@@ -957,8 +957,22 @@ textarea {
   .hist-grid {
     grid-template-columns: 1fr;
   }
+  .content {
+    padding: 0 8px;
+    margin: 16px auto;
+  }
+  .sub-section-card {
+    padding: 16px 10px;
+    margin-bottom: 16px;
+  }
+  .subhead {
+    font-size: 1.05rem;
+    padding: 8px 12px;
+    margin-bottom: 1.25rem;
+    display: flex;
+  }
   .likert-row {
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 4px;
   }
   .likert-opt {
@@ -977,13 +991,20 @@ textarea {
     flex-direction: column;
     align-items: center;
     padding: 12px 16px;
-    gap: 12px;
+    gap: 10px;
+  }
+  .brand-text strong {
+    font-size: 16px;
+  }
+  .brand-text small {
+    font-size: 9px;
   }
   .topnav {
     width: 100%;
     justify-content: center;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 10px;
+    font-size: 13px;
   }
   .card {
     padding: 16px 12px;
