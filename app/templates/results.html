@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}HACRI-E — Your Results{% endblock %}
+{% block content %}
+<section class="card">
+  <h1>Your HACRI-E Results</h1>
+  <p class="lede">Hi {{ name }} — Check your AI Survey result based on the 2 forms you filled. This is your result and your scores below. Your results email has been sent automatically to <strong>{{ email }}</strong>.</p>
+
+  <div class="scorecards">
+    <div class="scorecard literacy">
+      <h3>AI Literacy</h3>
+      <div class="big">{{ deltas.pre.lit if deltas.pre.lit is not none else "—" }}</div>
+      <div class="sub">Baseline</div>
+      <div class="arrow">→</div>
+      <div class="big">{{ deltas.post.lit if deltas.post.lit is not none else "—" }}</div>
+      <div class="sub">Post</div>
+      <div class="delta {% if deltas.delta_lit and deltas.delta_lit > 0 %}up{% elif deltas.delta_lit and deltas.delta_lit < 0 %}down{% endif %}">
+        Δ {{ "%+0.2f"|format(deltas.delta_lit) if deltas.delta_lit is not none else "—" }}
+      </div>
+    </div>
+
+    <div class="scorecard readiness">
+      <h3>AI Readiness</h3>
+      <div class="big">{{ deltas.pre.read if deltas.pre.read is not none else "—" }}</div>
+      <div class="sub">Baseline</div>
+      <div class="arrow">→</div>
+      <div class="big">{{ deltas.post.read if deltas.post.read is not none else "—" }}</div>
+      <div class="sub">Post</div>
+      <div class="delta {% if deltas.delta_read and deltas.delta_read > 0 %}up{% elif deltas.delta_read and deltas.delta_read < 0 %}down{% endif %}">
+        Δ {{ "%+0.2f"|format(deltas.delta_read) if deltas.delta_read is not none else "—" }}
+      </div>
+    </div>
+  </div>
+
+  <div class="quadrants">
+    <div class="chip">
+      <span class="chip-label">Baseline</span>
+      <span class="chip-val">{{ deltas.pre.quadrant }}</span>
+      <span class="chip-band muted">{{ deltas.pre.band }}</span>
+    </div>
+    <div class="chip">
+      <span class="chip-label">Post</span>
+      <span class="chip-val">{{ deltas.post.quadrant }}</span>
+      <span class="chip-band muted">{{ deltas.post.band }}</span>
+    </div>
+  </div>
+
+  <p class="movement">Overall movement: <strong>{{ deltas.movement }}</strong></p>
+</section>
+
+{% if user_png_url %}
+<section class="card">
+  <h2>Baseline → Post 2×2 Quadrant</h2>
+  <p class="muted">Where you sit on the AI Literacy × AI Readiness plane, before (Baseline) and after (Post-Workshop) the workshop.</p>
+  <img class="chart" src="{{ user_png_url }}" alt="Baseline vs Post 2x2 quadrant chart" />
+
+  <div style="margin-top: 20px; background: #fbfbfd; padding: 20px; border-radius: 8px; border: 1px solid var(--border); border-left: 4px solid var(--primary);">
+    <h3 style="font-size: 15px; color: var(--navy); margin-bottom: 8px; font-weight: 700;">📈 Development Summary</h3>
+    <p style="font-size: 13.8px; line-height: 1.6; color: var(--text); margin: 0;">
+      {% if deltas.delta_lit is not none and deltas.delta_read is not none %}
+        Your AI Literacy has changed by <strong>{{ "%+0.2f"|format(deltas.delta_lit) }}</strong> and your AI Readiness has changed by <strong>{{ "%+0.2f"|format(deltas.delta_read) }}</strong>.
+        {% if deltas.delta_lit > 0 and deltas.delta_read > 0 %}
+          This indicates significant growth in both your conceptual understanding of AI and your readiness/willingness to adopt AI tools in your studies. You are moving closer towards being an <strong>AI Champion</strong>.
+        {% elif deltas.delta_lit > 0 and deltas.delta_read <= 0 %}
+          This indicates you have gained a better conceptual understanding of AI, though your readiness or willingness to adopt AI tools in your studies has slightly decreased or remained steady.
+        {% elif deltas.delta_lit <= 0 and deltas.delta_read > 0 %}
+          This shows that you feel much more ready and enthusiastic about collaborating with AI, even if your technical/conceptual understanding score remained steady or slightly decreased.
+        {% else %}
+          Both your conceptual understanding and readiness to adopt AI tools show a steady focus or minor decline. Reflecting on specific areas of the workshop can help rebuild confidence.
+        {% endif %}
+      {% else %}
+        Insufficient data to calculate a complete delta summary.
+      {% endif %}
+    </p>
+  </div>
+</section>
+{% else %}
+<section class="card">
+  <h2>Baseline → Post 2×2 Quadrant</h2>
+  <p class="muted">Chart is being prepared… refresh in a few seconds.</p>
+</section>
+{% endif %}
+
+{% if h1_url or h2_url or h3_url %}
+<section class="card">
+  <h2>Section H — Cohort Reflection (POST)</h2>
+  <div class="hist-grid">
+    {% if h1_url %}<div><h3>H1 · Understanding change</h3><img class="chart" src="{{ h1_url }}" /></div>{% endif %}
+    {% if h2_url %}<div><h3>H2 · Most useful</h3><img class="chart" src="{{ h2_url }}" /></div>{% endif %}
+    {% if h3_url %}<div><h3>H3 · Most valuable part</h3><img class="chart" src="{{ h3_url }}" /></div>{% endif %}
+  </div>
+</section>
+{% endif %}
+
+{% if csv_url %}
+<section class="card">
+  <h2>Download your scorecard</h2>
+  <a class="btn" href="{{ csv_url }}">⬇ HACRI_E_{{ email }}.csv</a>
+  <p class="muted">The CSV contains your Baseline/Post scores plus every individual Likert item and its delta.</p>
+</section>
+{% endif %}
+
+<section class="card">
+  <p class="muted">Thank you for completing the HACRI-E Baseline Survey and Post-Workshop Survey. Your responses will help measure this program's impact and shape future cohorts.</p>
+</section>
+{% endblock %}

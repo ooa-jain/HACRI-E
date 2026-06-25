@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}HACRI-E2 — Preparing your results{% endblock %}
+{% block content %}
+<section class="card">
+  <h1>Preparing your results…</h1>
+  <p>Hi {{ name }} — your Post survey was submitted. Charts and the email are being prepared; this page will refresh automatically.</p>
+  <p><a class="btn" href="" onclick="setTimeout(() => location.reload(), 3000)">Refresh</a></p>
+  <p class="muted">If this page doesn't update within a minute, please refresh manually.</p>
+</section>
+{% endblock %}

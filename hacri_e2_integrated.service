@@ -1,0 +1,15 @@
+[Unit]
+Description=HACRI-E + Orientation Integrated Survey App
+After=network.target
+
+[Service]
+User=www-data
+WorkingDirectory=/var/www/hacri_e2_integrated
+Environment="PATH=/var/www/hacri_e2_integrated/venv/bin"
+EnvironmentFile=/var/www/hacri_e2_integrated/.env
+ExecStart=/var/www/hacri_e2_integrated/venv/bin/gunicorn app.main:app -c gunicorn.conf.py
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

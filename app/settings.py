@@ -1,0 +1,40 @@
+from __future__ import annotations
+from functools import lru_cache
+from pathlib import Path
+from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=".env", env_file_encoding="utf-8",
+        extra="ignore", case_sensitive=False,
+    )
+    mongodb_uri: str = Field(...)
+    mongodb_db: str = "hacri_e2"
+    session_secret: str = "dev-only-secret-do-not-use-in-production-32b"
+    public_base_url: str = "http://localhost:8000"
+    cookie_secure: bool = False
+    cookie_samesite: str = "lax"
+    generated_root: Path = Path("generated")
+
+    # Two separate admin accounts
+    survey_admin_username: str = "survey_admin"
+    survey_admin_password: str = "survey2026"
+    orientation_admin_username: str = "deeksha_admin"
+    orientation_admin_password: str = "deeksha2026"
+
+    # SMTP
+    smtp_host: str | None = None
+    smtp_port: int = 465
+    smtp_user: str | None = None
+    smtp_pass: str | None = None
+    email_from: str = "HACRI-E <noreply@juooa.cloud>"
+    email_dry_run: bool = True
+
+
+@lru_cache(maxsize=1)
+def get_settings() -> Settings:
+    return Settings()  # type: ignore[call-arg]
+
+settings = get_settings()

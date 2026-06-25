@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Post-Workshop Survey Locked — HACRI-E{% endblock %}
+{% block content %}
+<div class="landing-card" style="max-width: 500px; margin: 40px auto; text-align: center; padding: 40px 30px;">
+  <div style="font-size: 50px; margin-bottom: 20px;">🔒</div>
+  
+  {% if reason == "disabled" %}
+    <h2 style="color: var(--navy); font-family: 'Outfit', sans-serif; font-size: 22px; margin-bottom: 12px;">Post-Workshop Survey Closed</h2>
+    <p style="color: var(--text-muted); font-size: 14px; line-height: 1.6; margin-bottom: 24px;">
+      Hello {{ name }}. The Post-Workshop Survey is currently closed or disabled by the administrator. Please contact your coordinator.
+    </p>
+  {% else %}
+    <h2 style="color: var(--navy); font-family: 'Outfit', sans-serif; font-size: 22px; margin-bottom: 12px;">Post-Workshop Survey Locked</h2>
+    <p style="color: var(--text-muted); font-size: 14px; line-height: 1.6; margin-bottom: 24px;">
+      Hello {{ name }}. To ensure accurate assessment results, the Post-Workshop Survey is locked until you have had time to digest the workshop materials.
+    </p>
+    <div style="background: rgba(230, 179, 36, 0.08); border: 1px solid rgba(230, 179, 36, 0.3); border-radius: var(--radius-md); padding: 16px; margin-bottom: 24px;">
+      <span style="display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; color: var(--gold); margin-bottom: 4px;">Remaining Delay</span>
+      <strong style="font-size: 20px; color: var(--navy); font-family: 'Outfit', sans-serif;">{{ days_left }} Days</strong>
+      <span style="display: block; font-size: 12px; color: var(--text-muted); margin-top: 4px;">Will unlock on: <b>{{ available_at }}</b></span>
+    </div>
+  {% endif %}
+
+  <a href="/" class="btn primary" style="display: inline-block;">Return to Home</a>
+</div>
+{% endblock %}

@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Deeksharambh Admin</title>
+<style>
+:root{--navy:#0d2147;--gold:#e6b324;--bg:#f0f2f5;--card:#fff;--border:#e5e7eb;--text:#1e293b;--muted:#64748b;--green:#16a34a;--teal:#0d9488}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+.topbar{background:var(--navy);color:#fff;padding:0 20px;display:flex;align-items:center;gap:16px;min-height:52px}
+.topbar-brand{font-weight:700;font-size:15px;flex:1}.topbar-brand span{color:var(--gold)}
+.btn-sm{padding:6px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;border:none;font-family:inherit}
+.btn-red{background:#dc2626;color:#fff}
+.content{padding:24px;max-width:1100px;margin:0 auto}
+.tabs{display:flex;gap:4px;margin-bottom:20px;border-bottom:2px solid var(--border)}
+.tab{padding:10px 18px;font-size:13px;font-weight:600;cursor:pointer;color:var(--muted);background:none;border:none;border-bottom:2px solid transparent;margin-bottom:-2px;font-family:inherit}
+.tab.on{color:var(--navy);border-bottom-color:var(--navy)}
+.panel{display:none}.panel.on{display:block;animation:up .2s}
+@keyframes up{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.card{background:var(--card);border-radius:12px;padding:20px;border:1px solid var(--border);margin-bottom:16px}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:16px}
+.stat{background:var(--card);border-radius:10px;padding:16px;border:1px solid var(--border)}
+.stat-n{font-size:32px;font-weight:800;color:var(--teal)}.stat-l{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:14px 0}
+.toggle-switch{position:relative;display:inline-block;width:46px;height:24px}
+.toggle-switch input{opacity:0;width:0;height:0}
+.slider{position:absolute;cursor:pointer;inset:0;background:#d1d5db;border-radius:24px;transition:.2s}
+.slider:before{content:'';position:absolute;width:18px;height:18px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.2s}
+input:checked+.slider{background:var(--green)}
+input:checked+.slider:before{transform:translateX(22px)}
+.mtable{width:100%;border-collapse:collapse;font-size:12px}
+.mtable th{padding:8px 10px;text-align:left;font-weight:700;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.4px;border-bottom:2px solid var(--border)}
+.mtable td{padding:9px 10px;border-bottom:1px solid var(--border);vertical-align:middle}
+.mtable tr:last-child td{border:none}
+.search{width:100%;max-width:320px;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;margin-bottom:12px;outline:none}
+.search:focus{border-color:var(--teal)}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="topbar-brand"><span>OoA</span> · Deeksharambh Admin</div>
+  <a href="/admin/orientation/logout" class="btn-sm btn-red">Sign out</a>
+</div>
+<div class="content">
+  <div class="tabs">
+    <button class="tab on" onclick="show('p-overview',this)">📊 Overview</button>
+    <button class="tab" onclick="show('p-settings',this)">⚙️ Settings</button>
+    <button class="tab" onclick="show('p-responses',this)">📋 Responses</button>
+  </div>
+
+  <!-- Overview -->
+  <div class="panel on" id="p-overview">
+    <div class="stat-grid">
+      <div class="stat"><div class="stat-n" id="ov-count">—</div><div class="stat-l">Submissions</div></div>
+    </div>
+    <div class="card">
+      <div style="font-size:13px;color:var(--muted);margin-bottom:6px">Orientation Status</div>
+      <div id="ov-flag" style="font-size:14px">Loading…</div>
+    </div>
+    <div class="card" style="font-size:13px;color:var(--muted)">
+      <strong style="color:var(--text)">Student URLs</strong>
+      <p style="margin-top:8px">Share this link with students for Deeksharambh:</p>
+      <code id="ori-url" style="background:#f1f5f9;padding:6px 10px;border-radius:6px;display:inline-block;margin-top:6px;color:var(--navy)"></code>
+    </div>
+  </div>
+
+  <!-- Settings -->
+  <div class="panel" id="p-settings">
+    <div class="card" style="max-width:500px">
+      <div class="toggle-row">
+        <div>
+          <div style="font-size:14px;font-weight:600">🎓 Deeksharambh Orientation</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:3px">
+            Enable the orientation form at <code>/deeksharambh</code>
+          </div>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="tog-ori" onchange="toggleFlag('orientation_enabled',this.checked)" />
+          <span class="slider"></span>
+        </label>
+      </div>
+    </div>
+    <p style="font-size:12px;color:var(--muted)">When ON: students can access the Deeksharambh form. When OFF: the form shows a "not available" message.</p>
+  </div>
+
+  <!-- Responses -->
+  <div class="panel" id="p-responses">
+    <input class="search" type="text" placeholder="Search name or email…" oninput="filterResp()" id="resp-search" />
+    <div class="card" style="padding:0;overflow:hidden">
+      <table class="mtable" id="resp-table">
+        <thead>
+          <tr><th>#</th><th>Name</th><th>Email</th><th>Submitted At</th></tr>
+        </thead>
+        <tbody id="resp-tbody"><tr><td colspan="4" style="text-align:center;padding:20px;color:var(--muted)">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+let responses = [];
+
+function show(id, btn){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
+  document.getElementById(id).classList.add('on');
+  if(btn) btn.classList.add('on');
+  if(id==='p-responses' && responses.length===0) loadResponses();
+}
+
+async function loadFlags(){
+  const r = await fetch('/admin/api/flags');
+  const d = await r.json();
+  document.getElementById('tog-ori').checked = !!d.orientation_enabled;
+  document.getElementById('ov-flag').innerHTML =
+    d.orientation_enabled ? '🟢 <b>Open</b> — students can access the orientation form'
+                          : '🔴 <b>Closed</b> — orientation form is hidden';
+}
+
+async function toggleFlag(key, val){
+  await fetch('/admin/api/flags',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({[key]:val})});
+  loadFlags();
+}
+
+async function loadResponses(){
+  const r = await fetch('/admin/api/orientation/responses');
+  responses = await r.json();
+  document.getElementById('ov-count').textContent = responses.length;
+  renderResp(responses);
+}
+
+function renderResp(data){
+  const tbody = document.getElementById('resp-tbody');
+  if(!data.length){ tbody.innerHTML='<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--muted)">No submissions yet</td></tr>'; return; }
+  tbody.innerHTML = data.map((d,i)=>`
+    <tr>
+      <td style="color:var(--muted)">${i+1}</td>
+      <td style="font-weight:600">${e(d.name)}</td>
+      <td style="font-size:11px;color:var(--muted)">${e(d.email)}</td>
+      <td style="font-size:11px;color:var(--muted)">${e(d.submitted_at||'—')}</td>
+    </tr>`).join('');
+}
+
+function filterResp(){
+  const q = document.getElementById('resp-search').value.toLowerCase();
+  renderResp(responses.filter(d=>(d.name||'').toLowerCase().includes(q)||(d.email||'').toLowerCase().includes(q)));
+}
+
+function e(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+document.getElementById('ori-url').textContent = location.origin + '/deeksharambh';
+
+(async()=>{ await loadFlags(); await loadResponses(); })();
+</script>
+</body>
+</html>

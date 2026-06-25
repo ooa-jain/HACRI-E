@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AI Survey Admin — HACRI-E</title>
+<style>
+:root{--navy:#0d2147;--navy2:#1a3a7a;--gold:#e6b324;--bg:#f0f2f5;--card:#fff;--border:#e5e7eb;--text:#1e293b;--muted:#64748b;--green:#16a34a;--teal:#0d9488}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+.topbar{background:var(--navy);color:#fff;padding:0 20px;display:flex;align-items:center;gap:16px;min-height:52px}
+.topbar-brand{font-weight:700;font-size:15px;flex:1}.topbar-brand span{color:var(--gold)}
+.btn-sm{padding:6px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;border:none;font-family:inherit}
+.btn-red{background:#dc2626;color:#fff}.btn-green{background:var(--green);color:#fff}.btn-blue{background:var(--navy2);color:#fff}
+.content{padding:24px;max-width:1100px;margin:0 auto}
+.tabs{display:flex;gap:4px;margin-bottom:20px;border-bottom:2px solid var(--border);padding-bottom:0}
+.tab{padding:10px 18px;font-size:13px;font-weight:600;cursor:pointer;color:var(--muted);background:none;border:none;border-bottom:2px solid transparent;margin-bottom:-2px;font-family:inherit}
+.tab.on{color:var(--navy);border-bottom-color:var(--navy)}
+.panel{display:none}.panel.on{display:block;animation:up .2s}
+@keyframes up{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.card{background:var(--card);border-radius:12px;padding:20px;border:1px solid var(--border);margin-bottom:16px}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:16px}
+.stat{background:var(--card);border-radius:10px;padding:16px;border:1px solid var(--border)}
+.stat-n{font-size:32px;font-weight:800;color:var(--navy)}.stat-l{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border)}
+.toggle-row:last-child{border:none}
+.toggle-switch{position:relative;display:inline-block;width:46px;height:24px}
+.toggle-switch input{opacity:0;width:0;height:0}
+.slider{position:absolute;cursor:pointer;inset:0;background:#d1d5db;border-radius:24px;transition:.2s}
+.slider:before{content:'';position:absolute;width:18px;height:18px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.2s}
+input:checked+.slider{background:var(--green)}
+input:checked+.slider:before{transform:translateX(22px)}
+.mtable{width:100%;border-collapse:collapse;font-size:12px}
+.mtable th{padding:8px 10px;text-align:left;font-weight:700;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.4px;border-bottom:2px solid var(--border)}
+.mtable td{padding:9px 10px;border-bottom:1px solid var(--border);vertical-align:middle}
+.mtable tr:last-child td{border:none}
+.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;text-transform:uppercase}
+.bg-green{background:#dcfce7;color:#15803d}.bg-blue{background:#dbeafe;color:#1d4ed8}.bg-gray{background:#f1f5f9;color:#475569}
+.search{width:100%;max-width:320px;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;margin-bottom:12px;outline:none}
+.search:focus{border-color:var(--navy)}
+.alert-box{background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:16px;margin-bottom:16px}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="topbar-brand"><span>OoA</span> · AI Survey Admin</div>
+  <a href="/admin/survey/logout" class="btn-sm btn-red">Sign out</a>
+</div>
+<div class="content">
+  <div class="tabs">
+    <button class="tab on" onclick="show('p-overview',this)">📊 Overview</button>
+    <button class="tab" onclick="show('p-settings',this)">⚙️ Settings</button>
+    <button class="tab" onclick="show('p-users',this)">👥 Users</button>
+    <button class="tab" onclick="show('p-alerts',this)">🔔 Alerts</button>
+  </div>
+
+  <!-- Overview -->
+  <div class="panel on" id="p-overview">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:12px;">
+      <h2 style="font-size:16px;color:var(--navy);font-weight:700">Cohort Statistics</h2>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:13px;font-weight:600;color:var(--navy);">Department:</span>
+        <select id="dept-filter" onchange="applyDeptFilter(this.value)" style="padding:6px 12px;border-radius:6px;border:1px solid var(--border);font-size:13px;outline:none;font-family:inherit;background:#fff;min-width:200px;max-width:320px;">
+          <option value="">All Departments</option>
+        </select>
+      </div>
+      <a id="export-dept-btn" href="/admin/survey/export-cohort" class="btn-sm btn-green" style="text-decoration:none;display:inline-block;padding:8px 16px;">📥 Export Cohort CSV</a>
+    </div>
+
+    <div class="stat-grid">
+      <div class="stat"><div class="stat-n" id="ov-total">—</div><div class="stat-l">Registered</div></div>
+      <div class="stat"><div class="stat-n" id="ov-pre">—</div><div class="stat-l">Pre Done</div></div>
+      <div class="stat"><div class="stat-n" id="ov-post">—</div><div class="stat-l">Post Done</div></div>
+      <div class="stat"><div class="stat-n" id="ov-pending">—</div><div class="stat-l">Pending Post</div></div>
+    </div>
+    <div class="card" style="margin-bottom:20px;">
+      <div style="font-size:13px;color:var(--muted);margin-bottom:6px">Survey Status</div>
+      <div id="ov-flag" style="font-size:14px">Loading…</div>
+    </div>
+
+    <div class="card">
+      <h3 style="font-size:15px;color:var(--navy);margin-bottom:16px;font-weight:700">📊 Cohort Performance & Reflection Charts</h3>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(350px,1fr));gap:20px;text-align:center;">
+        <div>
+          <div style="font-weight:600;font-size:13px;color:var(--muted);margin-bottom:8px;">Quadrant Score Alignment</div>
+          <img id="cohort-chart-img" src="/admin/cohort.png" alt="Cohort Quadrant Chart" style="max-width:100%;height:auto;border:1px solid var(--border);border-radius:8px;" />
+        </div>
+        <div>
+          <div style="font-weight:600;font-size:13px;color:var(--muted);margin-bottom:8px;">Score Distributions (Histograms)</div>
+          <img id="histograms-chart-img" src="/admin/histograms.png" alt="Cohort Histograms Chart" style="max-width:100%;height:auto;border:1px solid var(--border);border-radius:8px;" />
+        </div>
+        <div>
+          <div style="font-weight:600;font-size:13px;color:var(--muted);margin-bottom:8px;">Section H1 · Understanding Change</div>
+          <img id="h1-chart-img" src="/admin/h1_histogram.png" alt="H1 Understanding Change Chart" style="max-width:100%;height:auto;border:1px solid var(--border);border-radius:8px;" />
+        </div>
+      </div>
+      <div style="margin-top:16px;text-align:center;">
+        <button class="btn-sm btn-blue" onclick="refreshCharts()">🔄 Regenerate Charts</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings -->
+  <div class="panel" id="p-settings">
+    <div class="card" style="max-width:500px">
+      <div class="toggle-row">
+        <div>
+          <div style="font-size:14px;font-weight:600">🛡️ Entire Portal Status (Active / Offline)</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:3px">If disabled, the site will be offline and show the closed page.</div>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="tog-survey" onchange="toggleFlag('survey_enabled',this.checked)" />
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <div class="toggle-row" style="margin-top:20px;border-top:1px solid var(--border);padding-top:20px">
+        <div>
+          <div style="font-size:14px;font-weight:600">📝 Pre-Survey (Baseline Survey)</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:3px">If disabled, students bypass the Baseline Survey and go straight to Orientation.</div>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="tog-pre-survey" onchange="toggleFlag('pre_survey_enabled',this.checked)" />
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <div class="toggle-row" style="margin-top:20px;border-top:1px solid var(--border);padding-top:20px">
+        <div>
+          <div style="font-size:14px;font-weight:600">🎓 Orientation Session (Deeksharambh)</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:3px">If disabled, students bypass the Orientation and go straight to the Post-Workshop Survey.</div>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="tog-orientation" onchange="toggleFlag('orientation_enabled',this.checked)" />
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <div class="toggle-row" style="margin-top:20px;border-top:1px solid var(--border);padding-top:20px">
+        <div>
+          <div style="font-size:14px;font-weight:600">📝 Post-Survey Gating</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:3px">Enable/disable the final survey or set a start delay rule (in days).</div>
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border)">
+        <div>
+          <div style="font-size:13px;font-weight:600">Post-Survey Status</div>
+          <div style="font-size:11.5px;color:var(--muted);margin-top:3px">If disabled, students cannot take the post survey at all.</div>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="tog-post-survey" onchange="toggleFlag('post_survey_enabled',this.checked)" />
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border)">
+        <div>
+          <div style="font-size:13px;font-weight:600">Start Delay (Days)</div>
+          <div style="font-size:11.5px;color:var(--muted);margin-top:3px">Number of days a student must wait after pre-survey (0 for immediate)</div>
+        </div>
+        <input type="number" id="inp-post-delay" min="0" max="365" style="width:75px;padding:6px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;outline:none;text-align:center;font-family:inherit;" onchange="updatePostDelay(this.value)" />
+      </div>
+
+      <div class="toggle-row" style="margin-top:20px;border-top:1px solid var(--border);padding-top:20px">
+        <div>
+          <div style="font-size:14px;font-weight:600">🛠️ Developer Test Mode (Bypass Validations)</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:3px">If enabled, students can navigate the wizard and submit the survey without selecting all options, and a "Bypass Validations / Auto-Fill" button will appear on the survey form for quick testing.</div>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="tog-test-mode" onchange="toggleFlag('test_mode_enabled',this.checked)" />
+          <span class="slider"></span>
+        </label>
+      </div>
+    </div>
+    <p style="font-size:12px;color:var(--muted)">When OFF: landing shows "survey closed". Students with existing sessions will still see their status.</p>
+  </div>
+
+  <!-- Users -->
+  <div class="panel" id="p-users">
+    <input class="search" type="text" placeholder="Search name, email, programme…" oninput="filterUsers()" id="user-search" />
+    <div class="card" style="padding:0;overflow:hidden">
+      <table class="mtable" id="user-table">
+        <thead>
+          <tr>
+            <th>#</th><th>Name</th><th>Email</th><th>Programme</th>
+            <th>Status</th><th>Orientation</th><th>Pre At</th><th>Post At</th><th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="user-tbody"><tr><td colspan="9" style="text-align:center;padding:20px;color:var(--muted)">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Alerts -->
+  <div class="panel" id="p-alerts">
+    <div class="alert-box">
+      <strong>Post-Survey Reminder</strong>
+      <p style="font-size:13px;margin-top:6px">Send a reminder to all students who completed the Baseline but not yet the Post-Workshop Survey.</p>
+      <p style="font-size:12px;margin-top:8px">Pending: <strong id="pending-count">—</strong> students</p>
+    </div>
+    <div id="alert-result" style="display:none;margin-bottom:12px"></div>
+    <button class="btn-sm btn-green" style="padding:10px 20px;font-size:13px;border-radius:8px" onclick="sendAlert()">
+      📧 Send Reminder to Pending Students
+    </button>
+    <p style="font-size:12px;color:var(--muted);margin-top:12px">Set <code>EMAIL_DRY_RUN=false</code> in .env for real emails.</p>
+  </div>
+</div>
+
+<script>
+let users = [];
+
+function show(id, btn){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
+  document.getElementById(id).classList.add('on');
+  if(btn) btn.classList.add('on');
+  if(id==='p-users' && users.length===0) loadUsers();
+  if(id==='p-alerts') loadPendingCount();
+}
+
+async function loadFlags(){
+  const r = await fetch('/admin/api/flags');
+  const d = await r.json();
+  document.getElementById('tog-survey').checked = !!d.survey_enabled;
+  document.getElementById('tog-pre-survey').checked = !!d.pre_survey_enabled;
+  document.getElementById('tog-orientation').checked = !!d.orientation_enabled;
+  document.getElementById('tog-post-survey').checked = !!d.post_survey_enabled;
+  document.getElementById('tog-test-mode').checked = !!d.test_mode_enabled;
+  document.getElementById('inp-post-delay').value = d.post_delay_days || 0;
+  document.getElementById('ov-flag').innerHTML =
+    d.survey_enabled ? '🟢 <b>Open</b> — students can register and submit surveys'
+                     : '🔴 <b>Closed</b> — new submissions are blocked';
+}
+
+async function toggleFlag(key, val){
+  await fetch('/admin/api/flags',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({[key]:val})});
+  loadFlags();
+}
+
+async function updatePostDelay(val){
+  const days = parseInt(val) || 0;
+  await fetch('/admin/api/flags',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({post_delay_days:days})});
+  loadFlags();
+}
+
+function refreshCharts() {
+  const t = new Date().getTime();
+  const dept = document.getElementById('dept-filter').value;
+  const qStr = dept ? `?force=1&dept=${encodeURIComponent(dept)}&t=${t}` : `?force=1&t=${t}`;
+  document.getElementById('cohort-chart-img').src = '/admin/cohort.png' + qStr;
+  document.getElementById('histograms-chart-img').src = '/admin/histograms.png' + qStr;
+  document.getElementById('h1-chart-img').src = '/admin/h1_histogram.png' + qStr;
+}
+
+async function loadUsers(){
+  const r = await fetch('/admin/api/survey/users');
+  users = await r.json();
+  renderUsers(users);
+  populateDeptDropdown(users);
+  updateOverviewStats("");
+}
+
+function populateDeptDropdown(usersList) {
+  const select = document.getElementById('dept-filter');
+  const currentVal = select.value;
+  const depts = Array.from(new Set(usersList.map(u => u.program).filter(Boolean))).sort();
+  select.innerHTML = '<option value="">All Departments</option>' + 
+    depts.map(d => `<option value="${escapeHtml(d)}">${escapeHtml(d)}</option>`).join('');
+  if (depts.includes(currentVal)) {
+    select.value = currentVal;
+  }
+}
+
+function applyDeptFilter(dept) {
+  updateOverviewStats(dept);
+}
+
+function updateOverviewStats(dept) {
+  let filtered = users;
+  if (dept) {
+    filtered = users.filter(u => u.program === dept);
+  }
+  
+  const total = filtered.length;
+  const pre   = filtered.filter(u => u.status === 'pre_done' || u.status === 'post_done').length;
+  const post  = filtered.filter(u => u.status === 'post_done').length;
+  
+  document.getElementById('ov-total').textContent   = total;
+  document.getElementById('ov-pre').textContent     = pre;
+  document.getElementById('ov-post').textContent    = post;
+  document.getElementById('ov-pending').textContent = pre - post;
+  
+  // Update export button URL
+  const exportBtn = document.getElementById('export-dept-btn');
+  if (dept) {
+    exportBtn.href = `/admin/survey/export-cohort?dept=${encodeURIComponent(dept)}`;
+  } else {
+    exportBtn.href = `/admin/survey/export-cohort`;
+  }
+  
+  // Update chart images with dept query parameter
+  const t = new Date().getTime();
+  const qStr = dept ? `?dept=${encodeURIComponent(dept)}&t=${t}` : `?t=${t}`;
+  document.getElementById('cohort-chart-img').src = '/admin/cohort.png' + qStr;
+  document.getElementById('histograms-chart-img').src = '/admin/histograms.png' + qStr;
+  document.getElementById('h1-chart-img').src = '/admin/h1_histogram.png' + qStr;
+}
+
+function escapeHtml(str) {
+  return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+const STATUS = {
+  pre_done:    '<span class="badge bg-blue">Pre Done</span>',
+  post_done:   '<span class="badge bg-green">Both Done ✓</span>',
+  not_started: '<span class="badge bg-gray">Not Started</span>',
+};
+
+function renderUsers(data){
+  const tbody = document.getElementById('user-tbody');
+  if(!data.length){ tbody.innerHTML='<tr><td colspan="9" style="text-align:center;padding:20px;color:var(--muted)">No users yet</td></tr>'; return; }
+  tbody.innerHTML = data.map((u,i)=>`
+    <tr>
+      <td style="color:var(--muted)">${i+1}</td>
+      <td style="font-weight:600">${e(u.name)}</td>
+      <td style="font-size:11px;color:var(--muted)">${e(u.email)}</td>
+      <td>${e(u.program||'—')}</td>
+      <td>${STATUS[u.status]||`<span class="badge bg-gray">${e(u.status)}</span>`}</td>
+      <td>${u.orientation_submitted?'<span class="badge bg-green">✓</span>':'<span class="badge bg-gray">—</span>'}</td>
+      <td style="font-size:11px;color:var(--muted)">${e(u.pre_at||'—')}</td>
+      <td style="font-size:11px;color:var(--muted)">${e(u.post_at||'—')}</td>
+      <td>
+        <div style="display:flex;gap:6px;align-items:center;">
+          ${u.status === 'post_done'
+            ? `<a href="/results/${u.email_slug}" target="_blank" class="btn-sm btn-blue" style="text-decoration:none;display:inline-block">👁️ View</a>
+               <button class="btn-sm btn-green" onclick="sendResultsMail(this, '${e(u.email)}')">📧 Send Mail</button>`
+            : ''}
+          <button class="btn-sm" style="background:#dc2626;color:white;border:none;border-radius:4px;cursor:pointer;padding:4px 8px;font-size:12px;font-weight:600;" onclick="deleteUser(this, '${e(u.email)}')">🗑️ Delete</button>
+        </div>
+      </td>
+    </tr>`).join('');
+}
+
+async function deleteUser(btn, email) {
+  if (!confirm(`Are you sure you want to delete user ${email} and all their survey responses? This action cannot be undone.`)) {
+    return;
+  }
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Deleting…';
+  try {
+    const r = await fetch(`/admin/api/survey/users/${encodeURIComponent(email)}`, {method: 'DELETE'});
+    if (r.ok) {
+      await loadUsers();
+    } else {
+      const err = await r.json();
+      alert(`Error deleting user: ${err.detail || r.statusText}`);
+      btn.disabled = false;
+      btn.textContent = originalText;
+    }
+  } catch (err) {
+    alert(`Error deleting user: ${err.message}`);
+    btn.disabled = false;
+    btn.textContent = originalText;
+  }
+}
+
+function filterUsers(){
+  const q = document.getElementById('user-search').value.toLowerCase();
+  renderUsers(users.filter(u=>(u.name||'').toLowerCase().includes(q)||(u.email||'').toLowerCase().includes(q)||(u.program||'').toLowerCase().includes(q)));
+}
+
+async function loadPendingCount(){
+  if(users.length===0) await loadUsers();
+  document.getElementById('pending-count').textContent = users.filter(u=>u.status==='pre_done').length;
+}
+
+async function sendAlert(){
+  const btn = event.target; btn.disabled=true; btn.textContent='Sending…';
+  const res = document.getElementById('alert-result'); res.style.display='none';
+  try{
+    const r = await fetch('/admin/api/alert/post-pending',{method:'POST'});
+    const d = await r.json();
+    res.style.cssText='display:block;background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:14px;margin-bottom:12px;font-size:13px;color:#15803d';
+    res.innerHTML=`✓ Sent: <b>${d.sent}</b>. Failed: <b>${d.failed}</b>. Total pending: <b>${d.total_pending}</b>.`;
+  }catch(ex){
+    res.style.cssText='display:block;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:14px;margin-bottom:12px;font-size:13px;color:#b91c1c';
+    res.innerHTML='✗ Error: '+ex.message;
+  }finally{ btn.disabled=false; btn.textContent='📧 Send Reminder to Pending Students'; }
+}
+
+async function sendResultsMail(btn, email) {
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Sending…';
+  try {
+    const r = await fetch(`/admin/api/send-results/${encodeURIComponent(email)}`, {method: 'POST'});
+    if (r.ok) {
+      btn.textContent = '✓ Sent';
+      btn.style.backgroundColor = '#16a34a';
+    } else {
+      btn.textContent = '✗ Error';
+      btn.style.backgroundColor = '#dc2626';
+    }
+  } catch (err) {
+    btn.textContent = '✗ Error';
+    btn.style.backgroundColor = '#dc2626';
+  } finally {
+    setTimeout(() => {
+      btn.disabled = false;
+      btn.textContent = originalText;
+      btn.style.backgroundColor = '';
+    }, 2000);
+  }
+}
+
+function e(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+(async()=>{ await loadFlags(); await loadUsers(); })();
+</script>
+</body>
+</html>

@@ -1,0 +1,456 @@
+HACRI-E2 · PRE-WORKSHOP SURVEY · Human­AI Collaboration Readiness Index
+
+                          HACRI-E2
+
+                                                           Human­AI Collaboration Readiness Index
+
+                                           PRE-WORKSHOP BASELINE SURVEY
+
+PURPOSE          Establishes your baseline AI awareness, attitudes, and collaboration readiness before the workshop program.
+DURATION
+STUDENT CODE     Approximately 15­20 minutes.
+CONFIDENTIALITY
+                 Enter the same code on both surveys: [First 2 letters of mother's first name] + [2-digit birth day] + [Last 2 letters of
+                 hometown] e.g. AN05TY
+                 Anonymous. No identifying information is collected. Data is used only for program evaluation and research.
+
+Student Code (required -- use the same code on both Pre and Post surveys):
+My code:
+
+Survey Sections:
+       SECTION A Your Background
+       SECTION B AI Awareness & Literacy
+       SECTION C Prior AI Usage
+       SECTION D Attitudes & Perceptions Toward AI
+       SECTION E AI Ethics & Academic Integrity
+       SECTION F Human­AI Collaboration Readiness (HACRI Core)
+       SECTION G Entrepreneurial AI Application [new]
+       SECTION H Future Expectations & Institutional Needs
+
+SECTION A        Your Background
+
+Help us understand who you are. All information is kept anonymous.
+
+A1 What is your age? (Select one)
+ -- Select --
+
+A2 What is your gender? (Select one)
+ -- Select --
+
+A3 What discipline are you enrolled in? (Select one)
+ -- Select --
+
+A4 What type of school did you attend before university? (Select one)
+ -- Select --
+
+A5 Did your school offer any formal subject or module on AI or Data Science? (Select one)
+ -- Select --
+
+Confidential -- for research use only                                                                                                      Page 1
+HACRI-E2 · PRE-WORKSHOP SURVEY · Human­AI Collaboration Readiness Index
+
+A6 How would you describe your access to technology (devices, internet) during school? (Select one)
+ -- Select --
+
+SECTION B  AI Awareness & Literacy
+
+Rate your agreement with each statement. 1 = Strongly Disagree  5 = Strongly Agree Blue = AI Literacy · Gold = AI Readiness
+
+                                                                             Strongly  Disagree  Neutral  Agree              Strongly
+                                                                             Disagree                                         Agree
+ Statement
+B1 I can explain what Artificial Intelligence is in my own words
+
+                                                                             1         2          3       4                  5
+
+B2 I understand the difference between AI and traditional computer software
+
+                                                                             1         2          3       4                  5
+
+B3 I know what machine learning means in context of AI
+
+                                                                             1         2          3       4                  5
+
+B4 I can name at least three AI tools I have used or seen used
+
+                                                                             1         2          3       4                  5
+
+B5 I understand what a large language model (like ChatGPT) is
+
+                                                                             1         2          3       4                  5
+
+B6 I know that AI systems are trained on data
+
+                                                                             1         2          3       4                  5
+
+B7 I understand that AI can make errors and produce incorrect information
+
+                                                                             1         2          3       4                  5
+
+B8 I know the difference between narrow AI and general AI
+
+                                                                             1         2          3       4                  5
+
+B9 I am aware that AI is already being used in my field of study
+
+                                                                             1         2          3       4                  5
+
+B10 I could explain AI to someone who has never heard of it
+
+                                                                             1         2          3       4                  5
+
+B11 In one or two sentences, describe what Artificial Intelligence means to you. (max 100 words)
+
+SECTION C  Prior AI Usage
+
+Tell us about your experience with AI tools before university.
+
+Confidential -- for research use only                                                                                        Page 2
+HACRI-E2 · PRE-WORKSHOP SURVEY · Human­AI Collaboration Readiness Index
+
+C1 Which AI tools have you used? (Select all that apply) (Select all that apply)
+
+ChatGPT or similar chatbots                                              Recommendation systems (Netflix, YouTube, Spotify)
+
+Google Gemini / Microsoft Copilot                                        Voice assistants (Siri, Alexa, Google Assistant)
+
+AI image generators (Midjourney, DALL-E)                                 AI tools in video games
+
+Grammar/writing assistants (e.g. Grammarly)                              None of the above
+
+AI-powered search (e.g. Perplexity)
+
+C2 How frequently did you use AI tools during your school years? (Select one)
+ -- Select --
+
+C3 For what purposes did you use AI tools in school? (Select all that apply) (Select all that apply)
+
+Writing or editing assignments                                           Language learning or translation
+
+Researching topics                                                       Entertainment / personal use
+
+Solving math or science problems                                         I did not use AI tools in school
+
+Generating images or creative content
+
+C4 Did your school teachers encourage the use of AI tools for learning? (Select one)
+ -- Select --
+
+C5 Have you ever been uncertain whether using AI on a school assignment was allowed? (Select one)
+ -- Select --
+
+SECTION D  Attitudes & Perceptions Toward AI
+
+Rate your agreement. 1 = Strongly Disagree  5 = Strongly Agree
+
+D1 -- AI Enthusiasm
+
+                                                                                  Strongly        Disagree  Neutral  Agree  Strongly
+                                                                                  Disagree                                   Agree
+ Statement
+D1a I am excited about the possibilities AI brings to my field of study
+
+                                                                                  1               2         3        4       5
+
+D1b I believe AI will make me more productive as a student
+
+                                                                                  1               2         3        4       5
+
+D1c I look forward to learning how to use AI tools in my university courses
+
+                                                                                  1               2         3        4       5
+
+D1d I think AI will create more opportunities than problems in the future
+
+                                                                                  1               2         3        4       5
+
+D2 -- AI Anxiety [reverse-scored in analysis]
+
+Confidential -- for research use only                                                                                        Page 3
+HACRI-E2 · PRE-WORKSHOP SURVEY · Human­AI Collaboration Readiness Index           Strongly  Disagree  Neutral  Agree  Strongly
+                                                                                  Disagree                             Agree
+  Statement
+ D2a I feel overwhelmed by how fast AI is developing
+
+                                                                                  1         2         3        4      5
+
+D2b I worry that AI might make my degree or future job less valuable
+
+                                                                                  1         2         3        4      5
+
+D2c I feel anxious when I think about having to use AI tools for my studies
+
+                                                                                  1         2         3        4      5
+
+D2d I am concerned that I will fall behind if I don't learn AI quickly enough
+
+                                                                                  1         2         3        4      5
+
+  D3 -- AI Trust                                                                  Strongly  Disagree  Neutral  Agree  Strongly
+ Statement                                                                        Disagree                             Agree
+D3a I trust AI tools to give me accurate information
+D3b I would verify AI-generated information before using it                       1         2         3        4      5
+D3c I believe AI systems can be biased or unfair
+D3d I think AI decisions should always be reviewed by a human                     1         2         3        4      5
+
+                                                                                  1         2         3        4      5
+
+                                                                                  1         2         3        4      5
+
+D4 -- AI & Human Identity
+
+                                                                                  Strongly  Disagree  Neutral  Agree  Strongly
+                                                                                  Disagree               3       4     Agree
+ Statement
+D4a There are things humans can do that AI never will (e.g. empathy, creativity)                                          5
+
+                                                                                  1         2
+
+D4b I think human judgment is still essential even when AI is involved
+
+                                                                                  1         2         3        4      5
+
+D4c I see AI as a tool that amplifies human ability, not replaces it
+
+                                                                                  1         2         3        4      5
+
+D4d I am confident in my ability to contribute something AI cannot
+
+                                                                                  1         2         3        4      5
+
+SECTION E  AI Ethics & Academic Integrity
+
+Rate your agreement. 1 = Strongly Disagree  5 = Strongly Agree
+
+                                                                                  Strongly  Disagree  Neutral  Agree  Strongly
+                                                                                  Disagree                             Agree
+ Statement
+E1 Using AI to write an entire assignment and submitting it as my own is          1         2         3        4      5
+
+       dishonest
+
+E2 Using AI to help brainstorm ideas for an assignment is acceptable
+
+                                                                                  1         2         3        4      5
+
+Confidential -- for research use only                                                                                 Page 4
+HACRI-E2 · PRE-WORKSHOP SURVEY · Human­AI Collaboration Readiness Index
+
+E3 I understand what my university's policy on AI use is
+
+                                                                                 1         2         3        4      5
+
+E4 I think universities should clearly define what counts as acceptable AI use
+
+                                                                                 1         2         3        4      5
+
+E5 AI systems can reflect the biases of the people who built them
+
+                                                                                 1         2         3        4      5
+
+E6 I am concerned about the environmental impact of large AI systems
+
+                                                                                 1         2         3        4      5
+
+E7 I believe that privacy is at risk when using AI tools
+
+                                                                                 1         2         3        4      5
+
+E8 I would speak up if I saw someone misusing AI in an academic setting
+
+                                                                                 1         2         3        4      5
+
+E9 AI should be developed with diverse perspectives to avoid discrimination
+
+                                                                                 1         2         3        4      5
+
+E10 I feel I have enough knowledge to make ethical decisions about using AI
+
+                                                                                 1         2         3        4      5
+
+  E11 -- SCENARIO
+  You are writing an assignment. You use an AI tool to draft the first version, then heavily edit it to reflect
+  your own ideas and analysis. Is this acceptable?
+
+E11 Your response: (Select one)
+
+ -- Select --
+
+E11 Briefly explain your reasoning. (max 50 words)
+
+SECTION F  Human­AI Collaboration Readiness (HACRI Core)
+
+Core instrument. 1 = Strongly Disagree  5 = Strongly Agree
+
+  F1 -- Cognitive Readiness                                                      Strongly  Disagree  Neutral  Agree  Strongly
+                                                                                 Disagree                             Agree
+ Statement
+F1a I can tell when an AI-generated response is incomplete or incorrect
+
+                                                                                 1         2         3        4      5
+
+F1b I feel confident evaluating whether AI output is relevant to my task
+
+                                                                                 1         2         3        4      5
+
+F1c I can identify when a task is better done by a human than an AI
+
+                                                                                 1         2         3        4      5
+
+F1d I can break a complex problem into parts that could be handled by AI vs. by
+
+me                                                                               1         2         3        4      5
+
+Confidential -- for research use only                                                                                Page 5
+HACRI-E2 · PRE-WORKSHOP SURVEY · Human­AI Collaboration Readiness Index               Strongly  Disagree  Neutral  Agree  Strongly
+    F2 -- Behavioral Readiness                                                        Disagree                             Agree
+
+  Statement
+ F2a I am willing to experiment with new AI tools in my studies
+
+                                                                                      1         2         3        4      5
+
+F2b I would ask for help or training if I didn't know how to use an AI tool properly
+
+                                                                                      1         2         3        4      5
+
+F2c I am comfortable adapting my workflow when AI is introduced
+
+                                                                                      1         2         3        4      5
+
+F2d I would actively try to improve my AI skills during my time at university
+
+                                                                                      1         2         3        4      5
+
+  F3 -- Social & Collaborative Readiness                                              Strongly  Disagree  Neutral  Agree  Strongly
+                                                                                      Disagree                             Agree
+ Statement
+F3a I can imagine working alongside AI tools as a regular part of my future           1         2         3        4      5
+
+       career
+
+F3b I am comfortable discussing how AI was used in a group project with peers
+
+                                                                                      1         2         3        4      5
+
+F3c I think teams that include AI tools can outperform teams that don't
+
+                                                                                      1         2         3        4      5
+
+F3d I would be comfortable telling a lecturer how I used AI in completing a task
+
+                                                                                      1         2         3        4      5
+
+  F4 -- Metacognitive Readiness                                                       Strongly  Disagree  Neutral  Agree  Strongly
+                                                                                      Disagree                             Agree
+ Statement
+F4a I reflect on whether I am over-relying on AI when completing tasks
+
+                                                                                      1         2         3        4      5
+
+F4b I notice when using AI helps my thinking vs. when it shortcuts it
+
+                                                                                      1         2         3        4      5
+
+F4c I can monitor whether my own learning is improving or declining when using
+
+AI                                                                                    1         2         3        4      5
+
+F4d I set my own limits on when and how I use AI tools
+
+                                                                                      1         2         3        4      5
+
+  SECTION G Entrepreneurial AI Application                                            Strongly  Disagree  Neutral  Agree  Strongly
+                                                                                      Disagree                             Agree
+   Rate your agreement. 1 = Strongly Disagree  5 = Strongly Agree
+    G1 -- Ideation & Opportunity Discovery                                            1         2         3        4      5
+  Statement
+ G1a I know how to use AI tools to generate or refine business ideas                                                      Page 6
+
+Confidential -- for research use only
+HACRI-E2 · PRE-WORKSHOP SURVEY · Human­AI Collaboration Readiness Index
+
+G1b I can use AI to identify gaps or opportunities in a market
+
+                                                                                1            2         3        4      5
+
+G1c I am confident using AI to stress-test or critique my own business idea
+
+                                                                                1            2         3        4      5
+
+  G2 -- Market & Customer Research                                              Strongly     Disagree  Neutral  Agree  Strongly
+ Statement                                                                      Disagree                                Agree
+G2a I know how to use AI tools to research a target market or industry
+                                                                                1            2         3        4      5
+G2b I can use AI to analyse competitors and their positioning
+                                                                                1            2         3        4      5
+G2c I understand the limitations of AI-generated market research and know
+       when to verify it independently                                          1            2         3        4      5
+
+G3 -- Building & Validating (MVP / Product)
+
+                                                                                Strongly     Disagree  Neutral  Agree  Strongly
+                                                                                Disagree                          4     Agree
+ Statement
+                                                                                1            2         3                   5
+G3a I know how AI tools can help me build or prototype a product (e.g. no-code
+       AI, AI-assisted coding)
+
+G3b I can use AI to help design or refine a minimum viable product (MVP)
+
+                                                                                1            2         3        4      5
+
+G3c I am confident identifying which parts of product development AI can        1            2         3        4      5
+       meaningfully accelerate
+
+  G4 -- Go-to-Market, Pitching & Fundraising                                    Strongly     Disagree  Neutral  Agree  Strongly
+                                                                                Disagree                                Agree
+ Statement
+G4a I know how to use AI tools to help draft a pitch deck or business plan
+
+                                                                                1            2         3        4      5
+
+G4b I can use AI to prepare for investor questions or due diligence
+
+                                                                                1            2         3        4      5
+
+G4c I am comfortable explaining to an investor exactly how and where I used AI
+
+in my venture                                                                   1            2         3        4      5
+
+G4d I know how to use AI tools to support marketing, sales, or customer         1            2         3        4      5
+       acquisition
+
+SECTION H Future Expectations & Institutional Needs
+
+H1 How important is it to you that your university prepares you to work with AI?
+
+Not important                          1     2                  3            4            5                     Extremely important
+
+Confidential -- for research use only                                                                                  Page 7
+HACRI-E2 · PRE-WORKSHOP SURVEY · Human­AI Collaboration Readiness Index
+
+H2 Which of the following would you find most useful? (Select up to 3)
+
+A dedicated AI literacy course                     A peer community or club for AI learning
+
+AI tools embedded within my existing subjects      Access to AI tools provided by the university
+
+Workshops or bootcamps on specific AI tools        Career guidance on AI in my industry
+
+Clear university guidelines on AI use
+
+H3 How confident are you that your school prepared you for AI at university?
+
+Not confident                          1     2  3                       4     5                   Very confident
+
+H4 Should AI literacy be a compulsory part of every university degree? (Select one)
+ -- Select --
+
+H5 What is the one thing you most want to understand about AI before finishing your first year? (max 150 words)
+
+Thank you for completing the HACRI-E2 Pre-Workshop Survey. Keep your Student Code -- you will need it for the
+Post-Workshop survey.
+
+Confidential -- for research use only                                                                            Page 8
+

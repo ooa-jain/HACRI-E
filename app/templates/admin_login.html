@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Admin Login — HACRI-E</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f0f2f5;min-height:100vh;display:flex;align-items:center;justify-content:center}
+  .card{background:#fff;border-radius:16px;padding:2.5rem 2rem;width:100%;max-width:380px;box-shadow:0 4px 24px rgba(0,0,0,.08)}
+  h1{font-size:20px;font-weight:700;color:#0d2147;margin-bottom:.25rem}
+  .sub{font-size:13px;color:#64748b;margin-bottom:1.5rem}
+  .field{margin-bottom:1rem}
+  label{display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px}
+  input{width:100%;padding:10px 12px;border:1.5px solid #d1d5db;border-radius:8px;font-size:14px;outline:none;transition:border-color .15s}
+  input:focus{border-color:#0d2147}
+  .btn{width:100%;padding:11px;background:#0d2147;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;margin-top:.5rem}
+  .btn:hover{background:#1a3a7a}
+  .err{background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;border-radius:8px;padding:10px 12px;font-size:13px;margin-bottom:1rem}
+  .logo{text-align:center;margin-bottom:1.5rem}
+  .logo-text{font-size:13px;color:#9ca3af;margin-top:6px}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">
+    <div style="width:48px;height:48px;background:#0d2147;border-radius:12px;display:inline-flex;align-items:center;justify-content:center;color:#e6b324;font-size:22px;font-weight:700">A</div>
+    <div class="logo-text">HACRI-E Admin</div>
+  </div>
+  <h1>Sign In</h1>
+  <p class="sub">Office of Academics — Internal Portal</p>
+
+  {% if error %}
+  <div class="err">{{ error }}</div>
+  {% endif %}
+
+  <form method="post" action="/admin/login">
+    <div class="field">
+      <label>Username</label>
+      <input type="text" name="username" required autocomplete="username" />
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input type="password" name="password" required autocomplete="current-password" />
+    </div>
+    <button type="submit" class="btn">Sign In →</button>
+  </form>
+</div>
+</body>
+</html>

@@ -1,0 +1,60 @@
+<!doctype html>
+<html>
+<body style="font-family:Helvetica,Arial,sans-serif;color:#1B2A4A;background:#F5F6FA;padding:24px;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:auto;background:#ffffff;border-radius:8px;overflow:hidden;">
+    <tr>
+      <td style="background:#1B2A4A;color:#fff;padding:24px 32px;">
+        <strong style="font-size:20px;">HACRI-E</strong><br/>
+        <span style="color:#C9A84C;font-size:13px;">Human–AI Collaboration Readiness Index</span>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:32px;">
+        <p style="font-size:16px;margin:0 0 16px 0;">Hi {{ name }},</p>
+        <p style="font-size:14px;line-height:1.55;margin:0 0 24px 0;">
+          Thank you for completing the HACRI-E Pre and Post surveys. Below is a summary of your results. The full charts and a CSV with per-item deltas are attached.
+        </p>
+
+        <table width="100%" cellpadding="8" cellspacing="0" style="border-collapse:collapse;margin-bottom:24px;">
+          <thead>
+            <tr style="background:#F5F6FA;">
+              <th style="text-align:left;border-bottom:1px solid #D0D3DE;">&nbsp;</th>
+              <th style="text-align:center;border-bottom:1px solid #D0D3DE;">Pre</th>
+              <th style="text-align:center;border-bottom:1px solid #D0D3DE;">Post</th>
+              <th style="text-align:center;border-bottom:1px solid #D0D3DE;">Δ</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>AI Literacy</td>
+              <td style="text-align:center;">{{ pre.lit if pre.lit is not none else "—" }}</td>
+              <td style="text-align:center;">{{ post.lit if post.lit is not none else "—" }}</td>
+              <td style="text-align:center;">{{ "%+.2f"|format(d_lit) if d_lit is not none else "—" }}</td>
+            </tr>
+            <tr>
+              <td>AI Readiness</td>
+              <td style="text-align:center;">{{ pre.read if pre.read is not none else "—" }}</td>
+              <td style="text-align:center;">{{ post.read if post.read is not none else "—" }}</td>
+              <td style="text-align:center;">{{ "%+.2f"|format(d_read) if d_read is not none else "—" }}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <p style="margin:0 0 8px 0;"><strong>Pre quadrant:</strong> {{ pre.quadrant }} <span style="color:#6E7185;">· {{ pre.band }}</span></p>
+        <p style="margin:0 0 8px 0;"><strong>Post quadrant:</strong> {{ post.quadrant }} <span style="color:#6E7185;">· {{ post.band }}</span></p>
+        <p style="margin:0 0 24px 0;"><strong>Movement:</strong> {{ movement }}</p>
+
+        <p style="margin:0 0 8px 0;">
+          <a href="{{ results_url }}" style="display:inline-block;background:#C9A84C;color:#1B2A4A;padding:10px 20px;border-radius:4px;text-decoration:none;font-weight:bold;">
+            View your full results online →
+          </a>
+        </p>
+
+        <p style="font-size:12px;color:#6E7185;margin-top:32px;">
+          HACRI-E · Confidential — for research use only.
+        </p>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

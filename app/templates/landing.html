@@ -1,0 +1,414 @@
+{% extends "base.html" %}
+{% block title %}HACRI-E — Start Assessment{% endblock %}
+{% block content %}
+<style>
+  .hero-split {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 48px;
+    align-items: center;
+    margin-top: 12px;
+  }
+
+  @media (max-width: 768px) {
+    .hero-split {
+      grid-template-columns: 1fr;
+      gap: 32px;
+    }
+
+    .landing-card {
+      order: 1;
+    }
+
+    .hero-info {
+      order: 2;
+    }
+  }
+
+  .tag-badge {
+    display: inline-block;
+    padding: 6px 14px;
+    background: rgba(6, 182, 212, 0.08);
+    color: var(--teal);
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    border-radius: 99px;
+    margin-bottom: 16px;
+    border: 1px solid rgba(6, 182, 212, 0.15);
+  }
+
+  .hero-info h1 {
+    font-family: 'Outfit', sans-serif;
+    font-size: 38px;
+    font-weight: 800;
+    color: var(--navy);
+    line-height: 1.15;
+    letter-spacing: -0.03em;
+    margin-bottom: 16px;
+  }
+
+  .hero-info .highlight {
+    background: linear-gradient(135deg, var(--gold) 0%, var(--teal) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .hero-info p {
+    color: var(--text-muted);
+    font-size: 15.5px;
+    line-height: 1.6;
+    margin-bottom: 24px;
+  }
+
+  /* Journey/Timeline */
+  .journey-timeline {
+    margin-top: 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .journey-item {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+  }
+
+  .journey-num {
+    background: var(--navy-light);
+    color: #fff;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 12px;
+    flex-shrink: 0;
+    margin-top: 2px;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .journey-item.active .journey-num {
+    background: linear-gradient(135deg, var(--gold) 0%, #fbbf24 100%);
+    color: var(--navy);
+  }
+
+  .journey-text strong {
+    display: block;
+    font-size: 14px;
+    color: var(--navy);
+    margin-bottom: 2px;
+  }
+
+  .journey-text span {
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.4;
+    display: block;
+  }
+
+  /* Premium Card Styles */
+  .landing-card {
+    background: #ffffff;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    border: 1px solid var(--border);
+    padding: 40px;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+
+  .landing-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 16px 36px -8px rgba(15, 23, 42, 0.08);
+  }
+
+  .landing-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 5px;
+    background: linear-gradient(90deg, var(--gold) 0%, var(--teal) 100%);
+  }
+
+  .landing-card h2 {
+    font-family: 'Outfit', sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--navy);
+    margin-bottom: 12px;
+  }
+
+  .profile-section {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .profile-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--navy-light) 0%, var(--navy) 100%);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Outfit', sans-serif;
+    font-weight: 700;
+    font-size: 18px;
+    border: 2px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .profile-details strong {
+    display: block;
+    font-size: 16px;
+    color: var(--navy);
+  }
+
+  .profile-details span {
+    font-size: 12.5px;
+    color: var(--text-muted);
+  }
+
+  /* Form spacing adjustments */
+  .landing-card .form-grid {
+    max-width: 100%;
+    margin-top: 24px;
+  }
+
+  .landing-card .field input {
+    padding: 12px 16px;
+    border-radius: var(--radius-sm);
+  }
+
+  .landing-card .btn {
+    width: 100%;
+    padding: 14px;
+    font-size: 14.5px;
+    border-radius: var(--radius-sm);
+  }
+
+  .closed-badge {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    color: var(--err);
+    padding: 14px;
+    border-radius: var(--radius-md);
+    font-size: 13.5px;
+    font-weight: 600;
+    line-height: 1.5;
+    margin-top: 12px;
+  }
+</style>
+
+<div class="hero-split">
+  <div class="hero-info">
+    <h1>Welcome to the <br /><span class="highlight">HACRI-E</span> Survey</h1>
+    <p>
+      This two-part survey measures your AI Literacy and AI Readiness to help customize Jain University's orientation
+      and academic curricula.
+    </p>
+
+    <div style="margin-top: 32px; display: flex; flex-direction: column; gap: 20px;">
+      <div
+        style="background: rgba(255, 255, 255, 0.65); border: 1px solid var(--border); padding: 18px 22px; border-radius: var(--radius-md); box-shadow: var(--shadow-sm); position: relative; overflow: hidden;">
+        <h3
+          style="font-family: 'Outfit', sans-serif; font-size: 15.5px; color: var(--navy); margin: 0 0 6px 0; display: flex; align-items: center; gap: 8px;">
+          <span style="color: var(--teal); font-size: 20px;">📊</span> Personalized Scorecards
+        </h3>
+        <p style="margin: 0; font-size: 12.5px; color: var(--text-muted); line-height: 1.5;">
+          Understand your digital capabilities. The survey generates an instant, downloadable dashboard mapping your AI
+          Literacy progress.
+        </p>
+      </div>
+
+      <div
+        style="background: rgba(255, 255, 255, 0.65); border: 1px solid var(--border); padding: 18px 22px; border-radius: var(--radius-md); box-shadow: var(--shadow-sm); position: relative; overflow: hidden;">
+        <h3
+          style="font-family: 'Outfit', sans-serif; font-size: 15.5px; color: var(--navy); margin: 0 0 6px 0; display: flex; align-items: center; gap: 8px;">
+          <span style="color: var(--gold); font-size: 20px;">💡</span> Academic Enhancement
+        </h3>
+        <p style="margin: 0; font-size: 12.5px; color: var(--text-muted); line-height: 1.5;">
+          Your responses directly shape Jain University's orientation and curricula, tailoring AI literacy modules to
+          your department's needs.
+        </p>
+      </div>
+
+      <div
+        style="background: rgba(255, 255, 255, 0.65); border: 1px solid var(--border); padding: 18px 22px; border-radius: var(--radius-md); box-shadow: var(--shadow-sm); position: relative; overflow: hidden;">
+        <h3
+          style="font-family: 'Outfit', sans-serif; font-size: 15.5px; color: var(--navy); margin: 0 0 6px 0; display: flex; align-items: center; gap: 8px;">
+          <span style="color: var(--teal); font-size: 20px;">🔒</span> Secure & Private
+        </h3>
+        <p style="margin: 0; font-size: 12.5px; color: var(--text-muted); line-height: 1.5;">
+          All data is strictly confidential and used solely for university evaluation and educational research purposes.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div class="landing-card">
+    {% if not survey_enabled %}
+    <h2>Portal Status</h2>
+    <div class="closed-badge">
+      <strong>Survey Closed</strong><br />
+      The portal is currently offline. Submissions are disabled.
+    </div>
+    {% elif user %}
+    <h2>Welcome Back</h2>
+
+    <div class="profile-section">
+      <div class="profile-avatar">
+        {{ user.name[0] | upper if user.name else "U" }}
+      </div>
+      <div class="profile-details">
+        <strong>{{ user.name }}</strong>
+        <span>{{ user.program or "Registered Student" }}</span>
+      </div>
+    </div>
+
+    <div style="margin-bottom: 24px;">
+      <p
+        style="margin: 0 0 8px 0; font-size: 13px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">
+        Current Progress</p>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        {% if user.status == "pre_done" %}
+        <span class="badge teal" style="font-size: 12px; padding: 4px 12px;">Baseline Completed</span>
+        {% elif user.status == "post_done" %}
+        <span class="badge ok" style="font-size: 12px; padding: 4px 12px;">Fully Completed</span>
+        {% else %}
+        <span class="badge muted" style="font-size: 12px; padding: 4px 12px;">Not Started</span>
+        {% endif %}
+      </div>
+    </div>
+
+    {% if user.status == "post_done" %}
+    <p style="margin:4px 0 16px 0; color: var(--text-muted); font-size: 13.5px;">Your assessment is complete. View your
+      result scorecard:</p>
+    <a class="btn primary" href="/results/{{ user.email_slug }}">View Results →</a>
+    {% elif user.status == "pre_done" %}
+    {% if orientation_enabled and not user.orientation_submitted %}
+    <p style="margin:4px 0 16px 0; color: var(--text-muted); font-size: 13.5px;">Please complete the orientation
+      workshop survey:</p>
+    <a class="btn primary" href="/orientation">Continue to Orientation Survey →</a>
+    {% else %}
+    {% if post_survey_enabled %}
+    <p style="margin:4px 0 16px 0; color: var(--text-muted); font-size: 13.5px;">You're ready for Survey 2:</p>
+    <a class="btn accent" href="/survey/post">Continue to Survey 2 →</a>
+    {% else %}
+    <p style="margin:4px 0 16px 0; color: var(--text-muted); font-size: 13.5px;">Survey 2 is not open yet. Please wait until the facilitator enables it.</p>
+    {% endif %}
+    {% endif %}
+    {% else %}
+    {% if pre_survey_enabled %}
+    <a class="btn primary" href="/survey/pre">Start Survey →</a>
+    {% elif orientation_enabled and not user.orientation_submitted %}
+    <p style="margin:4px 0 16px 0; color: var(--text-muted); font-size: 13.5px;">Please complete the orientation survey:</p>
+    <a class="btn primary" href="/orientation">Continue to Orientation Survey →</a>
+    {% else %}
+    {% if post_survey_enabled %}
+    <p style="margin:4px 0 16px 0; color: var(--text-muted); font-size: 13.5px;">You're ready for Survey 2:</p>
+    <a class="btn accent" href="/survey/post">Start Survey 2 →</a>
+    {% else %}
+    <p style="margin:4px 0 16px 0; color: var(--text-muted); font-size: 13.5px;">Survey 2 is not open yet. Please wait until the facilitator enables it.</p>
+    {% endif %}
+    {% endif %}
+    {% endif %}
+
+    {% else %}
+    <h2>Register</h2>
+    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">
+      Fill in your details below to begin the survey journey.
+    </p>
+
+    {% if error %}
+    <div class="callout err" style="margin-bottom: 16px; font-size: 13px;">{{ error }}</div>
+    {% endif %}
+
+    <form method="post" action="/start" class="form-grid">
+      <input type="hidden" name="csrf" value="{{ csrf_token }}" />
+
+      <label class="field">
+        <span>Full Name</span>
+        <input type="text" name="name" required minlength="1" maxlength="200" placeholder="e.g. Priya Sharma" />
+      </label>
+
+      <label class="field">
+        <span>Email Address</span>
+        <input type="email" name="email" required maxlength="200" placeholder="you@jainuniversity.ac.in" />
+      </label>
+
+      <label class="field">
+        <span>Programme / Department</span>
+        <select name="program" required>
+          <option value="" disabled selected>Select department...</option>
+          <option value="Department of Humanities & Social Sciences">Department of Humanities & Social Sciences</option>
+          <option value="Department of Economics">Department of Economics</option>
+          <option value="Department of Journalism and Mass Communication">Department of Journalism and Mass
+            Communication</option>
+          <option value="Department of Languages">Department of Languages</option>
+          <option value="Department of Law">Department of Law</option>
+          <option value="Department of Performing Arts and Cultural Studies">Department of Performing Arts and Cultural
+            Studies</option>
+          <option value="Department of Computer Science and IT">Department of Computer Science and IT</option>
+          <option value="Department of Allied Healthcare and Sciences">Department of Allied Healthcare and Sciences
+          </option>
+          <option value="Department of Biotechnology and Genetics">Department of Biotechnology and Genetics</option>
+          <option value="Department of Chemistry and Biochemistry">Department of Chemistry and Biochemistry</option>
+          <option value="Department of Data Analytics and Mathematical Science">Department of Data Analytics and
+            Mathematical Science</option>
+          <option value="Department of Forensic Science">Department of Forensic Science</option>
+          <option value="Department of Microbiology and Botany">Department of Microbiology and Botany</option>
+          <option value="Department of Physics and Electronics">Department of Physics and Electronics</option>
+          <option value="Department of Psychology and Allied Sciences">Department of Psychology and Allied Sciences
+          </option>
+          <option value="Department of Animation and Virtual Reality">Department of Animation and Virtual Reality
+          </option>
+          <option value="Department of Commerce">Department of Commerce</option>
+          <option value="Department of Art and Design">Department of Art and Design</option>
+          <option value="Department of Design">Department of Design</option>
+          <option value="Department of Aerospace Engineering">Department of Aerospace Engineering</option>
+          <option value="Department of Computer Science and Engineering">Department of Computer Science and Engineering
+          </option>
+          <option value="Department of Electrical and Electronics Engineering">Department of Electrical and Electronics
+            Engineering</option>
+          <option value="Department of Electronics and Communication Engineering">Department of Electronics and
+            Communication Engineering</option>
+          <option value="Department of Food Technology">Department of Food Technology</option>
+          <option value="Department of Information Science and Engineering">Department of Information Science and
+            Engineering</option>
+          <option value="Department of Civil Engineering">Department of Civil Engineering</option>
+          <option value="Department of Mechanical Engineering">Department of Mechanical Engineering</option>
+          <option value="Department of Management Studies - UG">Department of Management Studies - UG</option>
+          <option value="Area - School of Sports Education and Research">Area - School of Sports Education and Research
+          </option>
+          <option value="CeRSSE">CeRSSE</option>
+          <option value="Department of Management Studies - PG">Department of Management Studies - PG</option>
+          <option value="Department of Art and Design (Interior Design)">Department of Art and Design (Interior Design)
+          </option>
+        </select>
+      </label>
+
+      <div class="actions" style="margin-top: 12px;">
+        <button type="submit" class="btn primary">Start Survey →</button>
+      </div>
+    </form>
+    {% endif %}
+  </div>
+</div>
+
+<p class="footnote" style="margin-top: 48px;">
+  Data is used only for programme evaluation and research. No information is shared externally.
+</p>
+{% endblock %}

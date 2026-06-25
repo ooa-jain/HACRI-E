@@ -1,0 +1,1006 @@
+{% extends "base.html" %}
+{% block title %}HACRI-E — Survey{ 1% endblock %}
+{% block content %}
+<script>
+  window._TEST_MODE = {{ "true" if test_mode_enabled else "false" }};
+</script>
+
+{% if test_mode_enabled %}
+<div
+  style="background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%); color: #fff; padding: 16px 20px; border-radius: var(--radius-md); margin-bottom: 20px; box-shadow: var(--shadow-md); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+  <div style="display: flex; align-items: center; gap: 8px;">
+    <span style="font-size: 20px;">🛠️</span>
+    <div>
+      <strong style="font-size: 14px; display: block;">Developer Test Mode Active</strong>
+      <span style="font-size: 12px; opacity: 0.9;">Bypass validations is enabled. You can submit without filling all
+        fields.</span>
+    </div>
+  </div>
+  <button type="button" class="btn"
+    style="background: #ffffff; color: #4f46e5; border: none; font-size: 13px; font-weight: 700; padding: 8px 16px; border-radius: 6px; cursor: pointer; transition: all 0.2s; width: auto; height: auto;"
+    onclick="autoFillSurvey()">
+    ⚡ Auto-Fill Survey
+  </button>
+</div>
+{% endif %}
+
+<section class="card">
+  <header style="margin-bottom: 2rem; border-bottom: 2px solid var(--border-color); padding-bottom: 1rem;">
+    <h1> Survey 1</h1>
+    <p class="lede">HACRI-E · Human–AI Collaboration Readiness Index · <strong>~15–20 minutes</strong></p>
+    <p class="muted">Please rate your agreement with each statement. 1 = Strongly Disagree · 5 = Strongly Agree. (Blue =
+      AI Literacy · Gold = AI Readiness).</p>
+  </header>
+
+  {% if banner %}
+  <div class="callout"
+    style="background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:14px;font-weight:500">
+    ⚠️ {{ banner }}
+  </div>
+  {% endif %}
+
+  {% if errors %}
+  <div class="callout err">
+    <ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul>
+  </div>
+  {% endif %}
+
+  <!-- ── PROGRESS TRACKER ── -->
+  <div class="wizard-progress" id="wizard-progress">
+    <div class="wizard-progress-bar" id="wizard-progress-bar"></div>
+    <button type="button" class="wizard-step active" data-step="0">
+      <div class="wizard-step-circle">A</div>
+      <span class="wizard-step-label">Background</span>
+    </button>
+    <button type="button" class="wizard-step" data-step="1">
+      <div class="wizard-step-circle">B</div>
+      <span class="wizard-step-label">Literacy</span>
+    </button>
+    <button type="button" class="wizard-step" data-step="2">
+      <div class="wizard-step-circle">C</div>
+      <span class="wizard-step-label">Experience</span>
+    </button>
+    <button type="button" class="wizard-step" data-step="3">
+      <div class="wizard-step-circle">D</div>
+      <span class="wizard-step-label">Attitudes</span>
+    </button>
+    <button type="button" class="wizard-step" data-step="4">
+      <div class="wizard-step-circle">E</div>
+      <span class="wizard-step-label">Ethics</span>
+    </button>
+    <button type="button" class="wizard-step" data-step="5">
+      <div class="wizard-step-circle">F</div>
+      <span class="wizard-step-label">Readiness</span>
+    </button>
+    <button type="button" class="wizard-step" data-step="6">
+      <div class="wizard-step-circle">G</div>
+      <span class="wizard-step-label">Application</span>
+    </button>
+    <button type="button" class="wizard-step" data-step="7">
+      <div class="wizard-step-circle">H</div>
+      <span class="wizard-step-label">Expectations</span>
+    </button>
+  </div>
+
+  <form method="post" action="/survey/pre" class="survey" id="survey-form">
+    <input type="hidden" name="csrf" value="{{ csrf_token }}" />
+
+    <!-- ── SECTION A — Background ───────────────────────────────────────── -->
+    <fieldset class="section wizard-section active" data-step-section="0">
+      <legend>Section A · {{ section_titles["A"] }}</legend>
+      <p class="muted">Help us understand who you are.</p>
+      {% for key, label, kind, opts in pre_background %}
+      <div class="question">
+        <label class="q-label"><strong>{{ key }}.</strong> {{ label }}</label>
+        <div class="q-body">
+          <select name="{{ key }}" required>
+            <option value="">-- Select --</option>
+            {% for o in opts %}
+            <option value="{{ o }}" {% if values.get(key)==o %}selected{% endif %}>{{ o }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      {% endfor %}
+    </fieldset>
+
+    <!-- ── SECTION B — AI Awareness & Literacy (Likert) ──────────────────── -->
+    <fieldset class="section wizard-section" data-step-section="1">
+      <legend>Section B · {{ section_titles["B"] }}</legend>
+      <p class="muted">Rate your agreement. 1 = Strongly Disagree · 5 = Strongly Agree</p>
+
+      {% for key in schema if key.startswith("B") and key[1:].isdigit() %}
+      <div class="question likert">
+        <p class="q-label"><strong>{{ key }}.</strong>
+          {% if key == "B1" %}I can explain what Artificial Intelligence is in my own words
+          {% elif key == "B2" %}I understand the difference between AI and traditional computer software
+          {% elif key == "B3" %}I know what machine learning means in context of AI
+          {% elif key == "B4" %}I can name at least three AI tools I have used or seen used
+          {% elif key == "B5" %}I understand what a large language model (like ChatGPT) is
+          {% elif key == "B6" %}I know that AI systems are trained on data
+          {% elif key == "B7" %}I understand that AI can make errors and produce incorrect information
+          {% elif key == "B8" %}I know the difference between narrow AI and general AI
+          {% elif key == "B9" %}I am aware that AI is already being used in my field of study
+          {% elif key == "B10" %}I could explain AI to someone who has never heard of it
+          {% endif %}
+        </p>
+        <div class="likert-row">
+          {% for n, lbl in likert_choices %}
+          <label class="likert-opt">
+            <input type="radio" name="{{ key }}" value="{{ n }}" {% if values.get(key)==n %}checked{% endif %}
+              required />
+            <span class="num">{{ n }}</span>
+            <span class="lbl">{{ lbl }}</span>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+
+      <div class="question">
+        <label class="q-label"><strong>B11.</strong> In one or two sentences, describe what Artificial Intelligence
+          means to you. (max 100 words)</label>
+        <textarea name="B11" rows="3" maxlength="1500">{{ values.get("B11", "") }}</textarea>
+      </div>
+    </fieldset>
+
+    <!-- ── SECTION C — Prior AI Usage ────────────────────────────────────── -->
+    <fieldset class="section wizard-section" data-step-section="2">
+      <legend>Section C · {{ section_titles["C"] }}</legend>
+      <p class="muted">Tell us about your experience with AI tools before university.</p>
+      {% for key, label, kind, opts in pre_usage %}
+      <div class="question">
+        <p class="q-label"><strong>{{ key }}.</strong> {{ label }}</p>
+        <div class="q-body {% if kind == 'checkbox' %}check-grid{% endif %}">
+          {% if kind == "checkbox" %}
+          {% set chosen = values.get(key) or [] %}
+          {% for o in opts %}
+          <label class="check-opt">
+            <input type="checkbox" name="{{ key }}" value="{{ o }}" {% if o in chosen %}checked{% endif %} />
+            <span>{{ o }}</span>
+          </label>
+          {% endfor %}
+          {% else %}
+          <select name="{{ key }}" required>
+            <option value="">-- Select --</option>
+            {% for o in opts %}
+            <option value="{{ o }}" {% if values.get(key)==o %}selected{% endif %}>{{ o }}</option>
+            {% endfor %}
+          </select>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </fieldset>
+
+    <!-- ── SECTION D — Attitudes & Perceptions ────────────────────────────── -->
+    <fieldset class="section wizard-section" data-step-section="3">
+      <legend>Section D · {{ section_titles["D"] }}</legend>
+      <p class="muted">Rate your agreement. 1 = Strongly Disagree · 5 = Strongly Agree.</p>
+
+      <div class="sub-section-card">
+        <h3 class="subhead">D1 — AI Enthusiasm</h3>
+        {% for key in ["D1a","D1b","D1c","D1d"] %}
+        <div class="question likert">
+          <p class="q-label"><strong>{{ key }}.</strong>
+            {% if key == "D1a" %}I am excited about the possibilities AI brings to my field of study
+            {% elif key == "D1b" %}I believe AI will make me more productive as a student
+            {% elif key == "D1c" %}I look forward to learning how to use AI tools in my university courses
+            {% elif key == "D1d" %}I think AI will create more opportunities than problems in the future
+            {% endif %}
+          </p>
+          <div class="likert-row">
+            {% for n, lbl in likert_choices %}
+            <label class="likert-opt">
+              <input type="radio" name="{{ key }}" value="{{ n }}" {% if values.get(key)==n %}checked{% endif %}
+                required />
+              <span class="num">{{ n }}</span>
+              <span class="lbl">{{ lbl }}</span>
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+
+      <hr class="sub-divider-thick" />
+
+      <div class="sub-section-card">
+        <h3 class="subhead">D2 — AI Anxiety</h3>
+        {% for key in ["D2a","D2b","D2c","D2d"] %}
+        <div class="question likert">
+          <p class="q-label"><strong>{{ key }}.</strong>
+            {% if key == "D2a" %}I feel overwhelmed by how fast AI is developing
+            {% elif key == "D2b" %}I worry that AI might make my degree or future job less valuable
+            {% elif key == "D2c" %}I feel anxious when I think about having to use AI tools for my studies
+            {% elif key == "D2d" %}I am concerned that I will fall behind if I don't learn AI quickly enough
+            {% endif %}
+          </p>
+          <div class="likert-row">
+            {% for n, lbl in likert_choices %}
+            <label class="likert-opt">
+              <input type="radio" name="{{ key }}" value="{{ n }}" {% if values.get(key)==n %}checked{% endif %}
+                required />
+              <span class="num">{{ n }}</span>
+              <span class="lbl">{{ lbl }}</span>
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+
+      <hr class="sub-divider-thick" />
+
+      <div class="sub-section-card">
+        <h3 class="subhead">D3 — AI Trust</h3>
+        {% for key in ["D3a","D3b","D3c","D3d"] %}
+        <div class="question likert">
+          <p class="q-label"><strong>{{ key }}.</strong>
+            {% if key == "D3a" %}I trust AI tools to give me accurate information
+            {% elif key == "D3b" %}I would verify AI-generated information before using it
+            {% elif key == "D3c" %}I believe AI systems can be biased or unfair
+            {% elif key == "D3d" %}I think AI decisions should always be reviewed by a human
+            {% endif %}
+          </p>
+          <div class="likert-row">
+            {% for n, lbl in likert_choices %}
+            <label class="likert-opt">
+              <input type="radio" name="{{ key }}" value="{{ n }}" {% if values.get(key)==n %}checked{% endif %}
+                required />
+              <span class="num">{{ n }}</span>
+              <span class="lbl">{{ lbl }}</span>
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+
+      <hr class="sub-divider-thick" />
+
+      <div class="sub-section-card">
+        <h3 class="subhead">D4 — AI &amp; Human Identity</h3>
+        {% for key in ["D4a","D4b","D4c","D4d"] %}
+        <div class="question likert">
+          <p class="q-label"><strong>{{ key }}.</strong>
+            {% if key == "D4a" %}There are things humans can do that AI never will (e.g. empathy, creativity)
+            {% elif key == "D4b" %}I think human judgment is still essential even when AI is involved
+            {% elif key == "D4c" %}I see AI as a tool that amplifies human ability, not replaces it
+            {% elif key == "D4d" %}I am confident in my ability to contribute something AI cannot
+            {% endif %}
+          </p>
+          <div class="likert-row">
+            {% for n, lbl in likert_choices %}
+            <label class="likert-opt">
+              <input type="radio" name="{{ key }}" value="{{ n }}" {% if values.get(key)==n %}checked{% endif %}
+                required />
+              <span class="num">{{ n }}</span>
+              <span class="lbl">{{ lbl }}</span>
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </fieldset>
+
+    <!-- ── SECTION E — Ethics & Academic Integrity ───────────────────────── -->
+    <fieldset class="section wizard-section" data-step-section="4">
+      <legend>Section E · {{ section_titles["E"] }}</legend>
+      <p class="muted">Rate your agreement. 1 = Strongly Disagree · 5 = Strongly Agree.</p>
+
+      {% for key in ["E1","E2","E3","E4","E5","E6","E7","E8","E9","E10"] %}
+      <div class="question likert">
+        <p class="q-label"><strong>{{ key }}.</strong>
+          {% if key == "E1" %}Using AI to write an entire assignment and submitting it as my own is dishonest
+          {% elif key == "E2" %}Using AI to help brainstorm ideas for an assignment is acceptable
+          {% elif key == "E3" %}I understand what my university's policy on AI use is
+          {% elif key == "E4" %}I think universities should clearly define what counts as acceptable AI use
+          {% elif key == "E5" %}AI systems can reflect the biases of the people who built them
+          {% elif key == "E6" %}I am concerned about the environmental impact of large AI systems
+          {% elif key == "E7" %}I believe that privacy is at risk when using AI tools
+          {% elif key == "E8" %}I would speak up if I saw someone misusing AI in an academic setting
+          {% elif key == "E9" %}AI should be developed with diverse perspectives to avoid discrimination
+          {% elif key == "E10" %}I feel I have enough knowledge to make ethical decisions about using AI
+          {% endif %}
+        </p>
+        <div class="likert-row">
+          {% for n, lbl in likert_choices %}
+          <label class="likert-opt">
+            <input type="radio" name="{{ key }}" value="{{ n }}" {% if values.get(key)==n %}checked{% endif %}
+              required />
+            <span class="num">{{ n }}</span>
+            <span class="lbl">{{ lbl }}</span>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+
+      <div class="question">
+        <p class="q-label"><strong>E11.</strong> <em>Scenario</em>: You are writing an assignment. You use an AI tool to
+          draft the first version, then heavily edit it to reflect your own ideas and analysis. Is this acceptable?</p>
+        <select name="E11" required>
+          <option value="">-- Select --</option>
+          {% for o in pre_e11_options %}
+          <option value="{{ o }}" {% if values.get("E11")==o %}selected{% endif %}>{{ o }}</option>
+          {% endfor %}
+        </select>
+        <label class="q-label" style="display: block; margin-top:1.5rem">Briefly explain your reasoning. (max 50
+          words)</label>
+        <textarea name="E11_reason" rows="2" maxlength="500">{{ values.get("E11_reason", "") }}</textarea>
+      </div>
+    </fieldset>
+
+    <!-- ── SECTION F — HACRI Core ─────────────────────────────────────────── -->
+    <fieldset class="section wizard-section" data-step-section="5">
+      <legend>Section F · {{ section_titles["F"] }}</legend>
+      <p class="muted">Core instrument. 1 = Strongly Disagree · 5 = Strongly Agree.</p>
+
+      <h3 class="subhead">F1 — Cognitive Readiness</h3>
+      {% for key in ["F1a","F1b","F1c","F1d"] %}
+      <div class="question likert">
+        <p class="q-label"><strong>{{ key }}.</strong>
+          {% if key == "F1a" %}I can tell when an AI-generated response is incomplete or incorrect
+          {% elif key == "F1b" %}I feel confident evaluating whether AI output is relevant to my task
+          {% elif key == "F1c" %}I can identify when a task is better done by a human than an AI
+          {% elif key == "F1d" %}I can break a complex problem into parts that could be handled by AI vs. by me
+          {% endif %}
+        </p>
+        <div class="likert-row">
+          {% for n, lbl in likert_choices %}
+          <label class="likert-opt">
+            <input type="radio" name="{{ key }}" value="{{ n }}" {% if values.get(key)==n %}checked{% endif %}
+              required />
+            <span class="num">{{ n }}</span>
+            <span class="lbl">{{ lbl }}</span>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+
+      <h3 class="subhead">F2 — Behavioral Readiness</h3>
+      {% for key in ["F2a","F2b","F2c","F2d"] %}
+      <div class="question likert">
+        <p class="q-label"><strong>{{ key }}.</strong>
+          {% if key == "F2a" %}I am willing to experiment with new AI tools in my studies
+          {% elif key == "F2b" %}I would ask for help or training if I didn't know how to use an AI tool properly
+          {% elif key == "F2c" %}I am comfortable adapting my workflow when AI is introduced
+          {% elif key == "F2d" %}I would actively try to improve my AI skills during my time at university
+          {% endif %}
+        </p>
+        <div class="likert-row">
+          {% for n, lbl in likert_choices %}
+          <label class="likert-opt">
+            <input type="radio" name="{{ key }}" value="{{ n }}" {% if values.get(key)==n %}checked{% endif %}
+              required />
+            <span class="num">{{ n }}</span>
+            <span class="lbl">{{ lbl }}</span>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+
+      <h3 class="subhead">F3 — Social &amp; Collaborative Readiness</h3>
+      {% for key in ["F3a","F3b","F3c","F3d"] %}
+      <div class="question likert">
+        <p class="q-label"><strong>{{ key }}.</strong>
+          {% if key == "F3a" %}I can imagine working alongside AI tools as a regular part of my future career
+          {% elif key == "F3b" %}I am comfortable discussing how AI was used in a group project with peers
+          {% elif key == "F3c" %}I think teams that include AI tools can outperform teams that don't
+          {% elif key == "F3d" %}I would be comfortable telling a lecturer how I used AI in completing a task
+          {% endif %}
+        </p>
+        <div class="likert-row">
+          {% for n, lbl in likert_choices %}
+          <label class="likert-opt">
+            <input type="radio" name="{{ key }}" value="{{ n }}" {% if values.get(key)==n %}checked{% endif %}
+              required />
+            <span class="num">{{ n }}</span>
+            <span class="lbl">{{ lbl }}</span>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+
+      <h3 class="subhead">F4 — Metacognitive Readiness</h3>
+      {% for key in ["F4a","F4b","F4c","F4d"] %}
+      <div class="question likert">
+        <p class="q-label"><strong>{{ key }}.</strong>
+          {% if key == "F4a" %}I reflect on whether I am over-relying on AI when completing tasks
+          {% elif key == "F4b" %}I notice when using AI helps my thinking vs. when it shortcuts it
+          {% elif key == "F4c" %}I can monitor whether my own learning is improving or declining when using AI
+          {% elif key == "F4d" %}I set my own limits on when and how I use AI tools
+          {% endif %}
+        </p>
+        <div class="likert-row">
+          {% for n, lbl in likert_choices %}
+          <label class="likert-opt">
+            <input type="radio" name="{{ key }}" value="{{ n }}" {% if values.get(key)==n %}checked{% endif %}
+              required />
+            <span class="num">{{ n }}</span>
+            <span class="lbl">{{ lbl }}</span>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+    </fieldset>
+
+    <!-- ── SECTION G — Entrepreneurial AI Application ────────────────────── -->
+    <fieldset class="section wizard-section" data-step-section="6">
+      <legend>Section G · {{ section_titles["G"] }}</legend>
+      <p class="muted">If you identify yourself as an entrepreneur or aspire to be one, please answer the following
+        questions. Your responses will assess your willingness to use AI in your entrepreneurship.</p>
+
+      <h3 class="subhead">G1 — Ideation &amp; Opportunity Discovery</h3>
+      {% for key in ["G1a","G1b","G1c"] %}
+      <div class="question likert">
+        <p class="q-label"><strong>{{ key }}.</strong>
+          {% if key == "G1a" %}I know how to use AI tools to generate or refine business ideas
+          {% elif key == "G1b" %}I can use AI to identify gaps or opportunities in a market
+          {% elif key == "G1c" %}I am confident using AI to stress-test or critique my own business idea
+          {% endif %}
+        </p>
+        <div class="likert-row">
+          {% for n, lbl in likert_choices %}
+          <label class="likert-opt">
+            <input type="radio" name="{{ key }}" value="{{ n }}" {% if values.get(key)==n %}checked{% endif %}
+              required />
+            <span class="num">{{ n }}</span>
+            <span class="lbl">{{ lbl }}</span>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+
+      <h3 class="subhead">G2 — Market &amp; Customer Research</h3>
+      {% for key in ["G2a","G2b","G2c"] %}
+      <div class="question likert">
+        <p class="q-label"><strong>{{ key }}.</strong>
+          {% if key == "G2a" %}I know how to use AI tools to research a target market or industry
+          {% elif key == "G2b" %}I can use AI to analyse competitors and their positioning
+          {% elif key == "G2c" %}I understand the limitations of AI-generated market research and know when to verify it
+          independently
+          {% endif %}
+        </p>
+        <div class="likert-row">
+          {% for n, lbl in likert_choices %}
+          <label class="likert-opt">
+            <input type="radio" name="{{ key }}" value="{{ n }}" {% if values.get(key)==n %}checked{% endif %}
+              required />
+            <span class="num">{{ n }}</span>
+            <span class="lbl">{{ lbl }}</span>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+
+      <h3 class="subhead">G3 — Building &amp; Validating (MVP / Product)</h3>
+      {% for key in ["G3a","G3b","G3c"] %}
+      <div class="question likert">
+        <p class="q-label"><strong>{{ key }}.</strong>
+          {% if key == "G3a" %}I know how AI tools can help me build or prototype a product (e.g. no-code AI,
+          AI-assisted coding)
+          {% elif key == "G3b" %}I can use AI to help design or refine a minimum viable product (MVP)
+          {% elif key == "G3c" %}I am confident identifying which parts of product development AI can meaningfully
+          accelerate
+          {% endif %}
+        </p>
+        <div class="likert-row">
+          {% for n, lbl in likert_choices %}
+          <label class="likert-opt">
+            <input type="radio" name="{{ key }}" value="{{ n }}" {% if values.get(key)==n %}checked{% endif %}
+              required />
+            <span class="num">{{ n }}</span>
+            <span class="lbl">{{ lbl }}</span>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+
+      <h3 class="subhead">G4 — Go-to-Market, Pitching &amp; Fundraising</h3>
+      {% for key in ["G4a","G4b","G4c","G4d"] %}
+      <div class="question likert">
+        <p class="q-label"><strong>{{ key }}.</strong>
+          {% if key == "G4a" %}I know how to use AI tools to help draft a pitch deck or business plan
+          {% elif key == "G4b" %}I can use AI to prepare for investor questions or due diligence
+          {% elif key == "G4c" %}I am comfortable explaining to an investor exactly how and where I used AI in my
+          venture
+          {% elif key == "G4d" %}I know how to use AI tools to support marketing, sales, or customer acquisition
+          {% endif %}
+        </p>
+        <div class="likert-row">
+          {% for n, lbl in likert_choices %}
+          <label class="likert-opt">
+            <input type="radio" name="{{ key }}" value="{{ n }}" {% if values.get(key)==n %}checked{% endif %}
+              required />
+            <span class="num">{{ n }}</span>
+            <span class="lbl">{{ lbl }}</span>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+    </fieldset>
+
+    <!-- ── SECTION H — Future Expectations ───────────────────────────────── -->
+    <fieldset class="section wizard-section" data-step-section="7">
+      <legend>Section H · {{ section_titles["H"] }}</legend>
+      <p class="muted">Help us understand what you want from your university.</p>
+
+      <div class="question">
+        <p class="q-label"><strong>H1.</strong> How important is it to you that your university prepares you to work
+          with AI?</p>
+        <div class="likert-row">
+          {% for n, lbl in likert_choices %}
+          <label class="likert-opt">
+            <input type="radio" name="H1" value="{{ n }}" {% if values.get("H1")==n %}checked{% endif %} required />
+            <span class="num">{{ n }}</span>
+            <span class="lbl">
+              {% if n == 1 %}Not important
+              {% elif n == 5 %}Extremely important
+              {% else %}{{ lbl }}{% endif %}
+            </span>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="question">
+        <p class="q-label"><strong>H2.</strong> Which of the following would you find most useful? (Select up to 3)</p>
+        <div class="check-grid">
+          {% set h2_chosen = values.get("H2") or [] %}
+          {% for o in pre_future[1][3] %}
+          <label class="check-opt">
+            <input type="checkbox" name="H2" value="{{ o }}" {% if o in h2_chosen %}checked{% endif %} />
+            <span>{{ o }}</span>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="question">
+        <p class="q-label"><strong>H3.</strong> How confident are you that your school prepared you for AI at
+          university?</p>
+        <div class="likert-row">
+          {% for n, lbl in likert_choices %}
+          <label class="likert-opt">
+            <input type="radio" name="H3" value="{{ n }}" {% if values.get("H3")==n %}checked{% endif %} required />
+            <span class="num">{{ n }}</span>
+            <span class="lbl">
+              {% if n == 1 %}Not confident
+              {% elif n == 5 %}Very confident
+              {% else %}{{ lbl }}{% endif %}
+            </span>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="question">
+        <p class="q-label"><strong>H4.</strong> Should AI literacy be a compulsory part of every university degree?</p>
+        <select name="H4" required>
+          <option value="">-- Select --</option>
+          {% for o in ["Yes","No","Unsure"] %}
+          <option value="{{ o }}" {% if values.get("H4")==o %}selected{% endif %}>{{ o }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="question">
+        <p class="q-label"><strong>H5.</strong> What is the one thing you most want to understand about AI before
+          finishing your first year? (max 150 words)</p>
+        <textarea name="H5" rows="3" maxlength="2000">{{ values.get("H5", "") }}</textarea>
+      </div>
+
+      <div class="question">
+        <p class="q-label"><strong>H6.</strong> What human skills would you think is the most important to retain in the
+          age of AI</p>
+        <textarea name="H6" rows="3" maxlength="2000">{{ values.get("H6", "") }}</textarea>
+      </div>
+    </fieldset>
+
+    <!-- ── NAV BUTTONS ── -->
+    <div class="wizard-buttons">
+      <button type="button" class="btn" id="prev-btn" style="display: none;">← Back</button>
+      <button type="button" class="btn primary" id="next-btn">Next Step →</button>
+      <button type="submit" class="btn accent" id="submit-btn" style="display: none;">Submit Survey ✓</button>
+    </div>
+  </form>
+</section>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    let currentStep = 0;
+    const totalSteps = 8;
+
+    const form = document.getElementById('survey-form');
+    const steps = document.querySelectorAll('.wizard-step');
+    const sections = document.querySelectorAll('.wizard-section');
+    const prevBtn = document.getElementById('prev-btn');
+    const nextBtn = document.getElementById('next-btn');
+    const submitBtn = document.getElementById('submit-btn');
+    const progressBar = document.getElementById('wizard-progress-bar');
+
+    // Checkbox limit logic for H2
+    const h2Cbs = document.querySelectorAll('input[name="H2"]');
+    function updateH2CheckboxesState() {
+      const checked = Array.from(h2Cbs).filter(c => c.checked);
+      if (checked.length >= 3) {
+        h2Cbs.forEach(c => {
+          if (!c.checked) {
+            c.disabled = true;
+            c.closest('.check-opt').classList.add('disabled');
+          }
+        });
+      } else {
+        h2Cbs.forEach(c => {
+          c.disabled = false;
+          c.closest('.check-opt').classList.remove('disabled');
+        });
+      }
+    }
+
+    h2Cbs.forEach(cb => {
+      cb.addEventListener('change', updateH2CheckboxesState);
+    });
+    // Init state in case there are loaded values
+    updateH2CheckboxesState();
+
+    // --- LocalStorage Auto-save Progress ("Where he left off") ---
+    const storageKey = 'hacri_pre_draft';
+
+    function saveDraft() {
+      const data = {
+        step: currentStep,
+        fields: {}
+      };
+
+      const formElements = form.querySelectorAll('input, select, textarea');
+      formElements.forEach(el => {
+        if (!el.name || el.name === 'csrf') return;
+
+        if (el.type === 'radio') {
+          if (el.checked) {
+            data.fields[el.name] = el.value;
+          }
+        } else if (el.type === 'checkbox') {
+          if (!data.fields[el.name]) {
+            data.fields[el.name] = [];
+          }
+          if (el.checked) {
+            data.fields[el.name].push(el.value);
+          }
+        } else {
+          data.fields[el.name] = el.value;
+        }
+      });
+
+      localStorage.setItem(storageKey, JSON.stringify(data));
+    }
+
+    function restoreDraft() {
+      const saved = localStorage.getItem(storageKey);
+      if (!saved) return false;
+
+      try {
+        const data = JSON.parse(saved);
+        if (!data || !data.fields) return false;
+
+        const formElements = form.querySelectorAll('input, select, textarea');
+        formElements.forEach(el => {
+          if (!el.name || el.name === 'csrf') return;
+
+          const val = data.fields[el.name];
+          if (val === undefined) return;
+
+          if (el.type === 'radio') {
+            if (el.value == val) {
+              el.checked = true;
+            }
+          } else if (el.type === 'checkbox') {
+            if (Array.isArray(val) && val.includes(el.value)) {
+              el.checked = true;
+            }
+          } else {
+            el.value = val;
+          }
+        });
+
+        updateH2CheckboxesState();
+
+        if (data.step !== undefined && data.step >= 0 && data.step < totalSteps) {
+          currentStep = data.step;
+        }
+        return true;
+      } catch (e) {
+        console.error('Error restoring draft:', e);
+        return false;
+      }
+    }
+
+    // Bind save events
+    form.addEventListener('input', saveDraft);
+    form.addEventListener('change', saveDraft);
+
+    function showStep(stepIndex) {
+      currentStep = stepIndex;
+
+      // Update steps tracker
+      steps.forEach((step, idx) => {
+        step.classList.remove('active', 'completed');
+        if (idx === currentStep) {
+          step.classList.add('active');
+        } else if (idx < currentStep) {
+          step.classList.add('completed');
+        }
+      });
+
+      // Update progress bar width
+      const progressPercent = (currentStep / (totalSteps - 1)) * 100;
+      progressBar.style.width = `${progressPercent}%`;
+
+      // Toggle sections visibility
+      sections.forEach((section, idx) => {
+        section.classList.remove('active');
+        if (idx === currentStep) {
+          section.classList.add('active');
+        }
+      });
+
+      // Navigation buttons toggle
+      if (currentStep === 0) {
+        prevBtn.style.display = 'none';
+      } else {
+        prevBtn.style.display = 'inline-flex';
+      }
+
+      if (currentStep === totalSteps - 1) {
+        nextBtn.style.display = 'none';
+        submitBtn.style.display = 'inline-flex';
+      } else {
+        nextBtn.style.display = 'inline-flex';
+        submitBtn.style.display = 'none';
+      }
+
+      // Scroll smoothly to start of survey card
+      document.querySelector('.card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      saveDraft();
+    }
+
+    function validateCurrentSection() {
+      if (window._TEST_MODE) return true;
+      const section = document.querySelector(`.wizard-section[data-step-section="${currentStep}"]`);
+      if (!section) return true;
+
+      // Clear previous validation indicators
+      section.querySelectorAll('.question.error-pulse').forEach(q => q.classList.remove('error-pulse'));
+
+      const inputs = section.querySelectorAll('input[required], select[required], textarea[required]');
+      let isValid = true;
+      const radioGroups = {};
+      let firstInvalidElement = null;
+
+      inputs.forEach(input => {
+        if (input.type === 'radio') {
+          if (!radioGroups[input.name]) {
+            radioGroups[input.name] = [];
+          }
+          radioGroups[input.name].push(input);
+        } else {
+          if (!input.checkValidity()) {
+            isValid = false;
+            if (!firstInvalidElement) firstInvalidElement = input;
+            const questionCard = input.closest('.question');
+            if (questionCard) {
+              questionCard.classList.add('error-pulse');
+            }
+          }
+        }
+      });
+
+      // Radio groups validation
+      for (const name in radioGroups) {
+        const group = radioGroups[name];
+        const isAnyChecked = group.some(r => r.checked);
+        if (!isAnyChecked) {
+          isValid = false;
+          if (!firstInvalidElement) firstInvalidElement = group[0];
+          const questionCard = group[0].closest('.question');
+          if (questionCard) {
+            questionCard.classList.add('error-pulse');
+          }
+        }
+      }
+
+      // Checkbox group validation (mandatory min 1 check)
+      const cbGroups = {};
+      section.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+        if (!cbGroups[cb.name]) {
+          cbGroups[cb.name] = [];
+        }
+        cbGroups[cb.name].push(cb);
+      });
+
+      for (const name in cbGroups) {
+        const group = cbGroups[name];
+        const checkedCount = group.filter(cb => cb.checked).length;
+        if (checkedCount === 0) {
+          isValid = false;
+          if (!firstInvalidElement) firstInvalidElement = group[0];
+          const questionCard = group[0].closest('.question');
+          if (questionCard) {
+            questionCard.classList.add('error-pulse');
+          }
+          if (name === 'H2') {
+            alert("Please select at least 1 and up to 3 options in question H2.");
+          } else {
+            alert(`Please select at least 1 option in question ${name}.`);
+          }
+          return false;
+        } else if (name === 'H2' && checkedCount > 3) {
+          isValid = false;
+          if (!firstInvalidElement) firstInvalidElement = group[0];
+          const questionCard = group[0].closest('.question');
+          if (questionCard) {
+            questionCard.classList.add('error-pulse');
+          }
+          alert("Please select at most 3 options in question H2.");
+          return false;
+        }
+      }
+
+      if (!isValid && firstInvalidElement) {
+        // Native reporting or scroll focus
+        firstInvalidElement.focus({ preventScroll: true });
+        const questionCard = firstInvalidElement.closest('.question');
+        if (questionCard) {
+          questionCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } else {
+          firstInvalidElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        // Use native bubble validation trigger if available
+        if (firstInvalidElement.type !== 'radio') {
+          firstInvalidElement.reportValidity();
+        } else {
+          // Custom brief validation warning for radios
+          firstInvalidElement.setCustomValidity('Please select one of the agreement options.');
+          firstInvalidElement.reportValidity();
+          firstInvalidElement.setCustomValidity('');
+        }
+      }
+
+      return isValid;
+    }
+
+    nextBtn.addEventListener('click', () => {
+      if (validateCurrentSection()) {
+        if (currentStep < totalSteps - 1) {
+          showStep(currentStep + 1);
+        }
+      }
+    });
+
+    prevBtn.addEventListener('click', () => {
+      if (currentStep > 0) {
+        showStep(currentStep - 1);
+      }
+    });
+
+    // Jump validation for steps clicked directly in progress bar
+    steps.forEach((step, idx) => {
+      step.addEventListener('click', () => {
+        if (idx < currentStep) {
+          showStep(idx);
+        } else if (idx > currentStep) {
+          // Validate intermediate sections
+          let target = currentStep;
+          while (target < idx) {
+            if (!validateCurrentSection()) {
+              break;
+            }
+            target++;
+          }
+          showStep(target);
+        }
+      });
+    });
+
+    // Final submit validation
+    form.addEventListener('submit', (e) => {
+      if (!validateCurrentSection()) {
+        e.preventDefault();
+      } else {
+        localStorage.removeItem(storageKey);
+      }
+    });
+
+    // Restore draft if exists, else start at step 0
+    restoreDraft();
+    showStep(currentStep);
+  });
+
+  function autoFillSurvey() {
+    // 1. Radio groups
+    const radios = document.querySelectorAll('input[type="radio"]');
+    const radioGroups = {};
+    radios.forEach(r => {
+      if (!radioGroups[r.name]) {
+        radioGroups[r.name] = [];
+      }
+      radioGroups[r.name].push(r);
+    });
+    for (const name in radioGroups) {
+      const group = radioGroups[name];
+      if (group.length >= 3) {
+        group[2].checked = true; // Middle/Agree option
+      } else if (group.length > 0) {
+        group[0].checked = true;
+      }
+    }
+
+    // 2. Select dropdowns
+    document.querySelectorAll('select').forEach(sel => {
+      if (sel.options.length > 1) {
+        sel.selectedIndex = 1;
+      }
+    });
+
+    // 3. Checkboxes
+    const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+    const cbGroups = {};
+    checkboxes.forEach(cb => {
+      if (!cbGroups[cb.name]) {
+        cbGroups[cb.name] = [];
+      }
+      cbGroups[cb.name].push(cb);
+    });
+    for (const name in cbGroups) {
+      const group = cbGroups[name];
+      if (group.length > 0) {
+        group[0].checked = true;
+      }
+    }
+
+    // 4. Textareas
+    document.querySelectorAll('textarea').forEach(ta => {
+      ta.value = "Test response auto-filled by test mode bypass.";
+    });
+
+    // Save draft and notify
+    if (window.saveDraft) {
+      window.saveDraft();
+    } else {
+      // Find fallback saveDraft in scope if needed
+      const form = document.getElementById('survey-form');
+      if (form) {
+        const data = {};
+        new FormData(form).forEach((val, key) => {
+          if (key === 'csrf') return;
+          if (key.endsWith('[]') || ['C1', 'C3', 'H2'].includes(key)) {
+            if (!data[key]) data[key] = [];
+            data[key].push(val);
+          } else {
+            data[key] = val;
+          }
+        });
+        localStorage.setItem('hacri_pre_survey_draft', JSON.stringify(data));
+      }
+    }
+    // Refresh page or trigger input events to update UI
+    document.querySelectorAll('input, select, textarea').forEach(el => {
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    alert("Survey auto-filled! You can now navigate through and submit.");
+  }
+</script>
+{% endblock %}

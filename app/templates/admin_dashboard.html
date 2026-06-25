@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Admin Dashboard — HACRI-E</title>
+<style>
+:root{
+  --navy:#0d2147;--navy2:#1a3a7a;--gold:#e6b324;--gold2:#f5d76e;
+  --bg:#f0f2f5;--card:#fff;--border:#e5e7eb;
+  --text:#1e293b;--muted:#64748b;--red:#dc2626;--green:#16a34a;
+  --teal:#0d9488;--ok:#16a34a;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+
+/* ── Topbar ── */
+.topbar{background:var(--navy);color:#fff;padding:0 20px;display:flex;align-items:stretch;gap:0;min-height:52px}
+.topbar-brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:15px;padding-right:20px;border-right:1px solid rgba(255,255,255,.15)}
+.topbar-brand span{color:var(--gold)}
+.topbar-tabs{flex:1;display:flex;gap:2px;padding:0 12px;overflow-x:auto;scrollbar-width:none}
+.topbar-tabs::-webkit-scrollbar{display:none}
+.ttab{padding:0 16px;font-size:12px;font-weight:600;cursor:pointer;color:rgba(255,255,255,.5);border:none;background:transparent;font-family:inherit;white-space:nowrap;border-bottom:2px solid transparent;transition:all .14s;height:52px}
+.ttab:hover{color:rgba(255,255,255,.85)}
+.ttab.on{color:var(--gold2);border-bottom-color:var(--gold)}
+.topbar-end{display:flex;align-items:center;gap:12px;padding-left:16px;border-left:1px solid rgba(255,255,255,.15)}
+.btn-sm{padding:6px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;border:none;font-family:inherit}
+.btn-red{background:#dc2626;color:#fff}
+.btn-navy{background:var(--navy2);color:#fff;border:1px solid rgba(255,255,255,.2)}
+.btn-green{background:var(--green);color:#fff}
+
+/* ── Content ── */
+.content{padding:24px;max-width:1200px;margin:0 auto}
+.panel{display:none}.panel.on{display:block;animation:up .2s ease}
+@keyframes up{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── Cards / layout ── */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
+@media(max-width:640px){.grid-2{grid-template-columns:1fr}}
+.card{background:var(--card);border-radius:12px;padding:20px;border:1px solid var(--border)}
+.card-title{font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.stat-big{font-size:36px;font-weight:800;color:var(--navy)}
+.stat-sub{font-size:12px;color:var(--muted);margin-top:2px}
+
+/* ── Toggle switch ── */
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border)}
+.toggle-row:last-child{border-bottom:none}
+.toggle-label{font-size:14px;font-weight:600;color:var(--text)}
+.toggle-desc{font-size:12px;color:var(--muted);margin-top:2px}
+.toggle-switch{position:relative;display:inline-block;width:48px;height:26px}
+.toggle-switch input{opacity:0;width:0;height:0}
+.slider-sw{position:absolute;cursor:pointer;inset:0;background:#d1d5db;border-radius:26px;transition:.25s}
+.slider-sw:before{content:'';position:absolute;width:20px;height:20px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.25s;box-shadow:0 1px 4px rgba(0,0,0,.2)}
+input:checked+.slider-sw{background:var(--green)}
+input:checked+.slider-sw:before{transform:translateX(22px)}
+
+/* ── Tables ── */
+.mtable{width:100%;border-collapse:collapse;font-size:12px;margin-top:12px}
+.mtable th{padding:8px 10px;text-align:left;font-weight:700;color:var(--muted);font-size:10px;letter-spacing:.5px;text-transform:uppercase;border-bottom:2px solid var(--border);white-space:nowrap}
+.mtable td{padding:9px 10px;border-bottom:1px solid var(--border);vertical-align:middle}
+.mtable tr:hover td{background:rgba(13,33,71,.02)}
+.mtable tr:last-child td{border-bottom:none}
+.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px}
+.badge-green{background:#dcfce7;color:#15803d}
+.badge-blue{background:#dbeafe;color:#1d4ed8}
+.badge-orange{background:#ffedd5;color:#c2410c}
+.badge-gray{background:#f1f5f9;color:#475569}
+.badge-red{background:#fee2e2;color:#b91c1c}
+
+/* ── Alert section ── */
+.alert-box{background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:16px;margin-bottom:16px}
+.alert-box h3{font-size:14px;font-weight:700;color:#92400e;margin-bottom:6px}
+.alert-box p{font-size:13px;color:#78350f;line-height:1.5}
+
+/* ── Section header ── */
+.sec-hdr{display:flex;align-items:center;gap:10px;margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid var(--border)}
+.sec-icon{font-size:20px}
+.sec-title{font-size:17px;font-weight:700;color:var(--text);letter-spacing:-.3px}
+.sec-count{font-size:11px;color:var(--muted);background:var(--bg);border:1px solid var(--border);border-radius:20px;padding:3px 12px;margin-left:auto}
+
+/* ── Search ── */
+.search-bar{position:relative;max-width:340px;margin-bottom:14px}
+.search-bar input{width:100%;padding:8px 12px 8px 34px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;outline:none}
+.search-bar input:focus{border-color:var(--navy)}
+.search-bar svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted)}
+
+/* ── Progress bar ── */
+.pbar-wrap{background:#e5e7eb;border-radius:4px;height:6px;overflow:hidden;margin-top:4px}
+.pbar-fill{height:100%;background:var(--navy);border-radius:4px;transition:width .5s}
+</style>
+</head>
+<body>
+
+<!-- Topbar -->
+<div class="topbar">
+  <div class="topbar-brand">
+    <span>OoA</span> Admin
+  </div>
+  <div class="topbar-tabs">
+    <button class="ttab on" onclick="showPanel('p-overview',this)">📊 Overview</button>
+    <button class="ttab" onclick="showPanel('p-settings',this)">⚙️ Settings</button>
+    <button class="ttab" onclick="showPanel('p-survey',this)">🧪 AI Survey</button>
+    <button class="ttab" onclick="showPanel('p-orientation',this)">🎓 Orientation</button>
+    <button class="ttab" onclick="showPanel('p-alerts',this)">🔔 Alerts</button>
+  </div>
+  <div class="topbar-end">
+    <a href="/admin/logout" class="btn-sm btn-red">Sign out</a>
+  </div>
+</div>
+
+<div class="content">
+
+<!-- ── OVERVIEW ─────────────────────────────────────────────────────── -->
+<div class="panel on" id="p-overview">
+  <div class="sec-hdr">
+    <span class="sec-icon">📊</span>
+    <span class="sec-title">Overview</span>
+    <span class="sec-count" id="ov-last-updated">Loading…</span>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">Total Registered</div>
+      <div class="stat-big" id="ov-total">—</div>
+      <div class="stat-sub">students who started the survey</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Pre Survey Done</div>
+      <div class="stat-big" id="ov-pre">—</div>
+      <div class="stat-sub">completed baseline assessment</div>
+      <div class="pbar-wrap" style="margin-top:10px"><div class="pbar-fill" id="ov-pre-bar" style="width:0%"></div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Post Survey Done</div>
+      <div class="stat-big" id="ov-post">—</div>
+      <div class="stat-sub">completed both surveys</div>
+      <div class="pbar-wrap" style="margin-top:10px"><div class="pbar-fill" id="ov-post-bar" style="width:0%;background:var(--green)"></div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Orientation Done</div>
+      <div class="stat-big" id="ov-ori">—</div>
+      <div class="stat-sub">submitted Deeksharambh survey</div>
+      <div class="pbar-wrap" style="margin-top:10px"><div class="pbar-fill" id="ov-ori-bar" style="width:0%;background:var(--teal)"></div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Feature Status</div>
+    <div id="ov-flags" style="margin-top:10px;font-size:13px;color:var(--muted)">Loading…</div>
+  </div>
+</div>
+
+<!-- ── SETTINGS ──────────────────────────────────────────────────────── -->
+<div class="panel" id="p-settings">
+  <div class="sec-hdr">
+    <span class="sec-icon">⚙️</span>
+    <span class="sec-title">Feature Toggles</span>
+  </div>
+
+  <div class="card" style="max-width:560px">
+    <div class="toggle-row">
+      <div>
+        <div class="toggle-label">🧪 AI Survey (HACRI-E)</div>
+        <div class="toggle-desc">Allow students to register and complete the pre/post AI literacy survey</div>
+      </div>
+      <label class="toggle-switch">
+        <input type="checkbox" id="tog-survey" onchange="toggleFlag('survey_enabled', this.checked)" />
+        <span class="slider-sw"></span>
+      </label>
+    </div>
+    <div class="toggle-row">
+      <div>
+        <div class="toggle-label">🎓 Orientation (Deeksharambh 2026)</div>
+        <div class="toggle-desc">Enable the Deeksharambh survey link (shown between pre and post survey)</div>
+      </div>
+      <label class="toggle-switch">
+        <input type="checkbox" id="tog-orientation" onchange="toggleFlag('orientation_enabled', this.checked)" />
+        <span class="slider-sw"></span>
+      </label>
+    </div>
+  </div>
+
+  <p style="font-size:12px;color:var(--muted);margin-top:12px">
+    ⚠️ Disabling AI Survey will block access to <code>/survey/pre</code> and show a locked page.
+    Students who already have a session will still be directed based on their existing status.
+    Disabling Orientation hides the <code>/orientation</code> route.
+  </p>
+</div>
+
+<!-- ── AI SURVEY ─────────────────────────────────────────────────────── -->
+<div class="panel" id="p-survey">
+  <div class="sec-hdr">
+    <span class="sec-icon">🧪</span>
+    <span class="sec-title">AI Survey Responses</span>
+    <span class="sec-count" id="survey-count">…</span>
+  </div>
+
+  <div class="search-bar">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+    <input type="text" id="survey-search" placeholder="Search by name, email, program…" oninput="filterSurveyTable()" />
+  </div>
+
+  <div class="card" style="padding:0;overflow:hidden">
+    <table class="mtable" id="survey-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Programme</th>
+          <th>Status</th>
+          <th>Orientation</th>
+          <th>Pre Submitted</th>
+          <th>Post Submitted</th>
+        </tr>
+      </thead>
+      <tbody id="survey-tbody">
+        <tr><td colspan="8" style="text-align:center;color:var(--muted);padding:20px">Loading…</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ── ORIENTATION ───────────────────────────────────────────────────── -->
+<div class="panel" id="p-orientation">
+  <div class="sec-hdr">
+    <span class="sec-icon">🎓</span>
+    <span class="sec-title">Orientation Responses (Deeksharambh 2026)</span>
+    <span class="sec-count" id="ori-count">…</span>
+  </div>
+
+  <div class="search-bar">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+    <input type="text" id="ori-search" placeholder="Search by name or email…" oninput="filterOriTable()" />
+  </div>
+
+  <div class="card" style="padding:0;overflow:hidden">
+    <table class="mtable" id="ori-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Submitted At</th>
+        </tr>
+      </thead>
+      <tbody id="ori-tbody">
+        <tr><td colspan="4" style="text-align:center;color:var(--muted);padding:20px">Loading…</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ── ALERTS ────────────────────────────────────────────────────────── -->
+<div class="panel" id="p-alerts">
+  <div class="sec-hdr">
+    <span class="sec-icon">🔔</span>
+    <span class="sec-title">Manual Alerts</span>
+  </div>
+
+  <div class="alert-box" id="alert-preview">
+    <h3>Post-Survey Reminder</h3>
+    <p>Send a reminder email to all students who have completed the <strong>Baseline Assessment</strong> but have not yet submitted the <strong>Post-Workshop Survey</strong>.</p>
+    <p style="margin-top:8px;font-size:12px">Pending count: <strong id="pending-count">—</strong> students</p>
+  </div>
+
+  <div id="alert-result" style="display:none;margin-bottom:16px"></div>
+
+  <button class="btn-sm btn-green" style="padding:10px 20px;font-size:13px;border-radius:8px"
+          onclick="sendPostAlert()">
+    📧 Send Reminder to Pending Students
+  </button>
+
+  <p style="font-size:12px;color:var(--muted);margin-top:12px">
+    Emails are sent to each student's registered email address. 
+    Only students with <strong>pre_done</strong> status (pre completed, post not yet submitted) will receive this alert.
+    <br><br>
+    <strong>Note:</strong> Ensure SMTP is configured in <code>.env</code> (set <code>EMAIL_DRY_RUN=false</code>) for emails to actually send.
+  </p>
+</div>
+
+</div><!-- /content -->
+
+<script>
+// ── State ────────────────────────────────────────────────────────────────────
+let surveyUsers = [];
+let oriResponses = [];
+
+// ── Panel navigation ─────────────────────────────────────────────────────────
+function showPanel(id, btn) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('on'));
+  document.querySelectorAll('.ttab').forEach(t => t.classList.remove('on'));
+  document.getElementById(id).classList.add('on');
+  if (btn) btn.classList.add('on');
+
+  // Lazy load data
+  if (id === 'p-survey' && surveyUsers.length === 0) loadSurveyUsers();
+  if (id === 'p-orientation' && oriResponses.length === 0) loadOriResponses();
+  if (id === 'p-alerts') loadPendingCount();
+}
+
+// ── Feature flags ─────────────────────────────────────────────────────────────
+async function loadFlags() {
+  try {
+    const r = await fetch('/admin/api/flags');
+    const data = await r.json();
+    document.getElementById('tog-survey').checked = !!data.survey_enabled;
+    document.getElementById('tog-orientation').checked = !!data.orientation_enabled;
+    // Overview flags status
+    const survStatus = data.survey_enabled ? '🟢 AI Survey: <b>Open</b>' : '🔴 AI Survey: <b>Closed</b>';
+    const oriStatus  = data.orientation_enabled ? '🟢 Orientation: <b>Open</b>' : '🔴 Orientation: <b>Closed</b>';
+    document.getElementById('ov-flags').innerHTML = survStatus + ' &nbsp;|&nbsp; ' + oriStatus;
+  } catch(e) {
+    console.error(e);
+  }
+}
+
+async function toggleFlag(key, val) {
+  try {
+    const r = await fetch('/admin/api/flags', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({[key]: val})
+    });
+    const data = await r.json();
+    if (!data.ok) throw new Error('Failed');
+    loadFlags(); // refresh
+  } catch(e) {
+    alert('Failed to update flag: ' + e.message);
+  }
+}
+
+// ── Survey users ──────────────────────────────────────────────────────────────
+async function loadSurveyUsers() {
+  try {
+    const r = await fetch('/admin/api/survey/users');
+    surveyUsers = await r.json();
+    document.getElementById('survey-count').textContent = surveyUsers.length + ' users';
+    renderSurveyTable(surveyUsers);
+    updateOverview();
+  } catch(e) {
+    document.getElementById('survey-tbody').innerHTML = '<tr><td colspan="8" style="color:red;text-align:center;padding:16px">Error loading data</td></tr>';
+  }
+}
+
+const STATUS_BADGE = {
+  pre_done:    '<span class="badge badge-blue">Pre Done</span>',
+  post_done:   '<span class="badge badge-green">Both Done ✓</span>',
+  not_started: '<span class="badge badge-gray">Not Started</span>',
+};
+
+function renderSurveyTable(data) {
+  const tbody = document.getElementById('survey-tbody');
+  if (!data.length) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:20px">No users yet</td></tr>';
+    return;
+  }
+  tbody.innerHTML = data.map((u, i) => `
+    <tr>
+      <td style="color:var(--muted)">${i+1}</td>
+      <td style="font-weight:600">${esc(u.name)}</td>
+      <td style="color:var(--muted);font-size:11px">${esc(u.email)}</td>
+      <td>${esc(u.program || '—')}</td>
+      <td>${STATUS_BADGE[u.status] || '<span class="badge badge-gray">'+esc(u.status)+'</span>'}</td>
+      <td>${u.orientation_submitted ? '<span class="badge badge-green">✓</span>' : '<span class="badge badge-gray">—</span>'}</td>
+      <td style="font-size:11px;color:var(--muted)">${esc(u.pre_at || '—')}</td>
+      <td style="font-size:11px;color:var(--muted)">${esc(u.post_at || '—')}</td>
+    </tr>
+  `).join('');
+}
+
+function filterSurveyTable() {
+  const q = document.getElementById('survey-search').value.toLowerCase();
+  const filtered = surveyUsers.filter(u =>
+    (u.name||'').toLowerCase().includes(q) ||
+    (u.email||'').toLowerCase().includes(q) ||
+    (u.program||'').toLowerCase().includes(q)
+  );
+  renderSurveyTable(filtered);
+}
+
+// ── Orientation responses ─────────────────────────────────────────────────────
+async function loadOriResponses() {
+  try {
+    const r = await fetch('/admin/api/orientation/responses');
+    oriResponses = await r.json();
+    document.getElementById('ori-count').textContent = oriResponses.length + ' responses';
+    renderOriTable(oriResponses);
+  } catch(e) {
+    document.getElementById('ori-tbody').innerHTML = '<tr><td colspan="4" style="color:red;text-align:center;padding:16px">Error loading data</td></tr>';
+  }
+}
+
+function renderOriTable(data) {
+  const tbody = document.getElementById('ori-tbody');
+  if (!data.length) {
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:20px">No orientation submissions yet</td></tr>';
+    return;
+  }
+  tbody.innerHTML = data.map((d, i) => `
+    <tr>
+      <td style="color:var(--muted)">${i+1}</td>
+      <td style="font-weight:600">${esc(d.name)}</td>
+      <td style="color:var(--muted);font-size:11px">${esc(d.email)}</td>
+      <td style="font-size:11px;color:var(--muted)">${esc(d.submitted_at || '—')}</td>
+    </tr>
+  `).join('');
+}
+
+function filterOriTable() {
+  const q = document.getElementById('ori-search').value.toLowerCase();
+  const filtered = oriResponses.filter(d =>
+    (d.name||'').toLowerCase().includes(q) ||
+    (d.email||'').toLowerCase().includes(q)
+  );
+  renderOriTable(filtered);
+}
+
+// ── Overview ──────────────────────────────────────────────────────────────────
+function updateOverview() {
+  const total = surveyUsers.length;
+  const pre   = surveyUsers.filter(u => u.status === 'pre_done' || u.status === 'post_done').length;
+  const post  = surveyUsers.filter(u => u.status === 'post_done').length;
+  const ori   = surveyUsers.filter(u => u.orientation_submitted).length;
+
+  document.getElementById('ov-total').textContent = total;
+  document.getElementById('ov-pre').textContent   = pre;
+  document.getElementById('ov-post').textContent  = post;
+  document.getElementById('ov-ori').textContent   = ori;
+
+  const pct = (n, d) => d ? Math.round(n/d*100) : 0;
+  document.getElementById('ov-pre-bar').style.width  = pct(pre, total) + '%';
+  document.getElementById('ov-post-bar').style.width = pct(post, total) + '%';
+  document.getElementById('ov-ori-bar').style.width  = pct(ori, total) + '%';
+  document.getElementById('ov-last-updated').textContent = 'Updated ' + new Date().toLocaleTimeString();
+}
+
+// ── Alerts ────────────────────────────────────────────────────────────────────
+async function loadPendingCount() {
+  if (surveyUsers.length === 0) await loadSurveyUsers();
+  const pending = surveyUsers.filter(u => u.status === 'pre_done').length;
+  document.getElementById('pending-count').textContent = pending;
+}
+
+async function sendPostAlert() {
+  const btn = event.target;
+  btn.disabled = true;
+  btn.textContent = 'Sending…';
+  const resDiv = document.getElementById('alert-result');
+  resDiv.style.display = 'none';
+  try {
+    const r = await fetch('/admin/api/alert/post-pending', {method:'POST'});
+    const data = await r.json();
+    resDiv.style.display = 'block';
+    resDiv.style.cssText = 'display:block;background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:14px;margin-bottom:16px;font-size:13px;color:#15803d';
+    resDiv.innerHTML = `✓ Done! Sent: <strong>${data.sent}</strong> emails. Failed: <strong>${data.failed}</strong>. Total pending: <strong>${data.total_pending}</strong>.`;
+  } catch(e) {
+    resDiv.style.display = 'block';
+    resDiv.style.cssText = 'display:block;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:14px;margin-bottom:16px;font-size:13px;color:#b91c1c';
+    resDiv.innerHTML = '✗ Error sending alerts: ' + e.message;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '📧 Send Reminder to Pending Students';
+  }
+}
+
+// ── Util ──────────────────────────────────────────────────────────────────────
+function esc(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+(async function() {
+  await loadFlags();
+  await loadSurveyUsers();
+})();
+</script>
+</body>
+</html>

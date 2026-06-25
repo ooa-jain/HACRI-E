@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>{% block title %}HACRI-E Survey{% endblock %}</title>
+  <link rel="stylesheet" href="/static/css/styles.css" />
+  <style>
+    .badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+    .badge.teal{background:var(--teal,#0d9488);color:#fff}
+    .badge.ok{background:var(--ok,#16a34a);color:#fff}
+    .badge.muted{background:var(--text-muted,#94a3b8);color:#fff}
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <img src="/static/logo.png" alt="JAIN OoA" class="logo-img" style="height:38px;width:auto;border-radius:4px;display:block;" />
+      <span class="brand-text">
+        <strong>HACRI-E</strong>
+        <small>AI Literacy Assessment</small>
+      </span>
+    </div>
+    <nav class="topnav">
+      <a href="/">Home</a>
+      {% if user %}
+        <span class="who">{{ user.name }}</span>
+        <a href="/logout" class="muted">Sign out</a>
+      {% endif %}
+    </nav>
+  </header>
+
+  <main class="content">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="footer">
+    <span>JAIN (Deemed-to-be University) · Office of Academics</span>
+    <span class="muted">Confidential — for research use only.</span>
+  </footer>
+</body>
+</html>
