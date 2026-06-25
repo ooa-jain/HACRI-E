@@ -75,38 +75,40 @@
       <legend>Section B · {{ section_titles["B"] }}</legend>
       <p class="muted">Rate your agreement. 1 = Strongly Disagree · 5 = Strongly Agree</p>
 
-      {% for key in schema if key.startswith("B") and key[1:].isdigit() %}
-      <div class="question likert">
-        <p class="q-label"><strong>{{ key }}.</strong>
-          {% if key == "B1" %}I can explain what Artificial Intelligence is in my own words
-          {% elif key == "B2" %}I understand the difference between AI and traditional computer software
-          {% elif key == "B3" %}I know what machine learning means in context of AI
-          {% elif key == "B4" %}I can name at least three AI tools I have used or seen used
-          {% elif key == "B5" %}I understand what a large language model (like ChatGPT) is
-          {% elif key == "B6" %}I know that AI systems are trained on data
-          {% elif key == "B7" %}I understand that AI can make errors and produce incorrect information
-          {% elif key == "B8" %}I know the difference between narrow AI and general AI
-          {% elif key == "B9" %}I am aware that AI is already being used in my field of study
-          {% elif key == "B10" %}I could explain AI to someone who has never heard of it
-          {% endif %}
-        </p>
-        <div class="likert-row">
-          {% for n, lbl in likert_choices %}
-          <label class="likert-opt">
-            <input type="radio" name="{{ key }}" value="{{ n }}" {% if values.get(key)==n %}checked{% endif %}
-              required />
-            <span class="num">{{ n }}</span>
-            <span class="lbl">{{ lbl }}</span>
-          </label>
-          {% endfor %}
+      <div class="sub-section-card">
+        {% for key in schema if key.startswith("B") and key[1:].isdigit() %}
+        <div class="question likert">
+          <p class="q-label"><strong>{{ key }}.</strong>
+            {% if key == "B1" %}I can explain what Artificial Intelligence is in my own words
+            {% elif key == "B2" %}I understand the difference between AI and traditional computer software
+            {% elif key == "B3" %}I know what machine learning means in context of AI
+            {% elif key == "B4" %}I can name at least three AI tools I have used or seen used
+            {% elif key == "B5" %}I understand what a large language model (like ChatGPT) is
+            {% elif key == "B6" %}I know that AI systems are trained on data
+            {% elif key == "B7" %}I understand that AI can make errors and produce incorrect information
+            {% elif key == "B8" %}I know the difference between narrow AI and general AI
+            {% elif key == "B9" %}I am aware that AI is already being used in my field of study
+            {% elif key == "B10" %}I could explain AI to someone who has never heard of it
+            {% endif %}
+          </p>
+          <div class="likert-row">
+            {% for n, lbl in likert_choices %}
+            <label class="likert-opt">
+              <input type="radio" name="{{ key }}" value="{{ n }}" {% if values.get(key)==n %}checked{% endif %}
+                required />
+              <span class="num">{{ n }}</span>
+              <span class="lbl">{{ lbl }}</span>
+            </label>
+            {% endfor %}
+          </div>
         </div>
-      </div>
-      {% endfor %}
+        {% endfor %}
 
-      <div class="question">
-        <label class="q-label"><strong>B11.</strong> In one or two sentences, describe what Artificial Intelligence
-          means to you. (max 100 words)</label>
-        <textarea name="B11" rows="3" maxlength="1500">{{ values.get("B11", "") }}</textarea>
+        <div class="question">
+          <label class="q-label"><strong>B11.</strong> In one or two sentences, describe what Artificial Intelligence
+            means to you. (max 100 words)</label>
+          <textarea name="B11" rows="3" maxlength="1500">{{ values.get("B11", "") }}</textarea>
+        </div>
       </div>
     </fieldset>
 
@@ -226,34 +228,35 @@
     <fieldset class="section wizard-section" data-step-section="2">
       <legend>Section E · {{ section_titles["E"] }}</legend>
       <p class="muted">Rate your agreement. 1 = Strongly Disagree · 5 = Strongly Agree.</p>
-
-      {% for key in ["E1","E2","E3","E4","E5","E6","E7","E8","E9","E10"] %}
-      <div class="question likert">
-        <p class="q-label"><strong>{{ key }}.</strong>
-          {% if key == "E1" %}Using AI to write an entire assignment and submitting it as my own is dishonest
-          {% elif key == "E2" %}Using AI to help brainstorm ideas for an assignment is acceptable
-          {% elif key == "E3" %}I understand what my university's policy on AI use is
-          {% elif key == "E4" %}I think universities should clearly define what counts as acceptable AI use
-          {% elif key == "E5" %}AI systems can reflect the biases of the people who built them
-          {% elif key == "E6" %}I am concerned about the environmental impact of large AI systems
-          {% elif key == "E7" %}I believe that privacy is at risk when using AI tools
-          {% elif key == "E8" %}I would speak up if I saw someone misusing AI in an academic setting
-          {% elif key == "E9" %}AI should be developed with diverse perspectives to avoid discrimination
-          {% elif key == "E10" %}I feel I have enough knowledge to make ethical decisions about using AI
-          {% endif %}
-        </p>
-        <div class="likert-row">
-          {% for n, lbl in likert_choices %}
-          <label class="likert-opt">
-            <input type="radio" name="{{ key }}" value="{{ n }}" {% if values.get(key)==n %}checked{% endif %}
-              required />
-            <span class="num">{{ n }}</span>
-            <span class="lbl">{{ lbl }}</span>
-          </label>
-          {% endfor %}
+      <div class="sub-section-card">
+        {% for key in ["E1","E2","E3","E4","E5","E6","E7","E8","E9","E10"] %}
+        <div class="question likert">
+          <p class="q-label"><strong>{{ key }}.</strong>
+            {% if key == "E1" %}Using AI to write an entire assignment and submitting it as my own is dishonest
+            {% elif key == "E2" %}Using AI to help brainstorm ideas for an assignment is acceptable
+            {% elif key == "E3" %}I understand what my university's policy on AI use is
+            {% elif key == "E4" %}I think universities should clearly define what counts as acceptable AI use
+            {% elif key == "E5" %}AI systems can reflect the biases of the people who built them
+            {% elif key == "E6" %}I am concerned about the environmental impact of large AI systems
+            {% elif key == "E7" %}I believe that privacy is at risk when using AI tools
+            {% elif key == "E8" %}I would speak up if I saw someone misusing AI in an academic setting
+            {% elif key == "E9" %}AI should be developed with diverse perspectives to avoid discrimination
+            {% elif key == "E10" %}I feel I have enough knowledge to make ethical decisions about using AI
+            {% endif %}
+          </p>
+          <div class="likert-row">
+            {% for n, lbl in likert_choices %}
+            <label class="likert-opt">
+              <input type="radio" name="{{ key }}" value="{{ n }}" {% if values.get(key)==n %}checked{% endif %}
+                required />
+              <span class="num">{{ n }}</span>
+              <span class="lbl">{{ lbl }}</span>
+            </label>
+            {% endfor %}
+          </div>
         </div>
+        {% endfor %}
       </div>
-      {% endfor %}
     </fieldset>
 
     <!-- ── SECTION F — HACRI Core ─────────────────────────────────────────── -->
@@ -261,97 +264,111 @@
       <legend>Section F · {{ section_titles["F"] }}</legend>
       <p class="muted">Core instrument. 1 = Strongly Disagree · 5 = Strongly Agree.</p>
 
-      <h3 class="subhead">F1 — Cognitive Readiness</h3>
-      {% for key in ["F1a","F1b","F1c","F1d"] %}
-      <div class="question likert">
-        <p class="q-label"><strong>{{ key }}.</strong>
-          {% if key == "F1a" %}I can tell when an AI-generated response is incomplete or incorrect
-          {% elif key == "F1b" %}I feel confident evaluating whether AI output is relevant to my task
-          {% elif key == "F1c" %}I can identify when a task is better done by a human than an AI
-          {% elif key == "F1d" %}I can break a complex problem into parts that could be handled by AI vs. by me
-          {% endif %}
-        </p>
-        <div class="likert-row">
-          {% for n, lbl in likert_choices %}
-          <label class="likert-opt">
-            <input type="radio" name="{{ key }}" value="{{ n }}" {% if values.get(key)==n %}checked{% endif %}
-              required />
-            <span class="num">{{ n }}</span>
-            <span class="lbl">{{ lbl }}</span>
-          </label>
-          {% endfor %}
+      <div class="sub-section-card">
+        <h3 class="subhead">F1 — Cognitive Readiness</h3>
+        {% for key in ["F1a","F1b","F1c","F1d"] %}
+        <div class="question likert">
+          <p class="q-label"><strong>{{ key }}.</strong>
+            {% if key == "F1a" %}I can tell when an AI-generated response is incomplete or incorrect
+            {% elif key == "F1b" %}I feel confident evaluating whether AI output is relevant to my task
+            {% elif key == "F1c" %}I can identify when a task is better done by a human than an AI
+            {% elif key == "F1d" %}I can break a complex problem into parts that could be handled by AI vs. by me
+            {% endif %}
+          </p>
+          <div class="likert-row">
+            {% for n, lbl in likert_choices %}
+            <label class="likert-opt">
+              <input type="radio" name="{{ key }}" value="{{ n }}" {% if values.get(key)==n %}checked{% endif %}
+                required />
+              <span class="num">{{ n }}</span>
+              <span class="lbl">{{ lbl }}</span>
+            </label>
+            {% endfor %}
+          </div>
         </div>
+        {% endfor %}
       </div>
-      {% endfor %}
 
-      <h3 class="subhead">F2 — Behavioral Readiness</h3>
-      {% for key in ["F2a","F2b","F2c","F2d"] %}
-      <div class="question likert">
-        <p class="q-label"><strong>{{ key }}.</strong>
-          {% if key == "F2a" %}I am willing to experiment with new AI tools in my studies
-          {% elif key == "F2b" %}I would ask for help or training if I didn't know how to use an AI tool properly
-          {% elif key == "F2c" %}I am comfortable adapting my workflow when AI is introduced
-          {% elif key == "F2d" %}I would actively try to improve my AI skills during my time at university
-          {% endif %}
-        </p>
-        <div class="likert-row">
-          {% for n, lbl in likert_choices %}
-          <label class="likert-opt">
-            <input type="radio" name="{{ key }}" value="{{ n }}" {% if values.get(key)==n %}checked{% endif %}
-              required />
-            <span class="num">{{ n }}</span>
-            <span class="lbl">{{ lbl }}</span>
-          </label>
-          {% endfor %}
-        </div>
-      </div>
-      {% endfor %}
+      <hr class="sub-divider-thick" />
 
-      <h3 class="subhead">F3 — Social &amp; Collaborative Readiness</h3>
-      {% for key in ["F3a","F3b","F3c","F3d"] %}
-      <div class="question likert">
-        <p class="q-label"><strong>{{ key }}.</strong>
-          {% if key == "F3a" %}I can imagine working alongside AI tools as a regular part of my future career
-          {% elif key == "F3b" %}I am comfortable discussing how AI was used in a group project with peers
-          {% elif key == "F3c" %}I think teams that include AI tools can outperform teams that don't
-          {% elif key == "F3d" %}I would be comfortable telling a lecturer how I used AI in completing a task
-          {% endif %}
-        </p>
-        <div class="likert-row">
-          {% for n, lbl in likert_choices %}
-          <label class="likert-opt">
-            <input type="radio" name="{{ key }}" value="{{ n }}" {% if values.get(key)==n %}checked{% endif %}
-              required />
-            <span class="num">{{ n }}</span>
-            <span class="lbl">{{ lbl }}</span>
-          </label>
-          {% endfor %}
+      <div class="sub-section-card">
+        <h3 class="subhead">F2 — Behavioral Readiness</h3>
+        {% for key in ["F2a","F2b","F2c","F2d"] %}
+        <div class="question likert">
+          <p class="q-label"><strong>{{ key }}.</strong>
+            {% if key == "F2a" %}I am willing to experiment with new AI tools in my studies
+            {% elif key == "F2b" %}I would ask for help or training if I didn't know how to use an AI tool properly
+            {% elif key == "F2c" %}I am comfortable adapting my workflow when AI is introduced
+            {% elif key == "F2d" %}I would actively try to improve my AI skills during my time at university
+            {% endif %}
+          </p>
+          <div class="likert-row">
+            {% for n, lbl in likert_choices %}
+            <label class="likert-opt">
+              <input type="radio" name="{{ key }}" value="{{ n }}" {% if values.get(key)==n %}checked{% endif %}
+                required />
+              <span class="num">{{ n }}</span>
+              <span class="lbl">{{ lbl }}</span>
+            </label>
+            {% endfor %}
+          </div>
         </div>
+        {% endfor %}
       </div>
-      {% endfor %}
 
-      <h3 class="subhead">F4 — Metacognitive Readiness</h3>
-      {% for key in ["F4a","F4b","F4c","F4d"] %}
-      <div class="question likert">
-        <p class="q-label"><strong>{{ key }}.</strong>
-          {% if key == "F4a" %}I reflect on whether I am over-relying on AI when completing tasks
-          {% elif key == "F4b" %}I notice when using AI helps my thinking vs. when it shortcuts it
-          {% elif key == "F4c" %}I can monitor whether my own learning is improving or declining when using AI
-          {% elif key == "F4d" %}I set my own limits on when and how I use AI tools
-          {% endif %}
-        </p>
-        <div class="likert-row">
-          {% for n, lbl in likert_choices %}
-          <label class="likert-opt">
-            <input type="radio" name="{{ key }}" value="{{ n }}" {% if values.get(key)==n %}checked{% endif %}
-              required />
-            <span class="num">{{ n }}</span>
-            <span class="lbl">{{ lbl }}</span>
-          </label>
-          {% endfor %}
+      <hr class="sub-divider-thick" />
+
+      <div class="sub-section-card">
+        <h3 class="subhead">F3 — Social &amp; Collaborative Readiness</h3>
+        {% for key in ["F3a","F3b","F3c","F3d"] %}
+        <div class="question likert">
+          <p class="q-label"><strong>{{ key }}.</strong>
+            {% if key == "F3a" %}I can imagine working alongside AI tools as a regular part of my future career
+            {% elif key == "F3b" %}I am comfortable discussing how AI was used in a group project with peers
+            {% elif key == "F3c" %}I think teams that include AI tools can outperform teams that don't
+            {% elif key == "F3d" %}I would be comfortable telling a lecturer how I used AI in completing a task
+            {% endif %}
+          </p>
+          <div class="likert-row">
+            {% for n, lbl in likert_choices %}
+            <label class="likert-opt">
+              <input type="radio" name="{{ key }}" value="{{ n }}" {% if values.get(key)==n %}checked{% endif %}
+                required />
+              <span class="num">{{ n }}</span>
+              <span class="lbl">{{ lbl }}</span>
+            </label>
+            {% endfor %}
+          </div>
         </div>
+        {% endfor %}
       </div>
-      {% endfor %}
+
+      <hr class="sub-divider-thick" />
+
+      <div class="sub-section-card">
+        <h3 class="subhead">F4 — Metacognitive Readiness</h3>
+        {% for key in ["F4a","F4b","F4c","F4d"] %}
+        <div class="question likert">
+          <p class="q-label"><strong>{{ key }}.</strong>
+            {% if key == "F4a" %}I reflect on whether I am over-relying on AI when completing tasks
+            {% elif key == "F4b" %}I notice when using AI helps my thinking vs. when it shortcuts it
+            {% elif key == "F4c" %}I can monitor whether my own learning is improving or declining when using AI
+            {% elif key == "F4d" %}I set my own limits on when and how I use AI tools
+            {% endif %}
+          </p>
+          <div class="likert-row">
+            {% for n, lbl in likert_choices %}
+            <label class="likert-opt">
+              <input type="radio" name="{{ key }}" value="{{ n }}" {% if values.get(key)==n %}checked{% endif %}
+                required />
+              <span class="num">{{ n }}</span>
+              <span class="lbl">{{ lbl }}</span>
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
     </fieldset>
 
     <!-- ── SECTION G — Entrepreneurial AI Application ────────────────────── -->
@@ -360,148 +377,163 @@
       <p class="muted">If you identify yourself as an entrepreneur or aspire to be one, please answer the following
         questions. Your responses will assess your willingness to use AI in your entrepreneurship.</p>
 
-      <h3 class="subhead">G1 — Ideation &amp; Opportunity Discovery</h3>
-      {% for key in ["G1a","G1b","G1c"] %}
-      <div class="question likert">
-        <p class="q-label"><strong>{{ key }}.</strong>
-          {% if key == "G1a" %}I know how to use AI tools to generate or refine business ideas
-          {% elif key == "G1b" %}I can use AI to identify gaps or opportunities in a market
-          {% elif key == "G1c" %}I am confident using AI to stress-test or critique my own business idea
-          {% endif %}
-        </p>
-        <div class="likert-row">
-          {% for n, lbl in likert_choices %}
-          <label class="likert-opt">
-            <input type="radio" name="{{ key }}" value="{{ n }}" {% if values.get(key)==n %}checked{% endif %}
-              required />
-            <span class="num">{{ n }}</span>
-            <span class="lbl">{{ lbl }}</span>
-          </label>
-          {% endfor %}
+      <div class="sub-section-card">
+        <h3 class="subhead">G1 — Ideation &amp; Opportunity Discovery</h3>
+        {% for key in ["G1a","G1b","G1c"] %}
+        <div class="question likert">
+          <p class="q-label"><strong>{{ key }}.</strong>
+            {% if key == "G1a" %}I know how to use AI tools to generate or refine business ideas
+            {% elif key == "G1b" %}I can use AI to identify gaps or opportunities in a market
+            {% elif key == "G1c" %}I am confident using AI to stress-test or critique my own business idea
+            {% endif %}
+          </p>
+          <div class="likert-row">
+            {% for n, lbl in likert_choices %}
+            <label class="likert-opt">
+              <input type="radio" name="{{ key }}" value="{{ n }}" {% if values.get(key)==n %}checked{% endif %}
+                required />
+              <span class="num">{{ n }}</span>
+              <span class="lbl">{{ lbl }}</span>
+            </label>
+            {% endfor %}
+          </div>
         </div>
+        {% endfor %}
       </div>
-      {% endfor %}
 
-      <h3 class="subhead">G2 — Market &amp; Customer Research</h3>
-      {% for key in ["G2a","G2b","G2c"] %}
-      <div class="question likert">
-        <p class="q-label"><strong>{{ key }}.</strong>
-          {% if key == "G2a" %}I know how to use AI tools to research a target market or industry
-          {% elif key == "G2b" %}I can use AI to analyse competitors and their positioning
-          {% elif key == "G2c" %}I understand the limitations of AI-generated market research and know when to verify it
-          independently
-          {% endif %}
-        </p>
-        <div class="likert-row">
-          {% for n, lbl in likert_choices %}
-          <label class="likert-opt">
-            <input type="radio" name="{{ key }}" value="{{ n }}" {% if values.get(key)==n %}checked{% endif %}
-              required />
-            <span class="num">{{ n }}</span>
-            <span class="lbl">{{ lbl }}</span>
-          </label>
-          {% endfor %}
-        </div>
-      </div>
-      {% endfor %}
+      <hr class="sub-divider-thick" />
 
-      <h3 class="subhead">G3 — Building &amp; Validating (MVP / Product)</h3>
-      {% for key in ["G3a","G3b","G3c"] %}
-      <div class="question likert">
-        <p class="q-label"><strong>{{ key }}.</strong>
-          {% if key == "G3a" %}I know how AI tools can help me build or prototype a product (e.g. no-code AI,
-          AI-assisted coding)
-          {% elif key == "G3b" %}I can use AI to help design or refine a minimum viable product (MVP)
-          {% elif key == "G3c" %}I am confident identifying which parts of product development AI can meaningfully
-          accelerate
-          {% endif %}
-        </p>
-        <div class="likert-row">
-          {% for n, lbl in likert_choices %}
-          <label class="likert-opt">
-            <input type="radio" name="{{ key }}" value="{{ n }}" {% if values.get(key)==n %}checked{% endif %}
-              required />
-            <span class="num">{{ n }}</span>
-            <span class="lbl">{{ lbl }}</span>
-          </label>
-          {% endfor %}
+      <div class="sub-section-card">
+        <h3 class="subhead">G2 — Market &amp; Customer Research</h3>
+        {% for key in ["G2a","G2b","G2c"] %}
+        <div class="question likert">
+          <p class="q-label"><strong>{{ key }}.</strong>
+            {% if key == "G2a" %}I know how to use AI tools to research a target market or industry
+            {% elif key == "G2b" %}I can use AI to analyse competitors and their positioning
+            {% elif key == "G2c" %}I understand the limitations of AI-generated market research and know when to verify it
+            independently
+            {% endif %}
+          </p>
+          <div class="likert-row">
+            {% for n, lbl in likert_choices %}
+            <label class="likert-opt">
+              <input type="radio" name="{{ key }}" value="{{ n }}" {% if values.get(key)==n %}checked{% endif %}
+                required />
+              <span class="num">{{ n }}</span>
+              <span class="lbl">{{ lbl }}</span>
+            </label>
+            {% endfor %}
+          </div>
         </div>
+        {% endfor %}
       </div>
-      {% endfor %}
 
-      <h3 class="subhead">G4 — Go-to-Market, Pitching &amp; Fundraising</h3>
-      {% for key in ["G4a","G4b","G4c","G4d"] %}
-      <div class="question likert">
-        <p class="q-label"><strong>{{ key }}.</strong>
-          {% if key == "G4a" %}I know how to use AI tools to help draft a pitch deck or business plan
-          {% elif key == "G4b" %}I can use AI to prepare for investor questions or due diligence
-          {% elif key == "G4c" %}I am comfortable explaining to an investor exactly how and where I used AI in my
-          venture
-          {% elif key == "G4d" %}I know how to use AI tools to support marketing, sales, or customer acquisition
-          {% endif %}
-        </p>
-        <div class="likert-row">
-          {% for n, lbl in likert_choices %}
-          <label class="likert-opt">
-            <input type="radio" name="{{ key }}" value="{{ n }}" {% if values.get(key)==n %}checked{% endif %}
-              required />
-            <span class="num">{{ n }}</span>
-            <span class="lbl">{{ lbl }}</span>
-          </label>
-          {% endfor %}
+      <hr class="sub-divider-thick" />
+
+      <div class="sub-section-card">
+        <h3 class="subhead">G3 — Building &amp; Validating (MVP / Product)</h3>
+        {% for key in ["G3a","G3b","G3c"] %}
+        <div class="question likert">
+          <p class="q-label"><strong>{{ key }}.</strong>
+            {% if key == "G3a" %}I know how AI tools can help me build or prototype a product (e.g. no-code AI,
+            AI-assisted coding)
+            {% elif key == "G3b" %}I can use AI to help design or refine a minimum viable product (MVP)
+            {% elif key == "G3c" %}I am confident identifying which parts of product development AI can meaningfully
+            accelerate
+            {% endif %}
+          </p>
+          <div class="likert-row">
+            {% for n, lbl in likert_choices %}
+            <label class="likert-opt">
+              <input type="radio" name="{{ key }}" value="{{ n }}" {% if values.get(key)==n %}checked{% endif %}
+                required />
+              <span class="num">{{ n }}</span>
+              <span class="lbl">{{ lbl }}</span>
+            </label>
+            {% endfor %}
+          </div>
         </div>
+        {% endfor %}
       </div>
-      {% endfor %}
+
+      <hr class="sub-divider-thick" />
+
+      <div class="sub-section-card">
+        <h3 class="subhead">G4 — Go-to-Market, Pitching &amp; Fundraising</h3>
+        {% for key in ["G4a","G4b","G4c","G4d"] %}
+        <div class="question likert">
+          <p class="q-label"><strong>{{ key }}.</strong>
+            {% if key == "G4a" %}I know how to use AI tools to help draft a pitch deck or business plan
+            {% elif key == "G4b" %}I can use AI to prepare for investor questions or due diligence
+            {% elif key == "G4c" %}I am comfortable explaining to an investor exactly how and where I used AI in my
+            venture
+            {% elif key == "G4d" %}I know how to use AI tools to support marketing, sales, or customer acquisition
+            {% endif %}
+          </p>
+          <div class="likert-row">
+            {% for n, lbl in likert_choices %}
+            <label class="likert-opt">
+              <input type="radio" name="{{ key }}" value="{{ n }}" {% if values.get(key)==n %}checked{% endif %}
+                required />
+              <span class="num">{{ n }}</span>
+              <span class="lbl">{{ lbl }}</span>
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
     </fieldset>
 
     <!-- ── SECTION H — Post-Induction Reflection ─────────────────────────── -->
     <fieldset class="section wizard-section" data-step-section="5">
       <legend>Section H · {{ section_titles["H_POST"] }}</legend>
       <p class="muted">Complete after the induction session — same day.</p>
-
-      <div class="question">
-        <p class="q-label"><strong>H1.</strong> After today's induction session, how has your understanding of AI
-          changed?</p>
-        <select name="H1" required>
-          <option value="">-- Select --</option>
-          {% for o in post_reflection[0][3] %}
-          <option value="{{ o }}" {% if values.get("H1")==o %}selected{% endif %}>{{ o }}</option>
-          {% endfor %}
-        </select>
-      </div>
-
-      <div class="question">
-        <p class="q-label"><strong>H2.</strong> After today's session, how do you feel about working with AI in your
-          studies?</p>
-        <div class="likert-row">
-          {% for n, lbl in likert_choices %}
-          <label class="likert-opt">
-            <input type="radio" name="H2" value="{{ n }}" {% if values.get("H2")==n %}checked{% endif %} required />
-            <span class="num">{{ n }}</span>
-            <span class="lbl">
-              {% if n == 1 %}Much more anxious
-              {% elif n == 5 %}Much more confident
-              {% else %}{{ lbl }}{% endif %}
-            </span>
-          </label>
-          {% endfor %}
+      <div class="sub-section-card">
+        <div class="question">
+          <p class="q-label"><strong>H1.</strong> After today's induction session, how has your understanding of AI
+            changed?</p>
+          <select name="H1" required>
+            <option value="">-- Select --</option>
+            {% for o in post_reflection[0][3] %}
+            <option value="{{ o }}" {% if values.get("H1")==o %}selected{% endif %}>{{ o }}</option>
+            {% endfor %}
+          </select>
         </div>
-      </div>
 
-      <div class="question">
-        <p class="q-label"><strong>H3.</strong> Which part of the induction was most valuable to you?</p>
-        <select name="H3" required>
-          <option value="">-- Select --</option>
-          {% for o in post_reflection[2][3] %}
-          <option value="{{ o }}" {% if values.get("H3")==o %}selected{% endif %}>{{ o }}</option>
-          {% endfor %}
-        </select>
-      </div>
+        <div class="question">
+          <p class="q-label"><strong>H2.</strong> After today's session, how do you feel about working with AI in your
+            studies?</p>
+          <div class="likert-row">
+            {% for n, lbl in likert_choices %}
+            <label class="likert-opt">
+              <input type="radio" name="H2" value="{{ n }}" {% if values.get("H2")==n %}checked{% endif %} required />
+              <span class="num">{{ n }}</span>
+              <span class="lbl">
+                {% if n == 1 %}Much more anxious
+                {% elif n == 5 %}Much more confident
+                {% else %}{{ lbl }}{% endif %}
+              </span>
+            </label>
+            {% endfor %}
+          </div>
+        </div>
 
-      <div class="question">
-        <p class="q-label"><strong>H4.</strong> In two or three sentences, describe how you see yourself collaborating
-          with AI during your university studies. (max 100 words)</p>
-        <textarea name="H4" rows="3" maxlength="2000">{{ values.get("H4", "") }}</textarea>
+        <div class="question">
+          <p class="q-label"><strong>H3.</strong> Which part of the induction was most valuable to you?</p>
+          <select name="H3" required>
+            <option value="">-- Select --</option>
+            {% for o in post_reflection[2][3] %}
+            <option value="{{ o }}" {% if values.get("H3")==o %}selected{% endif %}>{{ o }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="question">
+          <p class="q-label"><strong>H4.</strong> In two or three sentences, describe how you see yourself collaborating
+            with AI during your university studies. (max 100 words)</p>
+          <textarea name="H4" rows="3" maxlength="2000">{{ values.get("H4", "") }}</textarea>
+        </div>
       </div>
     </fieldset>
 

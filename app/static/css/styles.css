@@ -1012,17 +1012,36 @@ textarea {
   .section {
     padding: 12px 0px;
   }
+  .wizard-progress {
+    justify-content: center;
+    margin-bottom: 24px;
+    padding: 0;
+  }
   .wizard-progress::before, .wizard-progress-bar {
-    top: 14px;
-  }
-  .wizard-step-circle {
-    width: 30px;
-    height: 30px;
-    font-size: 11px;
-    border-width: 2px;
-  }
-  .wizard-step-label {
     display: none;
+  }
+  .wizard-step {
+    display: none;
+  }
+  .wizard-step.active {
+    display: flex;
+    pointer-events: none;
+  }
+  .wizard-step.active .wizard-step-circle {
+    width: 32px;
+    height: 32px;
+    font-size: 13px;
+    border-width: 2px;
+    border-color: var(--gold);
+    color: var(--gold);
+    transform: none;
+  }
+  .wizard-step.active .wizard-step-label {
+    display: block;
+    margin-top: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--navy);
   }
   .wizard-buttons {
     flex-direction: column-reverse;
