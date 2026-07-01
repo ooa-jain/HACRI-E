@@ -96,7 +96,7 @@
         <div class="question">
           <label class="q-label">
             <strong>A4.</strong>
-            {% if ug_or_pg == "pg" %}What type of prv education did you attend before university?{% else %}What type of school did you attend before university?{% endif %}
+            {% if ug_or_pg == "pg" %}What type of previous education did you attend before university?{% else %}What type of school did you attend before university?{% endif %}
           </label>
           <div class="q-body">
             <select name="{{ key }}" required>
@@ -124,7 +124,7 @@
           <label class="q-label">
             <strong>{{ key }}.</strong>
             {% if ug_or_pg == "pg" %}
-              {{ label | replace("school", "prv education") | replace("School", "Prv education") }}
+              {{ label | replace("school", "previous education") | replace("School", "Previous education") }}
             {% else %}
               {{ label }}
             {% endif %}
@@ -135,7 +135,7 @@
               {% for o in opts %}
               <option value="{{ o }}" {% if values.get(key)==o %}selected{% endif %}>
                 {% if ug_or_pg == "pg" %}
-                  {{ o | replace("school", "prv education") | replace("School", "Prv education") }}
+                  {{ o | replace("school", "previous education") | replace("School", "Previous education") }}
                 {% else %}
                   {{ o }}
                 {% endif %}
@@ -201,7 +201,7 @@
           <p class="q-label">
             <strong>{{ key }}.</strong>
             {% if ug_or_pg == "pg" %}
-              {{ label | replace("school", "prv education") | replace("School", "Prv education") }}
+              {{ label | replace("school", "previous education") | replace("School", "Previous education") }}
             {% else %}
               {{ label }}
             {% endif %}
@@ -214,7 +214,7 @@
               <input type="checkbox" name="{{ key }}" value="{{ o }}" {% if o in chosen %}checked{% endif %} />
               <span>
                 {% if ug_or_pg == "pg" %}
-                  {{ o | replace("school", "prv education") | replace("School", "Prv education") }}
+                  {{ o | replace("school", "previous education") | replace("School", "Previous education") }}
                 {% else %}
                   {{ o }}
                 {% endif %}
@@ -227,7 +227,7 @@
               {% for o in opts %}
               <option value="{{ o }}" {% if values.get(key)==o %}selected{% endif %}>
                 {% if ug_or_pg == "pg" %}
-                  {{ o | replace("school", "prv education") | replace("School", "Prv education") }}
+                  {{ o | replace("school", "previous education") | replace("School", "Previous education") }}
                 {% else %}
                   {{ o }}
                 {% endif %}
@@ -667,7 +667,7 @@
         <div class="question">
           <p class="q-label"><strong>H3.</strong>
             {% if ug_or_pg == "pg" %}
-              How confident are you that your prv education prepared you for AI at university?
+              How confident are you that your previous education prepared you for AI at university?
             {% else %}
               How confident are you that your school prepared you for AI at university?
             {% endif %}
