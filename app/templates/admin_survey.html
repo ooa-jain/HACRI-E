@@ -83,20 +83,36 @@ input:checked+.slider:before{transform:translateX(22px)}
     <button class="tab on" onclick="show('p-overview',this)">📊 Overview</button>
     <button class="tab" onclick="show('p-settings',this)">⚙️ Settings</button>
     <button class="tab" onclick="show('p-users',this)">👥 Users</button>
+    <button class="tab" onclick="show('p-orient',this)">🎓 Orientation</button>
     <button class="tab" onclick="show('p-alerts',this)">🔔 Alerts</button>
+  </div>
+
+  <!-- Global Cohort Filters -->
+  <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px 20px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+    <h2 style="font-size:14px;color:var(--navy);font-weight:700">Cohort Filters</h2>
+    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span style="font-size:13px;font-weight:600;color:var(--navy);">Level:</span>
+        <select id="level-filter" onchange="applyFilters()" style="padding:6px 10px;border-radius:6px;border:1px solid var(--border);font-size:13px;outline:none;font-family:inherit;background:#fff;">
+          <option value="">UG &amp; PG</option>
+          <option value="ug">Under Graduate (UG)</option>
+          <option value="pg">Post Graduate (PG)</option>
+        </select>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span style="font-size:13px;font-weight:600;color:var(--navy);">Department:</span>
+        <select id="dept-filter" onchange="applyFilters()" style="padding:6px 10px;border-radius:6px;border:1px solid var(--border);font-size:13px;outline:none;font-family:inherit;background:#fff;min-width:200px;max-width:320px;">
+          <option value="">All Departments</option>
+        </select>
+      </div>
+    </div>
+    <a id="export-dept-btn" href="/admin/survey/export-cohort" class="btn-sm btn-green" style="text-decoration:none;display:inline-block;padding:8px 16px;">📥 Export Cohort CSV</a>
   </div>
 
   <!-- Overview -->
   <div class="panel on" id="p-overview">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:12px;">
+    <div style="margin-bottom:16px;">
       <h2 style="font-size:16px;color:var(--navy);font-weight:700">Cohort Statistics</h2>
-      <div style="display:flex;align-items:center;gap:8px;">
-        <span style="font-size:13px;font-weight:600;color:var(--navy);">Department:</span>
-        <select id="dept-filter" onchange="applyDeptFilter(this.value)" style="padding:6px 12px;border-radius:6px;border:1px solid var(--border);font-size:13px;outline:none;font-family:inherit;background:#fff;min-width:200px;max-width:320px;">
-          <option value="">All Departments</option>
-        </select>
-      </div>
-      <a id="export-dept-btn" href="/admin/survey/export-cohort" class="btn-sm btn-green" style="text-decoration:none;display:inline-block;padding:8px 16px;">📥 Export Cohort CSV</a>
     </div>
 
     <div class="stat-grid">
@@ -206,20 +222,58 @@ input:checked+.slider:before{transform:translateX(22px)}
       </div>
     </div>
     <p style="font-size:12px;color:var(--muted)">When OFF: landing shows "survey closed". Students with existing sessions will still see their status.</p>
+
+    <!-- Orientation Share Card -->
+    <div id="orientation-share-card" class="card" style="margin-top:20px; border-left:4px solid var(--teal); background:#f0fdfa; display:none; padding:20px;">
+      <div style="display:flex; gap:20px; align-items:flex-start; flex-wrap:wrap;">
+        <div style="flex:1; min-width:280px;">
+          <h3 style="font-size:14px; color:var(--teal); margin-bottom:6px; font-weight:700;">🔗 Shareable Orientation Survey Link</h3>
+          <p style="font-size:12.5px; color:var(--muted); margin-bottom:12px;">Since Orientation Session (Deeksharambh) is enabled, you can copy and share this link directly with students:</p>
+          <div style="display:flex; gap:8px; align-items:center; margin-bottom:12px;">
+            <input type="text" readonly value="{{ orientation_share_url }}" id="share-link-input" style="flex:1; padding:8px 12px; border:1.5px solid var(--border); border-radius:6px; font-size:13px; outline:none; background:#fff;" />
+            <button class="btn-sm btn-blue" onclick="copyShareLink()">📋 Copy Link</button>
+          </div>
+          <p style="font-size:12px; color:var(--muted);">Students will enter the same email ID they used in the baseline survey to complete their orientation response.</p>
+        </div>
+        <div style="display:flex; flex-direction:column; align-items:center; background:#fff; padding:12px; border:1px solid var(--border); border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+          <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={{ orientation_share_url|urlencode }}" alt="Orientation QR Code" style="width:150px; height:150px; display:block;" />
+          <span style="font-size:11px; font-weight:600; color:var(--navy); margin-top:8px;">📱 Scan for Orientation</span>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- Users -->
   <div class="panel" id="p-users">
     <input class="search" type="text" placeholder="Search name, email, programme…" oninput="filterUsers()" id="user-search" />
     <div class="card" style="padding:0;overflow-x:auto;">
-      <table class="mtable" id="user-table" style="min-width:900px;">
+      <table class="mtable" id="user-table" style="min-width:1100px;">
         <thead>
           <tr>
-            <th>#</th><th>Name</th><th>Email</th><th>Programme</th>
+            <th>#</th><th>Name</th><th>Email</th><th>Level</th><th>Previous Education</th><th>Programme</th>
             <th>Status</th><th>Orientation</th><th>Pre At</th><th>Post At</th><th>Actions</th>
           </tr>
         </thead>
-        <tbody id="user-tbody"><tr><td colspan="9" style="text-align:center;padding:20px;color:var(--muted)">Loading…</td></tr></tbody>
+        <tbody id="user-tbody"><tr><td colspan="11" style="text-align:center;padding:20px;color:var(--muted)">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Orientation Responses -->
+  <div class="panel" id="p-orient">
+    <div class="card" style="margin-bottom:16px;">
+      <h3 style="font-size:15px;color:var(--navy);margin-bottom:6px;font-weight:700">🎓 Deeksharambh Orientation Responses</h3>
+      <p style="font-size:12.5px;color:var(--muted);margin-bottom:16px">All students who submitted the orientation survey (Deeksharambh).</p>
+    </div>
+    <input class="search" type="text" placeholder="Search name, email…" oninput="filterOriUsers()" id="ori-search" />
+    <div class="card" style="padding:0;overflow-x:auto;">
+      <table class="mtable" id="ori-table" style="min-width:600px;">
+        <thead>
+          <tr>
+            <th>#</th><th>Name</th><th>Email</th><th>Level</th><th>Programme</th><th>Orientation At</th><th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="ori-tbody"><tr><td colspan="7" style="text-align:center;padding:20px;color:var(--muted)">Loading…</td></tr></tbody>
       </table>
     </div>
   </div>
@@ -240,7 +294,9 @@ input:checked+.slider:before{transform:translateX(22px)}
 </div>
 
 <script>
+let deptsInitialized = false;
 let users = [];
+let oriUsers = [];
 
 function show(id, btn){
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
@@ -248,6 +304,7 @@ function show(id, btn){
   document.getElementById(id).classList.add('on');
   if(btn) btn.classList.add('on');
   if(id==='p-users' && users.length===0) loadUsers();
+  if(id==='p-orient' && oriUsers.length===0) loadOrientationUsers();
   if(id==='p-alerts') loadPendingCount();
 }
 
@@ -263,6 +320,14 @@ async function loadFlags(){
   document.getElementById('ov-flag').innerHTML =
     d.survey_enabled ? '🟢 <b>Open</b> — students can register and submit surveys'
                      : '🔴 <b>Closed</b> — new submissions are blocked';
+
+  // Dynamically show/hide the orientation direct link card
+  const shareCard = document.getElementById('orientation-share-card');
+  if (!!d.orientation_enabled) {
+    shareCard.style.display = 'block';
+  } else {
+    shareCard.style.display = 'none';
+  }
 }
 
 async function toggleFlag(key, val){
@@ -276,67 +341,87 @@ async function updatePostDelay(val){
   loadFlags();
 }
 
+function copyShareLink() {
+  const input = document.getElementById('share-link-input');
+  input.select();
+  input.setSelectionRange(0, 99999);
+  navigator.clipboard.writeText(input.value);
+  alert('Orientation link copied to clipboard!');
+}
+
 function refreshCharts() {
   const t = new Date().getTime();
   const dept = document.getElementById('dept-filter').value;
-  const qStr = dept ? `?force=1&dept=${encodeURIComponent(dept)}&t=${t}` : `?force=1&t=${t}`;
+  const level = document.getElementById('level-filter').value;
+  const params = new URLSearchParams({force: '1', dept: dept || '', ug_or_pg: level || '', t: t.toString()});
+  const qStr = '?' + params.toString();
   document.getElementById('cohort-chart-img').src = '/admin/cohort.png' + qStr;
   document.getElementById('histograms-chart-img').src = '/admin/histograms.png' + qStr;
   document.getElementById('h1-chart-img').src = '/admin/h1_histogram.png' + qStr;
 }
 
 async function loadUsers(){
-  const r = await fetch('/admin/api/survey/users');
+  const level = document.getElementById('level-filter').value;
+  const dept = document.getElementById('dept-filter').value;
+  const qStr = new URLSearchParams({dept: dept || '', ug_or_pg: level || ''}).toString();
+  const r = await fetch('/admin/api/survey/users?' + qStr);
   users = await r.json();
   renderUsers(users);
+  updateOverviewStats(dept, level);
   populateDeptDropdown(users);
-  updateOverviewStats("");
+}
+
+async function loadOrientationUsers(){
+  const r = await fetch('/admin/api/orientation/responses');
+  oriUsers = await r.json();
+  renderOrientationUsers(oriUsers);
 }
 
 function populateDeptDropdown(usersList) {
+  if (deptsInitialized) return;
+  if (!usersList || usersList.length === 0) return;
   const select = document.getElementById('dept-filter');
-  const currentVal = select.value;
   const depts = Array.from(new Set(usersList.map(u => u.program).filter(Boolean))).sort();
-  select.innerHTML = '<option value="">All Departments</option>' + 
+  select.innerHTML = '<option value="">All Departments</option>' +
     depts.map(d => `<option value="${escapeHtml(d)}">${escapeHtml(d)}</option>`).join('');
-  if (depts.includes(currentVal)) {
-    select.value = currentVal;
+  deptsInitialized = true;
+}
+
+function applyFilters() {
+  loadUsers();
+  if (oriUsers && oriUsers.length > 0) {
+    renderOrientationUsers(oriUsers);
   }
 }
 
-function applyDeptFilter(dept) {
-  updateOverviewStats(dept);
-}
-
-function updateOverviewStats(dept) {
+function updateOverviewStats(dept, level) {
   let filtered = users;
-  if (dept) {
-    filtered = users.filter(u => u.program === dept);
+  if (dept || level) {
+    filtered = users.filter(u => (!dept || u.program === dept) && (!level || u.ug_or_pg === level));
   }
-  
+
   const total = filtered.length;
   const pre   = filtered.filter(u => u.status === 'pre_done' || u.status === 'post_done').length;
   const post  = filtered.filter(u => u.status === 'post_done').length;
-  
+
   document.getElementById('ov-total').textContent   = total;
   document.getElementById('ov-pre').textContent     = pre;
   document.getElementById('ov-post').textContent    = post;
   document.getElementById('ov-pending').textContent = pre - post;
-  
+
   // Update export button URL
   const exportBtn = document.getElementById('export-dept-btn');
-  if (dept) {
-    exportBtn.href = `/admin/survey/export-cohort?dept=${encodeURIComponent(dept)}`;
-  } else {
-    exportBtn.href = `/admin/survey/export-cohort`;
-  }
-  
-  // Update chart images with dept query parameter
+  const params = new URLSearchParams();
+  if (dept) params.set('dept', dept);
+  if (level) params.set('ug_or_pg', level);
+  exportBtn.href = `/admin/survey/export-cohort${params.toString() ? '?' + params.toString() : ''}`;
+
+  // Update chart images with dept and level query parameters
   const t = new Date().getTime();
-  const qStr = dept ? `?dept=${encodeURIComponent(dept)}&t=${t}` : `?t=${t}`;
-  document.getElementById('cohort-chart-img').src = '/admin/cohort.png' + qStr;
-  document.getElementById('histograms-chart-img').src = '/admin/histograms.png' + qStr;
-  document.getElementById('h1-chart-img').src = '/admin/h1_histogram.png' + qStr;
+  const chartParams = new URLSearchParams({dept: dept || '', ug_or_pg: level || '', t: t.toString()});
+  document.getElementById('cohort-chart-img').src = '/admin/cohort.png?' + chartParams;
+  document.getElementById('histograms-chart-img').src = '/admin/histograms.png?' + chartParams;
+  document.getElementById('h1-chart-img').src = '/admin/h1_histogram.png?' + chartParams;
 }
 
 function escapeHtml(str) {
@@ -349,26 +434,30 @@ const STATUS = {
   not_started: '<span class="badge bg-gray">Not Started</span>',
 };
 
+const LEVEL = { ug: 'UG', pg: 'PG' };
+
 function renderUsers(data){
   const tbody = document.getElementById('user-tbody');
-  if(!data.length){ tbody.innerHTML='<tr><td colspan="9" style="text-align:center;padding:20px;color:var(--muted)">No users yet</td></tr>'; return; }
+  if(!data.length){ tbody.innerHTML='<tr><td colspan="11" style="text-align:center;padding:20px;color:var(--muted)">No users yet</td></tr>'; return; }
   tbody.innerHTML = data.map((u,i)=>`
     <tr>
       <td style="color:var(--muted)">${i+1}</td>
       <td style="font-weight:600">${e(u.name)}</td>
       <td style="font-size:11px;color:var(--muted)">${e(u.email)}</td>
+      <td>${LEVEL[u.ug_or_pg] || 'UG'}</td>
+      <td style="font-size:11px;color:var(--muted)">${e(u.education_type || '—')}</td>
       <td>${e(u.program||'—')}</td>
       <td>${STATUS[u.status]||`<span class="badge bg-gray">${e(u.status)}</span>`}</td>
       <td>${u.orientation_submitted?'<span class="badge bg-green">✓</span>':'<span class="badge bg-gray">—</span>'}</td>
       <td style="font-size:11px;color:var(--muted)">${e(u.pre_at||'—')}</td>
       <td style="font-size:11px;color:var(--muted)">${e(u.post_at||'—')}</td>
       <td>
-        <div style="display:flex;gap:6px;align-items:center;">
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
           ${u.status === 'post_done'
             ? `<a href="/results/${u.email_slug}" target="_blank" class="btn-sm btn-blue" style="text-decoration:none;display:inline-block">👁️ View</a>
-               <button class="btn-sm btn-green" onclick="sendResultsMail(this, '${e(u.email)}')">📧 Send Mail</button>`
+               <button class="btn-sm btn-green" onclick="sendResultsMail(this,'${e(u.email)}')">📧 Mail</button>`
             : ''}
-          <button class="btn-sm" style="background:#dc2626;color:white;border:none;border-radius:4px;cursor:pointer;padding:4px 8px;font-size:12px;font-weight:600;" onclick="deleteUser(this, '${e(u.email)}')">🗑️ Delete</button>
+          <button class="btn-sm" style="background:#dc2626;color:white;border:none;border-radius:4px;cursor:pointer;padding:4px 8px;font-size:12px;font-weight:600;" onclick="deleteUser(this,'${e(u.email)}')">🗑️</button>
         </div>
       </td>
     </tr>`).join('');
@@ -401,6 +490,50 @@ async function deleteUser(btn, email) {
 function filterUsers(){
   const q = document.getElementById('user-search').value.toLowerCase();
   renderUsers(users.filter(u=>(u.name||'').toLowerCase().includes(q)||(u.email||'').toLowerCase().includes(q)||(u.program||'').toLowerCase().includes(q)));
+}
+
+function renderOrientationUsers(data){
+  const level = document.getElementById('level-filter').value;
+  const dept = document.getElementById('dept-filter').value;
+  
+  let filtered = data;
+  if (level || dept) {
+    filtered = data.filter(u => (!level || u.ug_or_pg === level) && (!dept || u.program === dept));
+  }
+
+  const tbody = document.getElementById('ori-tbody');
+  if(!filtered.length){ tbody.innerHTML='<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--muted)">No orientation responses yet</td></tr>'; return; }
+  tbody.innerHTML = filtered.map((u,i)=>`
+    <tr>
+      <td style="color:var(--muted)">${i+1}</td>
+      <td style="font-weight:600">${e(u.name)}</td>
+      <td style="font-size:11px;color:var(--muted)">${e(u.email)}</td>
+      <td>${LEVEL[u.ug_or_pg] || 'UG'}</td>
+      <td>${e(u.program||'—')}</td>
+      <td style="font-size:11px;color:var(--muted)">${e(u.submitted_at||'—')}</td>
+      <td>
+        <button class="btn-sm btn-blue" onclick="viewOrientation('${e(u.email)}')" style="background:#0d2147;">👁️ View</button>
+      </td>
+    </tr>`).join('');
+}
+
+function filterOriUsers(){
+  const q = document.getElementById('ori-search').value.toLowerCase();
+  const level = document.getElementById('level-filter').value;
+  const dept = document.getElementById('dept-filter').value;
+  
+  let filtered = oriUsers;
+  if (level || dept) {
+    filtered = oriUsers.filter(u => (!level || u.ug_or_pg === level) && (!dept || u.program === dept));
+  }
+  renderOrientationUsers(filtered.filter(u=>(u.name||'').toLowerCase().includes(q)||(u.email||'').toLowerCase().includes(q)));
+}
+
+async function viewOrientation(email){
+  const r = await fetch(`/admin/orientation/view/${email}`);
+  const data = await r.json();
+  // Simple alert view - could be enhanced with a modal
+  alert(`Orientation submitted at: ${data.submitted_at}\n\n${data.data ? 'Response preview (first 100 chars):\n' + JSON.stringify(data.data).substr(0,100) + '...' : 'No data'}`);
 }
 
 async function loadPendingCount(){

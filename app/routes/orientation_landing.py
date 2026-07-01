@@ -60,6 +60,7 @@ async def deeksha_landing_post(
     request:    Request,
     name:       str = Form(...),
     email:      str = Form(...),
+    confirm_email: str | None = Form(default=None),
     program:    str = Form(default=""),
     csrf:       str = Form(...),
     hacri_csrf: str | None = Cookie(default=None),
@@ -68,6 +69,14 @@ async def deeksha_landing_post(
     if not orientation_enabled:
         return request.app.state.templates.TemplateResponse(
             request, "orientation_disabled.html", {}, status_code=200
+        )
+
+    if confirm_email is not None and email.strip().lower() != confirm_email.strip().lower():
+        csrf_token = hacri_csrf or make_csrf_token()
+        return request.app.state.templates.TemplateResponse(
+            request, "deeksharambh_landing.html",
+            {"user": None, "csrf_token": csrf_token, "error": "Please correct: Email addresses do not match."},
+            status_code=422,
         )
 
     try:

@@ -163,12 +163,23 @@ async def get_all_flags() -> dict[str, Any]:
 
 
 # ── Users ──────────────────────────────────────────────────────────────────────
-async def upsert_user(email: str, name: str, program: str = "") -> dict:
+async def upsert_user(
+    email: str,
+    name: str,
+    program: str = "",
+    ug_or_pg: str | None = None,
+    education_type: str | None = None,
+) -> dict:
     now = _now()
+    update: dict[str, Any] = {"name": name, "program": program.strip(), "updated_at": now}
+    if ug_or_pg is not None:
+        update["ug_or_pg"] = ug_or_pg
+    if education_type is not None:
+        update["education_type"] = education_type
     return await get_db()[USERS].find_one_and_update(
         {"email": email},
         {
-            "$set":       {"name": name, "program": program.strip(), "updated_at": now},
+            "$set":       update,
             "$setOnInsert": {"email": email, "created_at": now, "status": None},
         },
         upsert=True,
@@ -191,7 +202,8 @@ async def save_pre_response(email: str, name: str, fields: dict) -> tuple[str, d
     user = await db[USERS].find_one_and_update(
         {"email": email},
         {"$set": {"status": STATUS_PRE_DONE, "pre_id": pre_id,
-                  "pre_submitted_at": now, "updated_at": now}},
+                  "pre_submitted_at": now, "updated_at": now,
+                  "education_type": fields.get("A4", "")}},
         upsert=True,
         return_document=ReturnDocument.AFTER,
     )
@@ -255,10 +267,16 @@ def _fmt(dt: Any) -> str:
     return dt.strftime("%d %b %Y %H:%M") if isinstance(dt, datetime) else ""
 
 
-async def list_survey_users(limit: int = 10_000) -> list[dict]:
+async def list_survey_users(limit: int = 10_000, dept: str | None = None, ug_or_pg: str | None = None) -> list[dict]:
     import base64
+    query = {}
+    if dept:
+        query["program"] = dept
+    if ug_or_pg:
+        query["ug_or_pg"] = ug_or_pg
+
     result = []
-    async for u in get_db()[USERS].find({}).sort("created_at", -1).limit(limit):
+    async for u in get_db()[USERS].find(query).sort("created_at", -1).limit(limit):
         email = u["email"]
         slug = base64.urlsafe_b64encode(email.lower().encode()).rstrip(b"=").decode()
         result.append({
@@ -266,11 +284,13 @@ async def list_survey_users(limit: int = 10_000) -> list[dict]:
             "email_slug":           slug,
             "name":                 u.get("name", ""),
             "program":              u.get("program", ""),
-            "status":               u.get("status") or "not_started",
+            "ug_or_pg":             u.get("ug_or_pg", "ug"),
+            "education_type":      u.get("education_type", ""),
+            "status":              u.get("status") or "not_started",
             "orientation_submitted": u.get("orientation_submitted", False),
-            "pre_at":               _fmt(u.get("pre_submitted_at")),
-            "post_at":              _fmt(u.get("post_submitted_at")),
-            "orientation_at":       _fmt(u.get("orientation_at")),
+            "pre_at":              _fmt(u.get("pre_submitted_at")),
+            "post_at":             _fmt(u.get("post_submitted_at")),
+            "orientation_at":      _fmt(u.get("orientation_at")),
         })
     return result
 
@@ -278,20 +298,31 @@ async def list_survey_users(limit: int = 10_000) -> list[dict]:
 async def list_orientation_responses(limit: int = 10_000) -> list[dict]:
     result = []
     async for doc in get_db()[ORI].find({}).sort("submitted_at", -1).limit(limit):
+        email = doc.get("email", "")
+        user = await get_db()[USERS].find_one({"email": email}) if email else None
         result.append({
-            "email":        doc.get("email", ""),
+            "email":        email,
             "name":         doc.get("name", ""),
             "submitted_at": _fmt(doc.get("submitted_at")),
+            "ug_or_pg":    (user or {}).get("ug_or_pg", "ug") if user else "ug",
+            "program":      (user or {}).get("program", "") if user else "",
+            "data":         doc.get("data", {}),
         })
     return result
 
 
-async def list_matched_users(program: str | None = None, limit: int = 10_000) -> dict[str, dict]:
+async def list_matched_users(
+    program: str | None = None,
+    ug_or_pg: str | None = None,
+    limit: int = 10_000,
+) -> dict[str, dict]:
     """Return {email: {pre: fields, post: fields}} for users with both surveys done."""
     db = get_db()
     query = {"status": STATUS_POST_DONE}
     if program:
         query["program"] = program
+    if ug_or_pg:
+        query["ug_or_pg"] = ug_or_pg
     matched: dict[str, dict] = {}
     async for u in db[USERS].find(query).limit(limit):
         email = u["email"]

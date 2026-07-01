@@ -188,7 +188,10 @@ async def pre_get(
         from app.routes.landing import email_to_slug
         return RedirectResponse(url=f"/results/{email_to_slug(session['email'])}", status_code=303)
 
-    extra = {}
+    extra = {
+        "ug_or_pg": (user or {}).get("ug_or_pg", "ug") if user else "ug",
+        "education_type": (user or {}).get("education_type", ""),
+    }
     if msg == "complete_pre_first":
         extra["banner"] = "Please complete the Baseline Survey before accessing the Post-Workshop Survey."
     return await _render_form(request, "pre_survey.html", extra_ctx=extra)

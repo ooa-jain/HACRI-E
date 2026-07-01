@@ -85,6 +85,9 @@ async def landing_post(
     request:    Request,
     name:       str = Form(...),
     email:      str = Form(...),
+    confirm_email: str | None = Form(default=None),
+    ug_or_pg:   str = Form(default="ug"),
+    education_type: str = Form(default=""),
     program:    str = Form(default=""),
     csrf:       str = Form(...),
     hacri_csrf: str | None = Cookie(default=None),
@@ -93,8 +96,22 @@ async def landing_post(
     if not survey_enabled:
         return RedirectResponse(url="/locked", status_code=303)
 
+    if confirm_email is not None and email.strip().lower() != confirm_email.strip().lower():
+        csrf_token = hacri_csrf or make_csrf_token()
+        return request.app.state.templates.TemplateResponse(
+            request, "landing.html",
+            {"user": None, "csrf_token": csrf_token,
+             "error": "Please correct: Email addresses do not match.", "survey_enabled": survey_enabled},
+            status_code=422,
+        )
+
     try:
-        identity = UserIdentity(name=name, email=email)
+        identity = UserIdentity(
+            name=name,
+            email=email,
+            ug_or_pg=ug_or_pg or "ug",
+            education_type=education_type or None,
+        )
     except ValidationError as e:
         csrf_token = hacri_csrf or make_csrf_token()
         return request.app.state.templates.TemplateResponse(
@@ -105,7 +122,7 @@ async def landing_post(
         )
 
     deps.verify_csrf(csrf, hacri_csrf)
-    user = await upsert_user(identity.email, identity.name, program)
+    user = await upsert_user(identity.email, identity.name, program, identity.ug_or_pg, identity.education_type)
 
     status_v = user.get("status")
     orientation_enabled = await get_flag(FLAG_ORIENTATION, default=False)

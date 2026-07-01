@@ -121,24 +121,23 @@ async def admin_cohort(
     token: str = Query(default=""),
     force: int = Query(default=0),
     dept: str = Query(default=""),
+    ug_or_pg: str = Query(default=""),
 ):
     from app.routes.admin import _is_survey_admin
     is_authed = _is_survey_admin(request) or (settings.admin_token and token == settings.admin_token)
     if not is_authed:
         raise HTTPException(status_code=403, detail="Forbidden")
 
-    matched = await list_matched_users(program=dept or None)
+    matched = await list_matched_users(program=dept or None, ug_or_pg=ug_or_pg or None)
     
-    if dept:
-        import hashlib
-        h = hashlib.md5(dept.encode("utf-8")).hexdigest()
-        out = settings.generated_root / f"cohort_{h}.png"
-    else:
-        out = settings.generated_root / "cohort.png"
+    import hashlib
+    key_str = f"cohort_dept={dept or ''}&ug_or_pg={ug_or_pg or ''}"
+    h = hashlib.md5(key_str.encode("utf-8")).hexdigest()
+    out = settings.generated_root / f"cohort_{h}.png"
 
     if not matched:
         from app.charts import _write_placeholder
-        _write_placeholder(out, "No matched responses yet for this department.")
+        _write_placeholder(out, "No matched responses yet for this cohort.")
         return FileResponse(str(out), media_type="image/png")
 
     if force or not out.exists():
@@ -157,24 +156,23 @@ async def admin_histograms(
     token: str = Query(default=""),
     force: int = Query(default=0),
     dept: str = Query(default=""),
+    ug_or_pg: str = Query(default=""),
 ):
     from app.routes.admin import _is_survey_admin
     is_authed = _is_survey_admin(request) or (settings.admin_token and token == settings.admin_token)
     if not is_authed:
         raise HTTPException(status_code=403, detail="Forbidden")
 
-    matched = await list_matched_users(program=dept or None)
+    matched = await list_matched_users(program=dept or None, ug_or_pg=ug_or_pg or None)
     
-    if dept:
-        import hashlib
-        h = hashlib.md5(dept.encode("utf-8")).hexdigest()
-        out = settings.generated_root / f"histograms_{h}.png"
-    else:
-        out = settings.generated_root / "histograms.png"
+    import hashlib
+    key_str = f"histograms_dept={dept or ''}&ug_or_pg={ug_or_pg or ''}"
+    h = hashlib.md5(key_str.encode("utf-8")).hexdigest()
+    out = settings.generated_root / f"histograms_{h}.png"
 
     if not matched:
         from app.charts import _write_placeholder
-        _write_placeholder(out, "No matched responses yet for this department.")
+        _write_placeholder(out, "No matched responses yet for this cohort.")
         return FileResponse(str(out), media_type="image/png")
 
     if force or not out.exists():
@@ -193,24 +191,23 @@ async def admin_h1_histogram(
     token: str = Query(default=""),
     force: int = Query(default=0),
     dept: str = Query(default=""),
+    ug_or_pg: str = Query(default=""),
 ):
     from app.routes.admin import _is_survey_admin
     is_authed = _is_survey_admin(request) or (settings.admin_token and token == settings.admin_token)
     if not is_authed:
         raise HTTPException(status_code=403, detail="Forbidden")
 
-    matched = await list_matched_users(program=dept or None)
+    matched = await list_matched_users(program=dept or None, ug_or_pg=ug_or_pg or None)
     
-    if dept:
-        import hashlib
-        h = hashlib.md5(dept.encode("utf-8")).hexdigest()
-        out = settings.generated_root / f"h1_histogram_{h}.png"
-    else:
-        out = settings.generated_root / "h1_histogram.png"
+    import hashlib
+    key_str = f"h1_dept={dept or ''}&ug_or_pg={ug_or_pg or ''}"
+    h = hashlib.md5(key_str.encode("utf-8")).hexdigest()
+    out = settings.generated_root / f"h1_histogram_{h}.png"
 
     if not matched:
         from app.charts import _write_placeholder
-        _write_placeholder(out, "No matched responses yet for this department.")
+        _write_placeholder(out, "No matched responses yet for this cohort.")
         return FileResponse(str(out), media_type="image/png")
 
     if force or not out.exists():

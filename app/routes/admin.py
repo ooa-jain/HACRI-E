@@ -126,8 +126,13 @@ async def survey_dashboard(request: Request):
     if not _is_survey_admin(request):
         return RedirectResponse(url="/admin/login", status_code=303)
     flags = await get_all_flags()
+    public_url = str(settings.public_base_url).rstrip('/')
+    orientation_share_url = f"{public_url}/deeksharambh"
     return request.app.state.templates.TemplateResponse(
-        request, "admin_survey.html", {"flags": flags},
+        request, "admin_survey.html", {
+            "flags": flags,
+            "orientation_share_url": orientation_share_url
+        },
     )
 
 
@@ -200,16 +205,23 @@ async def api_set_flags(request: Request):
 
 # ── Survey users (survey admin only) ──────────────────────────────────────────
 @router.get("/admin/api/survey/users")
-async def api_survey_users(request: Request):
+async def api_survey_users(
+    request: Request,
+    dept: str = Query(default=""),
+    ug_or_pg: str = Query(default=""),
+):
     if not _is_survey_admin(request):
         raise HTTPException(status_code=403)
-    return JSONResponse(await list_survey_users())
+    return JSONResponse(await list_survey_users(
+        dept=dept or None,
+        ug_or_pg=ug_or_pg or None,
+    ))
 
 
-# ── Orientation responses (orientation admin only) ────────────────────────────
+# ── Orientation responses (both admins can view) ───────────────────────────────
 @router.get("/admin/api/orientation/responses")
 async def api_orientation_responses(request: Request):
-    if not _is_ori_admin(request):
+    if not (_is_survey_admin(request) or _is_ori_admin(request)):
         raise HTTPException(status_code=403)
     return JSONResponse(await list_orientation_responses())
 
@@ -268,7 +280,11 @@ async def api_send_results(
 
 
 @router.get("/admin/survey/export-cohort")
-async def admin_export_cohort(request: Request, dept: str = Query(default="")):
+async def admin_export_cohort(
+    request: Request,
+    dept: str = Query(default=""),
+    ug_or_pg: str = Query(default=""),
+):
     if not _is_survey_admin(request):
         raise HTTPException(status_code=403)
 
@@ -276,6 +292,8 @@ async def admin_export_cohort(request: Request, dept: str = Query(default="")):
     query = {}
     if dept:
         query["program"] = dept
+    if ug_or_pg:
+        query["ug_or_pg"] = ug_or_pg
 
     users_list = []
     async for u in db["users"].find(query).sort("created_at", -1):
@@ -294,7 +312,12 @@ async def admin_export_cohort(request: Request, dept: str = Query(default="")):
     csv_data = cohort_csv_bytes(users_list, pre_docs, post_docs)
 
     import io
-    filename = f"HACRI_E2_Cohort_Export_{dept}.csv" if dept else "HACRI_E2_Cohort_Export.csv"
+    suffix = ""
+    if dept:
+        suffix += f"_{dept}"
+    if ug_or_pg:
+        suffix += f"_{ug_or_pg.upper()}"
+    filename = f"HACRI_E2_Cohort_Export{suffix}.csv"
     # remove spaces and special characters from filename
     filename = "".join(c for c in filename if c.isalnum() or c in "._-")
     return StreamingResponse(
@@ -313,3 +336,21 @@ async def api_delete_user(request: Request, email: str):
     from app.db import delete_user_and_responses
     await delete_user_and_responses(email)
     return JSONResponse({"ok": True})
+
+
+# ── View a single orientation response ─────────────────────────────────────────
+@router.get("/admin/orientation/view/{email}")
+async def api_view_orientation(request: Request, email: str):
+    if not (_is_survey_admin(request) or _is_ori_admin(request)):
+        raise HTTPException(status_code=403)
+    doc = await get_db()[ORI].find_one(
+        {"email": email}, sort=[("submitted_at", -1)]
+    )
+    if not doc:
+        raise HTTPException(status_code=404, detail="Orientation response not found")
+    return JSONResponse({
+        "email": doc.get("email", ""),
+        "name": doc.get("name", ""),
+        "submitted_at": doc.get("submitted_at").strftime("%d %b %Y %H:%M") if doc.get("submitted_at") else "",
+        "data": doc.get("data", {}),
+    })

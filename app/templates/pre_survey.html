@@ -91,17 +91,60 @@
       <p class="muted">Help us understand who you are.</p>
       <div class="sub-section-card">
         {% for key, label, kind, opts in pre_background %}
+        {% if key == "A4" %}
+        {# A4 changes label and options based on UG/PG level #}
         <div class="question">
-          <label class="q-label"><strong>{{ key }}.</strong> {{ label }}</label>
+          <label class="q-label">
+            <strong>A4.</strong>
+            {% if ug_or_pg == "pg" %}What type of prv education did you attend before university?{% else %}What type of school did you attend before university?{% endif %}
+          </label>
+          <div class="q-body">
+            <select name="{{ key }}" required>
+              <option value="">-- Select --</option>
+              {% if ug_or_pg == "pg" %}
+              <option value="Public Universities" {% if values.get(key)=="Public Universities" %}selected{% endif %}>Public Universities</option>
+              <option value="Private Universities" {% if values.get(key)=="Private Universities" %}selected{% endif %}>Private Universities</option>
+              <option value="Liberal Arts Colleges" {% if values.get(key)=="Liberal Arts Colleges" %}selected{% endif %}>Liberal Arts Colleges</option>
+              <option value="Community Colleges" {% if values.get(key)=="Community Colleges" %}selected{% endif %}>Community Colleges</option>
+              <option value="Research Universities" {% if values.get(key)=="Research Universities" %}selected{% endif %}>Research Universities</option>
+              <option value="Vocational &amp; Technical Colleges" {% if values.get(key)=="Vocational &amp; Technical Colleges" %}selected{% endif %}>Vocational &amp; Technical Colleges</option>
+              <option value="Online &amp; Distance Universities" {% if values.get(key)=="Online &amp; Distance Universities" %}selected{% endif %}>Online &amp; Distance Universities</option>
+              {% else %}
+              <option value="Public school" {% if values.get(key)=="Public school" %}selected{% endif %}>Public school</option>
+              <option value="Private / independent school" {% if values.get(key)=="Private / independent school" %}selected{% endif %}>Private / independent school</option>
+              <option value="International school" {% if values.get(key)=="International school" %}selected{% endif %}>International school</option>
+              <option value="Religious school" {% if values.get(key)=="Religious school" %}selected{% endif %}>Religious school</option>
+              <option value="Other / mixed" {% if values.get(key)=="Other / mixed" %}selected{% endif %}>Other / mixed</option>
+              {% endif %}
+            </select>
+          </div>
+        </div>
+        {% else %}
+        <div class="question">
+          <label class="q-label">
+            <strong>{{ key }}.</strong>
+            {% if ug_or_pg == "pg" %}
+              {{ label | replace("school", "prv education") | replace("School", "Prv education") }}
+            {% else %}
+              {{ label }}
+            {% endif %}
+          </label>
           <div class="q-body">
             <select name="{{ key }}" required>
               <option value="">-- Select --</option>
               {% for o in opts %}
-              <option value="{{ o }}" {% if values.get(key)==o %}selected{% endif %}>{{ o }}</option>
+              <option value="{{ o }}" {% if values.get(key)==o %}selected{% endif %}>
+                {% if ug_or_pg == "pg" %}
+                  {{ o | replace("school", "prv education") | replace("School", "Prv education") }}
+                {% else %}
+                  {{ o }}
+                {% endif %}
+              </option>
               {% endfor %}
             </select>
           </div>
         </div>
+        {% endif %}
         {% endfor %}
       </div>
     </fieldset>
@@ -155,21 +198,40 @@
       <div class="sub-section-card">
         {% for key, label, kind, opts in pre_usage %}
         <div class="question">
-          <p class="q-label"><strong>{{ key }}.</strong> {{ label }}</p>
+          <p class="q-label">
+            <strong>{{ key }}.</strong>
+            {% if ug_or_pg == "pg" %}
+              {{ label | replace("school", "prv education") | replace("School", "Prv education") }}
+            {% else %}
+              {{ label }}
+            {% endif %}
+          </p>
           <div class="q-body {% if kind == 'checkbox' %}check-grid{% endif %}">
             {% if kind == "checkbox" %}
             {% set chosen = values.get(key) or [] %}
             {% for o in opts %}
             <label class="check-opt">
               <input type="checkbox" name="{{ key }}" value="{{ o }}" {% if o in chosen %}checked{% endif %} />
-              <span>{{ o }}</span>
+              <span>
+                {% if ug_or_pg == "pg" %}
+                  {{ o | replace("school", "prv education") | replace("School", "Prv education") }}
+                {% else %}
+                  {{ o }}
+                {% endif %}
+              </span>
             </label>
             {% endfor %}
             {% else %}
             <select name="{{ key }}" required>
               <option value="">-- Select --</option>
               {% for o in opts %}
-              <option value="{{ o }}" {% if values.get(key)==o %}selected{% endif %}>{{ o }}</option>
+              <option value="{{ o }}" {% if values.get(key)==o %}selected{% endif %}>
+                {% if ug_or_pg == "pg" %}
+                  {{ o | replace("school", "prv education") | replace("School", "Prv education") }}
+                {% else %}
+                  {{ o }}
+                {% endif %}
+              </option>
               {% endfor %}
             </select>
             {% endif %}
@@ -603,8 +665,13 @@
         </div>
 
         <div class="question">
-          <p class="q-label"><strong>H3.</strong> How confident are you that your school prepared you for AI at
-            university?</p>
+          <p class="q-label"><strong>H3.</strong>
+            {% if ug_or_pg == "pg" %}
+              How confident are you that your prv education prepared you for AI at university?
+            {% else %}
+              How confident are you that your school prepared you for AI at university?
+            {% endif %}
+          </p>
           <div class="likert-row">
             {% for n, lbl in likert_choices %}
             <label class="likert-opt">

@@ -3,21 +3,20 @@
 {% block content %}
 <section class="card">
   <h1>Thank you, {{ name }}! ✓</h1>
-  <p class="lede">Your responses to the AI Survey Baseline Survey have been recorded.</p>
+  <p class="lede">Your responses to the AI Survey Baseline Assessment have been recorded.</p>
 
   <div class="callout">
-    <strong>Please use the same email address</strong>
-    (<code>{{ email }}</code>)
-    for any upcoming forms we send you. This lets us match your responses
-    automatically without you having to re-enter your details.
+    <strong>Please save your email ID for the next AI survey.</strong><br />
+    Use the same email address <code>{{ email }}</code> for any upcoming forms we share with you.
+    This ensures your responses are automatically matched across all survey phases.
   </div>
 
   {% if orientation_enabled %}
-    <p style="margin-top:1rem">Next step: please also fill the <strong>Deeksharambh Orientation Survey</strong>.</p>
-    <a class="btn primary" href="/orientation">Continue to Orientation Survey →</a>
+  <p style="margin-top:1rem">Next step: please fill the <strong>Deeksharambh Orientation Survey</strong>.</p>
+  <a class="btn primary" href="/orientation">Continue to Orientation Survey →</a>
   {% else %}
-    <p style="margin-top:1rem">You're all done for now. You may close this tab.</p>
-    <a class="btn primary" href="/">← Back to home</a>
+  <p style="margin-top:1rem">You're all done for now. You may close this tab.</p>
+  <a class="btn primary" href="/">← Back to home</a>
   {% endif %}
 </section>
 {% endblock %}

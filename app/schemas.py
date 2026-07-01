@@ -15,6 +15,8 @@ from pydantic import BaseModel, EmailStr, Field, field_validator
 class UserIdentity(BaseModel):
     name: Annotated[str, Field(min_length=1, max_length=200)]
     email: EmailStr
+    ug_or_pg: Annotated[str, Field(min_length=1, max_length=20)] = "ug"
+    education_type: Annotated[str | None, Field(max_length=100)] = None
 
     @field_validator("name")
     @classmethod
@@ -25,6 +27,13 @@ class UserIdentity(BaseModel):
     @classmethod
     def _norm_email(cls, v: str) -> str:
         return v.strip().lower()
+
+    @field_validator("ug_or_pg")
+    @classmethod
+    def _check_level(cls, v: str) -> str:
+        if v not in ("ug", "pg"):
+            raise ValueError("Must be 'ug' or 'pg'")
+        return v
 
 
 # ── Helpers used by routes to build the canonical fields dict ───────────────
