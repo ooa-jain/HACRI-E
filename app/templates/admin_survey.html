@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>AI Survey Admin — HACRI-E</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
 :root{--navy:#0d2147;--navy2:#1a3a7a;--gold:#e6b324;--bg:#f0f2f5;--card:#fff;--border:#e5e7eb;--text:#1e293b;--muted:#64748b;--green:#16a34a;--teal:#0d9488}
 *{box-sizing:border-box;margin:0;padding:0}
@@ -71,6 +72,24 @@ input:checked+.slider:before{transform:translateX(22px)}
     font-size: 12px;
   }
 }
+@keyframes modalFadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.overview-section {
+  display: grid;
+  grid-template-columns: 3fr 2fr;
+  gap: 20px;
+  margin-bottom: 20px;
+  align-items: stretch;
+}
+
+@media (max-width: 900px) {
+  .overview-section {
+    grid-template-columns: 1fr !important;
+  }
+}
 </style>
 </head>
 <body>
@@ -85,6 +104,7 @@ input:checked+.slider:before{transform:translateX(22px)}
     <button class="tab" onclick="show('p-users',this)">👥 Users</button>
     <button class="tab" onclick="show('p-orient',this)">🎓 Orientation</button>
     <button class="tab" onclick="show('p-alerts',this)">🔔 Alerts</button>
+    <button class="tab" onclick="show('p-dept-analysis',this)">🏢 Department Analysis</button>
   </div>
 
   <!-- Global Cohort Filters -->
@@ -105,8 +125,17 @@ input:checked+.slider:before{transform:translateX(22px)}
           <option value="">All Departments</option>
         </select>
       </div>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span style="font-size:13px;font-weight:600;color:var(--navy);">Status:</span>
+        <select id="status-filter" onchange="applyFilters()" style="padding:6px 10px;border-radius:6px;border:1px solid var(--border);font-size:13px;outline:none;font-family:inherit;background:#fff;">
+          <option value="">All Statuses</option>
+          <option value="not_started">Registered (Pending Baseline)</option>
+          <option value="pre_done">Pre Done (Pending Post-Workshop)</option>
+          <option value="post_done">Both Done</option>
+        </select>
+      </div>
     </div>
-    <a id="export-dept-btn" href="/admin/survey/export-cohort" class="btn-sm btn-green" style="text-decoration:none;display:inline-block;padding:8px 16px;">📥 Export Cohort CSV</a>
+    <button id="export-dept-btn" onclick="openExportModal()" class="btn-sm btn-green" style="border:none;display:inline-block;padding:8px 16px;font-family:inherit;font-size:12px;font-weight:600;border-radius:6px;cursor:pointer;">📥 Export Cohort Data</button>
   </div>
 
   <!-- Overview -->
@@ -115,15 +144,29 @@ input:checked+.slider:before{transform:translateX(22px)}
       <h2 style="font-size:16px;color:var(--navy);font-weight:700">Cohort Statistics</h2>
     </div>
 
-    <div class="stat-grid">
-      <div class="stat"><div class="stat-n" id="ov-total">—</div><div class="stat-l">Registered</div></div>
-      <div class="stat"><div class="stat-n" id="ov-pre">—</div><div class="stat-l">Pre Done</div></div>
-      <div class="stat"><div class="stat-n" id="ov-post">—</div><div class="stat-l">Post Done</div></div>
-      <div class="stat"><div class="stat-n" id="ov-pending">—</div><div class="stat-l">Pending Post</div></div>
-    </div>
-    <div class="card" style="margin-bottom:20px;">
-      <div style="font-size:13px;color:var(--muted);margin-bottom:6px">Survey Status</div>
-      <div id="ov-flag" style="font-size:14px">Loading…</div>
+    <div class="overview-section">
+      <div style="display: flex; flex-direction: column; gap: 16px;">
+        <div class="stat-grid" style="margin-bottom: 0;">
+          <div class="stat"><div class="stat-n" id="ov-total">—</div><div class="stat-l">Registered</div></div>
+          <div class="stat"><div class="stat-n" id="ov-pre">—</div><div class="stat-l">Pre Done</div></div>
+          <div class="stat"><div class="stat-n" id="ov-pending-pre">—</div><div class="stat-l">Pending Baseline</div></div>
+          <div class="stat"><div class="stat-n" id="ov-post">—</div><div class="stat-l">Post Done</div></div>
+          <div class="stat"><div class="stat-n" id="ov-pending">—</div><div class="stat-l">Pending Post</div></div>
+        </div>
+        <div class="card" style="margin-bottom: 0;">
+          <div style="font-size:13px;color:var(--muted);margin-bottom:6px">Survey Status</div>
+          <div id="ov-flag" style="font-size:14px">Loading…</div>
+        </div>
+      </div>
+      
+      <!-- Power BI Style Pie/Doughnut Chart Card -->
+      <div class="card" style="margin-bottom: 0; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; box-sizing: border-box; padding: 20px;">
+        <h3 style="font-size: 14px; font-weight: 700; color: var(--navy); margin-bottom: 12px; align-self: flex-start;">Survey Completion Status</h3>
+        <div style="position: relative; width: 100%; max-width: 150px; height: 150px; display: flex; justify-content: center; align-items: center;">
+          <canvas id="adminStatusPieChart"></canvas>
+        </div>
+        <div id="admin-pie-legend" style="width: 100%; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 6px;"></div>
+      </div>
     </div>
 
     <div class="card">
@@ -280,16 +323,67 @@ input:checked+.slider:before{transform:translateX(22px)}
 
   <!-- Alerts -->
   <div class="panel" id="p-alerts">
-    <div class="alert-box">
-      <strong>Post-Survey Reminder</strong>
-      <p style="font-size:13px;margin-top:6px">Send a reminder to all students who completed the Baseline but not yet the Post-Workshop Survey.</p>
-      <p style="font-size:12px;margin-top:8px">Pending: <strong id="pending-count">—</strong> students</p>
+    <div style="margin-bottom:16px;">
+      <h2 style="font-size:16px;color:var(--navy);font-weight:700">🔔 Cohort Reminders</h2>
+      <p style="font-size:12.5px;color:var(--muted);margin-top:4px">Send targeted reminders. The counts and recipients respect the active Level and Department filters above.</p>
     </div>
-    <div id="alert-result" style="display:none;margin-bottom:12px"></div>
-    <button class="btn-sm btn-green" style="padding:10px 20px;font-size:13px;border-radius:8px" onclick="sendAlert()">
-      📧 Send Reminder to Pending Students
-    </button>
-    <p style="font-size:12px;color:var(--muted);margin-top:12px">Set <code>EMAIL_DRY_RUN=false</code> in .env for real emails.</p>
+    
+    <div id="alert-result" style="display:none;margin-bottom:16px"></div>
+    
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:20px;margin-bottom:20px;">
+      <!-- Baseline Survey Reminder -->
+      <div class="card" style="margin-bottom:0;display:flex;flex-direction:column;justify-content:space-between;border-left:4px solid var(--navy2);">
+        <div>
+          <h3 style="font-size:15px;color:var(--navy);font-weight:700;margin-bottom:8px;">📝 Baseline Survey (Pre-Survey) Reminder</h3>
+          <p style="font-size:12.5px;color:var(--muted);margin-bottom:12px;line-height:1.4;">Send an email notification to students who registered but have NOT yet completed the Baseline (Pre-Survey).</p>
+          <div style="font-size:13px;font-weight:600;color:var(--navy);margin-bottom:16px;background:var(--bg);padding:8px 12px;border-radius:6px;display:inline-block;">
+            Pending: <span id="pending-pre-count" style="font-size:16px;font-weight:800;color:#dc2626;">—</span> students
+          </div>
+        </div>
+        <button class="btn-sm btn-blue" style="padding:10px 16px;font-size:13px;border-radius:6px;width:100%;" onclick="sendPreAlert()">
+          📧 Send Baseline Survey Reminders
+        </button>
+      </div>
+
+      <!-- Post-Workshop Survey Reminder -->
+      <div class="card" style="margin-bottom:0;display:flex;flex-direction:column;justify-content:space-between;border-left:4px solid var(--green);">
+        <div>
+          <h3 style="font-size:15px;color:var(--navy);font-weight:700;margin-bottom:8px;">📊 Post-Workshop Survey Reminder</h3>
+          <p style="font-size:12.5px;color:var(--muted);margin-bottom:12px;line-height:1.4;">Send an email notification to students who completed the Baseline Survey but have NOT yet completed the Post-Workshop Survey.</p>
+          <div style="font-size:13px;font-weight:600;color:var(--navy);margin-bottom:16px;background:var(--bg);padding:8px 12px;border-radius:6px;display:inline-block;">
+            Pending: <span id="pending-post-count" style="font-size:16px;font-weight:800;color:var(--teal);">—</span> students
+          </div>
+        </div>
+        <button class="btn-sm btn-green" style="padding:10px 16px;font-size:13px;border-radius:6px;width:100%;" onclick="sendPostAlert()">
+          📧 Send Post-Workshop Survey Reminders
+        </button>
+      </div>
+    </div>
+    <p style="font-size:12px;color:var(--muted)">Set <code>EMAIL_DRY_RUN=false</code> in the server's <code>.env</code> file for real emails.</p>
+  </div>
+
+  <!-- Department Analysis -->
+  <div class="panel" id="p-dept-analysis">
+    <div class="card" style="margin-bottom:16px;">
+      <h3 style="font-size:15px;color:var(--navy);margin-bottom:6px;font-weight:700">🏢 Department-wise Analysis</h3>
+      <p style="font-size:12.5px;color:var(--muted);margin-bottom:16px">Track statistics, copy public sharing links, and export Excel/PPT for each department.</p>
+    </div>
+    <div class="card" style="padding:0;overflow-x:auto;">
+      <table class="mtable" id="dept-table" style="min-width:900px;">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Department</th>
+            <th>Registered</th>
+            <th>Pre Done</th>
+            <th>Post Done</th>
+            <th>Pending Post</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="dept-tbody"><tr><td colspan="7" style="text-align:center;padding:20px;color:var(--muted)">Loading…</td></tr></tbody>
+      </table>
+    </div>
   </div>
 </div>
 
@@ -297,6 +391,7 @@ input:checked+.slider:before{transform:translateX(22px)}
 let deptsInitialized = false;
 let users = [];
 let oriUsers = [];
+let adminChartInstance = null;
 
 function show(id, btn){
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
@@ -306,6 +401,7 @@ function show(id, btn){
   if(id==='p-users' && users.length===0) loadUsers();
   if(id==='p-orient' && oriUsers.length===0) loadOrientationUsers();
   if(id==='p-alerts') loadPendingCount();
+  if(id==='p-dept-analysis') loadDeptStats();
 }
 
 async function loadFlags(){
@@ -369,6 +465,7 @@ async function loadUsers(){
   renderUsers(users);
   updateOverviewStats(dept, level);
   populateDeptDropdown(users);
+  loadPendingCount();
 }
 
 async function loadOrientationUsers(){
@@ -403,18 +500,79 @@ function updateOverviewStats(dept, level) {
   const total = filtered.length;
   const pre   = filtered.filter(u => u.status === 'pre_done' || u.status === 'post_done').length;
   const post  = filtered.filter(u => u.status === 'post_done').length;
+  const pendingPre = total - pre;
+  const pendingPost = pre - post;
 
   document.getElementById('ov-total').textContent   = total;
   document.getElementById('ov-pre').textContent     = pre;
+  document.getElementById('ov-pending-pre').textContent = pendingPre;
   document.getElementById('ov-post').textContent    = post;
-  document.getElementById('ov-pending').textContent = pre - post;
+  document.getElementById('ov-pending').textContent = pendingPost;
 
-  // Update export button URL
-  const exportBtn = document.getElementById('export-dept-btn');
-  const params = new URLSearchParams();
-  if (dept) params.set('dept', dept);
-  if (level) params.set('ug_or_pg', level);
-  exportBtn.href = `/admin/survey/export-cohort${params.toString() ? '?' + params.toString() : ''}`;
+  // Update dynamic pie chart & legend percentages
+  const pctPost = total > 0 ? ((post / total) * 100).toFixed(1) : 0;
+  const pctPendingPost = total > 0 ? ((pendingPost / total) * 100).toFixed(1) : 0;
+  const pctPendingPre = total > 0 ? ((pendingPre / total) * 100).toFixed(1) : 0;
+
+  const legendEl = document.getElementById('admin-pie-legend');
+  if (legendEl) {
+    legendEl.innerHTML = `
+      <div class="legend-item" style="display:flex; align-items:center; font-size:12px;">
+        <span class="legend-color" style="width:8px; height:8px; border-radius:50%; margin-right:6px; background-color:#10b981; flex-shrink:0;"></span>
+        <span class="legend-label" style="color:var(--muted); flex-grow:1;">Both Done:</span>
+        <span class="legend-value" style="color:var(--text); font-weight:600;">${post} (${pctPost}%)</span>
+      </div>
+      <div class="legend-item" style="display:flex; align-items:center; font-size:12px;">
+        <span class="legend-color" style="width:8px; height:8px; border-radius:50%; margin-right:6px; background-color:#e6b324; flex-shrink:0;"></span>
+        <span class="legend-label" style="color:var(--muted); flex-grow:1;">Pending Post:</span>
+        <span class="legend-value" style="color:var(--text); font-weight:600;">${pendingPost} (${pctPendingPost}%)</span>
+      </div>
+      <div class="legend-item" style="display:flex; align-items:center; font-size:12px;">
+        <span class="legend-color" style="width:8px; height:8px; border-radius:50%; margin-right:6px; background-color:#dc2626; flex-shrink:0;"></span>
+        <span class="legend-label" style="color:var(--muted); flex-grow:1;">Pending Baseline:</span>
+        <span class="legend-value" style="color:var(--text); font-weight:600;">${pendingPre} (${pctPendingPre}%)</span>
+      </div>
+    `;
+  }
+
+  if (typeof Chart !== 'undefined') {
+    const ctx = document.getElementById('adminStatusPieChart').getContext('2d');
+    if (adminChartInstance) {
+      adminChartInstance.data.datasets[0].data = [post, pendingPost, pendingPre];
+      adminChartInstance.update();
+    } else {
+      adminChartInstance = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: ['Both Done', 'Pending Post', 'Pending Baseline'],
+          datasets: [{
+            data: [post, pendingPost, pendingPre],
+            backgroundColor: ['#10b981', '#e6b324', '#dc2626'],
+            borderWidth: 2,
+            borderColor: '#ffffff',
+            hoverOffset: 4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  const val = context.raw;
+                  const pct = total > 0 ? ((val / total) * 100).toFixed(1) : 0;
+                  return ` ${context.label}: ${val} (${pct}%)`;
+                }
+              }
+            }
+          },
+          cutout: '60%'
+        }
+      });
+    }
+  }
 
   // Update chart images with dept and level query parameters
   const t = new Date().getTime();
@@ -437,9 +595,29 @@ const STATUS = {
 const LEVEL = { ug: 'UG', pg: 'PG' };
 
 function renderUsers(data){
+  const statusFilter = document.getElementById('status-filter').value;
+  let filtered = data;
+  
+  if (statusFilter) {
+    if (statusFilter === 'not_started') {
+      filtered = filtered.filter(u => u.status === 'not_started' || !u.status);
+    } else {
+      filtered = filtered.filter(u => u.status === statusFilter);
+    }
+  }
+
+  const q = document.getElementById('user-search').value.toLowerCase();
+  if (q) {
+    filtered = filtered.filter(u => 
+      (u.name || '').toLowerCase().includes(q) || 
+      (u.email || '').toLowerCase().includes(q) || 
+      (u.program || '').toLowerCase().includes(q)
+    );
+  }
+
   const tbody = document.getElementById('user-tbody');
-  if(!data.length){ tbody.innerHTML='<tr><td colspan="11" style="text-align:center;padding:20px;color:var(--muted)">No users yet</td></tr>'; return; }
-  tbody.innerHTML = data.map((u,i)=>`
+  if(!filtered.length){ tbody.innerHTML='<tr><td colspan="11" style="text-align:center;padding:20px;color:var(--muted)">No users matching filters</td></tr>'; return; }
+  tbody.innerHTML = filtered.map((u,i)=>`
     <tr>
       <td style="color:var(--muted)">${i+1}</td>
       <td style="font-weight:600">${e(u.name)}</td>
@@ -488,8 +666,7 @@ async function deleteUser(btn, email) {
 }
 
 function filterUsers(){
-  const q = document.getElementById('user-search').value.toLowerCase();
-  renderUsers(users.filter(u=>(u.name||'').toLowerCase().includes(q)||(u.email||'').toLowerCase().includes(q)||(u.program||'').toLowerCase().includes(q)));
+  renderUsers(users);
 }
 
 function renderOrientationUsers(data){
@@ -536,23 +713,51 @@ async function viewOrientation(email){
   alert(`Orientation submitted at: ${data.submitted_at}\n\n${data.data ? 'Response preview (first 100 chars):\n' + JSON.stringify(data.data).substr(0,100) + '...' : 'No data'}`);
 }
 
-async function loadPendingCount(){
-  if(users.length===0) await loadUsers();
-  document.getElementById('pending-count').textContent = users.filter(u=>u.status==='pre_done').length;
+function loadPendingCount(){
+  const dept = document.getElementById('dept-filter').value;
+  const level = document.getElementById('level-filter').value;
+  const filtered = users.filter(u => (!dept || u.program === dept) && (!level || u.ug_or_pg === level));
+  const pendingPre = filtered.filter(u => u.status === 'not_started' || !u.status).length;
+  const pendingPost = filtered.filter(u => u.status === 'pre_done').length;
+  
+  const elPre = document.getElementById('pending-pre-count');
+  const elPost = document.getElementById('pending-post-count');
+  if (elPre) elPre.textContent = pendingPre;
+  if (elPost) elPost.textContent = pendingPost;
 }
 
-async function sendAlert(){
+async function sendPreAlert(){
   const btn = event.target; btn.disabled=true; btn.textContent='Sending…';
   const res = document.getElementById('alert-result'); res.style.display='none';
+  const dept = document.getElementById('dept-filter').value;
+  const level = document.getElementById('level-filter').value;
+  const params = new URLSearchParams({dept: dept || '', ug_or_pg: level || ''});
   try{
-    const r = await fetch('/admin/api/alert/post-pending',{method:'POST'});
+    const r = await fetch('/admin/api/alert/pre-pending?' + params.toString(),{method:'POST'});
     const d = await r.json();
     res.style.cssText='display:block;background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:14px;margin-bottom:12px;font-size:13px;color:#15803d';
     res.innerHTML=`✓ Sent: <b>${d.sent}</b>. Failed: <b>${d.failed}</b>. Total pending: <b>${d.total_pending}</b>.`;
   }catch(ex){
     res.style.cssText='display:block;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:14px;margin-bottom:12px;font-size:13px;color:#b91c1c';
     res.innerHTML='✗ Error: '+ex.message;
-  }finally{ btn.disabled=false; btn.textContent='📧 Send Reminder to Pending Students'; }
+  }finally{ btn.disabled=false; btn.textContent='📧 Send Baseline Survey Reminders'; await loadUsers(); }
+}
+
+async function sendPostAlert(){
+  const btn = event.target; btn.disabled=true; btn.textContent='Sending…';
+  const res = document.getElementById('alert-result'); res.style.display='none';
+  const dept = document.getElementById('dept-filter').value;
+  const level = document.getElementById('level-filter').value;
+  const params = new URLSearchParams({dept: dept || '', ug_or_pg: level || ''});
+  try{
+    const r = await fetch('/admin/api/alert/post-pending?' + params.toString(),{method:'POST'});
+    const d = await r.json();
+    res.style.cssText='display:block;background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:14px;margin-bottom:12px;font-size:13px;color:#15803d';
+    res.innerHTML=`✓ Sent: <b>${d.sent}</b>. Failed: <b>${d.failed}</b>. Total pending: <b>${d.total_pending}</b>.`;
+  }catch(ex){
+    res.style.cssText='display:block;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:14px;margin-bottom:12px;font-size:13px;color:#b91c1c';
+    res.innerHTML='✗ Error: '+ex.message;
+  }finally{ btn.disabled=false; btn.textContent='📧 Send Post-Workshop Survey Reminders'; await loadUsers(); }
 }
 
 async function sendResultsMail(btn, email) {
@@ -582,7 +787,164 @@ async function sendResultsMail(btn, email) {
 
 function e(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
+let deptStats = [];
+async function loadDeptStats() {
+  const r = await fetch('/admin/api/survey/dept-stats');
+  deptStats = await r.json();
+  renderDeptStats(deptStats);
+}
+
+function renderDeptStats(data) {
+  const tbody = document.getElementById('dept-tbody');
+  if(!data.length){
+    tbody.innerHTML='<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--muted)">No departments found</td></tr>';
+    return;
+  }
+  tbody.innerHTML = data.map((d,i)=>`
+    <tr>
+      <td style="color:var(--muted)">${i+1}</td>
+      <td style="font-weight:600">
+        <a href="#" onclick="viewDeptUsers('${e(d.dept)}'); return false;" style="color:var(--navy2); text-decoration:none; border-bottom:1px dashed var(--navy2);" title="Click to view students in this department">
+          ${e(d.dept || 'Unnamed Department')}
+        </a>
+      </td>
+      <td><span class="badge bg-gray" style="font-size:12px;padding:4px 8px;">${d.registered}</span></td>
+      <td><span class="badge bg-blue" style="font-size:12px;padding:4px 8px;">${d.pre_done}</span></td>
+      <td><span class="badge bg-green" style="font-size:12px;padding:4px 8px;">${d.post_done}</span></td>
+      <td><span class="badge bg-gray" style="background:#fecaca;color:#b91c1c;font-size:12px;padding:4px 8px;">${d.post_pending}</span></td>
+      <td>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <button class="btn-sm btn-blue" onclick="copyDeptLink('${e(d.share_url)}')">🔗 Copy Link</button>
+          <a href="${e(d.share_url)}" target="_blank" class="btn-sm btn-blue" style="text-decoration:none;display:inline-block;background:var(--teal)">📈 View Shared</a>
+          <a href="/shared/analysis/export-excel?dept=${encodeURIComponent(d.dept)}&token=${d.token}" class="btn-sm btn-green" style="text-decoration:none;display:inline-block">📥 Excel</a>
+          <a href="/shared/analysis/download-ppt?dept=${encodeURIComponent(d.dept)}&token=${d.token}" class="btn-sm btn-blue" style="text-decoration:none;display:inline-block;background:var(--gold);color:var(--navy)">📊 PPT</a>
+        </div>
+      </td>
+    </tr>`).join('');
+}
+
+function viewDeptUsers(deptName) {
+  const select = document.getElementById('dept-filter');
+  select.value = deptName;
+  const usersTabBtn = Array.from(document.querySelectorAll('.tab')).find(t => t.textContent.includes('Users'));
+  show('p-users', usersTabBtn);
+  applyFilters();
+}
+
+function copyDeptLink(url) {
+  navigator.clipboard.writeText(url);
+  alert('Public sharing link copied to clipboard!');
+}
+
+function openExportModal() {
+  const dept = document.getElementById('dept-filter').value;
+  const level = document.getElementById('level-filter').value;
+  document.getElementById('export-hidden-dept').value = dept || '';
+  document.getElementById('export-hidden-level').value = level || '';
+  document.getElementById('export-modal').style.display = 'flex';
+}
+
+function closeExportModal() {
+  document.getElementById('export-modal').style.display = 'none';
+}
+
+// Close modal when form is submitted
+document.addEventListener('DOMContentLoaded', () => {
+  const expForm = document.getElementById('export-form');
+  if (expForm) {
+    expForm.addEventListener('submit', () => {
+      setTimeout(closeExportModal, 500);
+    });
+  }
+});
+
 (async()=>{ await loadFlags(); await loadUsers(); })();
 </script>
+
+<!-- Export Customization Modal -->
+<div id="export-modal" style="display:none; position:fixed; inset:0; background:rgba(13,33,71,0.6); backdrop-filter:blur(4px); z-index:1000; align-items:center; justify-content:center;">
+  <div style="background:#fff; border-radius:12px; max-width:520px; width:90%; padding:24px; box-shadow:0 10px 25px rgba(0,0,0,0.15); border:1px solid var(--border); animation: modalFadeIn 0.2s ease; box-sizing:border-box;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; border-bottom:1.5px solid var(--border); padding-bottom:12px;">
+      <h3 style="font-size:16px; color:var(--navy); font-weight:700; margin:0;">📥 Export Cohort Data</h3>
+      <button onclick="closeExportModal()" style="background:none; border:none; font-size:24px; cursor:pointer; color:var(--muted); font-weight:700; line-height:1; padding:0 4px;">&times;</button>
+    </div>
+    <form id="export-form" method="GET" action="/admin/survey/export-cohort">
+      <!-- Hidden fields to keep current active dashboard filters -->
+      <input type="hidden" name="dept" id="export-hidden-dept" />
+      <input type="hidden" name="ug_or_pg" id="export-hidden-level" />
+
+      <!-- Format Selection -->
+      <div style="margin-bottom:16px;">
+        <label style="display:block; font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; margin-bottom:8px; letter-spacing:0.5px;">File Format</label>
+        <div style="display:flex; gap:20px;">
+          <label style="display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:600; cursor:pointer;">
+            <input type="radio" name="format" value="xlsx" checked style="accent-color:var(--navy);" /> Excel Workbook (.xlsx)
+          </label>
+          <label style="display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:600; cursor:pointer;">
+            <input type="radio" name="format" value="csv" style="accent-color:var(--navy);" /> CSV File (.csv)
+          </label>
+        </div>
+      </div>
+
+      <!-- User Status Filter -->
+      <div style="margin-bottom:18px;">
+        <label for="export-status-filter" style="display:block; font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; margin-bottom:8px; letter-spacing:0.5px;">User Status Filter</label>
+        <select id="export-status-filter" name="status_filter" style="width:100%; padding:8px 12px; border-radius:6px; border:1px solid var(--border); font-size:13px; outline:none; font-family:inherit; background:#fff; cursor:pointer;">
+          <option value="all">All Registered Users</option>
+          <option value="pre_done">Only Baseline Done (Pre or Post Completed)</option>
+          <option value="post_done">Only Both Done (Post Completed)</option>
+          <option value="pending_pre">Pending Baseline (Registered but NOT Submitted Baseline)</option>
+          <option value="pending_post">Pending Post-Workshop (Baseline Done but NOT Post)</option>
+        </select>
+      </div>
+
+      <!-- Columns to Include -->
+      <div style="margin-bottom:20px;">
+        <label style="display:block; font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; margin-bottom:8px; letter-spacing:0.5px;">Data Columns to Include</label>
+        
+        <div style="display:flex; flex-direction:column; gap:12px;">
+          <label style="display:flex; align-items:flex-start; gap:8px; font-size:13px; cursor:pointer;">
+            <input type="checkbox" name="inc_profile" value="1" checked style="accent-color:var(--navy); margin-top:2px;" />
+            <div>
+              <strong style="color:var(--navy);">Student Profile</strong>
+              <div style="font-size:11px; color:var(--muted); margin-top:1px;">Name, Email, Level (UG/PG), Department/Program, Previous Education</div>
+            </div>
+          </label>
+          
+          <label style="display:flex; align-items:flex-start; gap:8px; font-size:13px; cursor:pointer;">
+            <input type="checkbox" name="inc_timestamps" value="1" checked style="accent-color:var(--navy); margin-top:2px;" />
+            <div>
+              <strong style="color:var(--navy);">Timestamps</strong>
+              <div style="font-size:11px; color:var(--muted); margin-top:1px;">Registration Date, Pre-survey submitted time, Post-survey submitted time</div>
+            </div>
+          </label>
+
+          <label style="display:flex; align-items:flex-start; gap:8px; font-size:13px; cursor:pointer;">
+            <input type="checkbox" name="inc_scores" value="1" checked style="accent-color:var(--navy); margin-top:2px;" />
+            <div>
+              <strong style="color:var(--navy);">Scores &amp; Analytics</strong>
+              <div style="font-size:11px; color:var(--muted); margin-top:1px;">PRE/POST Literacy, Readiness, Quadrants, Bands, Deltas, and Movement</div>
+            </div>
+          </label>
+
+          <label style="display:flex; align-items:flex-start; gap:8px; font-size:13px; cursor:pointer;">
+            <input type="checkbox" name="inc_responses" value="1" style="accent-color:var(--navy); margin-top:2px;" />
+            <div>
+              <strong style="color:var(--navy);">Individual Survey Item Responses</strong>
+              <div style="font-size:11px; color:var(--muted); margin-top:1px;">PRE, POST, and Delta answers for all 21+ Likert items (SCHEMA questions)</div>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div style="display:flex; justify-content:flex-end; gap:10px; border-top:1.5px solid var(--border); padding-top:16px; margin-top:16px;">
+        <button type="button" onclick="closeExportModal()" class="btn-sm" style="background:#f1f5f9; color:var(--text); border:1px solid var(--border); font-weight:600;">Cancel</button>
+        <button type="submit" class="btn-sm btn-green" style="padding:8px 20px; font-weight:600; border:none;">Download File</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 </body>
 </html>

@@ -187,6 +187,16 @@ async def send_simple_email(
         logging.getLogger(__name__).info(
             "DRY RUN email to %s <%s>: %s", to_name, to_email, subject
         )
+        log_dir = settings.generated_root
+        log_dir.mkdir(parents=True, exist_ok=True)
+        out = log_dir / "emails.log"
+        with out.open("a", encoding="utf-8") as f:
+            f.write("\n" + "=" * 72 + "\n")
+            f.write(f"To: {to_name} <{to_email}>\n")
+            f.write(f"From: {settings.email_from}\n")
+            f.write(f"Subject: {subject}\n")
+            f.write("--- Plain-text body ---\n")
+            f.write(body_text + "\n")
         return
 
     msg = MIMEText(body_text, "plain", "utf-8")

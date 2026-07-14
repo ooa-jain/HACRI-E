@@ -144,6 +144,37 @@ async def landing_post(
     return response
 
 
+@router.get("/resume/{email_slug}")
+async def resume_session(request: Request, email_slug: str):
+    email = slug_to_email(email_slug)
+    if not email:
+        return RedirectResponse(url="/", status_code=303)
+
+    db = get_db()
+    user = await db["users"].find_one({"email": email})
+    if not user:
+        return RedirectResponse(url="/", status_code=303)
+
+    status_v = user.get("status")
+    orientation_enabled = await get_flag(FLAG_ORIENTATION, default=False)
+    orientation_submitted = bool(user.get("orientation_submitted", False))
+    pre_enabled = await get_flag(FLAG_PRE_SURVEY, default=True)
+
+    if status_v == STATUS_POST_DONE:
+        dest_url = f"/results/{email_slug}"
+    elif pre_enabled and status_v != STATUS_PRE_DONE:
+        dest_url = "/survey/pre"
+    elif orientation_enabled and not orientation_submitted:
+        dest_url = "/orientation"
+    else:
+        dest_url = "/survey/post"
+
+    response = RedirectResponse(url=dest_url, status_code=303)
+    issue_session(response, user["email"], user.get("name", ""))
+    issue_csrf(response, make_csrf_token())
+    return response
+
+
 @router.get("/locked", response_class=HTMLResponse)
 async def locked(request: Request):
     return request.app.state.templates.TemplateResponse(request, "locked.html", {})

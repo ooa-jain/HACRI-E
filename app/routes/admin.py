@@ -29,7 +29,7 @@ from app.db import (
     FLAG_ORIENTATION, FLAG_SURVEY, FLAG_PRE_SURVEY,
     STATUS_PRE_DONE, STATUS_POST_DONE, FLAG_TEST_MODE,
     get_all_flags, list_orientation_responses, list_survey_users, set_flag,
-    get_db, FLAGS,
+    get_db, FLAGS, ORI,
 )
 from app.settings import settings
 
@@ -218,6 +218,30 @@ async def api_survey_users(
     ))
 
 
+@router.get("/admin/api/survey/dept-stats")
+async def api_survey_dept_stats(request: Request):
+    if not _is_survey_admin(request):
+        raise HTTPException(status_code=403)
+    
+    from app.db import get_dept_stats
+    from app.routes.shared_analysis import get_dept_token
+    
+    raw_stats = await get_dept_stats()
+    
+    # Append the shareable token for each department
+    stats = []
+    for s in raw_stats:
+        dept_name = s["dept"]
+        token = get_dept_token(dept_name)
+        stats.append({
+            **s,
+            "token": token,
+            "share_url": f"{str(settings.public_base_url).rstrip('/')}/shared/analysis?dept={dept_name}&token={token}"
+        })
+        
+    return JSONResponse(stats)
+
+
 # ── Orientation responses (both admins can view) ───────────────────────────────
 @router.get("/admin/api/orientation/responses")
 async def api_orientation_responses(request: Request):
@@ -226,12 +250,55 @@ async def api_orientation_responses(request: Request):
     return JSONResponse(await list_orientation_responses())
 
 
-# ── Send alert emails to pre-done / post-pending students (survey admin only) ──
-@router.post("/admin/api/alert/post-pending")
-async def api_send_alert(request: Request):
+# ── Send alert emails to registered-only students (survey admin only) ──
+@router.post("/admin/api/alert/pre-pending")
+async def api_send_pre_alert(
+    request: Request,
+    dept: str = Query(default=""),
+    ug_or_pg: str = Query(default=""),
+):
     if not _is_survey_admin(request):
         raise HTTPException(status_code=403)
-    users = await list_survey_users()
+    users = await list_survey_users(dept=dept or None, ug_or_pg=ug_or_pg or None)
+    pending = [u for u in users if u.get("status") in ("not_started", None)]
+    sent = failed = 0
+    for u in pending:
+        try:
+            await _send_pre_alert_email(u["email"], u["name"])
+            sent += 1
+        except Exception as e:
+            log.warning("Pre alert email failed for %s: %s", u["email"], e)
+            failed += 1
+    return JSONResponse({"ok": True, "sent": sent, "failed": failed, "total_pending": len(pending)})
+
+
+async def _send_pre_alert_email(email: str, name: str) -> None:
+    from app import emailer
+    from app.routes.landing import email_to_slug
+    slug = email_to_slug(email)
+    resume_link = f"{settings.public_base_url.rstrip('/')}/resume/{slug}"
+    
+    subject = "Reminder: Please complete the AI Baseline Survey"
+    body = (
+        f"Hi {name},\n\n"
+        "We noticed you registered for the AI Baseline Survey but haven't completed it yet.\n\n"
+        "Please click the link below to directly resume and finish your survey (no login required):\n"
+        f"{resume_link}\n\n"
+        "Thank you,\nOffice of Academics\nJAIN (Deemed-to-be University)"
+    )
+    await emailer.send_simple_email(email, name, subject, body)
+
+
+# ── Send alert emails to pre-done / post-pending students (survey admin only) ──
+@router.post("/admin/api/alert/post-pending")
+async def api_send_alert(
+    request: Request,
+    dept: str = Query(default=""),
+    ug_or_pg: str = Query(default=""),
+):
+    if not _is_survey_admin(request):
+        raise HTTPException(status_code=403)
+    users = await list_survey_users(dept=dept or None, ug_or_pg=ug_or_pg or None)
     pending = [u for u in users if u.get("status") == STATUS_PRE_DONE]
     sent = failed = 0
     for u in pending:
@@ -246,12 +313,16 @@ async def api_send_alert(request: Request):
 
 async def _send_alert_email(email: str, name: str) -> None:
     from app import emailer
+    from app.routes.landing import email_to_slug
+    slug = email_to_slug(email)
+    resume_link = f"{settings.public_base_url.rstrip('/')}/resume/{slug}"
+    
     subject = "Reminder: Please complete the Post-Workshop Survey"
     body = (
         f"Hi {name},\n\n"
         "Thank you for completing the Baseline Survey.\n\n"
-        "You haven't yet submitted the Post-Workshop Survey. Please complete it after the induction:\n"
-        f"{settings.public_base_url.rstrip('/')}/\n\n"
+        "You haven't yet submitted the Post-Workshop Survey. Please click the link below to directly resume and complete it (no login required):\n"
+        f"{resume_link}\n\n"
         "Thank you,\nOffice of Academics\nJAIN (Deemed-to-be University)"
     )
     await emailer.send_simple_email(email, name, subject, body)
@@ -284,6 +355,12 @@ async def admin_export_cohort(
     request: Request,
     dept: str = Query(default=""),
     ug_or_pg: str = Query(default=""),
+    format: str = Query(default="xlsx"),
+    status_filter: str = Query(default="all"),
+    inc_profile: bool = Query(default=False),
+    inc_timestamps: bool = Query(default=False),
+    inc_scores: bool = Query(default=False),
+    inc_responses: bool = Query(default=False),
 ):
     if not _is_survey_admin(request):
         raise HTTPException(status_code=403)
@@ -295,8 +372,27 @@ async def admin_export_cohort(
     if ug_or_pg:
         query["ug_or_pg"] = ug_or_pg
 
+    # Check if request comes from the new custom modal
+    is_modal = "status_filter" in request.query_params
+    if not is_modal:
+        format = "csv"
+        status_filter = "all"
+        inc_profile = True
+        inc_timestamps = True
+        inc_scores = True
+        inc_responses = True  # Legacy behavior included all question responses
+
     users_list = []
     async for u in db["users"].find(query).sort("created_at", -1):
+        status_v = u.get("status") or "not_started"
+        if status_filter == "pre_done" and status_v not in ("pre_done", "post_done"):
+            continue
+        if status_filter == "post_done" and status_v != "post_done":
+            continue
+        if status_filter == "pending_pre" and status_v in ("pre_done", "post_done"):
+            continue
+        if status_filter == "pending_post" and status_v != "pre_done":
+            continue
         users_list.append(u)
 
     emails = {u["email"] for u in users_list}
@@ -308,8 +404,17 @@ async def admin_export_cohort(
     async for doc in db["post_responses"].find({"email": {"$in": list(emails)}}):
         post_docs.append(doc)
 
-    from app.csv_export import cohort_csv_bytes
-    csv_data = cohort_csv_bytes(users_list, pre_docs, post_docs)
+    from app.csv_export import custom_cohort_export
+    file_data, media_type, ext = custom_cohort_export(
+        users_list,
+        pre_docs,
+        post_docs,
+        format=format,
+        inc_profile=inc_profile,
+        inc_timestamps=inc_timestamps,
+        inc_scores=inc_scores,
+        inc_responses=inc_responses,
+    )
 
     import io
     suffix = ""
@@ -317,12 +422,14 @@ async def admin_export_cohort(
         suffix += f"_{dept}"
     if ug_or_pg:
         suffix += f"_{ug_or_pg.upper()}"
-    filename = f"HACRI_E2_Cohort_Export{suffix}.csv"
+    if status_filter != "all":
+        suffix += f"_{status_filter}"
+    filename = f"HACRI_E2_Cohort_Export{suffix}.{ext}"
     # remove spaces and special characters from filename
     filename = "".join(c for c in filename if c.isalnum() or c in "._-")
     return StreamingResponse(
-        io.BytesIO(csv_data),
-        media_type="text/csv",
+        io.BytesIO(file_data),
+        media_type=media_type,
         headers={
             "Content-Disposition": f'attachment; filename="{filename}"'
         },

@@ -333,6 +333,72 @@ async def list_matched_users(
     return matched
 
 
+async def get_dept_stats() -> list[dict]:
+    """Return per-department stats: registered, pre_done, post_done counts."""
+    db = get_db()
+    pipeline = [
+        {"$group": {
+            "_id": "$program",
+            "registered": {"$sum": 1},
+            "pre_done":  {"$sum": {"$cond": [{"$in": ["$status", [STATUS_PRE_DONE, STATUS_POST_DONE]]}, 1, 0]}},
+            "post_done": {"$sum": {"$cond": [{"$eq": ["$status", STATUS_POST_DONE]}, 1, 0]}},
+        }},
+        {"$sort": {"_id": 1}},
+    ]
+    results = []
+    cursor = await db[USERS].aggregate(pipeline)
+    async for doc in cursor:
+        dept = doc["_id"] or ""
+        results.append({
+            "dept":       dept,
+            "registered": doc["registered"],
+            "pre_done":   doc["pre_done"],
+            "post_done":  doc["post_done"],
+            "pre_pending":  doc["registered"] - doc["pre_done"],
+            "post_pending": doc["pre_done"] - doc["post_done"],
+        })
+    return results
+
+
+async def get_dept_students(dept: str) -> list[dict]:
+    """Return all students for a given department with their pre/post status."""
+    db = get_db()
+    query = {"program": dept} if dept else {}
+    result = []
+    async for u in db[USERS].find(query).sort("created_at", -1):
+        result.append({
+            "email":      u["email"],
+            "name":       u.get("name", ""),
+            "program":    u.get("program", ""),
+            "ug_or_pg":  u.get("ug_or_pg", "ug"),
+            "status":     u.get("status") or "not_started",
+            "pre_at":     _fmt(u.get("pre_submitted_at")),
+            "post_at":    _fmt(u.get("post_submitted_at")),
+        })
+    return result
+
+
+async def get_student_detail(email: str) -> dict | None:
+    """Return full pre + post survey fields for one student."""
+    db = get_db()
+    user = await db[USERS].find_one({"email": email})
+    if not user:
+        return None
+    pre_doc  = await db[PRE ].find_one({"email": email}, sort=[("submitted_at", -1)])
+    post_doc = await db[POST].find_one({"email": email}, sort=[("submitted_at", -1)])
+    return {
+        "email":      email,
+        "name":       user.get("name", ""),
+        "program":    user.get("program", ""),
+        "ug_or_pg":  user.get("ug_or_pg", "ug"),
+        "status":     user.get("status") or "not_started",
+        "pre_at":     _fmt(user.get("pre_submitted_at")),
+        "post_at":    _fmt(user.get("post_submitted_at")),
+        "pre_fields":  pre_doc.get("fields",  {}) if pre_doc  else {},
+        "post_fields": post_doc.get("fields", {}) if post_doc else {},
+    }
+
+
 async def delete_user_and_responses(email: str) -> None:
     db = get_db()
     await db[USERS].delete_one({"email": email})
