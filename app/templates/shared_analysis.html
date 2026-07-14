@@ -394,8 +394,9 @@ body {
   </div>
 
   <!-- Charts Block -->
+  {% if survey_type == 'post' %}
   <div class="charts-card">
-    <h3 class="charts-title">📊 {% if survey_type == 'post' %}Post-Workshop{% else %}Pre-Survey (Baseline){% endif %} Performance & Reflection Charts</h3>
+    <h3 class="charts-title">📊 Post-Workshop Performance & Reflection Charts</h3>
     <div class="charts-grid">
       <div class="chart-item">
         <div class="chart-label">Quadrant Score Alignment</div>
@@ -413,6 +414,7 @@ body {
       </div>
     </div>
   </div>
+  {% endif %}
 </div>
 
 <script>
