@@ -10,3 +10,5 @@ build/
 .DS_Store
 *.log
 .pytest_cache/
+gunicorn.conf.py
+gunicorn.conf.py
