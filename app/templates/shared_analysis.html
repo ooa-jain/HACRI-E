@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>HACRI-E2 Cohort Analysis — {{ dept }}</title>
+<title>HACRI-E2 {% if survey_type == 'post' %}Post-Workshop{% else %}Pre-Survey (Baseline){% endif %} Analysis — {{ dept }}</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
 :root {
@@ -322,22 +322,26 @@ body {
 <body>
 
 <div class="header">
+  <div style="display:inline-block;padding:4px 14px;border-radius:20px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;
+    background:{% if survey_type == 'post' %}#16a34a{% else %}#0d9488{% endif %};color:#fff;">
+    {% if survey_type == 'post' %}📊 Post-Workshop Analysis{% else %}📝 Pre-Survey (Baseline) Analysis{% endif %}
+  </div>
   <h1><span>OoA</span> · HACRI-E2 Department Report</h1>
-  <p>Cohort Analysis Dashboard for <strong>{{ dept }}</strong></p>
+  <p>{% if survey_type == 'post' %}Post-Workshop{% else %}Baseline (Pre-Survey){% endif %} Cohort Analysis for <strong>{{ dept }}</strong></p>
 </div>
 
 <div class="container">
   <!-- Actions Banner -->
   <div class="action-banner">
     <div class="action-info">
-      <h2>Department Report & Exports</h2>
+      <h2>{% if survey_type == 'post' %}Post-Workshop{% else %}Pre-Survey (Baseline){% endif %} Report & Exports</h2>
       <p>Download the PowerPoint deck or export detailed response sheets for this department.</p>
     </div>
     <div class="btn-group">
-      <a href="/shared/analysis/export-excel?dept={{ dept|urlencode }}&token={{ token }}" class="btn btn-green">
+      <a href="/shared/analysis/export-excel?dept={{ dept|urlencode }}&token={{ token }}&type={{ survey_type }}" class="btn btn-green">
         📥 Export Excel (.xlsx)
       </a>
-      <a href="/shared/analysis/download-ppt?dept={{ dept|urlencode }}&token={{ token }}" class="btn btn-gold">
+      <a href="/shared/analysis/download-ppt?dept={{ dept|urlencode }}&token={{ token }}&type={{ survey_type }}" class="btn btn-gold">
         📊 Download PPT (.pptx)
       </a>
     </div>
@@ -350,10 +354,7 @@ body {
         <div class="stat-val">{{ total }}</div>
         <div class="stat-lbl">Registered Students</div>
       </div>
-      <div class="stat-card pre">
-        <div class="stat-val">{{ pre_done }}</div>
-        <div class="stat-lbl">Pre Done</div>
-      </div>
+      {% if survey_type == 'post' %}
       <div class="stat-card post">
         <div class="stat-val">{{ post_done }}</div>
         <div class="stat-lbl">Post Done</div>
@@ -362,6 +363,24 @@ body {
         <div class="stat-val">{{ pending }}</div>
         <div class="stat-lbl">Pending Post</div>
       </div>
+      <div class="stat-card pre">
+        <div class="stat-val">{{ pre_done }}</div>
+        <div class="stat-lbl">Pre Done (baseline)</div>
+      </div>
+      {% else %}
+      <div class="stat-card pre">
+        <div class="stat-val">{{ pre_done }}</div>
+        <div class="stat-lbl">Pre Done</div>
+      </div>
+      <div class="stat-card pending" style="--accent:#e6b324;">
+        <div class="stat-val">{{ total - pre_done }}</div>
+        <div class="stat-lbl">Pending Pre</div>
+      </div>
+      <div class="stat-card" style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:24px;text-align:center;">
+        <div class="stat-val" style="color:#94a3b8;">—</div>
+        <div class="stat-lbl" style="color:#94a3b8;">Post N/A</div>
+      </div>
+      {% endif %}
     </div>
 
     <!-- Power BI style Pie/Doughnut Chart Card -->
@@ -376,21 +395,21 @@ body {
 
   <!-- Charts Block -->
   <div class="charts-card">
-    <h3 class="charts-title">📊 Cohort Performance & Reflection Charts</h3>
+    <h3 class="charts-title">📊 {% if survey_type == 'post' %}Post-Workshop{% else %}Pre-Survey (Baseline){% endif %} Performance & Reflection Charts</h3>
     <div class="charts-grid">
       <div class="chart-item">
         <div class="chart-label">Quadrant Score Alignment</div>
-        <img class="chart-img" src="/shared/analysis/charts/cohort.png?dept={{ dept|urlencode }}&token={{ token }}" alt="Quadrant Score Alignment Chart">
+        <img class="chart-img" src="/shared/analysis/charts/cohort.png?dept={{ dept|urlencode }}&token={{ token }}&type={{ survey_type }}" alt="Quadrant Score Alignment Chart">
       </div>
       
       <div class="chart-item">
         <div class="chart-label">Score Distributions (Histograms)</div>
-        <img class="chart-img" src="/shared/analysis/charts/histograms.png?dept={{ dept|urlencode }}&token={{ token }}" alt="Score Distributions Chart">
+        <img class="chart-img" src="/shared/analysis/charts/histograms.png?dept={{ dept|urlencode }}&token={{ token }}&type={{ survey_type }}" alt="Score Distributions Chart">
       </div>
       
       <div class="chart-item">
         <div class="chart-label">Section H1 · Understanding Change</div>
-        <img class="chart-img" src="/shared/analysis/charts/h1_histogram.png?dept={{ dept|urlencode }}&token={{ token }}" alt="Understanding Change Chart">
+        <img class="chart-img" src="/shared/analysis/charts/h1_histogram.png?dept={{ dept|urlencode }}&token={{ token }}&type={{ survey_type }}" alt="Understanding Change Chart">
       </div>
     </div>
   </div>
@@ -399,45 +418,73 @@ body {
 <script>
   document.addEventListener("DOMContentLoaded", function() {
     const total = {{ total }};
+    const surveyType = "{{ survey_type }}";
     const postDone = {{ post_done }};
     const pendingPost = {{ pending }};
     const preDone = {{ pre_done }};
     const pendingPre = total - preDone;
 
+    // Show relevant numbers based on type
+    const chartData = surveyType === 'post'
+      ? [postDone, pendingPost, total - preDone]
+      : [preDone, pendingPre, 0];
+    const chartLabels = surveyType === 'post'
+      ? ['Post Done', 'Pending Post', 'Pending Pre']
+      : ['Pre Done', 'Pending Pre', ''];
+    const chartColors = surveyType === 'post'
+      ? ['#10b981', '#e6b324', '#dc2626']
+      : ['#0d9488', '#dc2626', '#e5e7eb'];
+
     // Calculate percentages
-    const pctPostDone = total > 0 ? ((postDone / total) * 100).toFixed(1) : 0;
-    const pctPendingPost = total > 0 ? ((pendingPost / total) * 100).toFixed(1) : 0;
-    const pctPendingPre = total > 0 ? ((pendingPre / total) * 100).toFixed(1) : 0;
+    const base = surveyType === 'post' ? preDone : total;
+    const pctA = base > 0 ? ((chartData[0] / base) * 100).toFixed(1) : 0;
+    const pctB = base > 0 ? ((chartData[1] / base) * 100).toFixed(1) : 0;
 
     // Render custom legend
     const legendEl = document.getElementById('pie-legend');
-    legendEl.innerHTML = `
-      <div class="legend-item">
-        <span class="legend-color" style="background-color: #10b981;"></span>
-        <span class="legend-label">Both Done:</span>
-        <span class="legend-value">${postDone} (${pctPostDone}%)</span>
-      </div>
-      <div class="legend-item">
-        <span class="legend-color" style="background-color: #e6b324;"></span>
-        <span class="legend-label">Pending Post:</span>
-        <span class="legend-value">${pendingPost} (${pctPendingPost}%)</span>
-      </div>
-      <div class="legend-item">
-        <span class="legend-color" style="background-color: #dc2626;"></span>
-        <span class="legend-label">Pending Baseline:</span>
-        <span class="legend-value">${pendingPre} (${pctPendingPre}%)</span>
-      </div>
-    `;
+    if (surveyType === 'post') {
+      legendEl.innerHTML = `
+        <div class="legend-item">
+          <span class="legend-color" style="background-color: #10b981;"></span>
+          <span class="legend-label">Post Done:</span>
+          <span class="legend-value">${postDone} (${pctA}%)</span>
+        </div>
+        <div class="legend-item">
+          <span class="legend-color" style="background-color: #e6b324;"></span>
+          <span class="legend-label">Pending Post:</span>
+          <span class="legend-value">${pendingPost} (${pctB}%)</span>
+        </div>
+        <div class="legend-item">
+          <span class="legend-color" style="background-color: #dc2626;"></span>
+          <span class="legend-label">Pending Pre:</span>
+          <span class="legend-value">${total - preDone}</span>
+        </div>`;
+    } else {
+      legendEl.innerHTML = `
+        <div class="legend-item">
+          <span class="legend-color" style="background-color: #0d9488;"></span>
+          <span class="legend-label">Pre Done:</span>
+          <span class="legend-value">${preDone} (${pctA}%)</span>
+        </div>
+        <div class="legend-item">
+          <span class="legend-color" style="background-color: #dc2626;"></span>
+          <span class="legend-label">Pending Pre:</span>
+          <span class="legend-value">${pendingPre} (${pctB}%)</span>
+        </div>`;
+    }
 
     // Chart.js Doughnut Chart
     const ctx = document.getElementById('statusPieChart').getContext('2d');
+    const filteredData = chartData.filter(v => v > 0);
+    const filteredLabels = chartLabels.filter((_, i) => chartData[i] > 0);
+    const filteredColors = chartColors.filter((_, i) => chartData[i] > 0);
     new Chart(ctx, {
       type: 'doughnut',
       data: {
-        labels: ['Both Done', 'Pending Post', 'Pending Baseline'],
+        labels: filteredLabels,
         datasets: [{
-          data: [postDone, pendingPost, pendingPre],
-          backgroundColor: ['#10b981', '#e6b324', '#dc2626'],
+          data: filteredData,
+          backgroundColor: filteredColors,
           borderWidth: 2,
           borderColor: '#ffffff',
           hoverOffset: 4
@@ -447,14 +494,12 @@ body {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-          legend: {
-            display: false
-          },
+          legend: { display: false },
           tooltip: {
             callbacks: {
               label: function(context) {
                 const val = context.raw;
-                const pct = total > 0 ? ((val / total) * 100).toFixed(1) : 0;
+                const pct = base > 0 ? ((val / base) * 100).toFixed(1) : 0;
                 return ` ${context.label}: ${val} (${pct}%)`;
               }
             }

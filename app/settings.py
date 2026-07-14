@@ -19,10 +19,13 @@ class Settings(BaseSettings):
     generated_root: Path = Path("generated")
 
     # Two separate admin accounts
-    survey_admin_username: str = "survey_admin"
+    survey_admin_username: str = "survey"
     survey_admin_password: str = "survey2026"
     orientation_admin_username: str = "deeksha_admin"
     orientation_admin_password: str = "deeksha2026"
+
+    # OTP login — survey admin OTP is sent to this address
+    survey_admin_otp_email: str = "santosh.ks@jainuniversity.ac.in"
 
     # SMTP
     smtp_host: str | None = None

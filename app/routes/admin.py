@@ -19,9 +19,15 @@ Shared API (each checks its own cookie):
   GET  /admin/api/survey/users
   GET  /admin/api/orientation/responses
   POST /admin/api/alert/post-pending
+
+OTP Login for Survey Admin:
+  POST /admin/survey/request-otp  → generates and emails OTP to admin email
+  POST /admin/login               → verifies OTP (or static password for orientation)
 """
 from __future__ import annotations
 import logging
+import secrets
+import time
 from datetime import datetime
 from fastapi import APIRouter, Form, HTTPException, Request, BackgroundTasks, Query
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, StreamingResponse
@@ -36,6 +42,64 @@ from app.settings import settings
 log = logging.getLogger(__name__)
 router = APIRouter()
 
+# ── In-memory OTP store (otp, expiry timestamp) ────────────────────────────
+_survey_otp_store: dict[str, float] = {}  # {otp_code: expiry_ts}
+_OTP_TTL = 10 * 60  # 10 minutes
+
+
+# ── OTP request endpoint ──────────────────────────────────────────────────────
+@router.post("/admin/survey/request-otp")
+async def survey_request_otp(request: Request, username: str = Form(...)):
+    """Generate & email a 6-digit OTP to the admin email, then redirect back to login form."""
+    if username != settings.survey_admin_username:
+        # Show invalid username but don't reveal info
+        return request.app.state.templates.TemplateResponse(
+            request, "admin_login.html",
+            {"error": "Invalid username.", "title": "Admin Login", "otp_sent": False},
+            status_code=401,
+        )
+
+    # Generate a 6-digit OTP and store it
+    otp = str(secrets.randbelow(900000) + 100000)  # 100000–999999
+    expiry = time.time() + _OTP_TTL
+    _survey_otp_store.clear()  # Only one valid OTP at a time
+    _survey_otp_store[otp] = expiry
+
+    # Send email
+    try:
+        from app import emailer
+        body = (
+            f"Your HACRI-E Admin OTP is: {otp}\n\n"
+            f"This OTP is valid for 10 minutes.\n\n"
+            f"If you did not request this, please ignore this email."
+        )
+        await emailer.send_simple_email(
+            settings.survey_admin_otp_email,
+            "HACRI-E Admin",
+            "HACRI-E Admin Login OTP",
+            body,
+        )
+        log.info("OTP [%s] sent to %s", otp, settings.survey_admin_otp_email)
+    except Exception as exc:
+        log.exception("Failed to send OTP email: %s", exc)
+        return request.app.state.templates.TemplateResponse(
+            request, "admin_login.html",
+            {"error": f"Failed to send OTP email. Please check SMTP config. ({exc})",
+             "title": "Admin Login", "otp_sent": False},
+            status_code=500,
+        )
+
+    return request.app.state.templates.TemplateResponse(
+        request, "admin_login.html",
+        {
+            "title": "Admin Login",
+            "otp_sent": True,
+            "otp_username": username,
+            "otp_email_hint": settings.survey_admin_otp_email,
+            "error": None,
+        },
+    )
+
 
 @router.get("/admin/login", response_class=HTMLResponse)
 async def general_admin_login_get(request: Request):
@@ -45,7 +109,7 @@ async def general_admin_login_get(request: Request):
         return RedirectResponse(url="/admin/orientation", status_code=303)
     return request.app.state.templates.TemplateResponse(
         request, "admin_login.html",
-        {"error": None, "title": "Admin Login"},
+        {"error": None, "title": "Admin Login", "otp_sent": False},
     )
 
 
@@ -55,10 +119,21 @@ async def general_admin_login_post(
     username: str = Form(...),
     password: str = Form(...)
 ):
-    if username == settings.survey_admin_username and password == settings.survey_admin_password:
-        r = RedirectResponse(url="/admin/survey", status_code=303)
-        _set_cookie(r, _SURVEY_COOKIE, settings.cookie_secure, settings.cookie_samesite)
-        return r
+    # Survey admin: verify OTP
+    if username == settings.survey_admin_username:
+        otp = password.strip()
+        expiry = _survey_otp_store.get(otp)
+        if expiry and time.time() < expiry:
+            _survey_otp_store.pop(otp, None)  # Consume OTP
+            r = RedirectResponse(url="/admin/survey", status_code=303)
+            _set_cookie(r, _SURVEY_COOKIE, settings.cookie_secure, settings.cookie_samesite)
+            return r
+        return request.app.state.templates.TemplateResponse(
+            request, "admin_login.html",
+            {"error": "Invalid or expired OTP. Please request a new one.",
+             "title": "Admin Login", "otp_sent": True, "otp_username": username},
+            status_code=401,
+        )
     elif username == settings.orientation_admin_username and password == settings.orientation_admin_password:
         r = RedirectResponse(url="/admin/orientation", status_code=303)
         _set_cookie(r, _ORI_COOKIE, settings.cookie_secure, settings.cookie_samesite)
@@ -66,7 +141,7 @@ async def general_admin_login_post(
     
     return request.app.state.templates.TemplateResponse(
         request, "admin_login.html",
-        {"error": "Invalid credentials", "title": "Admin Login"},
+        {"error": "Invalid credentials", "title": "Admin Login", "otp_sent": False},
         status_code=401,
     )
 
@@ -228,15 +303,19 @@ async def api_survey_dept_stats(request: Request):
     
     raw_stats = await get_dept_stats()
     
-    # Append the shareable token for each department
+    # Append two shareable tokens per department (pre and post)
     stats = []
     for s in raw_stats:
         dept_name = s["dept"]
-        token = get_dept_token(dept_name)
+        token_pre = get_dept_token(dept_name, "pre")
+        token_post = get_dept_token(dept_name, "post")
+        base = str(settings.public_base_url).rstrip('/')
         stats.append({
             **s,
-            "token": token,
-            "share_url": f"{str(settings.public_base_url).rstrip('/')}/shared/analysis?dept={dept_name}&token={token}"
+            "token_pre": token_pre,
+            "token_post": token_post,
+            "share_url_pre": f"{base}/shared/analysis?dept={dept_name}&token={token_pre}&type=pre",
+            "share_url_post": f"{base}/shared/analysis?dept={dept_name}&token={token_post}&type=post",
         })
         
     return JSONResponse(stats)

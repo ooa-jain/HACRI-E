@@ -146,6 +146,25 @@ async def set_flag(key: str, enabled: bool) -> None:
     )
 
 
+async def save_otp(key: str, otp: str) -> None:
+    await get_db()[FLAGS].update_one(
+        {"key": f"otp_{key}"},
+        {"$set": {"value": otp, "updated_at": _now()}},
+        upsert=True,
+    )
+
+
+async def verify_otp(key: str, otp: str) -> bool:
+    doc = await get_db()[FLAGS].find_one({"key": f"otp_{key}"})
+    if doc and doc.get("value") == otp:
+        updated_at = doc.get("updated_at")
+        if updated_at:
+            delta = _now() - updated_at
+            if delta.total_seconds() < 600:  # 10 minutes expiry
+                return True
+    return False
+
+
 async def get_all_flags() -> dict[str, Any]:
     flags: dict[str, Any] = {}
     async for doc in get_db()[FLAGS].find():

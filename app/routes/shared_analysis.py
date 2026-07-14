@@ -20,25 +20,28 @@ from app.ppt_export import generate_dept_ppt
 
 router = APIRouter()
 
-def get_dept_token(dept: str) -> str:
-    """Generate a secure cryptographic token for a department name."""
+def get_dept_token(dept: str, survey_type: str = "pre") -> str:
+    """Generate a secure cryptographic token for a department name + type."""
+    key = f"{dept}:{survey_type}"
     return hmac.new(
         settings.session_secret.encode("utf-8"),
-        dept.encode("utf-8"),
+        key.encode("utf-8"),
         hashlib.sha256
     ).hexdigest()[:16]
 
-def verify_token(dept: str, token: str) -> bool:
-    """Verify that the token matches the department."""
-    return hmac.compare_digest(get_dept_token(dept), token)
+def verify_token(dept: str, token: str, survey_type: str = "pre") -> bool:
+    """Verify that the token matches the department and type."""
+    return hmac.compare_digest(get_dept_token(dept, survey_type), token)
 
 @router.get("/shared/analysis", response_class=HTMLResponse)
 async def shared_analysis_get(
     request: Request,
     dept: str = Query(...),
     token: str = Query(...),
+    type: str = Query(default="pre"),
 ):
-    if not verify_token(dept, token):
+    survey_type = type if type in ("pre", "post") else "pre"
+    if not verify_token(dept, token, survey_type):
         raise HTTPException(status_code=403, detail="Access denied: Invalid or expired sharing link.")
 
     # Fetch users for this department
@@ -55,6 +58,7 @@ async def shared_analysis_get(
         {
             "dept": dept,
             "token": token,
+            "survey_type": survey_type,
             "total": total,
             "pre_done": pre_done,
             "post_done": post_done,
@@ -66,29 +70,43 @@ async def shared_analysis_get(
 async def shared_export_excel(
     dept: str = Query(...),
     token: str = Query(...),
+    type: str = Query(default="pre"),
 ):
-    if not verify_token(dept, token):
+    survey_type = type if type in ("pre", "post") else "pre"
+    if not verify_token(dept, token, survey_type):
         raise HTTPException(status_code=403, detail="Access denied")
 
     db = get_db()
     
-    # Query users
+    # Query users based on type
     users_list = []
     async for u in db["users"].find({"program": dept}).sort("created_at", -1):
+        # For pre: include everyone who at least completed pre
+        # For post: include only those who completed post
+        status = u.get("status", "")
+        if survey_type == "pre" and status not in ("pre_done", "post_done"):
+            continue
+        if survey_type == "post" and status != "post_done":
+            continue
         users_list.append(u)
 
     emails = {u["email"] for u in users_list}
     pre_docs = []
-    async for doc in db["pre_responses"].find({"email": {"$in": list(emails)}}):
-        pre_docs.append(doc)
-
+    if survey_type == "pre":
+        async for doc in db["pre_responses"].find({"email": {"$in": list(emails)}}):
+            pre_docs.append(doc)
     post_docs = []
-    async for doc in db["post_responses"].find({"email": {"$in": list(emails)}}):
-        post_docs.append(doc)
+    if survey_type == "post":
+        async for doc in db["post_responses"].find({"email": {"$in": list(emails)}}):
+            post_docs.append(doc)
 
-    excel_bytes = generate_cohort_excel(dept, users_list, pre_docs, post_docs)
+    excel_bytes = generate_cohort_excel(
+        dept, users_list,
+        pre_docs if survey_type == "pre" else [],
+        post_docs if survey_type == "post" else [],
+    )
     
-    filename = f"HACRI_E2_Cohort_Export_{dept}.xlsx"
+    filename = f"HACRI_E2_{survey_type.upper()}_Export_{dept}.xlsx"
     filename = "".join(c for c in filename if c.isalnum() or c in "._-")
     
     return StreamingResponse(
@@ -103,19 +121,25 @@ async def shared_export_excel(
 async def shared_download_ppt(
     dept: str = Query(...),
     token: str = Query(...),
+    type: str = Query(default="pre"),
 ):
-    if not verify_token(dept, token):
+    survey_type = type if type in ("pre", "post") else "pre"
+    if not verify_token(dept, token, survey_type):
         raise HTTPException(status_code=403, detail="Access denied")
 
-    # Fetch all users in department
-    users_list = await list_survey_users(dept=dept)
+    # Fetch all users in department filtered by type
+    users_list_all = await list_survey_users(dept=dept)
+    if survey_type == "post":
+        users_list = [u for u in users_list_all if u.get("status") == "post_done"]
+    else:
+        users_list = [u for u in users_list_all if u.get("status") in ("pre_done", "post_done")]
     
     # Fetch matched pre/post records
     matched_data = await list_matched_users(program=dept)
     
     ppt_bytes = generate_dept_ppt(dept, users_list, matched_data)
     
-    filename = f"HACRI_E2_Analysis_{dept}.pptx"
+    filename = f"HACRI_E2_{survey_type.upper()}_Analysis_{dept}.pptx"
     filename = "".join(c for c in filename if c.isalnum() or c in "._-")
     
     return StreamingResponse(
@@ -130,9 +154,11 @@ async def shared_download_ppt(
 async def shared_chart_cohort(
     dept: str = Query(...),
     token: str = Query(...),
+    type: str = Query(default="pre"),
     force: int = Query(default=0),
 ):
-    if not verify_token(dept, token):
+    survey_type = type if type in ("pre", "post") else "pre"
+    if not verify_token(dept, token, survey_type):
         raise HTTPException(status_code=403, detail="Access denied")
 
     matched = await list_matched_users(program=dept)
@@ -159,9 +185,11 @@ async def shared_chart_cohort(
 async def shared_chart_histograms(
     dept: str = Query(...),
     token: str = Query(...),
+    type: str = Query(default="pre"),
     force: int = Query(default=0),
 ):
-    if not verify_token(dept, token):
+    survey_type = type if type in ("pre", "post") else "pre"
+    if not verify_token(dept, token, survey_type):
         raise HTTPException(status_code=403, detail="Access denied")
 
     matched = await list_matched_users(program=dept)
@@ -188,9 +216,11 @@ async def shared_chart_histograms(
 async def shared_chart_h1(
     dept: str = Query(...),
     token: str = Query(...),
+    type: str = Query(default="pre"),
     force: int = Query(default=0),
 ):
-    if not verify_token(dept, token):
+    survey_type = type if type in ("pre", "post") else "pre"
+    if not verify_token(dept, token, survey_type):
         raise HTTPException(status_code=403, detail="Access denied")
 
     matched = await list_matched_users(program=dept)

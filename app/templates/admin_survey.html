@@ -813,11 +813,23 @@ function renderDeptStats(data) {
       <td><span class="badge bg-green" style="font-size:12px;padding:4px 8px;">${d.post_done}</span></td>
       <td><span class="badge bg-gray" style="background:#fecaca;color:#b91c1c;font-size:12px;padding:4px 8px;">${d.post_pending}</span></td>
       <td>
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-          <button class="btn-sm btn-blue" onclick="copyDeptLink('${e(d.share_url)}')">🔗 Copy Link</button>
-          <a href="${e(d.share_url)}" target="_blank" class="btn-sm btn-blue" style="text-decoration:none;display:inline-block;background:var(--teal)">📈 View Shared</a>
-          <a href="/shared/analysis/export-excel?dept=${encodeURIComponent(d.dept)}&token=${d.token}" class="btn-sm btn-green" style="text-decoration:none;display:inline-block">📥 Excel</a>
-          <a href="/shared/analysis/download-ppt?dept=${encodeURIComponent(d.dept)}&token=${d.token}" class="btn-sm btn-blue" style="text-decoration:none;display:inline-block;background:var(--gold);color:var(--navy)">📊 PPT</a>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <!-- Pre Analysis -->
+          <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+            <span style="font-size:10px;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:.4px;min-width:30px;">PRE</span>
+            <button class="btn-sm btn-blue" style="background:var(--teal);" onclick="copyDeptLink('${e(d.share_url_pre)}')">🔗 Copy</button>
+            <a href="${e(d.share_url_pre)}" target="_blank" class="btn-sm btn-blue" style="text-decoration:none;display:inline-block;background:#0369a1">📈 View</a>
+            <a href="/shared/analysis/export-excel?dept=${encodeURIComponent(d.dept)}&token=${d.token_pre}&type=pre" class="btn-sm btn-green" style="text-decoration:none;display:inline-block">📥 Excel</a>
+            <a href="/shared/analysis/download-ppt?dept=${encodeURIComponent(d.dept)}&token=${d.token_pre}&type=pre" class="btn-sm btn-blue" style="text-decoration:none;display:inline-block;background:var(--gold);color:var(--navy)">📊 PPT</a>
+          </div>
+          <!-- Post Analysis -->
+          <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+            <span style="font-size:10px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.4px;min-width:30px;">POST</span>
+            <button class="btn-sm btn-blue" style="background:var(--green);" onclick="copyDeptLink('${e(d.share_url_post)}')">🔗 Copy</button>
+            <a href="${e(d.share_url_post)}" target="_blank" class="btn-sm btn-blue" style="text-decoration:none;display:inline-block;background:#15803d">📊 View</a>
+            <a href="/shared/analysis/export-excel?dept=${encodeURIComponent(d.dept)}&token=${d.token_post}&type=post" class="btn-sm btn-green" style="text-decoration:none;display:inline-block">📥 Excel</a>
+            <a href="/shared/analysis/download-ppt?dept=${encodeURIComponent(d.dept)}&token=${d.token_post}&type=post" class="btn-sm btn-blue" style="text-decoration:none;display:inline-block;background:var(--gold);color:var(--navy)">📊 PPT</a>
+          </div>
         </div>
       </td>
     </tr>`).join('');
