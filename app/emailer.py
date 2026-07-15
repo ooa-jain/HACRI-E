@@ -182,7 +182,7 @@ async def send_simple_email(
     from email.mime.text import MIMEText
     from app.settings import settings
 
-    if settings.email_dry_run:
+    if settings.email_dry_run or not settings.smtp_host:
         import logging
         logging.getLogger(__name__).info(
             "DRY RUN email to %s <%s>: %s", to_name, to_email, subject

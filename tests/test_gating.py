@@ -254,13 +254,24 @@ async def test_unified_admin_login_flow(client: AsyncClient):
         assert r.status_code in (303, 307)
         assert "/admin/login" in r.headers["location"]
 
-    # 4. POST with Survey Admin credentials redirects to /admin/survey
+    # 4. POST with Survey Admin credentials redirects to /admin/survey (via OTP flow)
     from app.settings import settings
+    resp_otp_req = await client.post(
+        "/admin/survey/request-otp",
+        data={"username": settings.survey_admin_username},
+        follow_redirects=False
+    )
+    assert resp_otp_req.status_code == 200
+    
+    from app.routes.admin import _survey_otp_store
+    assert len(_survey_otp_store) == 1
+    otp = list(_survey_otp_store.keys())[0]
+
     resp_survey_login = await client.post(
         "/admin/login",
         data={
             "username": settings.survey_admin_username,
-            "password": settings.survey_admin_password
+            "password": otp
         },
         follow_redirects=False
     )

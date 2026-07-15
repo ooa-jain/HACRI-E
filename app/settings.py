@@ -1,7 +1,8 @@
 from __future__ import annotations
 from functools import lru_cache
 from pathlib import Path
-from pydantic import Field
+from typing import Any
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -34,6 +35,23 @@ class Settings(BaseSettings):
     smtp_pass: str | None = None
     email_from: str = "HACRI-E <noreply@juooa.cloud>"
     email_dry_run: bool = True
+
+    @model_validator(mode="before")
+    @classmethod
+    def populate_smtp_defaults(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            # Case insensitive check for keys
+            # Pydantic settings loads keys in lowercase or original depending on configuration.
+            # We check both lowercase and original casing.
+            email_user = data.get("email_user") or data.get("EMAIL_USER")
+            email_pass = data.get("email_pass") or data.get("EMAIL_PASS")
+            
+            if not data.get("smtp_user") and not data.get("SMTP_USER") and email_user:
+                data["smtp_user"] = email_user
+            if not data.get("smtp_pass") and not data.get("SMTP_PASS") and email_pass:
+                data["smtp_pass"] = email_pass
+        return data
+
 
 
 @lru_cache(maxsize=1)
