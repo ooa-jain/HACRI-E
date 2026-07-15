@@ -817,16 +817,16 @@ function renderDeptStats(data) {
           <!-- Pre Analysis -->
           <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
             <span style="font-size:10px;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:.4px;min-width:30px;">PRE</span>
-            <button class="btn-sm btn-blue" style="background:var(--teal);" onclick="copyDeptLink('${e(d.share_url_pre)}')">🔗 Copy</button>
-            <a href="${e(d.share_url_pre)}" target="_blank" class="btn-sm btn-blue" style="text-decoration:none;display:inline-block;background:#0369a1">📈 View</a>
+            <button class="btn-sm btn-blue" style="background:var(--teal);" onclick="copyDeptLink('/shared/analysis?dept=' + encodeURIComponent(d.dept) + '&token=' + d.token_pre + '&type=pre')">🔗 Copy</button>
+            <a href="/shared/analysis?dept=${encodeURIComponent(d.dept)}&token=${d.token_pre}&type=pre" target="_blank" class="btn-sm btn-blue" style="text-decoration:none;display:inline-block;background:#0369a1">📈 View</a>
             <a href="/shared/analysis/export-excel?dept=${encodeURIComponent(d.dept)}&token=${d.token_pre}&type=pre" class="btn-sm btn-green" style="text-decoration:none;display:inline-block">📥 Excel</a>
             <a href="/shared/analysis/download-ppt?dept=${encodeURIComponent(d.dept)}&token=${d.token_pre}&type=pre" class="btn-sm btn-blue" style="text-decoration:none;display:inline-block;background:var(--gold);color:var(--navy)">📊 PPT</a>
           </div>
           <!-- Post Analysis -->
           <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
             <span style="font-size:10px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.4px;min-width:30px;">POST</span>
-            <button class="btn-sm btn-blue" style="background:var(--green);" onclick="copyDeptLink('${e(d.share_url_post)}')">🔗 Copy</button>
-            <a href="${e(d.share_url_post)}" target="_blank" class="btn-sm btn-blue" style="text-decoration:none;display:inline-block;background:#15803d">📊 View</a>
+            <button class="btn-sm btn-blue" style="background:var(--green);" onclick="copyDeptLink('/shared/analysis?dept=' + encodeURIComponent(d.dept) + '&token=' + d.token_post + '&type=post')">🔗 Copy</button>
+            <a href="/shared/analysis?dept=${encodeURIComponent(d.dept)}&token=${d.token_post}&type=post" target="_blank" class="btn-sm btn-blue" style="text-decoration:none;display:inline-block;background:#15803d">📊 View</a>
             <a href="/shared/analysis/export-excel?dept=${encodeURIComponent(d.dept)}&token=${d.token_post}&type=post" class="btn-sm btn-green" style="text-decoration:none;display:inline-block">📥 Excel</a>
             <a href="/shared/analysis/download-ppt?dept=${encodeURIComponent(d.dept)}&token=${d.token_post}&type=post" class="btn-sm btn-blue" style="text-decoration:none;display:inline-block;background:var(--gold);color:var(--navy)">📊 PPT</a>
           </div>
@@ -844,7 +844,8 @@ function viewDeptUsers(deptName) {
 }
 
 function copyDeptLink(url) {
-  navigator.clipboard.writeText(url);
+  const absoluteUrl = url.startsWith('/') ? (window.location.origin + url) : url;
+  navigator.clipboard.writeText(absoluteUrl);
   alert('Public sharing link copied to clipboard!');
 }
 
