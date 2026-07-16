@@ -112,13 +112,7 @@
           </div>
         </div>
 
-        <!-- Father: If Entrepreneur -->
-        <div class="question" id="biz_name_group" style="display: none; margin-top: 20px;">
-          <label class="q-label" style="display: block; font-weight: 600; margin-bottom: 8px;">Father's Name of the Business:</label>
-          <div class="q-body">
-            <input type="text" name="business_name" id="business_name" placeholder="Enter business name" value="{{ values.get('business_name', '') }}" style="width: 100%; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 14px; outline: none;" />
-          </div>
-        </div>
+
 
         <div class="question" id="biz_type_group" style="display: none; margin-top: 20px;">
           <label class="q-label" style="display: block; font-weight: 600; margin-bottom: 4px;">Father's Type of Business:</label>
@@ -159,13 +153,7 @@
             </div>
           </div>
 
-          <!-- Mother: If Entrepreneur -->
-          <div class="question" id="mother_biz_name_group" style="display: none; margin-top: 20px;">
-            <label class="q-label" style="display: block; font-weight: 600; margin-bottom: 8px;">Mother's Name of the Business:</label>
-            <div class="q-body">
-              <input type="text" name="mother_business_name" id="mother_business_name" placeholder="Enter business name" value="{{ values.get('mother_business_name', '') }}" style="width: 100%; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 14px; outline: none;" />
-            </div>
-          </div>
+
 
           <div class="question" id="mother_biz_type_group" style="display: none; margin-top: 20px;">
             <label class="q-label" style="display: block; font-weight: 600; margin-bottom: 4px;">Mother's Type of Business:</label>
@@ -1080,8 +1068,6 @@
       const fNameInput = document.getElementsByName('father_name')[0];
       if (fNameInput) fNameInput.value = "Test Father";
       
-      const bNameInput = document.getElementById('business_name');
-      if (bNameInput) bNameInput.value = "Test Enterprise";
       
       const bTypeInput = document.getElementById('business_type');
       if (bTypeInput) bTypeInput.value = "Test business type detailing entrepreneurship.";
@@ -1131,19 +1117,12 @@
       const orgGroup = document.getElementById('org_name_group');
       const orgInput = document.getElementById('organization_name');
       
-      const bizNameGroup = document.getElementById('biz_name_group');
-      const bizNameInput = document.getElementById('business_name');
-      
       const bizTypeGroup = document.getElementById('biz_type_group');
       const bizTypeInput = document.getElementById('business_type');
 
       if (occValue === 'Salaried') {
         orgGroup.style.display = 'block';
         orgInput.required = true;
-        
-        bizNameGroup.style.display = 'none';
-        bizNameInput.required = false;
-        bizNameInput.value = '';
         
         bizTypeGroup.style.display = 'none';
         bizTypeInput.required = false;
@@ -1153,9 +1132,6 @@
         orgInput.required = false;
         orgInput.value = '';
         
-        bizNameGroup.style.display = 'block';
-        bizNameInput.required = true;
-        
         bizTypeGroup.style.display = 'block';
         bizTypeInput.required = true;
       } else {
@@ -1163,10 +1139,6 @@
         orgGroup.style.display = 'none';
         orgInput.required = false;
         orgInput.value = '';
-        
-        bizNameGroup.style.display = 'none';
-        bizNameInput.required = false;
-        bizNameInput.value = '';
         
         bizTypeGroup.style.display = 'none';
         bizTypeInput.required = false;
@@ -1182,19 +1154,12 @@
       const mOrgGroup = document.getElementById('mother_org_name_group');
       const mOrgInput = document.getElementById('mother_organization_name');
 
-      const mBizNameGroup = document.getElementById('mother_biz_name_group');
-      const mBizNameInput = document.getElementById('mother_business_name');
-
       const mBizTypeGroup = document.getElementById('mother_biz_type_group');
       const mBizTypeInput = document.getElementById('mother_business_type');
 
       if (mOccValue === 'Salaried') {
         mOrgGroup.style.display = 'block';
         mOrgInput.required = true;
-
-        mBizNameGroup.style.display = 'none';
-        mBizNameInput.required = false;
-        mBizNameInput.value = '';
 
         mBizTypeGroup.style.display = 'none';
         mBizTypeInput.required = false;
@@ -1204,9 +1169,6 @@
         mOrgInput.required = false;
         mOrgInput.value = '';
 
-        mBizNameGroup.style.display = 'block';
-        mBizNameInput.required = true;
-
         mBizTypeGroup.style.display = 'block';
         mBizTypeInput.required = true;
       } else {
@@ -1214,10 +1176,6 @@
         mOrgGroup.style.display = 'none';
         mOrgInput.required = false;
         mOrgInput.value = '';
-
-        mBizNameGroup.style.display = 'none';
-        mBizNameInput.required = false;
-        mBizNameInput.value = '';
 
         mBizTypeGroup.style.display = 'none';
         mBizTypeInput.required = false;
