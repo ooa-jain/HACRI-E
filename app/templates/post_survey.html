@@ -104,13 +104,7 @@
           </div>
         </div>
 
-        <!-- Father: If Salaried -->
-        <div class="question" id="org_name_group" style="display: none; margin-top: 20px;">
-          <label class="q-label" style="display: block; font-weight: 600; margin-bottom: 8px;">Father's Organization Name:</label>
-          <div class="q-body">
-            <input type="text" name="organization_name" id="organization_name" placeholder="Enter organization name" value="{{ values.get('organization_name', '') }}" style="width: 100%; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 14px; outline: none;" />
-          </div>
-        </div>
+
 
 
 
@@ -145,13 +139,7 @@
             </div>
           </div>
 
-          <!-- Mother: If Salaried -->
-          <div class="question" id="mother_org_name_group" style="display: none; margin-top: 20px;">
-            <label class="q-label" style="display: block; font-weight: 600; margin-bottom: 8px;">Mother's Organization Name:</label>
-            <div class="q-body">
-              <input type="text" name="mother_organization_name" id="mother_organization_name" placeholder="Enter organization name" value="{{ values.get('mother_organization_name', '') }}" style="width: 100%; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 14px; outline: none;" />
-            </div>
-          </div>
+
 
 
 
@@ -1082,8 +1070,7 @@
       const mNameInput = document.getElementsByName('mother_name')[0];
       if (mNameInput) mNameInput.value = "Test Mother";
 
-      const mOrgInput = document.getElementById('mother_organization_name');
-      if (mOrgInput) mOrgInput.value = "Test Organization";
+
     }
 
     // Save draft and notify
@@ -1113,33 +1100,13 @@
     const occSelect = document.getElementById('father_occupation');
     if (occSelect) {
       const occValue = occSelect.value;
-      
-      const orgGroup = document.getElementById('org_name_group');
-      const orgInput = document.getElementById('organization_name');
-      
       const bizTypeGroup = document.getElementById('biz_type_group');
       const bizTypeInput = document.getElementById('business_type');
 
-      if (occValue === 'Salaried') {
-        orgGroup.style.display = 'block';
-        orgInput.required = true;
-        
-        bizTypeGroup.style.display = 'none';
-        bizTypeInput.required = false;
-        bizTypeInput.value = '';
-      } else if (occValue === 'Entrepreneur') {
-        orgGroup.style.display = 'none';
-        orgInput.required = false;
-        orgInput.value = '';
-        
+      if (occValue === 'Entrepreneur') {
         bizTypeGroup.style.display = 'block';
         bizTypeInput.required = true;
       } else {
-        // Homemaker or empty
-        orgGroup.style.display = 'none';
-        orgInput.required = false;
-        orgInput.value = '';
-        
         bizTypeGroup.style.display = 'none';
         bizTypeInput.required = false;
         bizTypeInput.value = '';
@@ -1150,33 +1117,13 @@
     const mOccSelect = document.getElementById('mother_occupation');
     if (mOccSelect) {
       const mOccValue = mOccSelect.value;
-
-      const mOrgGroup = document.getElementById('mother_org_name_group');
-      const mOrgInput = document.getElementById('mother_organization_name');
-
       const mBizTypeGroup = document.getElementById('mother_biz_type_group');
       const mBizTypeInput = document.getElementById('mother_business_type');
 
-      if (mOccValue === 'Salaried') {
-        mOrgGroup.style.display = 'block';
-        mOrgInput.required = true;
-
-        mBizTypeGroup.style.display = 'none';
-        mBizTypeInput.required = false;
-        mBizTypeInput.value = '';
-      } else if (mOccValue === 'Entrepreneur') {
-        mOrgGroup.style.display = 'none';
-        mOrgInput.required = false;
-        mOrgInput.value = '';
-
+      if (mOccValue === 'Entrepreneur') {
         mBizTypeGroup.style.display = 'block';
         mBizTypeInput.required = true;
       } else {
-        // Homemaker or empty
-        mOrgGroup.style.display = 'none';
-        mOrgInput.required = false;
-        mOrgInput.value = '';
-
         mBizTypeGroup.style.display = 'none';
         mBizTypeInput.required = false;
         mBizTypeInput.value = '';
