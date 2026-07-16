@@ -3,75 +3,200 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Deeksharambh Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-:root{--navy:#0d2147;--gold:#e6b324;--bg:#f0f2f5;--card:#fff;--border:#e5e7eb;--text:#1e293b;--muted:#64748b;--green:#16a34a;--teal:#0d9488}
+:root{
+  --navy: #1B2A4A;
+  --navy2: #2A3E68;
+  --gold: #C9A84C;
+  --bg: #F4F6FA;
+  --card: #ffffff;
+  --border: #e2e8f0;
+  --text: #1e293b;
+  --muted: #64748b;
+  --green: #10b981;
+  --teal: #06b6d4;
+  --shadow: 0 4px 20px rgba(27, 42, 74, 0.06);
+}
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
-.topbar{background:var(--navy);color:#fff;padding:0 20px;display:flex;align-items:center;gap:16px;min-height:52px}
-.topbar-brand{font-weight:700;font-size:15px;flex:1}.topbar-brand span{color:var(--gold)}
-.btn-sm{padding:6px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;border:none;font-family:inherit}
-.btn-red{background:#dc2626;color:#fff}
-.content{padding:24px;max-width:1100px;margin:0 auto}
-.tabs{display:flex;gap:4px;margin-bottom:20px;border-bottom:2px solid var(--border)}
-.tab{padding:10px 18px;font-size:13px;font-weight:600;cursor:pointer;color:var(--muted);background:none;border:none;border-bottom:2px solid transparent;margin-bottom:-2px;font-family:inherit}
-.tab.on{color:var(--navy);border-bottom-color:var(--navy)}
-.panel{display:none}.panel.on{display:block;animation:up .2s}
-@keyframes up{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
-.card{background:var(--card);border-radius:12px;padding:20px;border:1px solid var(--border);margin-bottom:16px}
-.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:16px}
-.stat{background:var(--card);border-radius:10px;padding:16px;border:1px solid var(--border)}
-.stat-n{font-size:32px;font-weight:800;color:var(--teal)}.stat-l{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
-.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:14px 0}
-.toggle-switch{position:relative;display:inline-block;width:46px;height:24px}
+body{font-family:'Outfit',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+
+/* Topbar */
+.topbar{
+  background: var(--navy);
+  color: #fff;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  min-height: 64px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+.topbar-brand {
+  font-weight: 800;
+  font-size: 18px;
+  flex: 1;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.topbar-brand span{color:var(--gold)}
+
+/* Buttons */
+.btn-sm{
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  font-family: inherit;
+  transition: all 0.2s ease;
+}
+.btn-red{background:#ef4444;color:#fff}
+.btn-red:hover{background:#dc2626;transform:translateY(-1px)}
+
+.content{padding:28px 24px;max-width:1200px;margin:0 auto}
+
+/* Tabs */
+.tabs{
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+  border-bottom: 2px solid var(--border);
+  padding-bottom: 0;
+}
+.tab{
+  padding: 12px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--muted);
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+  font-family: inherit;
+  transition: all 0.2s ease;
+}
+.tab:hover{color: var(--navy)}
+.tab.on{
+  color: var(--navy);
+  border-bottom-color: var(--gold);
+  font-weight: 700;
+}
+
+.panel{display:none}.panel.on{display:block;animation:up .3s ease-out}
+@keyframes up{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+/* Cards */
+.card{
+  background: var(--card);
+  border-radius: 16px;
+  padding: 24px;
+  border: 1px solid var(--border);
+  margin-bottom: 20px;
+  box-shadow: var(--shadow);
+}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:20px}
+.stat{
+  background: var(--card);
+  border-radius: 12px;
+  padding: 20px;
+  border: 1px solid var(--border);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+}
+.stat-n{font-size:36px;font-weight:800;color:var(--teal)}
+.stat-l{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-top:4px}
+
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:16px 0}
+.toggle-switch{
+  position: relative;
+  display: inline-block;
+  width: 50px;
+  height: 26px;
+}
 .toggle-switch input{opacity:0;width:0;height:0}
-.slider{position:absolute;cursor:pointer;inset:0;background:#d1d5db;border-radius:24px;transition:.2s}
-.slider:before{content:'';position:absolute;width:18px;height:18px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.2s}
+.slider{
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background: #cbd5e1;
+  border-radius: 24px;
+  transition: .25s;
+}
+.slider:before{
+  content: '';
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  left: 3px;
+  bottom: 3px;
+  background: #fff;
+  border-radius: 50%;
+  transition: .25s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+}
 input:checked+.slider{background:var(--green)}
-input:checked+.slider:before{transform:translateX(22px)}
-.mtable{width:100%;border-collapse:collapse;font-size:12px}
-.mtable th{padding:8px 10px;text-align:left;font-weight:700;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.4px;border-bottom:2px solid var(--border)}
-.mtable td{padding:9px 10px;border-bottom:1px solid var(--border);vertical-align:middle}
+input:checked+.slider:before{transform:translateX(24px)}
+
+.mtable{width:100%;border-collapse:collapse;font-size:13px}
+.mtable th{
+  padding: 12px 14px;
+  text-align: left;
+  font-weight: 700;
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  border-bottom: 2px solid var(--border);
+}
+.mtable td{padding:14px 14px;border-bottom:1px solid var(--border);vertical-align:middle}
+.mtable tr:hover td{background:rgba(27, 42, 74, 0.015)}
 .mtable tr:last-child td{border:none}
-.search{width:100%;max-width:320px;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;margin-bottom:12px;outline:none}
-.search:focus{border-color:var(--teal)}
+
+.search{
+  width: 100%;
+  max-width: 360px;
+  padding: 10px 14px;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  font-size: 14px;
+  margin-bottom: 16px;
+  outline: none;
+  font-family: inherit;
+  transition: all 0.2s ease;
+}
+.search:focus{border-color:var(--teal);box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.08)}
 
 @media (max-width: 680px) {
   .topbar {
     flex-direction: column;
-    align-items: center;
-    padding: 12px 16px;
+    align-items: stretch;
+    padding: 16px 20px;
     gap: 12px;
   }
   .topbar-brand {
-    font-size: 13.5px;
+    font-size: 16px;
     text-align: center;
   }
   .content {
-    padding: 12px;
+    padding: 16px;
   }
   .card {
-    padding: 14px;
-  }
-  .tabs {
-    flex-wrap: nowrap;
-    white-space: nowrap;
-    overflow-x: auto;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-  }
-  .tabs::-webkit-scrollbar {
-    display: none;
+    padding: 16px;
   }
   .tab {
-    padding: 8px 12px;
-    font-size: 12px;
+    padding: 10px 14px;
+    font-size: 13px;
   }
 }
 </style>
 </head>
 <body>
 <div class="topbar">
-  <div class="topbar-brand"><span>OoA</span> · Deeksharambh Admin</div>
+  <div class="topbar-brand"><span>JAIN UNIVERSITY</span> · Deeksharambh Admin</div>
   <a href="/admin/orientation/logout" class="btn-sm btn-red">Sign out</a>
 </div>
 <div class="content">

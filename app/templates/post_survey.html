@@ -42,26 +42,30 @@
   <div class="wizard-progress" id="wizard-progress">
     <div class="wizard-progress-bar" id="wizard-progress-bar"></div>
     <button type="button" class="wizard-step active" data-step="0">
+      <div class="wizard-step-circle">A</div>
+      <span class="wizard-step-label">Background</span>
+    </button>
+    <button type="button" class="wizard-step" data-step="1">
       <div class="wizard-step-circle">B</div>
       <span class="wizard-step-label">Literacy</span>
     </button>
-    <button type="button" class="wizard-step" data-step="1">
+    <button type="button" class="wizard-step" data-step="2">
       <div class="wizard-step-circle">D</div>
       <span class="wizard-step-label">Attitudes</span>
     </button>
-    <button type="button" class="wizard-step" data-step="2">
+    <button type="button" class="wizard-step" data-step="3">
       <div class="wizard-step-circle">E</div>
       <span class="wizard-step-label">Ethics</span>
     </button>
-    <button type="button" class="wizard-step" data-step="3">
+    <button type="button" class="wizard-step" data-step="4">
       <div class="wizard-step-circle">F</div>
       <span class="wizard-step-label">Readiness</span>
     </button>
-    <button type="button" class="wizard-step" data-step="4">
+    <button type="button" class="wizard-step" data-step="5">
       <div class="wizard-step-circle">G</div>
       <span class="wizard-step-label">Application</span>
     </button>
-    <button type="button" class="wizard-step" data-step="5">
+    <button type="button" class="wizard-step" data-step="6">
       <div class="wizard-step-circle">H</div>
       <span class="wizard-step-label">Reflection</span>
     </button>
@@ -70,8 +74,112 @@
   <form method="post" action="/survey/post" class="survey" id="survey-form">
     <input type="hidden" name="csrf" value="{{ csrf_token }}" />
 
-    <!-- ── SECTION B — AI Awareness & Literacy (Likert) ──────────────────── -->
+    <!-- ── SECTION A — Your Background ──────────────────────────────────── -->
     <fieldset class="section wizard-section active" data-step-section="0">
+      <legend>Section A · Your Background</legend>
+      <p class="muted" style="margin-bottom: 20px;">Please provide your background details.</p>
+
+      <div class="sub-section-card">
+        <h3 class="subhead" style="font-size: 14px; font-weight: 700; color: var(--navy); margin-bottom: 16px; border-bottom: 1px solid var(--border); padding-bottom: 8px;">Parent Details</h3>
+
+        <!-- ── Father's Details ── -->
+        <h4 style="font-size: 13px; font-weight: 700; color: var(--navy); margin-bottom: 12px; padding: 8px 12px; background: #f0f4ff; border-radius: 6px;">👨 Father's Details</h4>
+        
+        <div class="question">
+          <label class="q-label" style="display: block; font-weight: 600; margin-bottom: 8px;">Father's Name:</label>
+          <div class="q-body">
+            <input type="text" name="father_name" placeholder="Enter father's name" required value="{{ values.get('father_name', '') }}" style="width: 100%; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 14px; outline: none;" />
+          </div>
+        </div>
+
+        <div class="question" style="margin-top: 20px;">
+          <label class="q-label" style="display: block; font-weight: 600; margin-bottom: 8px;">Father's Occupation:</label>
+          <div class="q-body">
+            <select name="father_occupation" id="father_occupation" required onchange="toggleOccupationFields()" style="width: 100%; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 14px; outline: none; background: #fff;">
+              <option value="">-- Select --</option>
+              <option value="Salaried" {% if values.get('father_occupation') == 'Salaried' %}selected{% endif %}>Salaried</option>
+              <option value="Entrepreneur" {% if values.get('father_occupation') == 'Entrepreneur' %}selected{% endif %}>Entrepreneur</option>
+              <option value="Homemaker" {% if values.get('father_occupation') == 'Homemaker' %}selected{% endif %}>Homemaker</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Father: If Salaried -->
+        <div class="question" id="org_name_group" style="display: none; margin-top: 20px;">
+          <label class="q-label" style="display: block; font-weight: 600; margin-bottom: 8px;">Father's Organization Name:</label>
+          <div class="q-body">
+            <input type="text" name="organization_name" id="organization_name" placeholder="Enter organization name" value="{{ values.get('organization_name', '') }}" style="width: 100%; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 14px; outline: none;" />
+          </div>
+        </div>
+
+        <!-- Father: If Entrepreneur -->
+        <div class="question" id="biz_name_group" style="display: none; margin-top: 20px;">
+          <label class="q-label" style="display: block; font-weight: 600; margin-bottom: 8px;">Father's Business Name:</label>
+          <div class="q-body">
+            <input type="text" name="business_name" id="business_name" placeholder="Enter business name" value="{{ values.get('business_name', '') }}" style="width: 100%; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 14px; outline: none;" />
+          </div>
+        </div>
+
+        <div class="question" id="biz_type_group" style="display: none; margin-top: 20px;">
+          <label class="q-label" style="display: block; font-weight: 600; margin-bottom: 4px;">Father's Type of Business:</label>
+          <p class="muted" style="margin-top: 0; margin-bottom: 8px; font-size: 12px; color: var(--muted);">(Explain in your own words what business they do, e.g. retail shop, software consulting, manufacturing, etc.)</p>
+          <div class="q-body">
+            <textarea name="business_type" id="business_type" rows="3" placeholder="Describe the business..." maxlength="500" style="width: 100%; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 14px; outline: none; resize: vertical;">{{ values.get('business_type', '') }}</textarea>
+          </div>
+        </div>
+
+        <!-- ── Mother's Details ── -->
+        <div style="margin-top: 28px; border-top: 2px solid var(--border); padding-top: 20px;">
+          <h4 style="font-size: 13px; font-weight: 700; color: var(--navy); margin-bottom: 12px; padding: 8px 12px; background: #fdf2f8; border-radius: 6px;">👩 Mother's Details</h4>
+          
+          <div class="question">
+            <label class="q-label" style="display: block; font-weight: 600; margin-bottom: 8px;">Mother's Name:</label>
+            <div class="q-body">
+              <input type="text" name="mother_name" placeholder="Enter mother's name" required value="{{ values.get('mother_name', '') }}" style="width: 100%; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 14px; outline: none;" />
+            </div>
+          </div>
+
+          <div class="question" style="margin-top: 20px;">
+            <label class="q-label" style="display: block; font-weight: 600; margin-bottom: 8px;">Mother's Occupation:</label>
+            <div class="q-body">
+              <select name="mother_occupation" id="mother_occupation" required onchange="toggleOccupationFields()" style="width: 100%; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 14px; outline: none; background: #fff;">
+                <option value="">-- Select --</option>
+                <option value="Salaried" {% if values.get('mother_occupation') == 'Salaried' %}selected{% endif %}>Salaried</option>
+                <option value="Entrepreneur" {% if values.get('mother_occupation') == 'Entrepreneur' %}selected{% endif %}>Entrepreneur</option>
+                <option value="Homemaker" {% if values.get('mother_occupation') == 'Homemaker' %}selected{% endif %}>Homemaker</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Mother: If Salaried -->
+          <div class="question" id="mother_org_name_group" style="display: none; margin-top: 20px;">
+            <label class="q-label" style="display: block; font-weight: 600; margin-bottom: 8px;">Mother's Organization Name:</label>
+            <div class="q-body">
+              <input type="text" name="mother_organization_name" id="mother_organization_name" placeholder="Enter organization name" value="{{ values.get('mother_organization_name', '') }}" style="width: 100%; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 14px; outline: none;" />
+            </div>
+          </div>
+
+          <!-- Mother: If Entrepreneur -->
+          <div class="question" id="mother_biz_name_group" style="display: none; margin-top: 20px;">
+            <label class="q-label" style="display: block; font-weight: 600; margin-bottom: 8px;">Mother's Business Name:</label>
+            <div class="q-body">
+              <input type="text" name="mother_business_name" id="mother_business_name" placeholder="Enter business name" value="{{ values.get('mother_business_name', '') }}" style="width: 100%; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 14px; outline: none;" />
+            </div>
+          </div>
+
+          <div class="question" id="mother_biz_type_group" style="display: none; margin-top: 20px;">
+            <label class="q-label" style="display: block; font-weight: 600; margin-bottom: 4px;">Mother's Type of Business:</label>
+            <p class="muted" style="margin-top: 0; margin-bottom: 8px; font-size: 12px; color: var(--muted);">(Explain in your own words what business they do, e.g. retail shop, software consulting, manufacturing, etc.)</p>
+            <div class="q-body">
+              <textarea name="mother_business_type" id="mother_business_type" rows="3" placeholder="Describe the business..." maxlength="500" style="width: 100%; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 14px; outline: none; resize: vertical;">{{ values.get('mother_business_type', '') }}</textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+    </fieldset>
+
+    <!-- ── SECTION B — AI Awareness & Literacy (Likert) ──────────────────── -->
+    <fieldset class="section wizard-section" data-step-section="1">
       <legend>Section B · {{ section_titles["B"] }}</legend>
       <p class="muted">Rate your agreement. 1 = Strongly Disagree · 5 = Strongly Agree</p>
 
@@ -113,7 +221,7 @@
     </fieldset>
 
     <!-- ── SECTION D — Attitudes & Perceptions ────────────────────────────── -->
-    <fieldset class="section wizard-section" data-step-section="1">
+    <fieldset class="section wizard-section" data-step-section="2">
       <legend>Section D · {{ section_titles["D"] }}</legend>
       <p class="muted">Rate your agreement. 1 = Strongly Disagree · 5 = Strongly Agree.</p>
 
@@ -225,7 +333,7 @@
     </fieldset>
 
     <!-- ── SECTION E — Ethics & Academic Integrity ───────────────────────── -->
-    <fieldset class="section wizard-section" data-step-section="2">
+    <fieldset class="section wizard-section" data-step-section="3">
       <legend>Section E · {{ section_titles["E"] }}</legend>
       <p class="muted">Rate your agreement. 1 = Strongly Disagree · 5 = Strongly Agree.</p>
       <div class="sub-section-card">
@@ -260,7 +368,7 @@
     </fieldset>
 
     <!-- ── SECTION F — HACRI Core ─────────────────────────────────────────── -->
-    <fieldset class="section wizard-section" data-step-section="3">
+    <fieldset class="section wizard-section" data-step-section="4">
       <legend>Section F · {{ section_titles["F"] }}</legend>
       <p class="muted">Core instrument. 1 = Strongly Disagree · 5 = Strongly Agree.</p>
 
@@ -372,7 +480,7 @@
     </fieldset>
 
     <!-- ── SECTION G — Entrepreneurial AI Application ────────────────────── -->
-    <fieldset class="section wizard-section" data-step-section="4">
+    <fieldset class="section wizard-section" data-step-section="5">
       <legend>Section G · {{ section_titles["G"] }}</legend>
       <p class="muted">If you identify yourself as an entrepreneur or aspire to be one, please answer the following
         questions. Your responses will assess your willingness to use AI in your entrepreneurship.</p>
@@ -486,7 +594,7 @@
     </fieldset>
 
     <!-- ── SECTION H — Post-Induction Reflection ─────────────────────────── -->
-    <fieldset class="section wizard-section" data-step-section="5">
+    <fieldset class="section wizard-section" data-step-section="6">
       <legend>Section H · {{ section_titles["H_POST"] }}</legend>
       <p class="muted">Complete after the induction session — same day.</p>
       <div class="sub-section-card">
@@ -535,6 +643,128 @@
           <textarea name="H4" rows="3" maxlength="2000">{{ values.get("H4", "") }}</textarea>
         </div>
       </div>
+
+      <!-- ── PRaiSE AI Framework Infographic ─────────────────────────── -->
+      <div style="margin-top: 28px; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 24px rgba(27,42,74,0.12);">
+        
+        <!-- Header Banner -->
+        <div style="padding: 24px 28px; color: #1B2A4A; border-bottom: 1px solid #e5e7eb; display: flex; align-items: flex-start; gap: 22px; background: #ffffff;">
+          <img src="/static/logosmall.png" alt="Logo" style="height: 72px; width: auto; object-fit: contain; flex-shrink: 0; margin-top: -4px;">
+          <div style="text-align: left;">
+            <h3 style="font-size: 22px; font-weight: 800; margin: 0 0 6px 0; letter-spacing: 0.5px; color: #1B2A4A;">
+              PAISE AI FRAMEWORK AT JAIN DEEMED TO BE UNIVERSITY
+            </h3>
+            <p style="font-size: 15px; margin: 0; color: #4b5563; line-height: 1.6; max-width: 800px; font-weight: 500;">
+              Each <span style="color: #c2951b; font-weight: 700;">PRaiSE</span> pillar in JAIN DEEMED TO BE UNIVERSITY is governed by a prioritized set of Responsible AI principles to ensure context-aware, accountable execution
+            </p>
+          </div>
+        </div>
+
+        <!-- Diamond Diagram — Centered -->
+        <div style="background: linear-gradient(180deg, #f0f4ff 0%, #ffffff 100%); padding: 32px 20px 24px; display: flex; justify-content: center;">
+          <div style="position: relative; width: 260px; height: 260px;">
+            
+            <!-- Diamond shape -->
+            <div style="position: absolute; top: 35px; left: 35px; width: 190px; height: 190px; background: linear-gradient(135deg, #f5ce4e 0%, #e6a817 50%, #d4960d 100%); transform: rotate(45deg); border-radius: 14px; box-shadow: 0 8px 32px rgba(201,168,76,0.35);"></div>
+
+            <!-- Center label -->
+            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 2; text-align: center;">
+              <div style="font-size: 26px; font-weight: 900; color: #1B2A4A; letter-spacing: 1.5px; text-shadow: 0 1px 3px rgba(255,255,255,0.7);">PRaiSE</div>
+            </div>
+
+            <!-- Top: Human Excellence (2) -->
+            <div style="position: absolute; top: -8px; left: 50%; transform: translateX(-50%); z-index: 3; text-align: center;">
+              <div style="background: #1B2A4A; color: #fff; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 10px; display: inline-block; margin-bottom: 2px;">2</div>
+              <div style="font-size: 11px; font-weight: 700; color: #1B2A4A; white-space: nowrap;">AI for Human Excellence</div>
+            </div>
+
+            <!-- Right: Societal Impact (1) -->
+            <div style="position: absolute; top: 50%; right: -58px; transform: translateY(-50%); z-index: 3; text-align: center;">
+              <div style="background: #1B7A3D; color: #fff; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 10px; display: inline-block; margin-bottom: 2px;">1</div>
+              <div style="font-size: 11px; font-weight: 700; color: #1B2A4A; white-space: nowrap;">AI for Societal<br>Impact</div>
+            </div>
+
+            <!-- Bottom: Entrepreneurship (4) -->
+            <div style="position: absolute; bottom: -14px; left: 50%; transform: translateX(-50%); z-index: 3; text-align: center;">
+              <div style="background: #1B7A3D; color: #fff; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 10px; display: inline-block; margin-bottom: 2px;">4</div>
+              <div style="font-size: 11px; font-weight: 700; color: #1B2A4A; white-space: nowrap;">AI for Entrepreneurship</div>
+            </div>
+
+            <!-- Left: Social Good (3) -->
+            <div style="position: absolute; top: 50%; left: -44px; transform: translateY(-50%); z-index: 3; text-align: center;">
+              <div style="background: #C9A84C; color: #fff; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 10px; display: inline-block; margin-bottom: 2px;">3</div>
+              <div style="font-size: 11px; font-weight: 700; color: #1B2A4A; white-space: nowrap;">AI for Social<br>Good</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tagline below diamond -->
+        <div style="text-align: center; padding: 0 20px 20px; background: #fff;">
+          <div style="font-size: 12px; font-weight: 700; color: #1B7A3D; line-height: 1.4;">Promoting Responsible AI Impact on Society and Economy</div>
+          <div style="font-size: 11px; font-weight: 600; color: #6b7280; margin-top: 3px;">JAIN AI Centre for Excellence</div>
+        </div>
+
+        <!-- Pillar Cards — 2x2 Grid -->
+        <div style="padding: 0 20px 24px; background: #fff; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px;">
+
+          <!-- Card 1: Societal Impact -->
+          <div style="border-left: 4px solid #1B7A3D; background: #f0fdf4; border-radius: 10px; padding: 16px 18px; transition: transform 0.2s;">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+              <div style="width: 36px; height: 36px; border-radius: 8px; background: #dcfce7; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1B7A3D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+              </div>
+              <div>
+                <span style="background: #1B7A3D; color: #fff; font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 8px; display: inline-block; margin-bottom: 2px;">PILLAR 1</span>
+                <div style="font-size: 14px; font-weight: 800; color: #1B2A4A;">Societal Impact</div>
+              </div>
+            </div>
+            <p style="font-size: 12.5px; color: #374151; line-height: 1.55; margin: 0;">Inclusive, AI-enabled curriculum architecture aligned to diverse learner pathways and evolving industry and Society needs</p>
+          </div>
+
+          <!-- Card 2: Human Excellence -->
+          <div style="border-left: 4px solid #1B2A4A; background: #f0f4ff; border-radius: 10px; padding: 16px 18px; transition: transform 0.2s;">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+              <div style="width: 36px; height: 36px; border-radius: 8px; background: #e0e7ff; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1B2A4A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a7 7 0 0 1 7 7c0 2.38-1.19 4.47-3 5.74V17a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1v-2.26C6.19 13.47 5 11.38 5 9a7 7 0 0 1 7-7z"/><path d="M9 21h6"/><path d="M10 17v4"/><path d="M14 17v4"/></svg>
+              </div>
+              <div>
+                <span style="background: #1B2A4A; color: #fff; font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 8px; display: inline-block; margin-bottom: 2px;">PILLAR 2</span>
+                <div style="font-size: 14px; font-weight: 800; color: #1B2A4A;">Human Excellence</div>
+              </div>
+            </div>
+            <p style="font-size: 12.5px; color: #374151; line-height: 1.55; margin: 0;">Bring out the Best that we can achieve using thoughtfully designed AI – Human Collaboration</p>
+          </div>
+
+          <!-- Card 3: Social Good -->
+          <div style="border-left: 4px solid #C9A84C; background: #fffbeb; border-radius: 10px; padding: 16px 18px; transition: transform 0.2s;">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+              <div style="width: 36px; height: 36px; border-radius: 8px; background: #fef3c7; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C9A84C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.42 4.58a5.4 5.4 0 0 0-7.65 0l-.77.78-.77-.78a5.4 5.4 0 0 0-7.65 0C1.46 6.7 1.33 10.28 4 13l8 8 8-8c2.67-2.72 2.54-6.3.42-8.42z"/></svg>
+              </div>
+              <div>
+                <span style="background: #C9A84C; color: #fff; font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 8px; display: inline-block; margin-bottom: 2px;">PILLAR 3</span>
+                <div style="font-size: 14px; font-weight: 800; color: #1B2A4A;">Social Good</div>
+              </div>
+            </div>
+            <p style="font-size: 12.5px; color: #374151; line-height: 1.55; margin: 0;">Make sure AI is used for Good by identifying and executing AI projects that makes an impact on the Society</p>
+          </div>
+
+          <!-- Card 4: Entrepreneurship -->
+          <div style="border-left: 4px solid #7c3aed; background: #f5f3ff; border-radius: 10px; padding: 16px 18px; transition: transform 0.2s;">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+              <div style="width: 36px; height: 36px; border-radius: 8px; background: #ede9fe; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>
+              </div>
+              <div>
+                <span style="background: #7c3aed; color: #fff; font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 8px; display: inline-block; margin-bottom: 2px;">PILLAR 4</span>
+                <div style="font-size: 14px; font-weight: 800; color: #1B2A4A;">Entrepreneurship</div>
+              </div>
+            </div>
+            <p style="font-size: 12.5px; color: #374151; line-height: 1.55; margin: 0;">Agentic AI workflow clubbed with Industry mentorship to drive an innovation ecosystem enabling the creation of responsible, scalable, and market-ready ventures</p>
+          </div>
+        </div>
+      </div>
+
     </fieldset>
 
     <!-- ── NAV BUTTONS ── -->
@@ -549,7 +779,7 @@
 <script>
   document.addEventListener('DOMContentLoaded', () => {
     let currentStep = 0;
-    const totalSteps = 6;
+    const totalSteps = 7;
 
     const form = document.getElementById('survey-form');
     const steps = document.querySelectorAll('.wizard-step');
@@ -622,6 +852,7 @@
         if (data.step !== undefined && data.step >= 0 && data.step < totalSteps) {
           currentStep = data.step;
         }
+        toggleOccupationFields();
         return true;
       } catch (e) {
         console.error('Error restoring draft:', e);
@@ -789,6 +1020,7 @@
 
     // Restore draft if exists, else start at step 0
     restoreDraft();
+    toggleOccupationFields();
     showStep(currentStep);
   });
 
@@ -839,6 +1071,35 @@
       ta.value = "Test response auto-filled by test mode bypass.";
     });
 
+    // Handle background fields explicitly in test mode auto-fill
+    const occSelect = document.getElementById('father_occupation');
+    if (occSelect) {
+      occSelect.value = "Entrepreneur";
+      occSelect.dispatchEvent(new Event('change', { bubbles: true }));
+      
+      const fNameInput = document.getElementsByName('father_name')[0];
+      if (fNameInput) fNameInput.value = "Test Father";
+      
+      const bNameInput = document.getElementById('business_name');
+      if (bNameInput) bNameInput.value = "Test Enterprise";
+      
+      const bTypeInput = document.getElementById('business_type');
+      if (bTypeInput) bTypeInput.value = "Test business type detailing entrepreneurship.";
+    }
+
+    // Mother's details auto-fill
+    const mOccSelect = document.getElementById('mother_occupation');
+    if (mOccSelect) {
+      mOccSelect.value = "Salaried";
+      mOccSelect.dispatchEvent(new Event('change', { bubbles: true }));
+
+      const mNameInput = document.getElementsByName('mother_name')[0];
+      if (mNameInput) mNameInput.value = "Test Mother";
+
+      const mOrgInput = document.getElementById('mother_organization_name');
+      if (mOrgInput) mOrgInput.value = "Test Organization";
+    }
+
     // Save draft and notify
     if (window.saveDraft) {
       window.saveDraft();
@@ -846,7 +1107,7 @@
       // Find fallback saveDraft in scope if needed
       const form = document.getElementById('survey-form');
       if (form) {
-        const data = { step: 5, fields: {} };
+        const data = { step: 6, fields: {} };
         new FormData(form).forEach((val, key) => {
           if (key === 'csrf') return;
           data.fields[key] = val;
@@ -859,6 +1120,110 @@
       el.dispatchEvent(new Event('change', { bubbles: true }));
     });
     alert("Survey auto-filled! You can now navigate through and submit.");
+  }
+
+  function toggleOccupationFields() {
+    // ── Father occupation toggle ──
+    const occSelect = document.getElementById('father_occupation');
+    if (occSelect) {
+      const occValue = occSelect.value;
+      
+      const orgGroup = document.getElementById('org_name_group');
+      const orgInput = document.getElementById('organization_name');
+      
+      const bizNameGroup = document.getElementById('biz_name_group');
+      const bizNameInput = document.getElementById('business_name');
+      
+      const bizTypeGroup = document.getElementById('biz_type_group');
+      const bizTypeInput = document.getElementById('business_type');
+
+      if (occValue === 'Salaried') {
+        orgGroup.style.display = 'block';
+        orgInput.required = true;
+        
+        bizNameGroup.style.display = 'none';
+        bizNameInput.required = false;
+        bizNameInput.value = '';
+        
+        bizTypeGroup.style.display = 'none';
+        bizTypeInput.required = false;
+        bizTypeInput.value = '';
+      } else if (occValue === 'Entrepreneur') {
+        orgGroup.style.display = 'none';
+        orgInput.required = false;
+        orgInput.value = '';
+        
+        bizNameGroup.style.display = 'block';
+        bizNameInput.required = true;
+        
+        bizTypeGroup.style.display = 'block';
+        bizTypeInput.required = true;
+      } else {
+        // Homemaker or empty
+        orgGroup.style.display = 'none';
+        orgInput.required = false;
+        orgInput.value = '';
+        
+        bizNameGroup.style.display = 'none';
+        bizNameInput.required = false;
+        bizNameInput.value = '';
+        
+        bizTypeGroup.style.display = 'none';
+        bizTypeInput.required = false;
+        bizTypeInput.value = '';
+      }
+    }
+
+    // ── Mother occupation toggle ──
+    const mOccSelect = document.getElementById('mother_occupation');
+    if (mOccSelect) {
+      const mOccValue = mOccSelect.value;
+
+      const mOrgGroup = document.getElementById('mother_org_name_group');
+      const mOrgInput = document.getElementById('mother_organization_name');
+
+      const mBizNameGroup = document.getElementById('mother_biz_name_group');
+      const mBizNameInput = document.getElementById('mother_business_name');
+
+      const mBizTypeGroup = document.getElementById('mother_biz_type_group');
+      const mBizTypeInput = document.getElementById('mother_business_type');
+
+      if (mOccValue === 'Salaried') {
+        mOrgGroup.style.display = 'block';
+        mOrgInput.required = true;
+
+        mBizNameGroup.style.display = 'none';
+        mBizNameInput.required = false;
+        mBizNameInput.value = '';
+
+        mBizTypeGroup.style.display = 'none';
+        mBizTypeInput.required = false;
+        mBizTypeInput.value = '';
+      } else if (mOccValue === 'Entrepreneur') {
+        mOrgGroup.style.display = 'none';
+        mOrgInput.required = false;
+        mOrgInput.value = '';
+
+        mBizNameGroup.style.display = 'block';
+        mBizNameInput.required = true;
+
+        mBizTypeGroup.style.display = 'block';
+        mBizTypeInput.required = true;
+      } else {
+        // Homemaker or empty
+        mOrgGroup.style.display = 'none';
+        mOrgInput.required = false;
+        mOrgInput.value = '';
+
+        mBizNameGroup.style.display = 'none';
+        mBizNameInput.required = false;
+        mBizNameInput.value = '';
+
+        mBizTypeGroup.style.display = 'none';
+        mBizTypeInput.required = false;
+        mBizTypeInput.value = '';
+      }
+    }
   }
 </script>
 {% endblock %}

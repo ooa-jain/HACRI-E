@@ -3,73 +3,238 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>AI Survey Admin — HACRI-E</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
-:root{--navy:#0d2147;--navy2:#1a3a7a;--gold:#e6b324;--bg:#f0f2f5;--card:#fff;--border:#e5e7eb;--text:#1e293b;--muted:#64748b;--green:#16a34a;--teal:#0d9488}
+:root{
+  --navy: #1B2A4A;
+  --navy2: #2A3E68;
+  --gold: #C9A84C;
+  --gold-light: #F4E8C1;
+  --bg: #F4F6FA;
+  --card: #ffffff;
+  --border: #e2e8f0;
+  --text: #1e293b;
+  --muted: #64748b;
+  --green: #10b981;
+  --teal: #06b6d4;
+  --shadow: 0 4px 20px rgba(27, 42, 74, 0.06);
+}
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
-.topbar{background:var(--navy);color:#fff;padding:0 20px;display:flex;align-items:center;gap:16px;min-height:52px}
-.topbar-brand{font-weight:700;font-size:15px;flex:1}.topbar-brand span{color:var(--gold)}
-.btn-sm{padding:6px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;border:none;font-family:inherit}
-.btn-red{background:#dc2626;color:#fff}.btn-green{background:var(--green);color:#fff}.btn-blue{background:var(--navy2);color:#fff}
-.content{padding:24px;max-width:1100px;margin:0 auto}
-.tabs{display:flex;gap:4px;margin-bottom:20px;border-bottom:2px solid var(--border);padding-bottom:0}
-.tab{padding:10px 18px;font-size:13px;font-weight:600;cursor:pointer;color:var(--muted);background:none;border:none;border-bottom:2px solid transparent;margin-bottom:-2px;font-family:inherit}
-.tab.on{color:var(--navy);border-bottom-color:var(--navy)}
-.panel{display:none}.panel.on{display:block;animation:up .2s}
-@keyframes up{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
-.card{background:var(--card);border-radius:12px;padding:20px;border:1px solid var(--border);margin-bottom:16px}
-.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:16px}
-.stat{background:var(--card);border-radius:10px;padding:16px;border:1px solid var(--border)}
-.stat-n{font-size:32px;font-weight:800;color:var(--navy)}.stat-l{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
-.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border)}
+body{font-family:'Outfit',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+
+/* Topbar */
+.topbar{
+  background: var(--navy);
+  color: #fff;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  min-height: 64px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+.topbar-brand {
+  font-weight: 800;
+  font-size: 18px;
+  flex: 1;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.topbar-brand span{color:var(--gold)}
+
+/* Buttons */
+.btn-sm{
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  font-family: inherit;
+  transition: all 0.2s ease;
+}
+.btn-red{background:#ef4444;color:#fff}
+.btn-red:hover{background:#dc2626;transform:translateY(-1px)}
+.btn-green{background:var(--green);color:#fff}
+.btn-green:hover{background:#059669;transform:translateY(-1px)}
+.btn-blue{background:var(--navy2);color:#fff}
+.btn-blue:hover{background:#1B2A4A;transform:translateY(-1px)}
+
+.content{padding:28px 24px;max-width:1200px;margin:0 auto}
+
+/* Tabs */
+.tabs{
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+  border-bottom: 2px solid var(--border);
+  padding-bottom: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.tabs::-webkit-scrollbar { display: none; }
+.tab{
+  padding: 12px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--muted);
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+  font-family: inherit;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+.tab:hover{color: var(--navy)}
+.tab.on{
+  color: var(--navy);
+  border-bottom-color: var(--gold);
+  font-weight: 700;
+}
+
+.panel{display:none}.panel.on{display:block;animation:up .3s ease-out}
+@keyframes up{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+/* Card elements */
+.card{
+  background: var(--card);
+  border-radius: 16px;
+  padding: 24px;
+  border: 1px solid var(--border);
+  margin-bottom: 20px;
+  box-shadow: var(--shadow);
+}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:20px}
+.stat{
+  background: var(--card);
+  border-radius: 12px;
+  padding: 20px;
+  border: 1px solid var(--border);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+  transition: transform 0.2s ease;
+}
+.stat:hover {
+  transform: translateY(-2px);
+}
+.stat-n{font-size:36px;font-weight:800;color:var(--navy)}
+.stat-l{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-top:4px}
+
+/* Toggle Switches */
+.toggle-row{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--border);
+}
 .toggle-row:last-child{border:none}
-.toggle-switch{position:relative;display:inline-block;width:46px;height:24px}
+.toggle-switch{
+  position: relative;
+  display: inline-block;
+  width: 50px;
+  height: 26px;
+}
 .toggle-switch input{opacity:0;width:0;height:0}
-.slider{position:absolute;cursor:pointer;inset:0;background:#d1d5db;border-radius:24px;transition:.2s}
-.slider:before{content:'';position:absolute;width:18px;height:18px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.2s}
+.slider{
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background: #cbd5e1;
+  border-radius: 24px;
+  transition: .25s;
+}
+.slider:before{
+  content: '';
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  left: 3px;
+  bottom: 3px;
+  background: #fff;
+  border-radius: 50%;
+  transition: .25s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+}
 input:checked+.slider{background:var(--green)}
-input:checked+.slider:before{transform:translateX(22px)}
-.mtable{width:100%;border-collapse:collapse;font-size:12px}
-.mtable th{padding:8px 10px;text-align:left;font-weight:700;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.4px;border-bottom:2px solid var(--border)}
-.mtable td{padding:9px 10px;border-bottom:1px solid var(--border);vertical-align:middle}
+input:checked+.slider:before{transform:translateX(24px)}
+
+/* Table Styling */
+.mtable{width:100%;border-collapse:collapse;font-size:13px}
+.mtable th{
+  padding: 12px 14px;
+  text-align: left;
+  font-weight: 700;
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  border-bottom: 2px solid var(--border);
+}
+.mtable td{padding:14px 14px;border-bottom:1px solid var(--border);vertical-align:middle}
+.mtable tr:hover td{background:rgba(27, 42, 74, 0.015)}
 .mtable tr:last-child td{border:none}
-.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;text-transform:uppercase}
-.bg-green{background:#dcfce7;color:#15803d}.bg-blue{background:#dbeafe;color:#1d4ed8}.bg-gray{background:#f1f5f9;color:#475569}
-.search{width:100%;max-width:320px;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;margin-bottom:12px;outline:none}
-.search:focus{border-color:var(--navy)}
-.alert-box{background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:16px;margin-bottom:16px}
+
+/* Badges */
+.badge{
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+.bg-green{background:#d1fae5;color:#065f46}
+.bg-blue{background:#dbeafe;color:#1e40af}
+.bg-gray{background:#f1f5f9;color:#475569}
+
+.search{
+  width: 100%;
+  max-width: 360px;
+  padding: 10px 14px;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  font-size: 14px;
+  margin-bottom: 16px;
+  outline: none;
+  font-family: inherit;
+  transition: all 0.2s ease;
+}
+.search:focus{border-color:var(--navy);box-shadow: 0 0 0 3px rgba(27, 42, 74, 0.08)}
+
+.alert-box{
+  background: #fffbef;
+  border: 1px solid #fef08a;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
 
 @media (max-width: 680px) {
   .topbar {
     flex-direction: column;
-    align-items: center;
-    padding: 12px 16px;
+    align-items: stretch;
+    padding: 16px 20px;
     gap: 12px;
   }
   .topbar-brand {
-    font-size: 13.5px;
+    font-size: 16px;
     text-align: center;
   }
   .content {
-    padding: 12px;
+    padding: 16px;
   }
   .card {
-    padding: 14px;
-  }
-  .tabs {
-    flex-wrap: nowrap;
-    white-space: nowrap;
-    overflow-x: auto;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-  }
-  .tabs::-webkit-scrollbar {
-    display: none;
+    padding: 16px;
   }
   .tab {
-    padding: 8px 12px;
-    font-size: 12px;
+    padding: 10px 14px;
+    font-size: 13px;
   }
 }
 @keyframes modalFadeIn {
@@ -94,7 +259,7 @@ input:checked+.slider:before{transform:translateX(22px)}
 </head>
 <body>
 <div class="topbar">
-  <div class="topbar-brand"><span>OoA</span> · AI Survey Admin</div>
+  <div class="topbar-brand"><span>JAIN UNIVERSITY</span> · AI Survey Admin</div>
   <a href="/admin/survey/logout" class="btn-sm btn-red">Sign out</a>
 </div>
 <div class="content">
@@ -105,6 +270,7 @@ input:checked+.slider:before{transform:translateX(22px)}
     <button class="tab" onclick="show('p-orient',this)">🎓 Orientation</button>
     <button class="tab" onclick="show('p-alerts',this)">🔔 Alerts</button>
     <button class="tab" onclick="show('p-dept-analysis',this)">🏢 Department Analysis</button>
+    <button class="tab" onclick="show('p-bg-analysis',this)">👨‍👩‍👦 Parental Background</button>
   </div>
 
   <!-- Global Cohort Filters -->
@@ -385,6 +551,137 @@ input:checked+.slider:before{transform:translateX(22px)}
       </table>
     </div>
   </div>
+
+  <!-- Parental Background Analysis -->
+  <div class="panel" id="p-bg-analysis">
+    <div class="card" style="margin-bottom:16px;">
+      <h3 style="font-size:15px;color:var(--navy);margin-bottom:6px;font-weight:700">📊 Student Parental Background Analysis</h3>
+      <p style="font-size:12.5px;color:var(--muted);margin-bottom:16px">This analysis is based on students who have completed the Post-Workshop Survey (where background details are collected).</p>
+    </div>
+
+    <!-- Stats Summary Cards -->
+    <div class="stat-grid" style="margin-bottom: 20px;">
+      <div class="stat">
+        <div class="stat-n" id="bg-stat-total">0</div>
+        <div class="stat-l">Total Respondents</div>
+      </div>
+      <div class="stat" style="border-left: 4px solid var(--navy2);">
+        <div class="stat-n" id="bg-stat-salaried">0</div>
+        <div class="stat-l">Salaried Family</div>
+      </div>
+      <div class="stat" style="border-left: 4px solid var(--green);">
+        <div class="stat-n" id="bg-stat-entrep">0</div>
+        <div class="stat-l">Entrepreneur Family</div>
+      </div>
+      <div class="stat" style="border-left: 4px solid var(--muted);">
+        <div class="stat-n" id="bg-stat-home">0</div>
+        <div class="stat-l">Homemaker Family</div>
+      </div>
+    </div>
+
+    <!-- Visual Breakdown and Pie/Doughnut Chart -->
+    <div class="overview-section" style="grid-template-columns: 1fr 1fr; margin-bottom: 20px; display: grid;">
+      <div class="card" style="margin-bottom: 0; display: flex; flex-direction: column; justify-content: center; padding: 20px; box-sizing: border-box;">
+        <h4 style="font-size: 13px; font-weight: 700; color: var(--navy); margin-bottom: 16px;">Distribution of Parent Occupations</h4>
+        
+        <!-- Salaried Bar -->
+        <div style="margin-bottom: 16px;">
+          <div style="display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; margin-bottom: 6px;">
+            <span>Salaried Family</span>
+            <span id="bg-bar-salaried-text">0% (0)</span>
+          </div>
+          <div style="background:#e5e7eb; border-radius:4px; height:8px; overflow:hidden;">
+            <div id="bg-bar-salaried" style="height:100%; background:var(--navy2); width:0%; transition: width 0.5s;"></div>
+          </div>
+        </div>
+
+        <!-- Entrepreneur Bar -->
+        <div style="margin-bottom: 16px;">
+          <div style="display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; margin-bottom: 6px;">
+            <span>Entrepreneur Family</span>
+            <span id="bg-bar-entrep-text">0% (0)</span>
+          </div>
+          <div style="background:#e5e7eb; border-radius:4px; height:8px; overflow:hidden;">
+            <div id="bg-bar-entrep" style="height:100%; background:var(--green); width:0%; transition: width 0.5s;"></div>
+          </div>
+        </div>
+
+        <!-- Homemaker Bar -->
+        <div>
+          <div style="display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; margin-bottom: 6px;">
+            <span>Homemaker Family</span>
+            <span id="bg-bar-home-text">0% (0)</span>
+          </div>
+          <div style="background:#e5e7eb; border-radius:4px; height:8px; overflow:hidden;">
+            <div id="bg-bar-home" style="height:100%; background:var(--muted); width:0%; transition: width 0.5s;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pie Chart Card -->
+      <div class="card" style="margin-bottom: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 220px; padding: 20px; box-sizing: border-box;">
+        <div style="position: relative; width: 100%; max-width: 160px; height: 160px; display: flex; justify-content: center; align-items: center;">
+          <canvas id="bgStatusPieChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Details Tables -->
+    <div style="display: grid; grid-template-columns: 1fr; gap: 20px;">
+      <!-- Salaried Families List -->
+      <div class="card" style="padding: 0; overflow: hidden;">
+        <div style="padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: #fafafa;">
+          <h4 style="font-size: 14px; font-weight: 700; color: var(--navy);">💼 Salaried Families Detail</h4>
+          <span class="badge bg-blue" id="bg-salaried-table-count">0</span>
+        </div>
+        <div style="overflow-x: auto;">
+          <table class="mtable" id="bg-salaried-table" style="min-width: 900px;">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Student Name</th>
+                <th>Email Address</th>
+                <th>Father's Name</th>
+                <th>Father's Organization</th>
+                <th>Mother's Name</th>
+                <th>Mother's Occupation</th>
+              </tr>
+            </thead>
+            <tbody id="bg-salaried-tbody">
+              <tr><td colspan="7" style="text-align:center;padding:20px;color:var(--muted)">No data available</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Entrepreneur Families List -->
+      <div class="card" style="padding: 0; overflow: hidden;">
+        <div style="padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: #fafafa;">
+          <h4 style="font-size: 14px; font-weight: 700; color: var(--navy);">🚀 Entrepreneur Families Detail</h4>
+          <span class="badge bg-green" id="bg-entrep-table-count">0</span>
+        </div>
+        <div style="overflow-x: auto;">
+          <table class="mtable" id="bg-entrep-table" style="min-width: 1000px;">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Student Name</th>
+                <th>Email Address</th>
+                <th>Father's Name</th>
+                <th>Business Name</th>
+                <th>Type of Business</th>
+                <th>Mother's Name</th>
+                <th>Mother's Occupation</th>
+              </tr>
+            </thead>
+            <tbody id="bg-entrep-tbody">
+              <tr><td colspan="8" style="text-align:center;padding:20px;color:var(--muted)">No data available</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -402,6 +699,7 @@ function show(id, btn){
   if(id==='p-orient' && oriUsers.length===0) loadOrientationUsers();
   if(id==='p-alerts') loadPendingCount();
   if(id==='p-dept-analysis') loadDeptStats();
+  if(id==='p-bg-analysis') loadBgAnalysis();
 }
 
 async function loadFlags(){
@@ -488,6 +786,10 @@ function applyFilters() {
   loadUsers();
   if (oriUsers && oriUsers.length > 0) {
     renderOrientationUsers(oriUsers);
+  }
+  const bgPanel = document.getElementById('p-bg-analysis');
+  if (bgPanel && bgPanel.classList.contains('on')) {
+    loadBgAnalysis();
   }
 }
 
@@ -870,6 +1172,130 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 });
+
+let bgChartInstance = null;
+
+async function loadBgAnalysis() {
+  try {
+    const dept = document.getElementById('dept-filter').value;
+    const level = document.getElementById('level-filter').value;
+    const params = new URLSearchParams({dept: dept || '', ug_or_pg: level || ''});
+    
+    const r = await fetch('/admin/api/survey/background-analysis?' + params.toString());
+    const d = await r.json();
+    
+    // Update stats
+    document.getElementById('bg-stat-total').textContent = d.total;
+    document.getElementById('bg-stat-salaried').textContent = d.salaried_count;
+    document.getElementById('bg-stat-entrep').textContent = d.entrepreneur_count;
+    document.getElementById('bg-stat-home').textContent = d.homemaker_count;
+
+    document.getElementById('bg-salaried-table-count').textContent = d.salaried_count;
+    document.getElementById('bg-entrep-table-count').textContent = d.entrepreneur_count;
+
+    // Calculate percentages
+    const pct = (n, total) => total > 0 ? ((n / total) * 100).toFixed(1) : '0.0';
+    const salPct = pct(d.salaried_count, d.total);
+    const entPct = pct(d.entrepreneur_count, d.total);
+    const homePct = pct(d.homemaker_count, d.total);
+
+    // Update bars
+    document.getElementById('bg-bar-salaried').style.width = salPct + '%';
+    document.getElementById('bg-bar-salaried-text').textContent = `${salPct}% (${d.salaried_count})`;
+    
+    document.getElementById('bg-bar-entrep').style.width = entPct + '%';
+    document.getElementById('bg-bar-entrep-text').textContent = `${entPct}% (${d.entrepreneur_count})`;
+
+    document.getElementById('bg-bar-home').style.width = homePct + '%';
+    document.getElementById('bg-bar-home-text').textContent = `${homePct}% (${d.homemaker_count})`;
+
+    // Render Pie Chart
+    if (typeof Chart !== 'undefined') {
+      const ctx = document.getElementById('bgStatusPieChart').getContext('2d');
+      if (bgChartInstance) {
+        bgChartInstance.data.datasets[0].data = [d.salaried_count, d.entrepreneur_count, d.homemaker_count];
+        bgChartInstance.update();
+      } else {
+        bgChartInstance = new Chart(ctx, {
+          type: 'doughnut',
+          data: {
+            labels: ['Salaried', 'Entrepreneur', 'Homemaker'],
+            datasets: [{
+              data: [d.salaried_count, d.entrepreneur_count, d.homemaker_count],
+              backgroundColor: ['#1a3a7a', '#16a34a', '#64748b'],
+              borderWidth: 2,
+              borderColor: '#ffffff',
+              hoverOffset: 4
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: 'bottom',
+                labels: {
+                  boxWidth: 12,
+                  font: { size: 11, family: 'inherit' }
+                }
+              },
+              tooltip: {
+                callbacks: {
+                  label: function(context) {
+                    const val = context.raw;
+                    const pctVal = d.total > 0 ? ((val / d.total) * 100).toFixed(1) : 0;
+                    return ` ${context.label}: ${val} (${pctVal}%)`;
+                  }
+                }
+              }
+            },
+            cutout: '55%'
+          }
+        });
+      }
+    }
+
+    // Render Salaried Table
+    const salariedTbody = document.getElementById('bg-salaried-tbody');
+    if (!d.salaried_list.length) {
+      salariedTbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--muted)">No salaried background respondents yet</td></tr>';
+    } else {
+      salariedTbody.innerHTML = d.salaried_list.map((u, i) => `
+        <tr>
+          <td style="color:var(--muted)">${i + 1}</td>
+          <td style="font-weight:600">${e(u.student_name)}</td>
+          <td style="font-size:11px;color:var(--muted)">${e(u.email)}</td>
+          <td>${e(u.father_name)}</td>
+          <td>${e(u.organization_name || '—')}</td>
+          <td>${e(u.mother_name || '—')}</td>
+          <td>${e(u.mother_occupation || '—')}</td>
+        </tr>
+      `).join('');
+    }
+
+    // Render Entrepreneur Table
+    const entrepTbody = document.getElementById('bg-entrep-tbody');
+    if (!d.entrepreneur_list.length) {
+      entrepTbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--muted)">No entrepreneur background respondents yet</td></tr>';
+    } else {
+      entrepTbody.innerHTML = d.entrepreneur_list.map((u, i) => `
+        <tr>
+          <td style="color:var(--muted)">${i + 1}</td>
+          <td style="font-weight:600">${e(u.student_name)}</td>
+          <td style="font-size:11px;color:var(--muted)">${e(u.email)}</td>
+          <td>${e(u.father_name)}</td>
+          <td>${e(u.business_name || '—')}</td>
+          <td style="white-space: normal; word-break: break-word; max-width: 250px;">${e(u.business_type || '—')}</td>
+          <td>${e(u.mother_name || '—')}</td>
+          <td>${e(u.mother_occupation || '—')}</td>
+        </tr>
+      `).join('');
+    }
+
+  } catch(ex) {
+    console.error('Error loading background analysis:', ex);
+  }
+}
 
 (async()=>{ await loadFlags(); await loadUsers(); })();
 </script>

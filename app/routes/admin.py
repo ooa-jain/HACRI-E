@@ -42,8 +42,8 @@ from app.settings import settings
 log = logging.getLogger(__name__)
 router = APIRouter()
 
-# ── In-memory OTP store (otp, expiry timestamp) ────────────────────────────
-_survey_otp_store: dict[str, float] = {}  # {otp_code: expiry_ts}
+# ── In-memory OTP store (username -> (otp, expiry timestamp)) ────────────────
+_admin_otp_store: dict[str, tuple[str, float]] = {}
 _OTP_TTL = 10 * 60  # 10 minutes
 
 
@@ -51,7 +51,14 @@ _OTP_TTL = 10 * 60  # 10 minutes
 @router.post("/admin/survey/request-otp")
 async def survey_request_otp(request: Request, username: str = Form(...)):
     """Generate & email a 6-digit OTP to the admin email, then redirect back to login form."""
-    if username != settings.survey_admin_username:
+    username = username.strip()
+    if username == settings.survey_admin_username:
+        email = settings.survey_admin_otp_email
+        portal_name = "HACRI-E Survey Admin"
+    elif username == settings.orientation_admin_username:
+        email = settings.orientation_admin_otp_email
+        portal_name = "Deeksharambh Orientation Admin"
+    else:
         # Show invalid username but don't reveal info
         return request.app.state.templates.TemplateResponse(
             request, "admin_login.html",
@@ -62,24 +69,23 @@ async def survey_request_otp(request: Request, username: str = Form(...)):
     # Generate a 6-digit OTP and store it
     otp = str(secrets.randbelow(900000) + 100000)  # 100000–999999
     expiry = time.time() + _OTP_TTL
-    _survey_otp_store.clear()  # Only one valid OTP at a time
-    _survey_otp_store[otp] = expiry
+    _admin_otp_store[username] = (otp, expiry)
 
     # Send email
     try:
         from app import emailer
         body = (
-            f"Your HACRI-E Admin OTP is: {otp}\n\n"
+            f"Your {portal_name} OTP is: {otp}\n\n"
             f"This OTP is valid for 10 minutes.\n\n"
             f"If you did not request this, please ignore this email."
         )
         await emailer.send_simple_email(
-            settings.survey_admin_otp_email,
-            "HACRI-E Admin",
-            "HACRI-E Admin Login OTP",
+            email,
+            portal_name,
+            f"{portal_name} Login OTP",
             body,
         )
-        log.info("OTP [%s] sent to %s", otp, settings.survey_admin_otp_email)
+        log.info("OTP [%s] sent to %s for %s", otp, email, username)
     except Exception as exc:
         log.exception("Failed to send OTP email: %s", exc)
         return request.app.state.templates.TemplateResponse(
@@ -89,13 +95,25 @@ async def survey_request_otp(request: Request, username: str = Form(...)):
             status_code=500,
         )
 
+    # Mask email hint for privacy, e.g. "sa***.ks@jainuniversity.ac.in"
+    email_parts = email.split("@")
+    if len(email_parts) == 2:
+        userpart, domain = email_parts
+        if len(userpart) > 3:
+            masked_user = userpart[:2] + "***" + userpart[-1]
+        else:
+            masked_user = "***"
+        masked_email = f"{masked_user}@{domain}"
+    else:
+        masked_email = "registered admin email"
+
     return request.app.state.templates.TemplateResponse(
         request, "admin_login.html",
         {
             "title": "Admin Login",
             "otp_sent": True,
             "otp_username": username,
-            "otp_email_hint": settings.survey_admin_otp_email,
+            "otp_email_hint": masked_email,
             "error": None,
         },
     )
@@ -117,31 +135,39 @@ async def general_admin_login_get(request: Request):
 async def general_admin_login_post(
     request: Request,
     username: str = Form(...),
-    password: str = Form(...)
+    password: str = Form(...)  # This acts as the OTP
 ):
-    # Survey admin: verify OTP
-    if username == settings.survey_admin_username:
-        otp = password.strip()
-        expiry = _survey_otp_store.get(otp)
-        if expiry and time.time() < expiry:
-            _survey_otp_store.pop(otp, None)  # Consume OTP
-            r = RedirectResponse(url="/admin/survey", status_code=303)
-            _set_cookie(r, _SURVEY_COOKIE, settings.cookie_secure, settings.cookie_samesite)
-            return r
-        return request.app.state.templates.TemplateResponse(
-            request, "admin_login.html",
-            {"error": "Invalid or expired OTP. Please request a new one.",
-             "title": "Admin Login", "otp_sent": True, "otp_username": username},
-            status_code=401,
-        )
-    elif username == settings.orientation_admin_username and password == settings.orientation_admin_password:
-        r = RedirectResponse(url="/admin/orientation", status_code=303)
-        _set_cookie(r, _ORI_COOKIE, settings.cookie_secure, settings.cookie_samesite)
-        return r
+    username = username.strip()
+    otp = password.strip()
     
+    stored = _admin_otp_store.get(username)
+    if stored:
+        stored_otp, expiry = stored
+        if otp == stored_otp and time.time() < expiry:
+            _admin_otp_store.pop(username, None)  # Consume OTP
+            
+            if username == settings.survey_admin_username:
+                r = RedirectResponse(url="/admin/survey", status_code=303)
+                _set_cookie(r, _SURVEY_COOKIE, settings.cookie_secure, settings.cookie_samesite)
+                return r
+            elif username == settings.orientation_admin_username:
+                r = RedirectResponse(url="/admin/orientation", status_code=303)
+                _set_cookie(r, _ORI_COOKIE, settings.cookie_secure, settings.cookie_samesite)
+                return r
+        else:
+            err_msg = "Invalid or expired OTP. Please request a new one."
+    else:
+        err_msg = "No active OTP found. Please request an OTP first."
+
     return request.app.state.templates.TemplateResponse(
         request, "admin_login.html",
-        {"error": "Invalid credentials", "title": "Admin Login", "otp_sent": False},
+        {
+            "error": err_msg,
+            "title": "Admin Login",
+            "otp_sent": True,
+            "otp_username": username,
+            "otp_email_hint": "registered admin email"
+        },
         status_code=401,
     )
 
@@ -539,4 +565,100 @@ async def api_view_orientation(request: Request, email: str):
         "name": doc.get("name", ""),
         "submitted_at": doc.get("submitted_at").strftime("%d %b %Y %H:%M") if doc.get("submitted_at") else "",
         "data": doc.get("data", {}),
+    })
+
+
+# ── Student Parental Background Analysis ─────────────────────────────────────
+@router.get("/admin/api/survey/background-analysis")
+async def api_background_analysis(
+    request: Request,
+    dept: str = Query(default=""),
+    ug_or_pg: str = Query(default=""),
+):
+    if not _is_survey_admin(request):
+        raise HTTPException(status_code=403)
+    
+    db = get_db()
+    
+    query = {"status": STATUS_POST_DONE}
+    if dept:
+        query["program"] = dept
+    if ug_or_pg:
+        query["ug_or_pg"] = ug_or_pg
+        
+    users_dict = {}
+    async for u in db["users"].find(query):
+        users_dict[u["email"]] = u
+        
+    post_responses = []
+    if users_dict:
+        async for p in db["post_responses"].find({"email": {"$in": list(users_dict.keys())}}):
+            post_responses.append(p)
+            
+    total = len(post_responses)
+    salaried_count = 0
+    entrepreneur_count = 0
+    homemaker_count = 0
+    
+    salaried_list = []
+    entrepreneur_list = []
+    
+    for p in post_responses:
+        fields = p.get("fields", {})
+        email = p.get("email", "")
+        u_info = users_dict.get(email, {})
+        student_name = u_info.get("name") or p.get("name", "")
+        
+        father_name = fields.get("father_name") or ""
+        occupation = fields.get("father_occupation") or ""
+        org_name = fields.get("organization_name") or ""
+        biz_name = fields.get("business_name") or ""
+        biz_type = fields.get("business_type") or ""
+
+        mother_name = fields.get("mother_name") or ""
+        mother_occupation = fields.get("mother_occupation") or ""
+        mother_org_name = fields.get("mother_organization_name") or ""
+        mother_biz_name = fields.get("mother_business_name") or ""
+        mother_biz_type = fields.get("mother_business_type") or ""
+        
+        if not occupation:
+            continue
+            
+        if occupation == "Salaried":
+            salaried_count += 1
+            salaried_list.append({
+                "student_name": student_name,
+                "email": email,
+                "father_name": father_name,
+                "organization_name": org_name,
+                "mother_name": mother_name,
+                "mother_occupation": mother_occupation,
+                "mother_organization_name": mother_org_name,
+                "mother_business_name": mother_biz_name,
+                "mother_business_type": mother_biz_type,
+            })
+        elif occupation == "Entrepreneur":
+            entrepreneur_count += 1
+            entrepreneur_list.append({
+                "student_name": student_name,
+                "email": email,
+                "father_name": father_name,
+                "business_name": biz_name,
+                "business_type": biz_type,
+                "mother_name": mother_name,
+                "mother_occupation": mother_occupation,
+                "mother_organization_name": mother_org_name,
+                "mother_business_name": mother_biz_name,
+                "mother_business_type": mother_biz_type,
+            })
+        elif occupation == "Homemaker":
+            homemaker_count += 1
+
+    return JSONResponse({
+        "total": total,
+        "salaried_count": salaried_count,
+        "entrepreneur_count": entrepreneur_count,
+        "homemaker_count": homemaker_count,
+        "salaried_list": salaried_list,
+        "entrepreneur_list": entrepreneur_list
     })

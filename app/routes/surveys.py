@@ -116,6 +116,20 @@ def _build_pre_fields(form: Any) -> dict[str, Any]:
 def _build_post_fields(form: Any) -> dict[str, Any]:
     fields: dict[str, Any] = {}
 
+    # Section A fields — Father
+    fields["father_name"] = coerce_str(form.get("father_name"))
+    fields["father_occupation"] = coerce_str(form.get("father_occupation"))
+    fields["organization_name"] = coerce_str(form.get("organization_name"))
+    fields["business_name"] = coerce_str(form.get("business_name"))
+    fields["business_type"] = coerce_text(form.get("business_type"), max_len=500)
+
+    # Section A fields — Mother
+    fields["mother_name"] = coerce_str(form.get("mother_name"))
+    fields["mother_occupation"] = coerce_str(form.get("mother_occupation"))
+    fields["mother_organization_name"] = coerce_str(form.get("mother_organization_name"))
+    fields["mother_business_name"] = coerce_str(form.get("mother_business_name"))
+    fields["mother_business_type"] = coerce_text(form.get("mother_business_type"), max_len=500)
+
     # Identical B/D/E/F/G Likert items
     for section in ("B", "D", "E", "F", "G"):
         for k in _likert_field_keys(section):
@@ -376,12 +390,49 @@ async def post_post(
     fields = _build_post_fields(form)
 
     test_mode = await get_flag(FLAG_TEST_MODE, default=False)
-    if not test_mode and not is_complete_post(fields):
+    errors = []
+    if not test_mode:
+        if not is_complete_post(fields):
+            errors.append("Please answer every Likert item (B, D, E, F, G) before submitting.")
+        
+        # Section A validation — Father
+        if not fields.get("father_name"):
+            errors.append("Please enter Father's Name.")
+        
+        occupation = fields.get("father_occupation")
+        if not occupation:
+            errors.append("Please select Father's Occupation.")
+        elif occupation == "Salaried":
+            if not fields.get("organization_name"):
+                errors.append("Please enter Father's Organization Name.")
+        elif occupation == "Entrepreneur":
+            if not fields.get("business_name"):
+                errors.append("Please enter Father's Business Name.")
+            if not fields.get("business_type"):
+                errors.append("Please explain Father's Type of Business.")
+
+        # Section A validation — Mother
+        if not fields.get("mother_name"):
+            errors.append("Please enter Mother's Name.")
+
+        mother_occ = fields.get("mother_occupation")
+        if not mother_occ:
+            errors.append("Please select Mother's Occupation.")
+        elif mother_occ == "Salaried":
+            if not fields.get("mother_organization_name"):
+                errors.append("Please enter Mother's Organization Name.")
+        elif mother_occ == "Entrepreneur":
+            if not fields.get("mother_business_name"):
+                errors.append("Please enter Mother's Business Name.")
+            if not fields.get("mother_business_type"):
+                errors.append("Please explain Mother's Type of Business.")
+
+    if errors:
         return await _render_form(
             request,
             "post_survey.html",
             values=fields,
-            errors=["Please answer every Likert item (B, D, E, F, G) before submitting."],
+            errors=errors,
         ), 422
 
     post_id, updated_user = await save_post_response(email, name, fields)

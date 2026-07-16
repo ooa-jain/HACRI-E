@@ -25,8 +25,9 @@ class Settings(BaseSettings):
     orientation_admin_username: str = "deeksha_admin"
     orientation_admin_password: str = "deeksha2026"
 
-    # OTP login — survey admin OTP is sent to this address
+    # OTP login — admin OTPs are sent to these addresses
     survey_admin_otp_email: str = "santosh.ks@jainuniversity.ac.in"
+    orientation_admin_otp_email: str = "santosh.ks@jainuniversity.ac.in"
 
     # SMTP
     smtp_host: str | None = None

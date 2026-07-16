@@ -1,98 +1,352 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Admin Login — HACRI-E</title>
-<style>
-  *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f0f2f5;min-height:100vh;display:flex;align-items:center;justify-content:center}
-  .card{background:#fff;border-radius:16px;padding:2.5rem 2rem;width:100%;max-width:400px;box-shadow:0 4px 24px rgba(0,0,0,.08)}
-  h1{font-size:20px;font-weight:700;color:#0d2147;margin-bottom:.25rem}
-  .sub{font-size:13px;color:#64748b;margin-bottom:1.5rem}
-  .field{margin-bottom:1rem}
-  label{display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px}
-  input[type=text],input[type=password],input[type=number]{width:100%;padding:10px 12px;border:1.5px solid #d1d5db;border-radius:8px;font-size:14px;outline:none;transition:border-color .15s;font-family:inherit}
-  input:focus{border-color:#0d2147}
-  .btn{width:100%;padding:11px;background:#0d2147;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;margin-top:.5rem;font-family:inherit}
-  .btn:hover{background:#1a3a7a}
-  .btn-outline{background:#fff;color:#0d2147;border:1.5px solid #0d2147}
-  .btn-outline:hover{background:#f0f2f5}
-  .err{background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;border-radius:8px;padding:10px 12px;font-size:13px;margin-bottom:1rem}
-  .info{background:#f0fdf4;border:1px solid #86efac;color:#15803d;border-radius:8px;padding:10px 12px;font-size:13px;margin-bottom:1rem;line-height:1.4}
-  .logo{text-align:center;margin-bottom:1.5rem}
-  .logo-text{font-size:13px;color:#9ca3af;margin-top:6px}
-  .divider{display:flex;align-items:center;gap:10px;margin:14px 0;color:#9ca3af;font-size:12px}
-  .divider::before,.divider::after{content:'';flex:1;border-top:1px solid #e5e7eb}
-  .otp-note{font-size:12px;color:#64748b;margin-top:8px;line-height:1.5}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Portal — JAIN Deemed-to-be University</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #1B2A4A;
+      --primary-light: #2A3E68;
+      --accent: #C9A84C;
+      --accent-hover: #B5933A;
+      --bg: #0b1329;
+      --card-bg: rgba(255, 255, 255, 0.08);
+      --card-border: rgba(255, 255, 255, 0.12);
+      --text: #f3f4f6;
+      --text-muted: #9ca3af;
+      --error: #f87171;
+      --error-bg: rgba(239, 68, 68, 0.15);
+      --success: #34d399;
+      --success-bg: rgba(52, 211, 153, 0.15);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: radial-gradient(circle at 10% 20%, var(--primary-light) 0%, var(--bg) 90%);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    /* Ambient background blobs */
+    body::before {
+      content: '';
+      position: absolute;
+      width: 400px;
+      height: 400px;
+      background: rgba(201, 168, 76, 0.08);
+      border-radius: 50%;
+      top: -100px;
+      right: -100px;
+      filter: blur(80px);
+      z-index: 0;
+    }
+
+    body::after {
+      content: '';
+      position: absolute;
+      width: 500px;
+      height: 500px;
+      background: rgba(42, 62, 104, 0.2);
+      border-radius: 50%;
+      bottom: -150px;
+      left: -150px;
+      filter: blur(100px);
+      z-index: 0;
+    }
+
+    .card {
+      background: rgba(27, 42, 74, 0.4);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--card-border);
+      border-radius: 24px;
+      padding: 3rem 2.5rem;
+      width: 100%;
+      max-width: 440px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+      z-index: 10;
+      position: relative;
+      animation: fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .logo-container {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    .logo-icon {
+      width: 64px;
+      height: 64px;
+      background: linear-gradient(135deg, var(--accent) 0%, #a8832a 100%);
+      border-radius: 18px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--primary);
+      font-size: 28px;
+      font-weight: 800;
+      box-shadow: 0 8px 24px rgba(201, 168, 76, 0.3);
+      margin-bottom: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .brand-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+    }
+
+    h1 {
+      font-size: 24px;
+      font-weight: 700;
+      color: #ffffff;
+      margin-bottom: 6px;
+      text-align: center;
+    }
+
+    .sub {
+      font-size: 14px;
+      color: var(--text-muted);
+      margin-bottom: 2rem;
+      text-align: center;
+      font-weight: 400;
+    }
+
+    .field {
+      margin-bottom: 1.5rem;
+      position: relative;
+    }
+
+    label {
+      display: block;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--accent);
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .input-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .input-icon {
+      position: absolute;
+      left: 14px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      pointer-events: none;
+    }
+
+    input[type=text], input[type=number] {
+      width: 100%;
+      padding: 12px 14px 12px 42px;
+      background: rgba(11, 19, 41, 0.5);
+      border: 1.5px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      font-size: 15px;
+      color: #ffffff;
+      outline: none;
+      transition: all 0.25s ease;
+      font-family: inherit;
+    }
+
+    input:focus {
+      border-color: var(--accent);
+      background: rgba(11, 19, 41, 0.8);
+      box-shadow: 0 0 0 4px rgba(201, 168, 76, 0.15);
+    }
+
+    .btn {
+      width: 100%;
+      padding: 13px;
+      background: linear-gradient(135deg, var(--accent) 0%, #b39137 100%);
+      color: var(--primary);
+      border: none;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 0.5rem;
+      font-family: inherit;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 15px rgba(201, 168, 76, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(201, 168, 76, 0.35);
+      background: linear-gradient(135deg, #d6b558 0%, var(--accent) 100%);
+    }
+
+    .btn:active {
+      transform: translateY(0);
+    }
+
+    .err {
+      background: var(--error-bg);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: var(--error);
+      border-radius: 12px;
+      padding: 12px 16px;
+      font-size: 13.5px;
+      margin-bottom: 1.5rem;
+      font-weight: 500;
+      line-height: 1.4;
+      animation: shake 0.4s ease;
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-4px); }
+      75% { transform: translateX(4px); }
+    }
+
+    .info {
+      background: var(--success-bg);
+      border: 1px solid rgba(52, 211, 153, 0.3);
+      color: var(--success);
+      border-radius: 12px;
+      padding: 12px 16px;
+      font-size: 13.5px;
+      margin-bottom: 1.5rem;
+      line-height: 1.5;
+      font-weight: 500;
+    }
+
+    .otp-note {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 1.5rem;
+      line-height: 1.5;
+      text-align: center;
+    }
+
+    .resend-btn {
+      background: none;
+      border: none;
+      color: var(--accent);
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 13px;
+      text-decoration: underline;
+      padding: 0;
+      font-family: inherit;
+      transition: color 0.2s;
+    }
+
+    .resend-btn:hover {
+      color: #ffffff;
+    }
+  </style>
 </head>
 <body>
+
 <div class="card">
-  <div class="logo">
-    <div style="width:48px;height:48px;background:#0d2147;border-radius:12px;display:inline-flex;align-items:center;justify-content:center;color:#e6b324;font-size:22px;font-weight:700">A</div>
-    <div class="logo-text">HACRI-E Admin</div>
+  <div class="logo-container">
+    <div class="logo-icon">J</div>
+    <div class="brand-title">JAIN UNIVERSITY</div>
   </div>
-  <h1>Sign In</h1>
-  <p class="sub">Office of Academics — Internal Portal</p>
+
+  <h1>Admin Portal</h1>
+  <p class="sub">Office of Academics • Secure Access</p>
 
   {% if error %}
-  <div class="err">{{ error }}</div>
+  <div class="err">
+    <svg style="vertical-align: middle; margin-right: 6px;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    {{ error }}
+  </div>
   {% endif %}
 
   {% if otp_sent %}
   <!-- ── Step 2: Enter OTP ─────────────────────────────────────── -->
   <div class="info">
-    ✅ An OTP has been sent to <strong>{{ otp_email_hint or "the registered admin email" }}</strong>.<br>
-    Please enter it below. Valid for <strong>10 minutes</strong>.
+    <svg style="vertical-align: middle; margin-right: 6px;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+    OTP sent to <strong>{{ otp_email_hint }}</strong>.<br>
+    Code is valid for 10 minutes.
   </div>
+
   <form method="post" action="/admin/login">
     <input type="hidden" name="username" value="{{ otp_username }}" />
     <div class="field">
-      <label>One-Time Password (OTP)</label>
-      <input type="number" name="password" id="otp-input" required autofocus
-             placeholder="6-digit OTP"
-             style="letter-spacing:4px;font-size:20px;font-weight:700;text-align:center"
-             min="100000" max="999999" />
+      <label>Enter One-Time Password</label>
+      <div class="input-wrapper">
+        <span class="input-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        </span>
+        <input type="number" name="password" id="otp-input" required autofocus
+               placeholder="6-digit OTP"
+               style="letter-spacing: 6px; font-size: 20px; font-weight: 700; text-align: center; padding-left: 14px;"
+               min="100000" max="999999" />
+      </div>
     </div>
-    <button type="submit" class="btn">Verify OTP →</button>
+    <button type="submit" class="btn">
+      Verify & Access
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+    </button>
   </form>
-  <div class="otp-note" style="margin-top:14px">
-    Didn't receive the OTP?
+
+  <div class="otp-note">
+    Didn't receive the code? 
     <form method="post" action="/admin/survey/request-otp" style="display:inline">
       <input type="hidden" name="username" value="{{ otp_username }}" />
-      <button type="submit" style="background:none;border:none;color:#0d2147;font-weight:600;cursor:pointer;font-size:12px;text-decoration:underline;padding:0;font-family:inherit">Resend OTP</button>
+      <button type="submit" class="resend-btn">Resend OTP</button>
     </form>
   </div>
 
   {% else %}
-  <!-- ── Step 1: Enter username → request OTP or static login ─── -->
+  <!-- ── Step 1: Enter Username to Request OTP ────────────────── -->
   <form method="post" action="/admin/survey/request-otp" id="otp-form">
     <div class="field">
-      <label>Username</label>
-      <input type="text" name="username" id="username-input" required autocomplete="username"
-             placeholder="survey / deeksha_admin" />
+      <label>Admin Username</label>
+      <div class="input-wrapper">
+        <span class="input-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        </span>
+        <input type="text" name="username" id="username-input" required autocomplete="username"
+               placeholder="e.g. survey or deeksha_admin" />
+      </div>
     </div>
-    <button type="submit" class="btn" id="otp-btn">📧 Request OTP →</button>
+    <button type="submit" class="btn" id="otp-btn">
+      Send OTP Code
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+    </button>
   </form>
 
-  <div class="divider">or sign in with password</div>
-
-  <form method="post" action="/admin/login">
-    <div class="field">
-      <label>Username</label>
-      <input type="text" name="username" required autocomplete="username" />
-    </div>
-    <div class="field">
-      <label>Password</label>
-      <input type="password" name="password" required autocomplete="current-password" />
-    </div>
-    <button type="submit" class="btn btn-outline">Sign In with Password →</button>
-  </form>
-  <p class="otp-note" style="margin-top:12px">
-    Survey admin: use <strong>username "survey"</strong> and click <em>Request OTP</em> — a one-time code will be emailed to the registered admin address.
-  </p>
+  <div class="otp-note">
+    Enter your administrative username (<code>survey</code> or <code>deeksha_admin</code>) to receive a secure login OTP on your registered email address.
+  </div>
   {% endif %}
 </div>
+
 </body>
 </html>

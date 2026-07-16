@@ -169,7 +169,13 @@ def custom_cohort_export(
     # Build columns/headers list
     headers = []
     if inc_profile:
-        headers += ["Name", "Email", "Level", "Programme", "Education Type"]
+        headers += [
+            "Name", "Email", "Level", "Programme", "Education Type",
+            "Father's Name", "Father's Occupation", "Father's Organization",
+            "Father's Business Name", "Father's Business Type",
+            "Mother's Name", "Mother's Occupation", "Mother's Organization",
+            "Mother's Business Name", "Mother's Business Type"
+        ]
     if inc_timestamps:
         headers += ["Registered At", "Pre Submitted At", "Post Submitted At"]
     if inc_scores:
@@ -199,6 +205,16 @@ def custom_cohort_export(
             row["Level"] = level
             row["Programme"] = u.get("program", "")
             row["Education Type"] = edu
+            row["Father's Name"] = post.get("father_name", "")
+            row["Father's Occupation"] = post.get("father_occupation", "")
+            row["Father's Organization"] = post.get("organization_name", "")
+            row["Father's Business Name"] = post.get("business_name", "")
+            row["Father's Business Type"] = post.get("business_type", "")
+            row["Mother's Name"] = post.get("mother_name", "")
+            row["Mother's Occupation"] = post.get("mother_occupation", "")
+            row["Mother's Organization"] = post.get("mother_organization_name", "")
+            row["Mother's Business Name"] = post.get("mother_business_name", "")
+            row["Mother's Business Type"] = post.get("mother_business_type", "")
             
         if inc_timestamps:
             row["Registered At"] = _fmt_dt(u.get("created_at"))
