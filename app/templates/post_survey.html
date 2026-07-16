@@ -93,7 +93,7 @@
         </div>
 
         <div class="question" style="margin-top: 20px;">
-          <label class="q-label" style="display: block; font-weight: 600; margin-bottom: 8px;">Father's Occupation:</label>
+          <label class="q-label" style="display: block; font-weight: 600; margin-bottom: 8px;">Occupation:</label>
           <div class="q-body">
             <select name="father_occupation" id="father_occupation" required onchange="toggleOccupationFields()" style="width: 100%; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 14px; outline: none; background: #fff;">
               <option value="">-- Select --</option>
@@ -109,7 +109,7 @@
 
 
         <div class="question" id="biz_type_group" style="display: none; margin-top: 20px;">
-          <label class="q-label" style="display: block; font-weight: 600; margin-bottom: 4px;">Father's Type of Business:</label>
+          <label class="q-label" style="display: block; font-weight: 600; margin-bottom: 4px;">Type of Business:</label>
           <p class="muted" style="margin-top: 0; margin-bottom: 8px; font-size: 12px; color: var(--muted);">(Explain in your own words what business they do, e.g. retail shop, software consulting, manufacturing, etc.)</p>
           <div class="q-body">
             <textarea name="business_type" id="business_type" rows="3" placeholder="Describe the business..." maxlength="500" style="width: 100%; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 14px; outline: none; resize: vertical;">{{ values.get('business_type', '') }}</textarea>
@@ -128,7 +128,7 @@
           </div>
 
           <div class="question" style="margin-top: 20px;">
-            <label class="q-label" style="display: block; font-weight: 600; margin-bottom: 8px;">Mother's Occupation:</label>
+            <label class="q-label" style="display: block; font-weight: 600; margin-bottom: 8px;">Occupation:</label>
             <div class="q-body">
               <select name="mother_occupation" id="mother_occupation" required onchange="toggleOccupationFields()" style="width: 100%; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 14px; outline: none; background: #fff;">
                 <option value="">-- Select --</option>
@@ -144,7 +144,7 @@
 
 
           <div class="question" id="mother_biz_type_group" style="display: none; margin-top: 20px;">
-            <label class="q-label" style="display: block; font-weight: 600; margin-bottom: 4px;">Mother's Type of Business:</label>
+            <label class="q-label" style="display: block; font-weight: 600; margin-bottom: 4px;">Type of Business:</label>
             <p class="muted" style="margin-top: 0; margin-bottom: 8px; font-size: 12px; color: var(--muted);">(Explain in your own words what business they do, e.g. retail shop, software consulting, manufacturing, etc.)</p>
             <div class="q-body">
               <textarea name="mother_business_type" id="mother_business_type" rows="3" placeholder="Describe the business..." maxlength="500" style="width: 100%; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 14px; outline: none; resize: vertical;">{{ values.get('mother_business_type', '') }}</textarea>
