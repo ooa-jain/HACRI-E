@@ -766,7 +766,7 @@
 
 <script>
   document.addEventListener('DOMContentLoaded', () => {
-    let currentStep = 0;
+    let currentStep = {{ draft_step or 0 }};
     const totalSteps = 7;
 
     const form = document.getElementById('survey-form');
@@ -780,6 +780,7 @@
     // --- LocalStorage Auto-save Progress ("Where he left off") ---
     const storageKey = 'hacri_post_draft';
 
+    let saveTimeout = null;
     function saveDraft() {
       const data = {
         step: currentStep,
@@ -807,6 +808,22 @@
       });
 
       localStorage.setItem(storageKey, JSON.stringify(data));
+
+      clearTimeout(saveTimeout);
+      saveTimeout = setTimeout(() => {
+        const csrfToken = document.querySelector('input[name="csrf"]')?.value;
+        fetch('/survey/draft/post', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            csrf: csrfToken,
+            step: currentStep,
+            fields: data.fields
+          })
+        }).catch(err => console.warn('Failed to sync draft with server:', err));
+      }, 1000);
     }
 
     function restoreDraft() {

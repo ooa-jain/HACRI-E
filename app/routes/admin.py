@@ -382,16 +382,7 @@ async def _send_pre_alert_email(email: str, name: str) -> None:
     from app.routes.landing import email_to_slug
     slug = email_to_slug(email)
     resume_link = f"{settings.public_base_url.rstrip('/')}/resume/{slug}"
-    
-    subject = "Reminder: Please complete the AI Baseline Survey"
-    body = (
-        f"Hi {name},\n\n"
-        "We noticed you registered for the AI Baseline Survey but haven't completed it yet.\n\n"
-        "Please click the link below to directly resume and finish your survey (no login required):\n"
-        f"{resume_link}\n\n"
-        "Thank you,\nOffice of Academics\nJAIN (Deemed-to-be University)"
-    )
-    await emailer.send_simple_email(email, name, subject, body)
+    await emailer.send_pre_reminder_email(email, name, resume_link)
 
 
 # ── Send alert emails to pre-done / post-pending students (survey admin only) ──
@@ -421,16 +412,7 @@ async def _send_alert_email(email: str, name: str) -> None:
     from app.routes.landing import email_to_slug
     slug = email_to_slug(email)
     resume_link = f"{settings.public_base_url.rstrip('/')}/resume/{slug}"
-    
-    subject = "Reminder: Please complete the Post-Workshop Survey"
-    body = (
-        f"Hi {name},\n\n"
-        "Thank you for completing the Baseline Survey.\n\n"
-        "You haven't yet submitted the Post-Workshop Survey. Please click the link below to directly resume and complete it (no login required):\n"
-        f"{resume_link}\n\n"
-        "Thank you,\nOffice of Academics\nJAIN (Deemed-to-be University)"
-    )
-    await emailer.send_simple_email(email, name, subject, body)
+    await emailer.send_post_reminder_email(email, name, resume_link)
 
 
 @router.post("/admin/api/send-results/{email}")

@@ -202,13 +202,18 @@ async def pre_get(
         from app.routes.landing import email_to_slug
         return RedirectResponse(url=f"/results/{email_to_slug(session['email'])}", status_code=303)
 
+    db_draft = (user or {}).get("pre_draft", {})
+    draft_fields = db_draft.get("fields", {})
+    draft_step = db_draft.get("step", 0)
+
     extra = {
         "ug_or_pg": (user or {}).get("ug_or_pg", "ug") if user else "ug",
         "education_type": (user or {}).get("education_type", ""),
+        "draft_step": draft_step,
     }
     if msg == "complete_pre_first":
         extra["banner"] = "Please complete the Baseline Survey before accessing the Post-Workshop Survey."
-    return await _render_form(request, "pre_survey.html", extra_ctx=extra)
+    return await _render_form(request, "pre_survey.html", values=draft_fields, extra_ctx=extra)
 
 
 @router.post("/survey/pre")
@@ -254,6 +259,10 @@ async def pre_post(
         ), 422
 
     pre_id, _user = await save_pre_response(email, name, fields)
+    await get_db()["users"].update_one(
+        {"email": email},
+        {"$unset": {"pre_draft": ""}}
+    )
     return RedirectResponse(url="/survey/pre/done", status_code=303)
 
 
@@ -336,7 +345,13 @@ async def post_get(
                     }
                 )
 
-    return await _render_form(request, "post_survey.html")
+    db_draft = (user or {}).get("post_draft", {})
+    draft_fields = db_draft.get("fields", {})
+    draft_step = db_draft.get("step", 0)
+    extra = {
+        "draft_step": draft_step,
+    }
+    return await _render_form(request, "post_survey.html", values=draft_fields, extra_ctx=extra)
 
 
 @router.post("/survey/post")
@@ -436,6 +451,10 @@ async def post_post(
         ), 422
 
     post_id, updated_user = await save_post_response(email, name, fields)
+    await get_db()["users"].update_one(
+        {"email": email},
+        {"$unset": {"post_draft": ""}}
+    )
 
     if updated_user is None or updated_user.get("status") != STATUS_POST_DONE:
         # Should not normally happen — the re-check above allows it.
@@ -531,3 +550,35 @@ async def _to_thread(func, *args, **kwargs):
     return await asyncio.get_running_loop().run_in_executor(
         None, lambda: func(*args, **kwargs)
     )
+
+
+@router.post("/survey/draft/{survey_type}")
+async def save_draft(
+    survey_type: str,
+    request: Request,
+    session: Annotated[dict, Depends(get_current_session)],
+):
+    if survey_type not in ("pre", "post"):
+        raise HTTPException(status_code=400, detail="Invalid survey type")
+
+    data = await request.json()
+    csrf_token = data.get("csrf")
+    hacri_csrf = request.cookies.get("hacri_csrf")
+    
+    from app import deps
+    deps.verify_csrf(csrf_token, hacri_csrf)
+
+    db = get_db()
+    await db["users"].update_one(
+        {"email": session["email"]},
+        {
+            "$set": {
+                f"{survey_type}_draft": {
+                    "step": data.get("step", 0),
+                    "fields": data.get("fields", {}),
+                    "updated_at": _now()
+                }
+            }
+        }
+    )
+    return {"ok": True}

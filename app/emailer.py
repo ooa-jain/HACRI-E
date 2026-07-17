@@ -216,3 +216,89 @@ async def send_simple_email(
         smtp_kwargs["start_tls"] = True
 
     await aiosmtplib.send(msg, **smtp_kwargs)
+
+
+async def send_html_email(
+    to_email: str,
+    to_name: str,
+    subject: str,
+    body_text: str,
+    body_html: str,
+) -> None:
+    """Send an HTML email with plain-text fallback (used for admin alerts)."""
+    import aiosmtplib
+    from email.message import EmailMessage
+    from app.settings import settings
+
+    if settings.email_dry_run or not settings.smtp_host:
+        import logging
+        logging.getLogger(__name__).info(
+            "DRY RUN HTML email to %s <%s>: %s", to_name, to_email, subject
+        )
+        log_dir = settings.generated_root
+        log_dir.mkdir(parents=True, exist_ok=True)
+        out = log_dir / "emails.log"
+        with out.open("a", encoding="utf-8") as f:
+            f.write("\n" + "=" * 72 + "\n")
+            f.write(f"To: {to_name} <{to_email}>\n")
+            f.write(f"From: {settings.email_from}\n")
+            f.write(f"Subject: {subject}\n")
+            f.write("--- HTML body ---\n")
+            f.write(body_html + "\n")
+        return
+
+    msg = EmailMessage()
+    msg["Subject"] = subject
+    msg["From"] = settings.email_from
+    msg["To"] = f"{to_name} <{to_email}>"
+    msg.set_content(body_text)
+    msg.add_alternative(body_html, subtype="html")
+
+    smtp_kwargs = dict(
+        hostname=settings.smtp_host,
+        port=settings.smtp_port,
+        username=settings.smtp_user,
+        password=settings.smtp_pass,
+    )
+    if settings.smtp_port == 465:
+        smtp_kwargs["use_tls"] = True
+    else:
+        smtp_kwargs["start_tls"] = True
+
+    await aiosmtplib.send(msg, **smtp_kwargs)
+
+
+async def send_pre_reminder_email(email: str, name: str, resume_link: str) -> None:
+    tpl = _env.get_template("pre_reminder_email.html")
+    logo_url = f"{settings.public_base_url.rstrip('/')}/static/logosmall.png"
+    html_body = tpl.render(
+        name=name,
+        resume_link=resume_link,
+        logo_url=logo_url,
+    )
+    subject = "Reminder: Please complete the AI Baseline Survey"
+    body_text = (
+        f"Hi {name},\n\n"
+        "We noticed you registered for the AI Baseline Survey but haven't completed it yet.\n\n"
+        f"Please click the link below to directly resume and finish your survey:\n{resume_link}\n\n"
+        "Thank you,\nOffice of Academics\nJAIN (Deemed-to-be University)"
+    )
+    await send_html_email(email, name, subject, body_text, html_body)
+
+
+async def send_post_reminder_email(email: str, name: str, resume_link: str) -> None:
+    tpl = _env.get_template("post_reminder_email.html")
+    logo_url = f"{settings.public_base_url.rstrip('/')}/static/logosmall.png"
+    html_body = tpl.render(
+        name=name,
+        resume_link=resume_link,
+        logo_url=logo_url,
+    )
+    subject = "Reminder: Please complete the Post-Workshop Survey"
+    body_text = (
+        f"Hi {name},\n\n"
+        "Thank you for completing the Baseline Survey.\n\n"
+        f"You haven't yet submitted the Post-Workshop Survey. Please click the link below to directly resume and complete it:\n{resume_link}\n\n"
+        "Thank you,\nOffice of Academics\nJAIN (Deemed-to-be University)"
+    )
+    await send_html_email(email, name, subject, body_text, html_body)
