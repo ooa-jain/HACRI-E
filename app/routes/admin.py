@@ -657,3 +657,12 @@ async def api_background_analysis(
         "salaried_list": salaried_list,
         "entrepreneur_list": entrepreneur_list
     })
+
+
+@router.get("/admin/api/email-notification/stats")
+async def api_email_notification_stats(request: Request):
+    if not _is_survey_admin(request):
+        raise HTTPException(status_code=403)
+    from app.db import get_email_notification_stats
+    stats = await get_email_notification_stats()
+    return JSONResponse(stats)

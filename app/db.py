@@ -441,3 +441,54 @@ async def delete_user_and_responses(email: str) -> None:
     await db[PRE].delete_many({"email": email})
     await db[POST].delete_many({"email": email})
     await db[ORI].delete_many({"email": email})
+
+
+async def get_email_notification_stats() -> list[dict]:
+    db = get_db()
+    results = {}
+    
+    async for u in db[USERS].find({}):
+        dept = u.get("program") or "No Program"
+        if dept not in results:
+            results[dept] = {
+                "dept": dept,
+                "pre_sent": 0,
+                "post_sent": 0,
+                "clicked": 0,
+                "completed_after": 0,
+                "in_draft": 0,
+                "total_users": 0
+            }
+        
+        entry = results[dept]
+        entry["total_users"] += 1
+        
+        pre_reminder = u.get("pre_reminder_sent_at")
+        post_reminder = u.get("post_reminder_sent_at")
+        clicked = u.get("reminder_clicked_at")
+        pre_sub = u.get("pre_submitted_at")
+        post_sub = u.get("post_submitted_at")
+        
+        if pre_reminder:
+            entry["pre_sent"] += 1
+        if post_reminder:
+            entry["post_sent"] += 1
+        if clicked:
+            entry["clicked"] += 1
+            
+        completed_after = False
+        if clicked:
+            if post_sub and post_sub > clicked:
+                completed_after = True
+            elif pre_sub and pre_sub > clicked:
+                completed_after = True
+                
+        if completed_after:
+            entry["completed_after"] += 1
+            
+        has_pre_draft = bool(u.get("pre_draft"))
+        has_post_draft = bool(u.get("post_draft"))
+        if has_pre_draft or has_post_draft:
+            entry["in_draft"] += 1
+            
+    return sorted(results.values(), key=lambda x: x["dept"])
