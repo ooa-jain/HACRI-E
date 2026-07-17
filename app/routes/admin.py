@@ -347,17 +347,8 @@ async def api_survey_dept_stats(request: Request):
     return JSONResponse(stats)
 
 
-# ── Orientation responses (both admins can view) ───────────────────────────────
-@router.get("/admin/api/orientation/responses")
-async def api_orientation_responses(request: Request):
-    if not (_is_survey_admin(request) or _is_ori_admin(request)):
-        raise HTTPException(status_code=403)
-    return JSONResponse(await list_orientation_responses())
-
-
-# ── Send alert emails to registered-only students (survey admin only) ──
 @router.post("/admin/api/alert/pre-pending")
-async def api_send_pre_alert(
+async def api_send_pre_pending(
     request: Request,
     dept: str = Query(default=""),
     ug_or_pg: str = Query(default=""),
@@ -367,9 +358,15 @@ async def api_send_pre_alert(
     users = await list_survey_users(dept=dept or None, ug_or_pg=ug_or_pg or None)
     pending = [u for u in users if u.get("status") in ("not_started", None)]
     sent = failed = 0
+    from datetime import datetime, timezone
+    db = get_db()
     for u in pending:
         try:
-            await _send_pre_alert_email(u["email"], u["name"])
+            await _send_pre_alert_email(u["email"], u["name"], request)
+            await db["users"].update_one(
+                {"email": u["email"]},
+                {"$set": {"pre_reminder_sent_at": datetime.now(timezone.utc)}}
+            )
             sent += 1
         except Exception as e:
             log.warning("Pre alert email failed for %s: %s", u["email"], e)
@@ -377,12 +374,21 @@ async def api_send_pre_alert(
     return JSONResponse({"ok": True, "sent": sent, "failed": failed, "total_pending": len(pending)})
 
 
-async def _send_pre_alert_email(email: str, name: str) -> None:
+async def _send_pre_alert_email(email: str, name: str, request: Request) -> None:
     from app import emailer
     from app.routes.landing import email_to_slug
     slug = email_to_slug(email)
-    resume_link = f"{settings.public_base_url.rstrip('/')}/resume/{slug}"
+    base_url = str(request.base_url).rstrip("/")
+    resume_link = f"{base_url}/resume/{slug}?src=reminder"
     await emailer.send_pre_reminder_email(email, name, resume_link)
+
+
+# ── Orientation responses (both admins can view) ───────────────────────────────
+@router.get("/admin/api/orientation/responses")
+async def api_orientation_responses(request: Request):
+    if not (_is_survey_admin(request) or _is_ori_admin(request)):
+        raise HTTPException(status_code=403)
+    return JSONResponse(await list_orientation_responses())
 
 
 # ── Send alert emails to pre-done / post-pending students (survey admin only) ──
@@ -397,9 +403,15 @@ async def api_send_alert(
     users = await list_survey_users(dept=dept or None, ug_or_pg=ug_or_pg or None)
     pending = [u for u in users if u.get("status") == STATUS_PRE_DONE]
     sent = failed = 0
+    from datetime import datetime, timezone
+    db = get_db()
     for u in pending:
         try:
-            await _send_alert_email(u["email"], u["name"])
+            await _send_alert_email(u["email"], u["name"], request)
+            await db["users"].update_one(
+                {"email": u["email"]},
+                {"$set": {"post_reminder_sent_at": datetime.now(timezone.utc)}}
+            )
             sent += 1
         except Exception as e:
             log.warning("Alert email failed for %s: %s", u["email"], e)
@@ -407,11 +419,12 @@ async def api_send_alert(
     return JSONResponse({"ok": True, "sent": sent, "failed": failed, "total_pending": len(pending)})
 
 
-async def _send_alert_email(email: str, name: str) -> None:
+async def _send_alert_email(email: str, name: str, request: Request) -> None:
     from app import emailer
     from app.routes.landing import email_to_slug
     slug = email_to_slug(email)
-    resume_link = f"{settings.public_base_url.rstrip('/')}/resume/{slug}"
+    base_url = str(request.base_url).rstrip("/")
+    resume_link = f"{base_url}/resume/{slug}?src=reminder"
     await emailer.send_post_reminder_email(email, name, resume_link)
 
 

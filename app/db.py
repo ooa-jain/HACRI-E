@@ -298,6 +298,19 @@ async def list_survey_users(limit: int = 10_000, dept: str | None = None, ug_or_
     async for u in get_db()[USERS].find(query).sort("created_at", -1).limit(limit):
         email = u["email"]
         slug = base64.urlsafe_b64encode(email.lower().encode()).rstrip(b"=").decode()
+        pre_reminder = u.get("pre_reminder_sent_at")
+        post_reminder = u.get("post_reminder_sent_at")
+        clicked = u.get("reminder_clicked_at")
+        pre_sub = u.get("pre_submitted_at")
+        post_sub = u.get("post_submitted_at")
+
+        completed_after = False
+        if clicked:
+            if post_sub and post_sub > clicked:
+                completed_after = True
+            elif pre_sub and pre_sub > clicked:
+                completed_after = True
+
         result.append({
             "email":                email,
             "email_slug":           slug,
@@ -307,9 +320,13 @@ async def list_survey_users(limit: int = 10_000, dept: str | None = None, ug_or_
             "education_type":      u.get("education_type", ""),
             "status":              u.get("status") or "not_started",
             "orientation_submitted": u.get("orientation_submitted", False),
-            "pre_at":              _fmt(u.get("pre_submitted_at")),
-            "post_at":             _fmt(u.get("post_submitted_at")),
+            "pre_at":              _fmt(pre_sub),
+            "post_at":             _fmt(post_sub),
             "orientation_at":      _fmt(u.get("orientation_at")),
+            "pre_reminder_at":     _fmt(pre_reminder),
+            "post_reminder_at":    _fmt(post_reminder),
+            "reminder_clicked_at": _fmt(clicked),
+            "completed_after_reminder": completed_after,
         })
     return result
 

@@ -227,8 +227,11 @@ async def send_html_email(
 ) -> None:
     """Send an HTML email with plain-text fallback (used for admin alerts)."""
     import aiosmtplib
-    from email.message import EmailMessage
+    from email.mime.multipart import MIMEMultipart
+    from email.mime.text import MIMEText
+    from email.mime.image import MIMEImage
     from app.settings import settings
+    from pathlib import Path
 
     if settings.email_dry_run or not settings.smtp_host:
         import logging
@@ -247,12 +250,26 @@ async def send_html_email(
             f.write(body_html + "\n")
         return
 
-    msg = EmailMessage()
+    msg = MIMEMultipart("related")
     msg["Subject"] = subject
     msg["From"] = settings.email_from
     msg["To"] = f"{to_name} <{to_email}>"
-    msg.set_content(body_text)
-    msg.add_alternative(body_html, subtype="html")
+
+    msg_alternative = MIMEMultipart("alternative")
+    msg.attach(msg_alternative)
+
+    msg_alternative.attach(MIMEText(body_text, "plain"))
+    msg_alternative.attach(MIMEText(body_html, "html"))
+
+    # Embed logosmall.png inline as cid:logosmall
+    static_logo_path = Path(__file__).parent / "static" / "logosmall.png"
+    if static_logo_path.exists():
+        with open(static_logo_path, "rb") as f:
+            logo_data = f.read()
+        msg_image = MIMEImage(logo_data)
+        msg_image.add_header("Content-ID", "<logosmall>")
+        msg_image.add_header("Content-Disposition", "inline", filename="logosmall.png")
+        msg.attach(msg_image)
 
     smtp_kwargs = dict(
         hostname=settings.smtp_host,
@@ -270,11 +287,9 @@ async def send_html_email(
 
 async def send_pre_reminder_email(email: str, name: str, resume_link: str) -> None:
     tpl = _env.get_template("pre_reminder_email.html")
-    logo_url = f"{settings.public_base_url.rstrip('/')}/static/logosmall.png"
     html_body = tpl.render(
         name=name,
         resume_link=resume_link,
-        logo_url=logo_url,
     )
     subject = "Reminder: Please complete the AI Baseline Survey"
     body_text = (
@@ -288,11 +303,9 @@ async def send_pre_reminder_email(email: str, name: str, resume_link: str) -> No
 
 async def send_post_reminder_email(email: str, name: str, resume_link: str) -> None:
     tpl = _env.get_template("post_reminder_email.html")
-    logo_url = f"{settings.public_base_url.rstrip('/')}/static/logosmall.png"
     html_body = tpl.render(
         name=name,
         resume_link=resume_link,
-        logo_url=logo_url,
     )
     subject = "Reminder: Please complete the Post-Workshop Survey"
     body_text = (

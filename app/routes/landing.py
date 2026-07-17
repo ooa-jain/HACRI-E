@@ -145,7 +145,7 @@ async def landing_post(
 
 
 @router.get("/resume/{email_slug}")
-async def resume_session(request: Request, email_slug: str):
+async def resume_session(request: Request, email_slug: str, src: str | None = None):
     email = slug_to_email(email_slug)
     if not email:
         return RedirectResponse(url="/", status_code=303)
@@ -154,6 +154,13 @@ async def resume_session(request: Request, email_slug: str):
     user = await db["users"].find_one({"email": email})
     if not user:
         return RedirectResponse(url="/", status_code=303)
+
+    if src == "reminder":
+        from datetime import datetime, timezone
+        await db["users"].update_one(
+            {"email": email},
+            {"$set": {"reminder_clicked_at": datetime.now(timezone.utc)}}
+        )
 
     status_v = user.get("status")
     orientation_enabled = await get_flag(FLAG_ORIENTATION, default=False)

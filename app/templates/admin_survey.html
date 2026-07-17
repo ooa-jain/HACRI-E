@@ -460,10 +460,10 @@ input:checked+.slider:before{transform:translateX(24px)}
         <thead>
           <tr>
             <th>#</th><th>Name</th><th>Email</th><th>Level</th><th>Previous Education</th><th>Programme</th>
-            <th>Status</th><th>Orientation</th><th>Pre At</th><th>Post At</th><th>Actions</th>
+            <th>Status</th><th>Orientation</th><th>Pre At</th><th>Post At</th><th>Reminder Tracking</th><th>Actions</th>
           </tr>
         </thead>
-        <tbody id="user-tbody"><tr><td colspan="11" style="text-align:center;padding:20px;color:var(--muted)">Loading…</td></tr></tbody>
+        <tbody id="user-tbody"><tr><td colspan="12" style="text-align:center;padding:20px;color:var(--muted)">Loading…</td></tr></tbody>
       </table>
     </div>
   </div>
@@ -918,7 +918,7 @@ function renderUsers(data){
   }
 
   const tbody = document.getElementById('user-tbody');
-  if(!filtered.length){ tbody.innerHTML='<tr><td colspan="11" style="text-align:center;padding:20px;color:var(--muted)">No users matching filters</td></tr>'; return; }
+  if(!filtered.length){ tbody.innerHTML='<tr><td colspan="12" style="text-align:center;padding:20px;color:var(--muted)">No users matching filters</td></tr>'; return; }
   tbody.innerHTML = filtered.map((u,i)=>`
     <tr>
       <td style="color:var(--muted)">${i+1}</td>
@@ -931,6 +931,13 @@ function renderUsers(data){
       <td>${u.orientation_submitted?'<span class="badge bg-green">✓</span>':'<span class="badge bg-gray">—</span>'}</td>
       <td style="font-size:11px;color:var(--muted)">${e(u.pre_at||'—')}</td>
       <td style="font-size:11px;color:var(--muted)">${e(u.post_at||'—')}</td>
+      <td style="font-size:11px;line-height:1.4;">
+        ${u.pre_reminder_at ? `<div><strong>Pre Sent:</strong> ${e(u.pre_reminder_at)}</div>` : ''}
+        ${u.post_reminder_at ? `<div><strong>Post Sent:</strong> ${e(u.post_reminder_at)}</div>` : ''}
+        ${u.reminder_clicked_at ? `<div style="color:#d97706;font-weight:600;"><strong>Clicked:</strong> ${e(u.reminder_clicked_at)}</div>` : ''}
+        ${u.completed_after_reminder ? `<div style="color:var(--green);font-weight:700;margin-top:2px;">✨ Completed After Email ✓</div>` : ''}
+        ${(!u.pre_reminder_at && !u.post_reminder_at && !u.reminder_clicked_at) ? '<span style="color:var(--muted)">—</span>' : ''}
+      </td>
       <td>
         <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
           ${u.status === 'post_done'
