@@ -383,7 +383,12 @@ async def get_dept_stats() -> list[dict]:
         {"$sort": {"_id": 1}},
     ]
     results = []
-    cursor = db[USERS].aggregate(pipeline)
+    res = db[USERS].aggregate(pipeline)
+    import inspect
+    if inspect.isawaitable(res):
+        cursor = await res
+    else:
+        cursor = res
     async for doc in cursor:
         dept = doc["_id"] or ""
         results.append({
