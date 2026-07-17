@@ -261,14 +261,14 @@ async def send_html_email(
     msg_alternative.attach(MIMEText(body_text, "plain"))
     msg_alternative.attach(MIMEText(body_html, "html"))
 
-    # Embed logosmall.png inline as cid:logosmall
-    static_logo_path = Path(__file__).parent / "static" / "logosmall.png"
+    # Embed logo.png inline as cid:logo
+    static_logo_path = Path(__file__).parent / "static" / "logo.png"
     if static_logo_path.exists():
         with open(static_logo_path, "rb") as f:
             logo_data = f.read()
         msg_image = MIMEImage(logo_data)
-        msg_image.add_header("Content-ID", "<logosmall>")
-        msg_image.add_header("Content-Disposition", "inline", filename="logosmall.png")
+        msg_image.add_header("Content-ID", "<logo>")
+        msg_image.add_header("Content-Disposition", "inline", filename="logo.png")
         msg.attach(msg_image)
 
     smtp_kwargs = dict(
