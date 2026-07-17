@@ -242,3 +242,33 @@ async def shared_chart_h1(
             None, chart_helpers.plot_h1_histogram_custom, matched, out
         )
     return FileResponse(str(out), media_type="image/png")
+
+
+@router.get("/shared/departments", response_class=HTMLResponse)
+async def shared_departments_list(request: Request):
+    from app.db import get_dept_stats
+    raw_stats = await get_dept_stats()
+    
+    dept_list = []
+    for item in raw_stats:
+        dept = item["dept"]
+        if not dept:
+            continue
+        token_pre = get_dept_token(dept, "pre")
+        token_post = get_dept_token(dept, "post")
+        dept_list.append({
+            "name": dept,
+            "registered": item["registered"],
+            "pre_done": item["pre_done"],
+            "post_done": item["post_done"],
+            "token_pre": token_pre,
+            "token_post": token_post
+        })
+        
+    return request.app.state.templates.TemplateResponse(
+        request,
+        "shared_departments.html",
+        {
+            "dept_list": dept_list,
+        }
+    )

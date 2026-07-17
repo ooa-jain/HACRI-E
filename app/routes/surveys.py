@@ -251,12 +251,14 @@ async def pre_post(
             errors.append("Please select at least 1 option in question H2.")
 
     if errors:
-        return await _render_form(
+        response = await _render_form(
             request,
             "pre_survey.html",
             values=fields,
             errors=errors,
-        ), 422
+        )
+        response.status_code = 422
+        return response
 
     pre_id, _user = await save_pre_response(email, name, fields)
     await get_db()["users"].update_one(
@@ -443,12 +445,14 @@ async def post_post(
                 errors.append("Please explain Mother's Type of Business.")
 
     if errors:
-        return await _render_form(
+        response = await _render_form(
             request,
             "post_survey.html",
             values=fields,
             errors=errors,
-        ), 422
+        )
+        response.status_code = 422
+        return response
 
     post_id, updated_user = await save_post_response(email, name, fields)
     await get_db()["users"].update_one(

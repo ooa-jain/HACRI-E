@@ -69,7 +69,8 @@ async def survey_request_otp(request: Request, username: str = Form(...)):
     # Generate a 6-digit OTP and store it
     otp = str(secrets.randbelow(900000) + 100000)  # 100000–999999
     expiry = time.time() + _OTP_TTL
-    _admin_otp_store[username] = (otp, expiry)
+    from app.db import save_admin_otp
+    await save_admin_otp(username, otp, expiry)
 
     # Send email
     try:
@@ -140,24 +141,24 @@ async def general_admin_login_post(
     username = username.strip()
     otp = password.strip()
     
-    stored = _admin_otp_store.get(username)
-    if stored:
-        stored_otp, expiry = stored
-        if otp == stored_otp and time.time() < expiry:
-            _admin_otp_store.pop(username, None)  # Consume OTP
-            
-            if username == settings.survey_admin_username:
-                r = RedirectResponse(url="/admin/survey", status_code=303)
-                _set_cookie(r, _SURVEY_COOKIE, settings.cookie_secure, settings.cookie_samesite)
-                return r
-            elif username == settings.orientation_admin_username:
-                r = RedirectResponse(url="/admin/orientation", status_code=303)
-                _set_cookie(r, _ORI_COOKIE, settings.cookie_secure, settings.cookie_samesite)
-                return r
-        else:
-            err_msg = "Invalid or expired OTP. Please request a new one."
+    if username == settings.orientation_admin_username and otp == settings.orientation_admin_password:
+        r = RedirectResponse(url="/admin/orientation", status_code=303)
+        _set_cookie(r, _ORI_COOKIE, settings.cookie_secure, settings.cookie_samesite)
+        return r
+
+    from app.db import verify_admin_otp
+    is_valid = await verify_admin_otp(username, otp)
+    if is_valid:
+        if username == settings.survey_admin_username:
+            r = RedirectResponse(url="/admin/survey", status_code=303)
+            _set_cookie(r, _SURVEY_COOKIE, settings.cookie_secure, settings.cookie_samesite)
+            return r
+        elif username == settings.orientation_admin_username:
+            r = RedirectResponse(url="/admin/orientation", status_code=303)
+            _set_cookie(r, _ORI_COOKIE, settings.cookie_secure, settings.cookie_samesite)
+            return r
     else:
-        err_msg = "No active OTP found. Please request an OTP first."
+        err_msg = "Invalid credentials or expired OTP. Please request a new one."
 
     return request.app.state.templates.TemplateResponse(
         request, "admin_login.html",

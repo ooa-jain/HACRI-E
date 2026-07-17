@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Department-wise Analysis Directory – JAIN University</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --navy: #1B2A4A;
+      --navy-light: #2A3E68;
+      --border: #E2E8F0;
+      --bg: #F8FAFC;
+      --teal: #0f766e;
+      --green: #15803d;
+      --gray: #64748b;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: var(--bg);
+      color: var(--navy);
+      min-height: 100vh;
+      padding: 40px 20px;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+    .header h1 {
+      font-size: 28px;
+      font-weight: 800;
+      color: var(--navy);
+      margin-bottom: 8px;
+      letter-spacing: -0.5px;
+    }
+    .header p {
+      font-size: 15px;
+      color: var(--gray);
+    }
+    .card {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+      padding: 24px;
+      overflow-x: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      min-width: 800px;
+    }
+    th {
+      padding: 16px;
+      font-weight: 700;
+      font-size: 13.5px;
+      color: var(--gray);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-bottom: 2px solid var(--border);
+    }
+    td {
+      padding: 16px;
+      border-bottom: 1px solid var(--border);
+      font-size: 14.5px;
+      vertical-align: middle;
+    }
+    tr:last-child td {
+      border-bottom: none;
+    }
+    .dept-name {
+      font-weight: 600;
+      color: var(--navy);
+    }
+    .badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 12.5px;
+      font-weight: 700;
+      text-align: center;
+    }
+    .badge-gray {
+      background: #F1F5F9;
+      color: #475569;
+    }
+    .badge-blue {
+      background: #E0F2FE;
+      color: #0369a1;
+    }
+    .badge-green {
+      background: #DCFCE7;
+      color: #15803d;
+    }
+    .actions {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 700;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      cursor: pointer;
+      border: none;
+    }
+    .btn-pre {
+      background: var(--teal);
+      color: #ffffff;
+    }
+    .btn-pre:hover {
+      background: #0d5e58;
+      transform: translateY(-1px);
+    }
+    .btn-post {
+      background: var(--green);
+      color: #ffffff;
+    }
+    .btn-post:hover {
+      background: #0f622d;
+      transform: translateY(-1px);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🏢 Department Analysis Directory</h1>
+      <p>JAIN (Deemed-to-be University) · Shared Public Reports Directory</p>
+    </div>
+    
+    <div class="card">
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 50px;">#</th>
+            <th>Department Name</th>
+            <th style="text-align: center; width: 120px;">Registered</th>
+            <th style="text-align: center; width: 120px;">Pre Done</th>
+            <th style="text-align: center; width: 120px;">Post Done</th>
+            <th style="width: 280px; text-align: center;">Analysis Reports</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for d in dept_list %}
+          <tr>
+            <td style="color: var(--gray);">{{ loop.index }}</td>
+            <td class="dept-name">{{ d.name }}</td>
+            <td style="text-align: center;">
+              <span class="badge badge-gray">{{ d.registered }}</span>
+            </td>
+            <td style="text-align: center;">
+              <span class="badge badge-blue">{{ d.pre_done }}</span>
+            </td>
+            <td style="text-align: center;">
+              <span class="badge badge-green">{{ d.post_done }}</span>
+            </td>
+            <td>
+              <div class="actions" style="justify-content: center;">
+                <a href="/shared/analysis?dept={{ d.name | urlencode }}&token={{ d.token_pre }}&type=pre" target="_blank" class="btn btn-pre">
+                  📈 Pre Survey
+                </a>
+                <a href="/shared/analysis?dept={{ d.name | urlencode }}&token={{ d.token_post }}&type=post" target="_blank" class="btn btn-post">
+                  📊 Post Survey
+                </a>
+              </div>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="6" style="text-align: center; color: var(--gray); padding: 40px;">
+              No departments found.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</body>
+</html>

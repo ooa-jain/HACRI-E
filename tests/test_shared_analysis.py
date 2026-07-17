@@ -84,3 +84,29 @@ async def test_shared_analysis_access_and_exports(client: AsyncClient):
         r = await client.get(f"/shared/analysis/charts/{chart_type}.png?dept={dept}&token={valid_token}")
         assert r.status_code == 200
         assert "image/png" in r.headers["content-type"]
+
+
+@pytest.mark.asyncio
+async def test_shared_departments_directory(client: AsyncClient):
+    db = get_db()
+    dept = "Department of Chemistry"
+    
+    # Insert a user to make the department active
+    await db["users"].insert_one({
+        "email": "chem.student@example.com",
+        "name": "Chemistry Student",
+        "program": dept,
+        "status": STATUS_POST_DONE,
+    })
+    
+    # Fetch the public directory page
+    resp = await client.get("/shared/departments")
+    assert resp.status_code == 200
+    assert "Department of Chemistry" in resp.text
+    
+    # Verify pre/post survey link components are present in the page
+    token_pre = get_dept_token(dept, "pre")
+    token_post = get_dept_token(dept, "post")
+    
+    assert f"token={token_pre}" in resp.text
+    assert f"token={token_post}" in resp.text

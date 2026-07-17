@@ -87,6 +87,10 @@ def _make_post_payload(name: str, email: str) -> dict:
 
     data: dict = {
         "csrf": "test-csrf-token",
+        "father_name": "Father Name",
+        "father_occupation": "Homemaker",
+        "mother_name": "Mother Name",
+        "mother_occupation": "Homemaker",
         **{k: "3" for k in SCHEMA if k[0] in "BDEFG"},
         "H1": POST_REFLECTION[0][3][0],   # first option of H1
         "H2": "3",
@@ -246,7 +250,7 @@ async def test_unified_admin_login_flow(client: AsyncClient):
     # 2. Unauthenticated GET /admin/login returns 200
     resp_login = await client.get("/admin/login")
     assert resp_login.status_code == 200
-    assert "Sign In" in resp_login.text
+    assert "Admin Username" in resp_login.text
 
     # 3. GET legacy routes redirect to /admin/login
     for path in ["/admin/survey/login", "/admin/orientation/login"]:
@@ -263,9 +267,11 @@ async def test_unified_admin_login_flow(client: AsyncClient):
     )
     assert resp_otp_req.status_code == 200
     
-    from app.routes.admin import _survey_otp_store
-    assert len(_survey_otp_store) == 1
-    otp = list(_survey_otp_store.keys())[0]
+    from app.db import get_db
+    db = get_db()
+    otp_doc = await db["admin_otps"].find_one({"username": settings.survey_admin_username})
+    assert otp_doc is not None
+    otp = otp_doc["otp"]
 
     resp_survey_login = await client.post(
         "/admin/login",

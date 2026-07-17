@@ -9,6 +9,7 @@ Collections:
   feature_flags          — survey_enabled, orientation_enabled
 """
 from __future__ import annotations
+import time
 from datetime import datetime, timezone
 from typing import Any
 from pymongo import AsyncMongoClient, ReturnDocument
@@ -382,7 +383,7 @@ async def get_dept_stats() -> list[dict]:
         {"$sort": {"_id": 1}},
     ]
     results = []
-    cursor = await db[USERS].aggregate(pipeline)
+    cursor = db[USERS].aggregate(pipeline)
     async for doc in cursor:
         dept = doc["_id"] or ""
         results.append({
@@ -492,3 +493,27 @@ async def get_email_notification_stats() -> list[dict]:
             entry["in_draft"] += 1
             
     return sorted(results.values(), key=lambda x: x["dept"])
+
+
+async def save_admin_otp(username: str, otp: str, expires_at: float):
+    db = get_db()
+    await db["admin_otps"].update_one(
+        {"username": username},
+        {"$set": {"otp": otp, "expires_at": expires_at}},
+        upsert=True
+    )
+
+
+async def verify_admin_otp(username: str, otp: str) -> bool:
+    db = get_db()
+    doc = await db["admin_otps"].find_one({"username": username})
+    if not doc:
+        return False
+    
+    stored_otp = doc.get("otp")
+    expires_at = doc.get("expires_at", 0)
+    
+    if otp == stored_otp and time.time() < expires_at:
+        await db["admin_otps"].delete_one({"username": username})
+        return True
+    return False
