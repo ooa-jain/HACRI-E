@@ -267,6 +267,48 @@
     .resend-btn:hover {
       color: #ffffff;
     }
+
+    .otp-box-container {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      margin: 1.5rem 0;
+    }
+    .otp-digit {
+      width: 46px;
+      height: 52px;
+      background: rgba(11, 19, 41, 0.5);
+      border: 1.5px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      font-size: 24px;
+      font-weight: 700;
+      color: #ffffff;
+      text-align: center;
+      outline: none;
+      transition: all 0.25s ease;
+      font-family: inherit;
+    }
+    .otp-digit:focus {
+      border-color: var(--accent);
+      background: rgba(11, 19, 41, 0.8);
+      box-shadow: 0 0 0 4px rgba(201, 168, 76, 0.15);
+    }
+    .toggle-link-container {
+      text-align: center;
+      margin: 1rem 0;
+    }
+    .toggle-link {
+      color: var(--accent);
+      font-size: 13.5px;
+      font-weight: 500;
+      text-decoration: none;
+      transition: color 0.2s;
+      cursor: pointer;
+    }
+    .toggle-link:hover {
+      color: #ffffff;
+      text-decoration: underline;
+    }
   </style>
 </head>
 <body>
@@ -295,20 +337,43 @@
     Code is valid for 10 minutes.
   </div>
 
-  <form method="post" action="/admin/login">
+  <form method="post" action="/admin/login" id="login-form">
     <input type="hidden" name="username" value="{{ otp_username }}" />
-    <div class="field">
-      <label>Enter One-Time Password</label>
-      <div class="input-wrapper">
-        <span class="input-icon">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-        </span>
-        <input type="number" name="password" id="otp-input" required autofocus
-               placeholder="6-digit OTP"
-               style="letter-spacing: 6px; font-size: 20px; font-weight: 700; text-align: center; padding-left: 14px;"
-               min="100000" max="999999" />
+    <input type="hidden" name="password" id="otp-final-value" />
+
+    <!-- 6-digit OTP entry (visible by default) -->
+    <div id="otp-entry-section">
+      <div class="field">
+        <label style="text-align: center;">Enter One-Time Password</label>
+        <div class="otp-box-container">
+          <input type="text" class="otp-digit" maxlength="1" pattern="[0-9]" inputmode="numeric" required autofocus />
+          <input type="text" class="otp-digit" maxlength="1" pattern="[0-9]" inputmode="numeric" required />
+          <input type="text" class="otp-digit" maxlength="1" pattern="[0-9]" inputmode="numeric" required />
+          <input type="text" class="otp-digit" maxlength="1" pattern="[0-9]" inputmode="numeric" required />
+          <input type="text" class="otp-digit" maxlength="1" pattern="[0-9]" inputmode="numeric" required />
+          <input type="text" class="otp-digit" maxlength="1" pattern="[0-9]" inputmode="numeric" required />
+        </div>
       </div>
     </div>
+
+    <!-- Static password entry (hidden by default) -->
+    <div id="static-password-section" style="display: none;">
+      <div class="field">
+        <label>Enter Admin Password</label>
+        <div class="input-wrapper">
+          <span class="input-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          </span>
+          <input type="password" id="static-password-input" placeholder="Enter administrative password"
+                 style="width: 100%; padding: 12px 14px 12px 42px; background: rgba(11, 19, 41, 0.5); border: 1.5px solid rgba(255, 255, 255, 0.1); border-radius: 12px; font-size: 15px; color: #ffffff; outline: none; transition: all 0.25s ease;" />
+        </div>
+      </div>
+    </div>
+
+    <div class="toggle-link-container">
+      <a id="auth-method-toggle" class="toggle-link">Login with static password instead</a>
+    </div>
+
     <button type="submit" class="btn">
       Verify & Access
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
@@ -347,6 +412,96 @@
   </div>
   {% endif %}
 </div>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  // Step 2 elements
+  const loginForm = document.getElementById("login-form");
+  const otpEntrySection = document.getElementById("otp-entry-section");
+  const staticPasswordSection = document.getElementById("static-password-section");
+  const authMethodToggle = document.getElementById("auth-method-toggle");
+  const otpDigits = document.querySelectorAll(".otp-digit");
+  const staticPasswordInput = document.getElementById("static-password-input");
+  const otpFinalValue = document.getElementById("otp-final-value");
+
+  let isOtpMode = true;
+
+  if (authMethodToggle) {
+    authMethodToggle.addEventListener("click", (e) => {
+      e.preventDefault();
+      isOtpMode = !isOtpMode;
+      if (isOtpMode) {
+        otpEntrySection.style.display = "block";
+        staticPasswordSection.style.display = "none";
+        authMethodToggle.textContent = "Login with static password instead";
+        staticPasswordInput.removeAttribute("required");
+        otpDigits.forEach(input => input.setAttribute("required", "required"));
+        // Focus first OTP input
+        otpDigits[0].focus();
+      } else {
+        otpEntrySection.style.display = "none";
+        staticPasswordSection.style.display = "block";
+        authMethodToggle.textContent = "Use OTP verification code instead";
+        otpDigits.forEach(input => input.removeAttribute("required"));
+        staticPasswordInput.setAttribute("required", "required");
+        // Focus static password input
+        staticPasswordInput.focus();
+      }
+    });
+  }
+
+  // OTP inputs auto-focus logic
+  if (otpDigits.length > 0) {
+    otpDigits.forEach((digitInput, idx) => {
+      // Move to next digit on input
+      digitInput.addEventListener("input", (e) => {
+        const val = e.target.value;
+        // Keep only last character if multiple characters are entered
+        if (val.length > 1) {
+          e.target.value = val.slice(-1);
+        }
+        if (e.target.value && idx < otpDigits.length - 1) {
+          otpDigits[idx + 1].focus();
+        }
+      });
+
+      // Handle backspace/delete navigation
+      digitInput.addEventListener("keydown", (e) => {
+        if (e.key === "Backspace" && !digitInput.value && idx > 0) {
+          otpDigits[idx - 1].focus();
+        }
+      });
+
+      // Handle paste
+      digitInput.addEventListener("paste", (e) => {
+        e.preventDefault();
+        const text = (e.clipboardData || window.clipboardData).getData("text").trim();
+        if (/^\d{6}$/.test(text)) {
+          otpDigits.forEach((input, i) => {
+            input.value = text[i];
+          });
+          otpDigits[otpDigits.length - 1].focus();
+        }
+      });
+    });
+  }
+
+  // Form submission handler
+  if (loginForm) {
+    loginForm.addEventListener("submit", (e) => {
+      if (isOtpMode) {
+        let otpValue = "";
+        otpDigits.forEach(input => {
+          otpValue += input.value;
+        });
+        otpFinalValue.value = otpValue;
+      } else {
+        otpFinalValue.value = staticPasswordInput.value;
+      }
+    });
+  }
+});
+</script>
 
 </body>
 </html>

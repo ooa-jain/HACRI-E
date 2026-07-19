@@ -296,6 +296,18 @@ async def test_unified_admin_login_flow(client: AsyncClient):
     assert resp_ori_login.status_code in (303, 307)
     assert "/admin/orientation" in resp_ori_login.headers["location"]
 
+    # 5b. POST with Survey Admin static password credentials redirects to /admin/survey
+    resp_survey_static_login = await client.post(
+        "/admin/login",
+        data={
+            "username": settings.survey_admin_username,
+            "password": settings.survey_admin_password
+        },
+        follow_redirects=False
+    )
+    assert resp_survey_static_login.status_code in (303, 307)
+    assert "/admin/survey" in resp_survey_static_login.headers["location"]
+
     # 6. POST with invalid credentials returns 401
     resp_invalid = await client.post(
         "/admin/login",

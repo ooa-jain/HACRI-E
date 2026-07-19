@@ -146,6 +146,11 @@ async def general_admin_login_post(
         _set_cookie(r, _ORI_COOKIE, settings.cookie_secure, settings.cookie_samesite)
         return r
 
+    if username == settings.survey_admin_username and otp == settings.survey_admin_password:
+        r = RedirectResponse(url="/admin/survey", status_code=303)
+        _set_cookie(r, _SURVEY_COOKIE, settings.cookie_secure, settings.cookie_samesite)
+        return r
+
     from app.db import verify_admin_otp
     is_valid = await verify_admin_otp(username, otp)
     if is_valid:

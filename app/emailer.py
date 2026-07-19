@@ -58,14 +58,18 @@ async def send_results_email(
             _dry_run_save(msg)
             return
 
-        await aiosmtplib.send(
-            msg,
+        smtp_kwargs = dict(
             hostname=settings.smtp_host,
             port=settings.smtp_port,
             username=settings.smtp_user,
             password=settings.smtp_pass,
-            start_tls=True,
         )
+        if settings.smtp_port == 465:
+            smtp_kwargs["use_tls"] = True
+        else:
+            smtp_kwargs["start_tls"] = True
+
+        await aiosmtplib.send(msg, **smtp_kwargs)
     except Exception as e:  # pragma: no cover
         log.exception("Failed to send results email to %s: %s", email, e)
 
@@ -291,10 +295,10 @@ async def send_pre_reminder_email(email: str, name: str, resume_link: str) -> No
         name=name,
         resume_link=resume_link,
     )
-    subject = "Reminder: Please complete the AI Baseline Survey"
+    subject = "Reminder: Please complete the (Pre-Workshop Survey) Pre AI Survey"
     body_text = (
         f"Hi {name},\n\n"
-        "We noticed you registered for the AI Baseline Survey but haven't completed it yet.\n\n"
+        "We noticed you registered for the (Pre-Workshop Survey) Pre AI Survey but haven't completed it yet.\n\n"
         f"Please click the link below to directly resume and finish your survey:\n{resume_link}\n\n"
         "Thank you,\nOffice of Academics\nJAIN (Deemed-to-be University)"
     )
@@ -310,7 +314,7 @@ async def send_post_reminder_email(email: str, name: str, resume_link: str) -> N
     subject = "Reminder: Please complete the Post-Workshop Survey"
     body_text = (
         f"Hi {name},\n\n"
-        "Thank you for completing the Baseline Survey.\n\n"
+        "Thank you for completing the (Pre-Workshop Survey) Pre AI Survey.\n\n"
         f"You haven't yet submitted the Post-Workshop Survey. Please click the link below to directly resume and complete it:\n{resume_link}\n\n"
         "Thank you,\nOffice of Academics\nJAIN (Deemed-to-be University)"
     )
