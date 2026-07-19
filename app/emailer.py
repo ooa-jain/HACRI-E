@@ -295,10 +295,10 @@ async def send_pre_reminder_email(email: str, name: str, resume_link: str) -> No
         name=name,
         resume_link=resume_link,
     )
-    subject = "Reminder: Please complete the (Pre-Workshop Survey) Pre AI Survey"
+    subject = "Reminder: Please complete the Pre-AI Survey 1"
     body_text = (
         f"Hi {name},\n\n"
-        "We noticed you registered for the (Pre-Workshop Survey) Pre AI Survey but haven't completed it yet.\n\n"
+        "We noticed you registered for the Pre AI Survey 1 but haven't completed it yet.\n\n"
         f"Please click the link below to directly resume and finish your survey:\n{resume_link}\n\n"
         "Thank you,\nOffice of Academics\nJAIN (Deemed-to-be University)"
     )
@@ -314,7 +314,7 @@ async def send_post_reminder_email(email: str, name: str, resume_link: str) -> N
     subject = "Reminder: Please complete the Post-Workshop Survey"
     body_text = (
         f"Hi {name},\n\n"
-        "Thank you for completing the (Pre-Workshop Survey) Pre AI Survey.\n\n"
+        "Thank you for completing the Pre-AI Survey 1.\n\n"
         f"You haven't yet submitted the Post-Workshop Survey. Please click the link below to directly resume and complete it:\n{resume_link}\n\n"
         "Thank you,\nOffice of Academics\nJAIN (Deemed-to-be University)"
     )
