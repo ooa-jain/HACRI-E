@@ -423,8 +423,8 @@ input:checked+.slider:before{transform:translateX(24px)}
 
       <div class="toggle-row" style="margin-top:20px;border-top:1px solid var(--border);padding-top:20px">
         <div>
-          <div style="font-size:14px;font-weight:600">📧 Automated Baseline Reminders</div>
-          <div style="font-size:12px;color:var(--muted);margin-top:3px">Automatically send reminder emails to registered students who have not completed their baseline survey.</div>
+          <div style="font-size:14px;font-weight:600">📧 Automated Reminders (Daily until completed)</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:3px">Automatically emails students who registered but have <strong>not taken the test</strong>. The first reminder goes out after the delay below, then it repeats on the cadence below every day until they complete the survey.</div>
         </div>
         <label class="toggle-switch">
           <input type="checkbox" id="tog-auto-reminders" onchange="toggleFlag('auto_reminders_enabled',this.checked)" />
@@ -434,10 +434,18 @@ input:checked+.slider:before{transform:translateX(24px)}
 
       <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border)">
         <div>
-          <div style="font-size:13px;font-weight:600">Auto-Reminder Delay (Days)</div>
-          <div style="font-size:11.5px;color:var(--muted);margin-top:3px">Days to wait after registration before sending reminder</div>
+          <div style="font-size:13px;font-weight:600">First Reminder After (Days)</div>
+          <div style="font-size:11.5px;color:var(--muted);margin-top:3px">Days to wait after registration before the first reminder (default 5)</div>
         </div>
         <input type="number" id="inp-auto-reminder-delay" min="1" max="365" style="width:75px;padding:6px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;outline:none;text-align:center;font-family:inherit;" onchange="updateAutoReminderDelay(this.value)" />
+      </div>
+
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border)">
+        <div>
+          <div style="font-size:13px;font-weight:600">Then Repeat Every (Days)</div>
+          <div style="font-size:11.5px;color:var(--muted);margin-top:3px">How often to re-send afterwards until the student completes (default 1 = every day)</div>
+        </div>
+        <input type="number" id="inp-auto-reminder-repeat" min="1" max="90" style="width:75px;padding:6px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;outline:none;text-align:center;font-family:inherit;" onchange="updateAutoReminderRepeat(this.value)" />
       </div>
 
       <div class="toggle-row" style="margin-top:20px;border-top:1px solid var(--border);padding-top:20px">
@@ -512,9 +520,17 @@ input:checked+.slider:before{transform:translateX(24px)}
   <div class="panel" id="p-alerts">
     <div style="margin-bottom:16px;">
       <h2 style="font-size:16px;color:var(--navy);font-weight:700">🔔 Cohort Reminders</h2>
-      <p style="font-size:12.5px;color:var(--muted);margin-top:4px">Send targeted reminders. The counts and recipients respect the active Level and Department filters above.</p>
+      <p style="font-size:12.5px;color:var(--muted);margin-top:4px">Send targeted reminders now, or let automation handle them. Manual sends go to <strong>all</strong> pending recipients (no 100 limit) over a single mail connection, so large cohorts are fast and reliable. Counts and recipients respect the active Level and Department filters above.</p>
     </div>
-    
+
+    <!-- Automation status (mirrors Settings → Automated Reminders) -->
+    <div class="card" style="margin-bottom:16px;border-left:4px solid var(--gold);background:#fffdf5;padding:16px 20px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+        <div id="automation-status" style="font-size:12.5px;color:var(--text);line-height:1.5;flex:1;min-width:260px;">Loading automation status…</div>
+        <button class="btn-sm btn-blue" onclick="show('p-settings', document.querySelector('.tab[onclick*=\'p-settings\']'))">⚙️ Configure</button>
+      </div>
+    </div>
+
     <div id="alert-result" style="display:none;margin-bottom:16px"></div>
     
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:20px;margin-bottom:20px;">
@@ -823,6 +839,8 @@ async function loadFlags(){
   document.getElementById('inp-post-delay').value = d.post_delay_days || 0;
   document.getElementById('tog-auto-reminders').checked = !!d.auto_reminders_enabled;
   document.getElementById('inp-auto-reminder-delay').value = d.auto_reminder_delay_days || 5;
+  document.getElementById('inp-auto-reminder-repeat').value = d.auto_reminder_repeat_days || 1;
+  renderAutomationStatus(d);
   document.getElementById('ov-flag').innerHTML =
     d.survey_enabled ? '🟢 <b>Open</b> — students can register and submit surveys'
                      : '🔴 <b>Closed</b> — new submissions are blocked';
@@ -851,6 +869,26 @@ async function updateAutoReminderDelay(val){
   const days = parseInt(val) || 5;
   await fetch('/admin/api/flags',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({auto_reminder_delay_days:days})});
   loadFlags();
+}
+
+async function updateAutoReminderRepeat(val){
+  const days = Math.max(1, parseInt(val) || 1);
+  await fetch('/admin/api/flags',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({auto_reminder_repeat_days:days})});
+  loadFlags();
+}
+
+function renderAutomationStatus(d){
+  const el = document.getElementById('automation-status');
+  if(!el) return;
+  const on = !!d.auto_reminders_enabled;
+  const delay = d.auto_reminder_delay_days || 5;
+  const repeat = d.auto_reminder_repeat_days || 1;
+  const cadence = repeat === 1 ? 'every day' : `every ${repeat} days`;
+  el.innerHTML = on
+    ? `<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--green);margin-right:6px;"></span>
+       <strong style="color:var(--green);">Automation ON</strong> — first reminder <b>${delay} day(s)</b> after registration, then <b>${cadence}</b> until the student takes the test. Runs automatically in the background.`
+    : `<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#94a3b8;margin-right:6px;"></span>
+       <strong style="color:var(--muted);">Automation OFF</strong> — turn it on under <b>Settings → Automated Reminders</b> to send daily reminders automatically.`;
 }
 
 function copyShareLink() {
@@ -1052,8 +1090,8 @@ function renderUsers(data){
       <td style="font-size:11px;color:var(--muted)">${e(u.pre_at||'—')}</td>
       <td style="font-size:11px;color:var(--muted)">${e(u.post_at||'—')}</td>
       <td style="font-size:11px;line-height:1.4;">
-        ${u.pre_reminder_at ? `<div><strong>Pre Sent:</strong> ${e(u.pre_reminder_at)}</div>` : ''}
-        ${u.post_reminder_at ? `<div><strong>Post Sent:</strong> ${e(u.post_reminder_at)}</div>` : ''}
+        ${u.pre_reminder_at ? `<div><strong>Pre Sent:</strong> ${e(u.pre_reminder_at)}${u.pre_reminder_count > 1 ? ` <span class="badge bg-gray" style="padding:1px 6px;font-size:9px;">×${u.pre_reminder_count}</span>` : ''}</div>` : ''}
+        ${u.post_reminder_at ? `<div><strong>Post Sent:</strong> ${e(u.post_reminder_at)}${u.post_reminder_count > 1 ? ` <span class="badge bg-gray" style="padding:1px 6px;font-size:9px;">×${u.post_reminder_count}</span>` : ''}</div>` : ''}
         ${u.reminder_clicked_at ? `<div style="color:#d97706;font-weight:600;"><strong>Clicked:</strong> ${e(u.reminder_clicked_at)}</div>` : ''}
         ${u.completed_after_reminder ? `<div style="color:var(--green);font-weight:700;margin-top:2px;">✨ Completed After Email ✓</div>` : ''}
         ${u.last_email_error ? `<div style="color:#dc2626;font-weight:600;margin-top:4px;line-height:1.2;"><strong>Failed:</strong> ${e(u.last_email_error)} <br><span style="font-size:9px">${e(u.email_failed_at)}</span></div>` : ''}

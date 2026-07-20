@@ -37,6 +37,11 @@ class Settings(BaseSettings):
     email_from: str = "HACRI-E <noreply@juooa.cloud>"
     email_dry_run: bool = True
 
+    # Seconds to pause between messages inside a bulk send. The batch reuses a
+    # single SMTP connection, so this only needs to be a small courtesy delay to
+    # stay under provider per-second limits. Set to 0 to send as fast as possible.
+    email_batch_delay_seconds: float = 0.4
+
     @model_validator(mode="before")
     @classmethod
     def populate_smtp_defaults(cls, data: Any) -> Any:
