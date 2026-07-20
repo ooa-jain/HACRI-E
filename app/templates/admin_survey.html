@@ -1479,6 +1479,11 @@ async function loadBgAnalysis() {
       `).join('');
     }
 
+  } catch(ex) {
+    console.error('Error loading background analysis:', ex);
+  }
+}
+
 async function loadTimelineDepts() {
   const r = await fetch('/admin/api/survey/dept-stats');
   const depts = await r.json();
