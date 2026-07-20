@@ -813,6 +813,7 @@ function show(id, btn){
 
 async function loadFlags(){
   const r = await fetch('/admin/api/flags');
+  if (!r.ok) throw new Error('Failed to load flags');
   const d = await r.json();
   document.getElementById('tog-survey').checked = !!d.survey_enabled;
   document.getElementById('tog-pre-survey').checked = !!d.pre_survey_enabled;
@@ -876,6 +877,7 @@ async function loadUsers(){
   const dept = document.getElementById('dept-filter').value;
   const qStr = new URLSearchParams({dept: dept || '', ug_or_pg: level || ''}).toString();
   const r = await fetch('/admin/api/survey/users?' + qStr);
+  if (!r.ok) throw new Error('Failed to load users');
   users = await r.json();
   renderUsers(users);
   updateOverviewStats(dept, level);
@@ -885,6 +887,7 @@ async function loadUsers(){
 
 async function loadOrientationUsers(){
   const r = await fetch('/admin/api/orientation/responses');
+  if (!r.ok) throw new Error('Failed to load orientation users');
   oriUsers = await r.json();
   renderOrientationUsers(oriUsers);
 }
@@ -1152,6 +1155,36 @@ function loadPendingCount(){
   if (elPost) elPost.textContent = pendingPost;
 }
 
+async function pollAlertTask(taskId, btn, originalText, resElement, onComplete) {
+  const poll = setInterval(async () => {
+    try {
+      const r = await fetch(`/admin/api/alert/status/${taskId}`);
+      if (!r.ok) throw new Error('Failed to get status');
+      const d = await r.json();
+      
+      if (d.status === 'running') {
+        btn.disabled = true;
+        btn.textContent = `Sending… (${d.sent + d.failed}/${d.total})`;
+        resElement.style.cssText = 'display:block;background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:14px;margin-bottom:12px;font-size:13px;color:#1e40af';
+        resElement.innerHTML = `⏳ Sending reminders in background: <b>${d.sent}</b> sent, <b>${d.failed}</b> failed (Progress: <b>${d.sent + d.failed}</b>/<b>${d.total}</b>)`;
+      } else if (d.status === 'completed') {
+        clearInterval(poll);
+        btn.disabled = false;
+        btn.textContent = originalText;
+        resElement.style.cssText = 'display:block;background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:14px;margin-bottom:12px;font-size:13px;color:#15803d';
+        resElement.innerHTML = `✓ Sent: <b>${d.sent}</b>. Failed: <b>${d.failed}</b>. Total pending was: <b>${d.total}</b>.`;
+        if (onComplete) await onComplete();
+      }
+    } catch (ex) {
+      clearInterval(poll);
+      btn.disabled = false;
+      btn.textContent = originalText;
+      resElement.style.cssText = 'display:block;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:14px;margin-bottom:12px;font-size:13px;color:#b91c1c';
+      resElement.innerHTML = '✗ Status Error: ' + ex.message;
+    }
+  }, 1000);
+}
+
 async function sendPreAlert(){
   const btn = event.target; btn.disabled=true; btn.textContent='Sending…';
   const res = document.getElementById('alert-result'); res.style.display='none';
@@ -1160,13 +1193,21 @@ async function sendPreAlert(){
   const params = new URLSearchParams({dept: dept || '', ug_or_pg: level || ''});
   try{
     const r = await fetch('/admin/api/alert/pre-pending?' + params.toString(),{method:'POST'});
+    if (!r.ok) throw new Error('Server returned error status');
     const d = await r.json();
-    res.style.cssText='display:block;background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:14px;margin-bottom:12px;font-size:13px;color:#15803d';
-    res.innerHTML=`✓ Sent: <b>${d.sent}</b>. Failed: <b>${d.failed}</b>. Total pending: <b>${d.total_pending}</b>.`;
+    if (d.task_id) {
+      await pollAlertTask(d.task_id, btn, '📧 Send Baseline Survey Reminders', res, loadUsers);
+    } else {
+      res.style.cssText='display:block;background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:14px;margin-bottom:12px;font-size:13px;color:#15803d';
+      res.innerHTML=`✓ Sent: <b>${d.sent}</b>. Failed: <b>${d.failed}</b>. Total pending: <b>${d.total_pending}</b>.`;
+      btn.disabled=false; btn.textContent='📧 Send Baseline Survey Reminders';
+      await loadUsers();
+    }
   }catch(ex){
     res.style.cssText='display:block;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:14px;margin-bottom:12px;font-size:13px;color:#b91c1c';
     res.innerHTML='✗ Error: '+ex.message;
-  }finally{ btn.disabled=false; btn.textContent='📧 Send Baseline Survey Reminders'; await loadUsers(); }
+    btn.disabled=false; btn.textContent='📧 Send Baseline Survey Reminders';
+  }
 }
 
 async function sendPostAlert(){
@@ -1177,13 +1218,21 @@ async function sendPostAlert(){
   const params = new URLSearchParams({dept: dept || '', ug_or_pg: level || ''});
   try{
     const r = await fetch('/admin/api/alert/post-pending?' + params.toString(),{method:'POST'});
+    if (!r.ok) throw new Error('Server returned error status');
     const d = await r.json();
-    res.style.cssText='display:block;background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:14px;margin-bottom:12px;font-size:13px;color:#15803d';
-    res.innerHTML=`✓ Sent: <b>${d.sent}</b>. Failed: <b>${d.failed}</b>. Total pending: <b>${d.total_pending}</b>.`;
+    if (d.task_id) {
+      await pollAlertTask(d.task_id, btn, '📧 Send Post-Workshop Survey Reminders', res, loadUsers);
+    } else {
+      res.style.cssText='display:block;background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:14px;margin-bottom:12px;font-size:13px;color:#15803d';
+      res.innerHTML=`✓ Sent: <b>${d.sent}</b>. Failed: <b>${d.failed}</b>. Total pending: <b>${d.total_pending}</b>.`;
+      btn.disabled=false; btn.textContent='📧 Send Post-Workshop Survey Reminders';
+      await loadUsers();
+    }
   }catch(ex){
     res.style.cssText='display:block;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:14px;margin-bottom:12px;font-size:13px;color:#b91c1c';
     res.innerHTML='✗ Error: '+ex.message;
-  }finally{ btn.disabled=false; btn.textContent='📧 Send Post-Workshop Survey Reminders'; await loadUsers(); }
+    btn.disabled=false; btn.textContent='📧 Send Post-Workshop Survey Reminders';
+  }
 }
 
 async function sendResultsMail(btn, email) {
@@ -1264,21 +1313,25 @@ async function resendDeptReminder(btn, dept, type) {
     const r = await fetch(url, {method: 'POST'});
     if (!r.ok) throw new Error('Server returned error status');
     const d = await r.json();
-    res.style.cssText = 'display:block;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:10px;padding:14px;margin-bottom:12px;font-size:13px;color:#065f46';
-    res.innerHTML = `<strong>✓ Success:</strong> Sent ${d.sent} reminders for department ${e(dept)} (${d.failed} failed).`;
-    await loadEmailNotificationStats();
+    if (d.task_id) {
+      await pollAlertTask(d.task_id, btn, originalText, res, loadEmailNotificationStats);
+    } else {
+      res.style.cssText = 'display:block;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:10px;padding:14px;margin-bottom:12px;font-size:13px;color:#065f46';
+      res.innerHTML = `<strong>✓ Success:</strong> Sent ${d.sent} reminders for department ${e(dept)} (${d.failed} failed).`;
+      btn.disabled = false; btn.textContent = originalText;
+      await loadEmailNotificationStats();
+    }
   } catch (err) {
     res.style.cssText = 'display:block;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:14px;margin-bottom:12px;font-size:13px;color:#b91c1c';
     res.innerHTML = `<strong>✗ Error:</strong> ${e(err.message)}`;
-  } finally {
-    btn.disabled = false;
-    btn.textContent = originalText;
+    btn.disabled = false; btn.textContent = originalText;
   }
 }
 
 let deptStats = [];
 async function loadDeptStats() {
   const r = await fetch('/admin/api/survey/dept-stats');
+  if (!r.ok) throw new Error('Failed to load dept stats');
   deptStats = await r.json();
   renderDeptStats(deptStats);
 }
@@ -1369,6 +1422,7 @@ async function loadBgAnalysis() {
     const params = new URLSearchParams({dept: dept || '', ug_or_pg: level || ''});
     
     const r = await fetch('/admin/api/survey/background-analysis?' + params.toString());
+    if (!r.ok) throw new Error('Failed to load background analysis');
     const d = await r.json();
     
     // Update stats
@@ -1486,6 +1540,7 @@ async function loadBgAnalysis() {
 
 async function loadTimelineDepts() {
   const r = await fetch('/admin/api/survey/dept-stats');
+  if (!r.ok) throw new Error('Failed to load timeline departments');
   const depts = await r.json();
   const select = document.getElementById('timeline-dept-filter');
   
@@ -1549,6 +1604,7 @@ async function loadTimeline() {
   
   try {
     const r = await fetch('/admin/api/survey/users?dept=' + encodeURIComponent(dept));
+    if (!r.ok) throw new Error('Failed to load timeline data');
     const users = await r.json();
     
     // Sort users by created_at_iso ascending (oldest first / who started first)
