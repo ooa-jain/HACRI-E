@@ -363,9 +363,66 @@ async def api_survey_dept_stats(request: Request):
     return JSONResponse(stats)
 
 
+class FakeRequest:
+    def __init__(self, base_url: str):
+        self.base_url = base_url
+
+
+async def run_bulk_reminder_task(task_id: str, type_name: str, pending_users: list[dict], base_url: str):
+    import asyncio
+    from datetime import datetime, timezone
+    from app.db import get_db
+    
+    db = get_db()
+    req = FakeRequest(base_url)
+    
+    for i, u in enumerate(pending_users):
+        if i > 0:
+            await asyncio.sleep(2.5)  # respect SMTP rate limits (Hostinger strict limits)
+            
+        sent_inc = 0
+        failed_inc = 0
+        try:
+            if type_name == "pre-pending":
+                await _send_pre_alert_email(u["email"], u["name"], req)
+                await db["users"].update_one(
+                    {"email": u["email"]},
+                    {"$set": {"pre_reminder_sent_at": datetime.now(timezone.utc)}}
+                )
+            else:
+                await _send_alert_email(u["email"], u["name"], req)
+                await db["users"].update_one(
+                    {"email": u["email"]},
+                    {"$set": {"post_reminder_sent_at": datetime.now(timezone.utc)}}
+                )
+            sent_inc = 1
+        except Exception as e:
+            log.warning("Bulk email failed for %s: %s", u["email"], e)
+            failed_inc = 1
+            
+        await db["admin_tasks"].update_one(
+            {"_id": task_id},
+            {
+                "$inc": {"sent": sent_inc, "failed": failed_inc},
+                "$set": {"updated_at": datetime.now(timezone.utc)}
+            }
+        )
+        
+    await db["admin_tasks"].update_one(
+        {"_id": task_id},
+        {
+            "$set": {
+                "status": "completed",
+                "updated_at": datetime.now(timezone.utc)
+            }
+        }
+    )
+
+
 @router.post("/admin/api/alert/pre-pending")
 async def api_send_pre_pending(
     request: Request,
+    background_tasks: BackgroundTasks,
     dept: str = Query(default=""),
     ug_or_pg: str = Query(default=""),
 ):
@@ -373,21 +430,37 @@ async def api_send_pre_pending(
         raise HTTPException(status_code=403)
     users = await list_survey_users(dept=dept or None, ug_or_pg=ug_or_pg or None)
     pending = [u for u in users if u.get("status") in ("not_started", None)]
-    sent = failed = 0
-    from datetime import datetime, timezone
+    
+    import secrets
+    task_id = "pre_" + secrets.token_hex(8)
+    
     db = get_db()
-    for u in pending:
-        try:
-            await _send_pre_alert_email(u["email"], u["name"], request)
-            await db["users"].update_one(
-                {"email": u["email"]},
-                {"$set": {"pre_reminder_sent_at": datetime.now(timezone.utc)}}
-            )
-            sent += 1
-        except Exception as e:
-            log.warning("Pre alert email failed for %s: %s", u["email"], e)
-            failed += 1
-    return JSONResponse({"ok": True, "sent": sent, "failed": failed, "total_pending": len(pending)})
+    from datetime import datetime, timezone
+    await db["admin_tasks"].insert_one({
+        "_id": task_id,
+        "type": "pre-pending",
+        "status": "running",
+        "total": len(pending),
+        "sent": 0,
+        "failed": 0,
+        "started_at": datetime.now(timezone.utc),
+        "updated_at": datetime.now(timezone.utc)
+    })
+    
+    base_url = str(request.base_url).rstrip("/")
+    background_tasks.add_task(
+        run_bulk_reminder_task,
+        task_id,
+        "pre-pending",
+        pending,
+        base_url
+    )
+    
+    return JSONResponse({
+        "ok": True,
+        "task_id": task_id,
+        "total_pending": len(pending)
+    })
 
 
 async def _send_pre_alert_email(email: str, name: str, request: Request) -> None:
@@ -411,6 +484,7 @@ async def api_orientation_responses(request: Request):
 @router.post("/admin/api/alert/post-pending")
 async def api_send_alert(
     request: Request,
+    background_tasks: BackgroundTasks,
     dept: str = Query(default=""),
     ug_or_pg: str = Query(default=""),
 ):
@@ -418,21 +492,37 @@ async def api_send_alert(
         raise HTTPException(status_code=403)
     users = await list_survey_users(dept=dept or None, ug_or_pg=ug_or_pg or None)
     pending = [u for u in users if u.get("status") == STATUS_PRE_DONE]
-    sent = failed = 0
-    from datetime import datetime, timezone
+    
+    import secrets
+    task_id = "post_" + secrets.token_hex(8)
+    
     db = get_db()
-    for u in pending:
-        try:
-            await _send_alert_email(u["email"], u["name"], request)
-            await db["users"].update_one(
-                {"email": u["email"]},
-                {"$set": {"post_reminder_sent_at": datetime.now(timezone.utc)}}
-            )
-            sent += 1
-        except Exception as e:
-            log.warning("Alert email failed for %s: %s", u["email"], e)
-            failed += 1
-    return JSONResponse({"ok": True, "sent": sent, "failed": failed, "total_pending": len(pending)})
+    from datetime import datetime, timezone
+    await db["admin_tasks"].insert_one({
+        "_id": task_id,
+        "type": "post-pending",
+        "status": "running",
+        "total": len(pending),
+        "sent": 0,
+        "failed": 0,
+        "started_at": datetime.now(timezone.utc),
+        "updated_at": datetime.now(timezone.utc)
+    })
+    
+    base_url = str(request.base_url).rstrip("/")
+    background_tasks.add_task(
+        run_bulk_reminder_task,
+        task_id,
+        "post-pending",
+        pending,
+        base_url
+    )
+    
+    return JSONResponse({
+        "ok": True,
+        "task_id": task_id,
+        "total_pending": len(pending)
+    })
 
 
 async def _send_alert_email(email: str, name: str, request: Request) -> None:
@@ -442,6 +532,24 @@ async def _send_alert_email(email: str, name: str, request: Request) -> None:
     base_url = str(request.base_url).rstrip("/")
     resume_link = f"{base_url}/resume/{slug}?src=reminder"
     await emailer.send_post_reminder_email(email, name, resume_link)
+
+
+@router.get("/admin/api/alert/status/{task_id}")
+async def api_get_alert_status(request: Request, task_id: str):
+    if not _is_survey_admin(request):
+        raise HTTPException(status_code=403)
+    db = get_db()
+    task = await db["admin_tasks"].find_one({"_id": task_id})
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    return JSONResponse({
+        "task_id": task["_id"],
+        "type": task["type"],
+        "status": task["status"],
+        "total": task["total"],
+        "sent": task["sent"],
+        "failed": task["failed"]
+    })
 
 
 @router.post("/admin/api/send-results/{email}")
@@ -721,6 +829,19 @@ async def run_auto_reminder_worker():
                         continue
                     
                     try:
+                        # Atomic lock: try to claim this reminder task
+                        result = await db["users"].update_one(
+                            {
+                                "email": email, 
+                                "pre_reminder_sent_at": {"$exists": False}
+                            },
+                            {"$set": {"pre_reminder_sent_at": "sending"}}
+                        )
+                        
+                        if result.modified_count == 0:
+                            # Another worker already claimed this user
+                            continue
+                            
                         slug = email_to_slug(email)
                         base_url = settings.public_base_url.rstrip("/")
                         resume_link = f"{base_url}/resume/{slug}?src=reminder"
@@ -733,8 +854,18 @@ async def run_auto_reminder_worker():
                             {"$set": {"pre_reminder_sent_at": datetime.now(timezone.utc)}}
                         )
                         logger.info(f"Automated pre-reminder successfully sent and updated for {email}.")
+                        
+                        # Respect Hostinger rate limit
+                        await asyncio.sleep(2.5)
+                        
                     except Exception as ex:
                         logger.error(f"Failed to send auto-reminder to {email}: {ex}")
+                        # Revert lock on failure so it can be retried later
+                        await db["users"].update_one(
+                            {"email": email, "pre_reminder_sent_at": "sending"},
+                            {"$unset": {"pre_reminder_sent_at": ""}}
+                        )
+                        await asyncio.sleep(5.0)  # Back off a bit on failure
             else:
                 logger.info("Auto-reminders are disabled.")
         except Exception as e:
