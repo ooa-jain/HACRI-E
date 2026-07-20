@@ -443,6 +443,10 @@ async def api_send_pre_pending(
     users = await list_survey_users(dept=dept or None, ug_or_pg=ug_or_pg or None)
     pending = [u for u in users if u.get("status") in ("not_started", None)]
     
+    # Sort so those who never received a reminder come first, then limit to 100
+    pending.sort(key=lambda u: bool(u.get("pre_reminder_at")))
+    pending = pending[:100]
+    
     import secrets
     task_id = "pre_" + secrets.token_hex(8)
     
@@ -504,6 +508,10 @@ async def api_send_alert(
         raise HTTPException(status_code=403)
     users = await list_survey_users(dept=dept or None, ug_or_pg=ug_or_pg or None)
     pending = [u for u in users if u.get("status") == STATUS_PRE_DONE]
+    
+    # Sort so those who never received a reminder come first, then limit to 100
+    pending.sort(key=lambda u: bool(u.get("post_reminder_at")))
+    pending = pending[:100]
     
     import secrets
     task_id = "post_" + secrets.token_hex(8)
