@@ -38,6 +38,16 @@ _env = Environment(
 _STATIC_LOGO_PATH = Path(__file__).parent / "static" / "logo.png"
 
 
+def is_rate_limit_error(exc: Exception) -> bool:
+    """True when an SMTP error is a provider outbound rate-limit (e.g. Hostinger
+    451 "hostinger_out_ratelimit"), as opposed to a hard delivery failure."""
+    code = getattr(exc, "code", None)
+    if code in (421, 451, 452):
+        return True
+    s = str(exc).lower()
+    return any(t in s for t in ("ratelimit", "rate limit", "too many", "4.7.1"))
+
+
 # ── Shared SMTP helpers ────────────────────────────────────────────────────────
 def _is_dry_run() -> bool:
     """Dry-run when explicitly enabled or when no SMTP host is configured."""

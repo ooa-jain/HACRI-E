@@ -23,27 +23,66 @@
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Outfit',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
 
-/* Topbar */
-.topbar{
-  background: var(--navy);
-  color: #fff;
-  padding: 0 24px;
+/* ── Sidebar shell layout ── */
+.shell{display:flex;min-height:100vh}
+.sidebar{
+  width: 240px;
+  flex-shrink: 0;
+  background: linear-gradient(180deg, var(--navy) 0%, #14203a 100%);
+  color: #e2e8f0;
   display: flex;
-  align-items: center;
-  gap: 20px;
-  min-height: 64px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  flex-direction: column;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+  box-shadow: 2px 0 12px rgba(0,0,0,0.12);
 }
-.topbar-brand {
-  font-weight: 800;
-  font-size: 18px;
-  flex: 1;
-  letter-spacing: 0.5px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.side-brand{
+  padding: 22px 20px 18px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
 }
-.topbar-brand span{color:var(--gold)}
+.side-brand .brand-top{font-weight:800;font-size:16px;letter-spacing:0.5px;color:#fff}
+.side-brand .brand-top span{color:var(--gold)}
+.side-brand .brand-sub{font-size:11px;color:#94a3b8;margin-top:3px;text-transform:uppercase;letter-spacing:1px;font-weight:600}
+.side-nav{flex:1;padding:14px 10px;display:flex;flex-direction:column;gap:2px}
+.nav-item{
+  display:flex;align-items:center;gap:10px;
+  width:100%;text-align:left;
+  padding:11px 14px;
+  border:none;background:none;cursor:pointer;
+  color:#cbd5e1;font-family:inherit;font-size:13.5px;font-weight:600;
+  border-radius:10px;
+  border-left:3px solid transparent;
+  transition:all .18s ease;
+  white-space:nowrap;
+}
+.nav-item:hover{background:rgba(255,255,255,0.06);color:#fff}
+.nav-item.on{
+  background:rgba(201,168,76,0.14);
+  color:#fff;
+  border-left-color:var(--gold);
+}
+.nav-item .ni-icon{font-size:16px;width:22px;text-align:center;flex-shrink:0}
+.side-foot{padding:14px 16px;border-top:1px solid rgba(255,255,255,0.08)}
+.side-logout{
+  display:block;text-align:center;text-decoration:none;
+  background:rgba(239,68,68,0.15);color:#fca5a5;
+  border:1px solid rgba(239,68,68,0.3);
+  padding:9px 12px;border-radius:10px;font-size:13px;font-weight:700;
+  transition:all .2s ease;
+}
+.side-logout:hover{background:#ef4444;color:#fff}
+.main{flex:1;min-width:0;display:flex;flex-direction:column}
+.main-header{
+  background:var(--card);
+  border-bottom:1px solid var(--border);
+  padding:16px 28px;
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  position:sticky;top:0;z-index:50;
+}
+.main-header h1{font-size:18px;font-weight:800;color:var(--navy)}
+.main-header .hdr-sub{font-size:12px;color:var(--muted);margin-top:2px}
 
 /* Buttons */
 .btn-sm{
@@ -63,39 +102,7 @@ body{font-family:'Outfit',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif
 .btn-blue{background:var(--navy2);color:#fff}
 .btn-blue:hover{background:#1B2A4A;transform:translateY(-1px)}
 
-.content{padding:28px 24px;max-width:1200px;margin:0 auto}
-
-/* Tabs */
-.tabs{
-  display: flex;
-  gap: 8px;
-  margin-bottom: 24px;
-  border-bottom: 2px solid var(--border);
-  padding-bottom: 0;
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-.tabs::-webkit-scrollbar { display: none; }
-.tab{
-  padding: 12px 20px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  color: var(--muted);
-  background: none;
-  border: none;
-  border-bottom: 3px solid transparent;
-  margin-bottom: -2px;
-  font-family: inherit;
-  transition: all 0.2s ease;
-  white-space: nowrap;
-}
-.tab:hover{color: var(--navy)}
-.tab.on{
-  color: var(--navy);
-  border-bottom-color: var(--gold);
-  font-weight: 700;
-}
+.content{padding:24px 28px;max-width:1280px;margin:0 auto;width:100%}
 
 .panel{display:none}.panel.on{display:block;animation:up .3s ease-out}
 @keyframes up{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
@@ -215,28 +222,43 @@ input:checked+.slider:before{transform:translateX(24px)}
   margin-bottom: 20px;
 }
 
-@media (max-width: 680px) {
-  .topbar {
-    flex-direction: column;
-    align-items: stretch;
-    padding: 16px 20px;
-    gap: 12px;
+/* Mobile: sidebar collapses to a horizontal scrollable bar on top */
+@media (max-width: 900px) {
+  .shell{flex-direction:column}
+  .sidebar{
+    width:100%;height:auto;position:static;
+    flex-direction:column;overflow:visible;
   }
-  .topbar-brand {
-    font-size: 16px;
-    text-align: center;
+  .side-nav{
+    flex-direction:row;overflow-x:auto;padding:8px 10px;gap:4px;
+    scrollbar-width:none;
   }
-  .content {
-    padding: 16px;
-  }
-  .card {
-    padding: 16px;
-  }
-  .tab {
-    padding: 10px 14px;
-    font-size: 13px;
-  }
+  .side-nav::-webkit-scrollbar{display:none}
+  .nav-item{border-left:none;border-bottom:3px solid transparent;border-radius:8px 8px 0 0;padding:9px 12px;font-size:12.5px}
+  .nav-item.on{border-left:none;border-bottom-color:var(--gold)}
+  .side-brand{padding:14px 16px 10px;display:flex;align-items:center;justify-content:space-between}
+  .side-foot{display:none}
+  .main-header{padding:12px 16px}
+  .content{padding:16px}
+  .card{padding:16px}
 }
+
+/* Segment chips (Email Notifications drill-down) */
+.seg-chip{
+  padding:7px 14px;border-radius:20px;border:1.5px solid var(--border);
+  background:#fff;color:var(--muted);font-size:12px;font-weight:700;
+  cursor:pointer;font-family:inherit;transition:all .18s ease;white-space:nowrap;
+}
+.seg-chip:hover{border-color:var(--navy);color:var(--navy)}
+.seg-chip.on{background:var(--navy);border-color:var(--navy);color:#fff}
+.funnel-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px}
+.funnel-card{
+  background:var(--card);border:1px solid var(--border);border-radius:12px;
+  padding:16px;box-shadow:0 2px 8px rgba(0,0,0,0.02);
+}
+.funnel-n{font-size:28px;font-weight:800;color:var(--navy)}
+.funnel-l{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;font-weight:700;margin-top:3px}
+.funnel-pct{font-size:11px;font-weight:700;margin-top:5px}
 @keyframes modalFadeIn {
   from { opacity: 0; transform: translateY(-10px); }
   to { opacity: 1; transform: translateY(0); }
@@ -258,22 +280,39 @@ input:checked+.slider:before{transform:translateX(24px)}
 </style>
 </head>
 <body>
-<div class="topbar">
-  <div class="topbar-brand"><span>JAIN UNIVERSITY</span> · AI Survey Admin</div>
-  <a href="/admin/survey/logout" class="btn-sm btn-red">Sign out</a>
+<div class="shell">
+<aside class="sidebar">
+  <div class="side-brand">
+    <div>
+      <div class="brand-top">JAIN <span>UNIVERSITY</span></div>
+      <div class="brand-sub">AI Survey Admin</div>
+    </div>
+  </div>
+  <nav class="side-nav">
+    <button class="nav-item on" data-title="Overview" onclick="show('p-overview',this)"><span class="ni-icon">📊</span><span>Overview</span></button>
+    <button class="nav-item" data-title="Users" onclick="show('p-users',this)"><span class="ni-icon">👥</span><span>Users</span></button>
+    <button class="nav-item" data-title="Email Notifications & Tracking" onclick="show('p-email-notifications',this)"><span class="ni-icon">📧</span><span>Email Notifications</span></button>
+    <button class="nav-item" data-title="Cohort Reminders" onclick="show('p-alerts',this)"><span class="ni-icon">🔔</span><span>Reminders</span></button>
+    <button class="nav-item" data-title="Department Analysis" onclick="show('p-dept-analysis',this)"><span class="ni-icon">🏢</span><span>Departments</span></button>
+    <button class="nav-item" data-title="Timeline & Timesheet" onclick="show('p-timeline',this)"><span class="ni-icon">⏱️</span><span>Timeline</span></button>
+    <button class="nav-item" data-title="Parental Background" onclick="show('p-bg-analysis',this)"><span class="ni-icon">👨‍👩‍👦</span><span>Parental Background</span></button>
+    <button class="nav-item" data-title="Orientation Responses" onclick="show('p-orient',this)"><span class="ni-icon">🎓</span><span>Orientation</span></button>
+    <button class="nav-item" data-title="Settings" onclick="show('p-settings',this)"><span class="ni-icon">⚙️</span><span>Settings</span></button>
+  </nav>
+  <div class="side-foot">
+    <a href="/admin/survey/logout" class="side-logout">🚪 Sign out</a>
+  </div>
+</aside>
+
+<main class="main">
+<div class="main-header">
+  <div>
+    <h1 id="section-title">Overview</h1>
+    <div class="hdr-sub">Office of Academics · HACRI-E Survey Administration</div>
+  </div>
+  <a href="/admin/survey/logout" class="btn-sm btn-red" style="text-decoration:none;">Sign out</a>
 </div>
 <div class="content">
-  <div class="tabs">
-    <button class="tab on" onclick="show('p-overview',this)">📊 Overview</button>
-    <button class="tab" onclick="show('p-settings',this)">⚙️ Settings</button>
-    <button class="tab" onclick="show('p-users',this)">👥 Users</button>
-    <button class="tab" onclick="show('p-orient',this)">🎓 Orientation</button>
-    <button class="tab" onclick="show('p-alerts',this)">🔔 Alerts</button>
-    <button class="tab" onclick="show('p-email-notifications',this)">📧 Email Notifications</button>
-    <button class="tab" onclick="show('p-dept-analysis',this)">🏢 Department Analysis</button>
-    <button class="tab" onclick="show('p-bg-analysis',this)">👨‍👩‍👦 Parental Background</button>
-    <button class="tab" onclick="show('p-timeline',this)">⏱️ Timeline</button>
-  </div>
 
   <!-- Global Cohort Filters -->
   <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px 20px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
@@ -316,9 +355,9 @@ input:checked+.slider:before{transform:translateX(24px)}
       <div style="display: flex; flex-direction: column; gap: 16px;">
         <div class="stat-grid" style="margin-bottom: 0;">
           <div class="stat"><div class="stat-n" id="ov-total">—</div><div class="stat-l">Registered</div></div>
-          <div class="stat"><div class="stat-n" id="ov-pre">—</div><div class="stat-l">Pre Done</div></div>
+          <div class="stat"><div class="stat-n" id="ov-pre">—</div><div class="stat-l">Pre Done</div><div style="font-size:11px;font-weight:700;color:var(--teal);margin-top:3px;" id="ov-pre-pct"></div></div>
           <div class="stat"><div class="stat-n" id="ov-pending-pre">—</div><div class="stat-l">Pending Baseline</div></div>
-          <div class="stat"><div class="stat-n" id="ov-post">—</div><div class="stat-l">Post Done</div></div>
+          <div class="stat"><div class="stat-n" id="ov-post">—</div><div class="stat-l">Post Done</div><div style="font-size:11px;font-weight:700;color:var(--green);margin-top:3px;" id="ov-post-pct"></div></div>
           <div class="stat"><div class="stat-n" id="ov-pending">—</div><div class="stat-l">Pending Post</div></div>
         </div>
         <div class="card" style="margin-bottom: 0;">
@@ -527,7 +566,7 @@ input:checked+.slider:before{transform:translateX(24px)}
     <div class="card" style="margin-bottom:16px;border-left:4px solid var(--gold);background:#fffdf5;padding:16px 20px;">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
         <div id="automation-status" style="font-size:12.5px;color:var(--text);line-height:1.5;flex:1;min-width:260px;">Loading automation status…</div>
-        <button class="btn-sm btn-blue" onclick="show('p-settings', document.querySelector('.tab[onclick*=\'p-settings\']'))">⚙️ Configure</button>
+        <button class="btn-sm btn-blue" onclick="show('p-settings', document.querySelector('.nav-item[onclick*=\'p-settings\']'))">⚙️ Configure</button>
       </div>
     </div>
 
@@ -569,28 +608,71 @@ input:checked+.slider:before{transform:translateX(24px)}
   <div class="panel" id="p-email-notifications">
     <div class="card" style="margin-bottom:16px;">
       <h3 style="font-size:15px;color:var(--navy);margin-bottom:6px;font-weight:700">📧 Email Notifications &amp; Tracking</h3>
-      <p style="font-size:12.5px;color:var(--muted);margin-bottom:16px">Track department-wise reminder delivery, user link clicks, survey completion rates, and active drafts.</p>
+      <p style="font-size:12.5px;color:var(--muted);">Reminder delivery → link clicks → submissions, per department and per student. Everything below respects the Level / Department filters at the top.</p>
     </div>
-    
+
     <div id="email-notif-result" style="display:none;margin-bottom:16px"></div>
-    
+
+    <!-- Engagement funnel -->
+    <div class="funnel-grid" id="email-funnel">
+      <div class="funnel-card"><div class="funnel-n" id="fn-total">—</div><div class="funnel-l">Registered</div></div>
+      <div class="funnel-card" style="border-left:4px solid var(--navy2);"><div class="funnel-n" id="fn-reminded">—</div><div class="funnel-l">Reminder Received</div><div class="funnel-pct" style="color:var(--navy2);" id="fn-reminded-pct"></div></div>
+      <div class="funnel-card" style="border-left:4px solid #d97706;"><div class="funnel-n" id="fn-clicked">—</div><div class="funnel-l">Clicked &amp; Entered</div><div class="funnel-pct" style="color:#d97706;" id="fn-clicked-pct"></div></div>
+      <div class="funnel-card" style="border-left:4px solid var(--green);"><div class="funnel-n" id="fn-converted">—</div><div class="funnel-l">Clicked &amp; Submitted</div><div class="funnel-pct" style="color:var(--green);" id="fn-converted-pct"></div></div>
+      <div class="funnel-card" style="border-left:4px solid #dc2626;background:#fef7f7;"><div class="funnel-n" id="fn-stuck" style="color:#dc2626;">—</div><div class="funnel-l">Clicked, NOT Submitted</div><div class="funnel-pct" style="color:#dc2626;" id="fn-stuck-pct"></div></div>
+    </div>
+
+    <!-- Student drill-down by engagement segment -->
+    <div class="card" style="padding:0;overflow:hidden;margin-bottom:20px;">
+      <div style="padding:16px 20px;border-bottom:1px solid var(--border);background:#fafafa;">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+          <h4 style="font-size:14px;font-weight:700;color:var(--navy);">🎯 Student Engagement Drill-Down</h4>
+          <button class="btn-sm btn-green" id="segment-send-btn" onclick="sendSegmentReminder()" disabled>📧 Send Reminder to Segment</button>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;" id="segment-chips">
+          <button class="seg-chip on" data-seg="clicked_not_submitted" onclick="setSegment(this)">⚠️ Clicked, NOT Submitted (<span id="segn-clicked_not_submitted">0</span>)</button>
+          <button class="seg-chip" data-seg="clicked_submitted" onclick="setSegment(this)">✅ Clicked &amp; Submitted (<span id="segn-clicked_submitted">0</span>)</button>
+          <button class="seg-chip" data-seg="sent_not_clicked" onclick="setSegment(this)">📭 Reminded, Never Clicked (<span id="segn-sent_not_clicked">0</span>)</button>
+          <button class="seg-chip" data-seg="never_reminded" onclick="setSegment(this)">🕐 Pending, Never Reminded (<span id="segn-never_reminded">0</span>)</button>
+        </div>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="mtable" id="segment-table" style="min-width:1000px;">
+          <thead>
+            <tr>
+              <th>#</th><th>Name</th><th>Email</th><th>Department</th><th>Status</th>
+              <th>Reminders Sent</th><th>Clicked At</th><th>Next Step Needed</th>
+            </tr>
+          </thead>
+          <tbody id="segment-tbody">
+            <tr><td colspan="8" style="text-align:center;padding:20px;color:var(--muted)">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Department summary -->
     <div class="card" style="padding:0;overflow-x:auto;">
-      <table class="mtable" id="email-notif-table" style="min-width:1000px;">
+      <div style="padding:16px 20px;border-bottom:1px solid var(--border);background:#fafafa;">
+        <h4 style="font-size:14px;font-weight:700;color:var(--navy);">🏢 Department Summary</h4>
+      </div>
+      <table class="mtable" id="email-notif-table" style="min-width:1050px;">
         <thead>
           <tr>
             <th>#</th>
             <th>Department</th>
-            <th>Registered Students</th>
-            <th>Pre Reminders Sent</th>
-            <th>Post Reminders Sent</th>
-            <th>Link Clicked &amp; Entered</th>
+            <th>Registered</th>
+            <th>Pre Sent</th>
+            <th>Post Sent</th>
+            <th>Clicked &amp; Entered</th>
             <th>Completed after Email</th>
+            <th>Clicked, NOT Submitted</th>
             <th>Left in Draft</th>
             <th>Actions / Re-send</th>
           </tr>
         </thead>
         <tbody id="email-notif-tbody">
-          <tr><td colspan="9" style="text-align:center;padding:20px;color:var(--muted)">Loading notification tracking data…</td></tr>
+          <tr><td colspan="10" style="text-align:center;padding:20px;color:var(--muted)">Loading notification tracking data…</td></tr>
         </tbody>
       </table>
     </div>
@@ -805,7 +887,9 @@ input:checked+.slider:before{transform:translateX(24px)}
       </div>
     </div>
   </div>
-</div>
+</div><!-- /.content -->
+</main>
+</div><!-- /.shell -->
 
 <script>
 let deptsInitialized = false;
@@ -815,9 +899,12 @@ let adminChartInstance = null;
 
 function show(id, btn){
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
+  document.querySelectorAll('.nav-item').forEach(t=>t.classList.remove('on'));
   document.getElementById(id).classList.add('on');
   if(btn) btn.classList.add('on');
+  const titleEl = document.getElementById('section-title');
+  if (titleEl && btn && btn.dataset.title) titleEl.textContent = btn.dataset.title;
+  window.scrollTo({top: 0});
   if(id==='p-users' && users.length===0) loadUsers();
   if(id==='p-orient' && oriUsers.length===0) loadOrientationUsers();
   if(id==='p-alerts') loadPendingCount();
@@ -949,6 +1036,10 @@ function applyFilters() {
   if (bgPanel && bgPanel.classList.contains('on')) {
     loadBgAnalysis();
   }
+  const emailPanel = document.getElementById('p-email-notifications');
+  if (emailPanel && emailPanel.classList.contains('on')) {
+    loadEmailNotificationStats();
+  }
 }
 
 function updateOverviewStats(dept, level) {
@@ -968,6 +1059,8 @@ function updateOverviewStats(dept, level) {
   document.getElementById('ov-pending-pre').textContent = pendingPre;
   document.getElementById('ov-post').textContent    = post;
   document.getElementById('ov-pending').textContent = pendingPost;
+  document.getElementById('ov-pre-pct').textContent  = total > 0 ? ((pre  / total) * 100).toFixed(1) + '% of registered' : '';
+  document.getElementById('ov-post-pct').textContent = total > 0 ? ((post / total) * 100).toFixed(1) + '% of registered' : '';
 
   // Update dynamic pie chart & legend percentages
   const pctPost = total > 0 ? ((post / total) * 100).toFixed(1) : 0;
@@ -1206,12 +1299,31 @@ async function pollAlertTask(taskId, btn, originalText, resElement, onComplete) 
         btn.textContent = `Sending… (${d.sent + d.failed}/${d.total})`;
         resElement.style.cssText = 'display:block;background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:14px;margin-bottom:12px;font-size:13px;color:#1e40af';
         resElement.innerHTML = `⏳ Sending reminders in background: <b>${d.sent}</b> sent, <b>${d.failed}</b> failed (Progress: <b>${d.sent + d.failed}</b>/<b>${d.total}</b>)`;
+      } else if (d.status === 'cooling_down') {
+        btn.disabled = true;
+        btn.textContent = 'Cooling down…';
+        resElement.style.cssText = 'display:block;background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:14px;margin-bottom:12px;font-size:13px;color:#b45309';
+        resElement.innerHTML = `⏸️ Mail server rate-limited — pausing briefly then continuing. <b>${d.sent}</b> sent so far of <b>${d.total}</b>.`;
       } else if (d.status === 'completed') {
         clearInterval(poll);
         btn.disabled = false;
         btn.textContent = originalText;
         resElement.style.cssText = 'display:block;background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:14px;margin-bottom:12px;font-size:13px;color:#15803d';
         resElement.innerHTML = `✓ Sent: <b>${d.sent}</b>. Failed: <b>${d.failed}</b>. Total pending was: <b>${d.total}</b>.`;
+        if (onComplete) await onComplete();
+      } else if (d.status === 'rate_limited') {
+        clearInterval(poll);
+        btn.disabled = false;
+        btn.textContent = originalText;
+        resElement.style.cssText = 'display:block;background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:14px;margin-bottom:12px;font-size:13px;color:#b45309';
+        resElement.innerHTML = `⚠️ Sent <b>${d.sent}</b> of <b>${d.total}</b>, then the mail provider’s hourly limit was hit. ${e(d.error || 'Wait for the quota to reset, then click send again to continue with the rest.')}`;
+        if (onComplete) await onComplete();
+      } else if (d.status === 'error') {
+        clearInterval(poll);
+        btn.disabled = false;
+        btn.textContent = originalText;
+        resElement.style.cssText = 'display:block;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:14px;margin-bottom:12px;font-size:13px;color:#b91c1c';
+        resElement.innerHTML = `✗ Sending stopped: ${e(d.error || 'unknown error')} (Sent <b>${d.sent}</b>, failed <b>${d.failed}</b>.)`;
         if (onComplete) await onComplete();
       }
     } catch (ex) {
@@ -1301,23 +1413,141 @@ async function sendResultsMail(btn, email) {
 
 function e(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
+// ── Email Notifications tab: funnel + student segments + dept summary ─────────
+let emailTabUsers = [];
+let currentSegment = 'clicked_not_submitted';
+
+// Which engagement bucket does a student fall into?
+function segmentOf(u) {
+  const clicked = !!u.reminder_clicked_at;
+  const reminded = !!(u.pre_reminder_at || u.post_reminder_at);
+  const finished = u.status === 'post_done';
+  if (clicked && (u.completed_after_reminder || finished)) return 'clicked_submitted';
+  if (finished) return 'completed';           // done without clicking — nothing to chase
+  if (clicked) return 'clicked_not_submitted';
+  if (reminded) return 'sent_not_clicked';
+  return 'never_reminded';
+}
+
 async function loadEmailNotificationStats() {
+  const dept = document.getElementById('dept-filter').value;
+  const level = document.getElementById('level-filter').value;
+  const params = new URLSearchParams({dept: dept || '', ug_or_pg: level || ''});
   const tbody = document.getElementById('email-notif-tbody');
-  tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:20px;color:var(--muted)">Loading notification tracking data…</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:20px;color:var(--muted)">Loading notification tracking data…</td></tr>';
   try {
-    const r = await fetch('/admin/api/email-notification/stats');
-    if (!r.ok) throw new Error('Failed to fetch data');
-    const data = await r.json();
+    const [rStats, rUsers] = await Promise.all([
+      fetch('/admin/api/email-notification/stats?' + params.toString()),
+      fetch('/admin/api/survey/users?' + params.toString()),
+    ]);
+    if (!rStats.ok || !rUsers.ok) throw new Error('Failed to fetch data');
+    const data = await rStats.json();
+    emailTabUsers = await rUsers.json();
+    renderEmailFunnel();
+    renderSegmentTable();
     renderEmailNotificationStats(data);
   } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:20px;color:#dc2626">Error: ${e(err.message)}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:20px;color:#dc2626">Error: ${e(err.message)}</td></tr>`;
+  }
+}
+
+function renderEmailFunnel() {
+  const total = emailTabUsers.length;
+  const reminded = emailTabUsers.filter(u => u.pre_reminder_at || u.post_reminder_at).length;
+  const clicked = emailTabUsers.filter(u => u.reminder_clicked_at).length;
+  const segs = {clicked_submitted:0, clicked_not_submitted:0, sent_not_clicked:0, never_reminded:0, completed:0};
+  emailTabUsers.forEach(u => { segs[segmentOf(u)]++; });
+
+  const pct = (n, d) => d > 0 ? ((n / d) * 100).toFixed(1) + '%' : '—';
+  document.getElementById('fn-total').textContent = total;
+  document.getElementById('fn-reminded').textContent = reminded;
+  document.getElementById('fn-reminded-pct').textContent = pct(reminded, total) + ' of registered';
+  document.getElementById('fn-clicked').textContent = clicked;
+  document.getElementById('fn-clicked-pct').textContent = pct(clicked, reminded) + ' of reminded';
+  document.getElementById('fn-converted').textContent = segs.clicked_submitted;
+  document.getElementById('fn-converted-pct').textContent = pct(segs.clicked_submitted, clicked) + ' of clicked';
+  document.getElementById('fn-stuck').textContent = segs.clicked_not_submitted;
+  document.getElementById('fn-stuck-pct').textContent = 'need a follow-up nudge';
+
+  ['clicked_not_submitted','clicked_submitted','sent_not_clicked','never_reminded'].forEach(s => {
+    const el = document.getElementById('segn-' + s);
+    if (el) el.textContent = segs[s];
+  });
+}
+
+function setSegment(chip) {
+  currentSegment = chip.dataset.seg;
+  document.querySelectorAll('.seg-chip').forEach(c => c.classList.remove('on'));
+  chip.classList.add('on');
+  renderSegmentTable();
+}
+
+function nextStepFor(u) {
+  if (u.status === 'pre_done') return '<span class="badge" style="background:#ecfdf5;color:#047857;">Post-Workshop Survey</span>';
+  return '<span class="badge bg-blue">Baseline (Pre) Survey</span>';
+}
+
+function renderSegmentTable() {
+  const list = emailTabUsers.filter(u => segmentOf(u) === currentSegment);
+  const tbody = document.getElementById('segment-tbody');
+  const sendBtn = document.getElementById('segment-send-btn');
+  // Reminders make sense only for students who still have a survey pending.
+  const sendable = currentSegment !== 'clicked_submitted';
+  sendBtn.disabled = !sendable || list.length === 0;
+  sendBtn.textContent = sendable
+    ? `📧 Send Reminder to Segment (${list.length})`
+    : '✅ Already submitted — no reminder needed';
+
+  if (!list.length) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--muted)">No students in this segment (with current filters)</td></tr>';
+    return;
+  }
+  tbody.innerHTML = list.map((u,i)=>`
+    <tr>
+      <td style="color:var(--muted)">${i+1}</td>
+      <td style="font-weight:600">${e(u.name)}</td>
+      <td style="font-size:11px;color:var(--muted)">${e(u.email)}</td>
+      <td>${e(u.program||'—')}</td>
+      <td>${STATUS[u.status]||`<span class="badge bg-gray">${e(u.status)}</span>`}</td>
+      <td style="font-size:11px;line-height:1.5;">
+        ${u.pre_reminder_at ? `<div>Pre: ${e(u.pre_reminder_at)}${u.pre_reminder_count > 1 ? ` ×${u.pre_reminder_count}` : ''}</div>` : ''}
+        ${u.post_reminder_at ? `<div>Post: ${e(u.post_reminder_at)}${u.post_reminder_count > 1 ? ` ×${u.post_reminder_count}` : ''}</div>` : ''}
+        ${(!u.pre_reminder_at && !u.post_reminder_at) ? '<span style="color:var(--muted)">Never</span>' : ''}
+      </td>
+      <td style="font-size:11px;">${u.reminder_clicked_at ? `<span style="color:#d97706;font-weight:700;">${e(u.reminder_clicked_at)}</span>` : '<span style="color:var(--muted)">—</span>'}</td>
+      <td>${u.status === 'post_done' ? '<span class="badge bg-green">Done ✓</span>' : nextStepFor(u)}</td>
+    </tr>`).join('');
+}
+
+async function sendSegmentReminder() {
+  const list = emailTabUsers.filter(u => segmentOf(u) === currentSegment && u.status !== 'post_done');
+  if (!list.length) return;
+  if (!confirm(`Send a reminder email to ${list.length} student(s) in this segment now?\n\nEach student automatically gets the right reminder (Baseline or Post-Workshop) for where they are stuck.`)) return;
+  const btn = document.getElementById('segment-send-btn');
+  const originalText = btn.textContent;
+  btn.disabled = true; btn.textContent = 'Queuing…';
+  const res = document.getElementById('email-notif-result');
+  res.style.display = 'none';
+  try {
+    const r = await fetch('/admin/api/alert/custom', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({emails: list.map(u => u.email)}),
+    });
+    if (!r.ok) throw new Error('Server returned error status');
+    const d = await r.json();
+    await pollAlertTask(d.task_id, btn, originalText, res, loadEmailNotificationStats);
+  } catch (err) {
+    res.style.cssText = 'display:block;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:14px;margin-bottom:12px;font-size:13px;color:#b91c1c';
+    res.innerHTML = `<strong>✗ Error:</strong> ${e(err.message)}`;
+    btn.disabled = false; btn.textContent = originalText;
   }
 }
 
 function renderEmailNotificationStats(data) {
   const tbody = document.getElementById('email-notif-tbody');
   if(!data.length){
-    tbody.innerHTML='<tr><td colspan="9" style="text-align:center;padding:20px;color:var(--muted)">No department data found</td></tr>';
+    tbody.innerHTML='<tr><td colspan="10" style="text-align:center;padding:20px;color:var(--muted)">No department data found</td></tr>';
     return;
   }
   tbody.innerHTML = data.map((d,i)=>`
@@ -1329,6 +1559,7 @@ function renderEmailNotificationStats(data) {
       <td><span class="badge bg-blue" style="font-size:12px;padding:4px 8px;background:var(--teal);">${d.post_sent}</span></td>
       <td><span class="badge bg-gray" style="background:#fef3c7;color:#d97706;font-size:12px;padding:4px 8px;font-weight:700;">${d.clicked}</span></td>
       <td><span class="badge bg-green" style="font-size:12px;padding:4px 8px;">${d.completed_after}</span></td>
+      <td><span class="badge" style="background:#fee2e2;color:#dc2626;font-size:12px;padding:4px 8px;font-weight:700;">${d.clicked_not_submitted || 0}</span></td>
       <td><span class="badge bg-gray" style="background:#e0f2fe;color:#0369a1;font-size:12px;padding:4px 8px;">${d.in_draft}</span></td>
       <td>
         <div style="display:flex;gap:6px;align-items:center;">
@@ -1419,7 +1650,7 @@ function renderDeptStats(data) {
 function viewDeptUsers(deptName) {
   const select = document.getElementById('dept-filter');
   select.value = deptName;
-  const usersTabBtn = Array.from(document.querySelectorAll('.tab')).find(t => t.textContent.includes('Users'));
+  const usersTabBtn = Array.from(document.querySelectorAll('.nav-item')).find(t => t.textContent.includes('Users'));
   show('p-users', usersTabBtn);
   applyFilters();
 }

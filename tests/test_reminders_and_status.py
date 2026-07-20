@@ -166,6 +166,46 @@ async def test_auto_reminder_worker(app_with_mock):
 
 
 @pytest.mark.asyncio
+async def test_custom_segment_alert(client: AsyncClient):
+    """Custom send picks the right reminder kind per student and skips finished ones."""
+    from app.db import get_db, STATUS_PRE_DONE
+    database = get_db()
+
+    await database["users"].insert_one({
+        "email": "clickpre@example.com", "name": "Clicked Pre",
+        "program": "Dept of AI", "status": "not_started",
+    })
+    await database["users"].insert_one({
+        "email": "clickpost@example.com", "name": "Clicked Post",
+        "program": "Dept of AI", "status": STATUS_PRE_DONE,
+    })
+    await database["users"].insert_one({
+        "email": "alldone@example.com", "name": "All Done",
+        "program": "Dept of AI", "status": "post_done",
+    })
+
+    client.cookies.set("survey_admin_session", "1")
+    resp = await client.post("/admin/api/alert/custom", json={
+        "emails": ["clickpre@example.com", "clickpost@example.com", "alldone@example.com"],
+    })
+    assert resp.status_code == 200
+    d = resp.json()
+    assert d["total_pending"] == 2  # post_done student skipped
+
+    status = (await client.get(f"/admin/api/alert/status/{d['task_id']}")).json()
+    assert status["status"] == "completed"
+    assert status["sent"] == 2
+
+    # Kind chosen per student: not_started got a PRE stamp, pre_done a POST stamp.
+    u1 = await database["users"].find_one({"email": "clickpre@example.com"})
+    assert u1.get("pre_reminder_count") == 1 and not u1.get("post_reminder_count")
+    u2 = await database["users"].find_one({"email": "clickpost@example.com"})
+    assert u2.get("post_reminder_count") == 1 and not u2.get("pre_reminder_count")
+    u3 = await database["users"].find_one({"email": "alldone@example.com"})
+    assert not u3.get("pre_reminder_count") and not u3.get("post_reminder_count")
+
+
+@pytest.mark.asyncio
 async def test_auto_reminder_disabled_sends_nothing(app_with_mock):
     from datetime import datetime, timezone, timedelta
     from app.db import get_db

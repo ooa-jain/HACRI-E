@@ -89,11 +89,18 @@ async def survey_request_otp(request: Request, username: str = Form(...)):
         log.info("OTP [%s] sent to %s for %s", otp, email, username)
     except Exception as exc:
         log.exception("Failed to send OTP email: %s", exc)
+        err_str = str(exc).lower()
+        if "451" in err_str or "ratelimit" in err_str or "rate limit" in err_str:
+            msg = ("The mail server is temporarily rate-limited, so the OTP email "
+                   "couldn't be sent right now. Use “Login with password instead” "
+                   "below, or try the OTP again in about an hour.")
+        else:
+            msg = (f"Couldn't send the OTP email ({exc}). Use “Login with password "
+                   f"instead” below, or check the SMTP configuration.")
         return request.app.state.templates.TemplateResponse(
             request, "admin_login.html",
-            {"error": f"Failed to send OTP email. Please check SMTP config. ({exc})",
-             "title": "Admin Login", "otp_sent": False},
-            status_code=500,
+            {"error": msg, "title": "Admin Login", "otp_sent": False},
+            status_code=200,
         )
 
     # Mask email hint for privacy, e.g. "sa***.ks@jainuniversity.ac.in"
@@ -388,17 +395,23 @@ async def run_bulk_reminder_task(task_id: str, type_name: str, pending_users: li
     db = get_db()
     delay = max(0.0, float(getattr(settings, "email_batch_delay_seconds", 0.4)))
 
-    if type_name == "pre-pending":
-        stamp_field = "pre_reminder_sent_at"
-        count_field = "pre_reminder_count"
-        build_msg = emailer.build_pre_reminder_message
-    else:
-        stamp_field = "post_reminder_sent_at"
-        count_field = "post_reminder_count"
-        build_msg = emailer.build_post_reminder_message
+    # Each pending entry may carry its own "kind" ("pre" | "post") — used by the
+    # custom-segment sender where one batch mixes baseline and post reminders.
+    # Entries without a kind fall back to the task-level type.
+    default_kind = "pre" if type_name == "pre-pending" else "post"
+
+    def _fields_for(kind: str):
+        if kind == "pre":
+            return ("pre_reminder_sent_at", "pre_reminder_count",
+                    emailer.build_pre_reminder_message)
+        return ("post_reminder_sent_at", "post_reminder_count",
+                emailer.build_post_reminder_message)
+
+    cooldown = max(0.0, float(getattr(settings, "email_ratelimit_cooldown_seconds", 60.0)))
 
     sent = 0
     failed = 0
+    rate_limited = False
     try:
         async with emailer.SmtpBatchSender() as sender:
             for i, u in enumerate(pending_users):
@@ -410,10 +423,31 @@ async def run_bulk_reminder_task(task_id: str, type_name: str, pending_users: li
                 if not email:
                     continue
 
+                stamp_field, count_field, build_msg = _fields_for(u.get("kind") or default_kind)
+                slug = email_to_slug(email)
+                resume_link = f"{base_url}/resume/{slug}?src=reminder"
+                msg = build_msg(email, name, resume_link)
+
                 try:
-                    slug = email_to_slug(email)
-                    resume_link = f"{base_url}/resume/{slug}?src=reminder"
-                    await sender.send(build_msg(email, name, resume_link))
+                    try:
+                        await sender.send(msg)
+                    except Exception as e1:
+                        # Outbound rate-limit → wait once, then retry this message.
+                        if emailer.is_rate_limit_error(e1) and cooldown:
+                            log.warning("Rate-limited on %s; cooling down %.0fs then retrying.",
+                                        email, cooldown)
+                            await db["admin_tasks"].update_one(
+                                {"_id": task_id},
+                                {"$set": {"status": "cooling_down",
+                                          "updated_at": datetime.now(timezone.utc)}})
+                            await asyncio.sleep(cooldown)
+                            await db["admin_tasks"].update_one(
+                                {"_id": task_id},
+                                {"$set": {"status": "running",
+                                          "updated_at": datetime.now(timezone.utc)}})
+                            await sender.send(msg)
+                        else:
+                            raise
                     await db["users"].update_one(
                         {"email": email},
                         {"$set": {stamp_field: datetime.now(timezone.utc)},
@@ -422,13 +456,23 @@ async def run_bulk_reminder_task(task_id: str, type_name: str, pending_users: li
                     )
                     sent += 1
                 except Exception as e:
-                    failed += 1
                     log.warning("Bulk email failed for %s: %s", email, e)
                     await db["users"].update_one(
                         {"email": email},
                         {"$set": {"last_email_error": str(e),
                                   "email_failed_at": datetime.now(timezone.utc)}}
                     )
+                    # If the provider is still rate-limiting after a cooldown+retry,
+                    # stop now so the remaining recipients aren't burned — the admin
+                    # can resume once the hourly quota resets.
+                    if emailer.is_rate_limit_error(e):
+                        rate_limited = True
+                        await db["admin_tasks"].update_one(
+                            {"_id": task_id},
+                            {"$set": {"sent": sent, "failed": failed,
+                                      "updated_at": datetime.now(timezone.utc)}})
+                        break
+                    failed += 1
 
                 # Persist progress every message so the poller shows live counts.
                 await db["admin_tasks"].update_one(
@@ -446,11 +490,24 @@ async def run_bulk_reminder_task(task_id: str, type_name: str, pending_users: li
         )
         return
 
-    await db["admin_tasks"].update_one(
-        {"_id": task_id},
-        {"$set": {"status": "completed", "sent": sent, "failed": failed,
-                  "updated_at": datetime.now(timezone.utc)}}
-    )
+    if rate_limited:
+        remaining = len(pending_users) - sent - failed
+        await db["admin_tasks"].update_one(
+            {"_id": task_id},
+            {"$set": {
+                "status": "rate_limited",
+                "sent": sent, "failed": failed,
+                "error": (f"Provider outbound rate limit hit. Sent {sent} before "
+                          f"stopping; {max(0, remaining)} not yet sent. Wait for the "
+                          f"hourly quota to reset, then click send again to continue."),
+                "updated_at": datetime.now(timezone.utc)}}
+        )
+    else:
+        await db["admin_tasks"].update_one(
+            {"_id": task_id},
+            {"$set": {"status": "completed", "sent": sent, "failed": failed,
+                      "updated_at": datetime.now(timezone.utc)}}
+        )
 
 
 @router.post("/admin/api/alert/pre-pending")
@@ -556,6 +613,54 @@ async def api_send_alert(
         "task_id": task_id,
         "total_pending": len(pending)
     })
+
+
+# ── Send reminders to an explicit list of students (segment drill-down) ───────
+@router.post("/admin/api/alert/custom")
+async def api_send_custom_alert(request: Request, background_tasks: BackgroundTasks):
+    """Send reminders to a specific set of students, e.g. the "clicked but not
+    submitted" segment from the Email Notifications drill-down. The reminder
+    kind is chosen per student: not-started → baseline (pre), pre-done → post.
+    Students who already finished both surveys are skipped."""
+    if not _is_survey_admin(request):
+        raise HTTPException(status_code=403)
+    try:
+        body = await request.json()
+        emails = [str(e).strip().lower() for e in (body.get("emails") or []) if e]
+    except Exception:
+        raise HTTPException(status_code=400, detail="Expected JSON body {emails: [...]}")
+    if not emails:
+        raise HTTPException(status_code=400, detail="No recipients given")
+    emails = emails[:5000]
+
+    db = get_db()
+    pending = []
+    async for u in db["users"].find({"email": {"$in": emails}}):
+        status_v = u.get("status")
+        if status_v in (None, "not_started"):
+            kind = "pre"
+        elif status_v == STATUS_PRE_DONE:
+            kind = "post"
+        else:
+            continue  # both surveys done — nothing to remind about
+        pending.append({"email": u["email"], "name": u.get("name", ""), "kind": kind})
+
+    task_id = "custom_" + secrets.token_hex(8)
+    from datetime import datetime, timezone
+    await db["admin_tasks"].insert_one({
+        "_id": task_id,
+        "type": "custom",
+        "status": "running",
+        "total": len(pending),
+        "sent": 0,
+        "failed": 0,
+        "started_at": datetime.now(timezone.utc),
+        "updated_at": datetime.now(timezone.utc),
+    })
+
+    base_url = str(request.base_url).rstrip("/")
+    background_tasks.add_task(run_bulk_reminder_task, task_id, "custom", pending, base_url)
+    return JSONResponse({"ok": True, "task_id": task_id, "total_pending": len(pending)})
 
 
 @router.get("/admin/api/alert/status/{task_id}")
@@ -809,11 +914,15 @@ async def api_background_analysis(
 
 
 @router.get("/admin/api/email-notification/stats")
-async def api_email_notification_stats(request: Request):
+async def api_email_notification_stats(
+    request: Request,
+    dept: str = Query(default=""),
+    ug_or_pg: str = Query(default=""),
+):
     if not _is_survey_admin(request):
         raise HTTPException(status_code=403)
     from app.db import get_email_notification_stats
-    stats = await get_email_notification_stats()
+    stats = await get_email_notification_stats(dept=dept or None, ug_or_pg=ug_or_pg or None)
     return JSONResponse(stats)
 
 
@@ -928,6 +1037,11 @@ async def _run_daily_reminders(
                 })
                 await db["users"].update_one({"email": email}, restore)
                 failed += 1
+                # If the provider is rate-limiting, stop this pass and let the
+                # next scheduled tick pick up where we left off.
+                if emailer.is_rate_limit_error(ex):
+                    logger.warning("Auto-reminders rate-limited; pausing until next tick.")
+                    break
 
     return {"sent": sent, "failed": failed}
 
