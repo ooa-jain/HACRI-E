@@ -272,6 +272,7 @@ input:checked+.slider:before{transform:translateX(24px)}
     <button class="tab" onclick="show('p-email-notifications',this)">📧 Email Notifications</button>
     <button class="tab" onclick="show('p-dept-analysis',this)">🏢 Department Analysis</button>
     <button class="tab" onclick="show('p-bg-analysis',this)">👨‍👩‍👦 Parental Background</button>
+    <button class="tab" onclick="show('p-timeline',this)">⏱️ Timeline</button>
   </div>
 
   <!-- Global Cohort Filters -->
@@ -603,6 +604,61 @@ input:checked+.slider:before{transform:translateX(24px)}
     </div>
   </div>
 
+  <!-- Department Timeline / Timesheet -->
+  <div class="panel" id="p-timeline">
+    <div class="card" style="margin-bottom:16px;">
+      <h3 style="font-size:15px;color:var(--navy);margin-bottom:6px;font-weight:700">⏱️ Department Timeline &amp; Student Timesheet</h3>
+      <p style="font-size:12.5px;color:var(--muted);margin-bottom:16px">Track student registration, pre-survey completion, and post-survey completion times sorted by chronological progress.</p>
+      
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span style="font-size:13px;font-weight:600;color:var(--navy);">Department:</span>
+          <select id="timeline-dept-filter" onchange="loadTimeline()" style="padding:6px 12px;border-radius:6px;border:1px solid var(--border);font-size:13px;outline:none;font-family:inherit;background:#fff;min-width:200px;">
+            <option value="">Select Department...</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Timeline Stats Summary Cards -->
+    <div class="stat-grid" style="margin-bottom: 20px; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+      <div class="stat" style="border-left: 4px solid var(--teal); background: #fff; padding: 16px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+        <div class="stat-n" id="timeline-stat-total" style="font-size: 24px; font-weight: 700; color: var(--navy);">0</div>
+        <div class="stat-l" style="font-size: 12px; color: var(--muted); margin-top: 4px;">Total Registered</div>
+      </div>
+      <div class="stat" style="border-left: 4px solid var(--navy2); background: #fff; padding: 16px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); display: flex; flex-direction: column; justify-content: center; min-height: 70px;">
+        <div class="stat-n" id="timeline-stat-first" style="font-size: 13px; font-weight: 600; color: var(--navy); white-space: normal; line-height: 1.2;">None</div>
+        <div class="stat-l" style="font-size: 12px; color: var(--muted); margin-top: 4px;">First to Start</div>
+      </div>
+      <div class="stat" style="border-left: 4px solid var(--green); background: #fff; padding: 16px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+        <div class="stat-n" id="timeline-stat-avg-pre" style="font-size: 24px; font-weight: 700; color: var(--navy);">0h</div>
+        <div class="stat-l" style="font-size: 12px; color: var(--muted); margin-top: 4px;">Avg. Pre Completion Time</div>
+      </div>
+      <div class="stat" style="border-left: 4px solid var(--gold); background: #fff; padding: 16px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+        <div class="stat-n" id="timeline-stat-avg-post" style="font-size: 24px; font-weight: 700; color: var(--navy);">0h</div>
+        <div class="stat-l" style="font-size: 12px; color: var(--muted); margin-top: 4px;">Avg. Post Completion Time</div>
+      </div>
+    </div>
+
+    <!-- Timesheet List -->
+    <div class="card" style="padding:0;overflow-x:auto;">
+      <table class="mtable" id="timeline-table" style="min-width:1000px; width:100%; border-collapse:collapse;">
+        <thead>
+          <tr style="background:#f8fafc; border-bottom:1px solid var(--border);">
+            <th style="padding:12px; text-align:left; font-size:12px; font-weight:600; color:var(--muted); width:50px;">#</th>
+            <th style="padding:12px; text-align:left; font-size:12px; font-weight:600; color:var(--muted); width:250px;">Student &amp; Contact</th>
+            <th style="padding:12px; text-align:left; font-size:12px; font-weight:600; color:var(--muted); width:150px;">Registration Date</th>
+            <th style="padding:12px; text-align:left; font-size:12px; font-weight:600; color:var(--muted); width:350px;">Activity Timeline Progress</th>
+            <th style="padding:12px; text-align:left; font-size:12px; font-weight:600; color:var(--muted); width:100px;">Status</th>
+          </tr>
+        </thead>
+        <tbody id="timeline-tbody">
+          <tr><td colspan="5" style="text-align:center;padding:30px;color:var(--muted)">Please select a department to load timeline.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
   <!-- Parental Background Analysis -->
   <div class="panel" id="p-bg-analysis">
     <div class="card" style="margin-bottom:16px;">
@@ -752,6 +808,7 @@ function show(id, btn){
   if(id==='p-email-notifications') loadEmailNotificationStats();
   if(id==='p-dept-analysis') loadDeptStats();
   if(id==='p-bg-analysis') loadBgAnalysis();
+  if(id==='p-timeline') loadTimelineDepts();
 }
 
 async function loadFlags(){
@@ -1422,8 +1479,184 @@ async function loadBgAnalysis() {
       `).join('');
     }
 
-  } catch(ex) {
-    console.error('Error loading background analysis:', ex);
+async function loadTimelineDepts() {
+  const r = await fetch('/admin/api/survey/dept-stats');
+  const depts = await r.json();
+  const select = document.getElementById('timeline-dept-filter');
+  
+  // Save selected value to restore it
+  const currentVal = select.value;
+  select.innerHTML = '<option value="">Select Department...</option>' + depts.map(d => `
+    <option value="${e(d.dept)}">${e(d.dept)}</option>
+  `).join('');
+  
+  if (currentVal) {
+    select.value = currentVal;
+  }
+}
+
+function getDurationString(startIso, endIso) {
+  if (!startIso || !endIso) return "";
+  const start = new Date(startIso);
+  const end = new Date(endIso);
+  const diffMs = end - start;
+  if (diffMs < 0) return "";
+  
+  const diffMins = Math.floor(diffMs / 60000);
+  if (diffMins < 60) {
+    return diffMins + "m";
+  }
+  const diffHrs = Math.floor(diffMins / 60);
+  if (diffHrs < 24) {
+    const mins = diffMins % 60;
+    return diffHrs + "h " + mins + "m";
+  }
+  const diffDays = Math.floor(diffHrs / 24);
+  const hrs = diffHrs % 24;
+  return diffDays + "d " + hrs + "h";
+}
+
+function formatAvgDuration(totalMs, count) {
+  if (!count || count <= 0) return "N/A";
+  const avgMs = totalMs / count;
+  const avgMins = Math.floor(avgMs / 60000);
+  if (avgMins < 60) return avgMins + " mins";
+  const avgHrs = Math.floor(avgMins / 60);
+  if (avgHrs < 24) return avgHrs + " hrs";
+  const avgDays = (avgHrs / 24).toFixed(1);
+  return avgDays + " days";
+}
+
+async function loadTimeline() {
+  const dept = document.getElementById('timeline-dept-filter').value;
+  const tbody = document.getElementById('timeline-tbody');
+  
+  if (!dept) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:30px;color:var(--muted)">Please select a department to load timeline.</td></tr>';
+    document.getElementById('timeline-stat-total').textContent = '0';
+    document.getElementById('timeline-stat-first').textContent = 'None';
+    document.getElementById('timeline-stat-avg-pre').textContent = 'N/A';
+    document.getElementById('timeline-stat-avg-post').textContent = 'N/A';
+    return;
+  }
+  
+  tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:30px;color:var(--muted)">Loading timeline...</td></tr>';
+  
+  try {
+    const r = await fetch('/admin/api/survey/users?dept=' + encodeURIComponent(dept));
+    const users = await r.json();
+    
+    // Sort users by created_at_iso ascending (oldest first / who started first)
+    users.sort((a, b) => {
+      const aTime = a.created_at_iso ? new Date(a.created_at_iso) : 0;
+      const bTime = b.created_at_iso ? new Date(b.created_at_iso) : 0;
+      return aTime - bTime;
+    });
+    
+    if (!users.length) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:30px;color:var(--muted)">No students found in this department.</td></tr>';
+      document.getElementById('timeline-stat-total').textContent = '0';
+      document.getElementById('timeline-stat-first').textContent = 'None';
+      document.getElementById('timeline-stat-avg-pre').textContent = 'N/A';
+      document.getElementById('timeline-stat-avg-post').textContent = 'N/A';
+      return;
+    }
+    
+    // Stats computation
+    let totalPreMs = 0;
+    let countPre = 0;
+    let totalPostMs = 0;
+    let countPost = 0;
+    
+    users.forEach(u => {
+      if (u.created_at_iso && u.pre_submitted_at_iso) {
+        totalPreMs += (new Date(u.pre_submitted_at_iso) - new Date(u.created_at_iso));
+        countPre++;
+      }
+      if (u.pre_submitted_at_iso && u.post_submitted_at_iso) {
+        totalPostMs += (new Date(u.post_submitted_at_iso) - new Date(u.pre_submitted_at_iso));
+        countPost++;
+      }
+    });
+    
+    document.getElementById('timeline-stat-total').textContent = users.length;
+    
+    const firstUser = users[0];
+    const firstRegStr = firstUser.created_at ? firstUser.created_at.split(' ')[0] : '';
+    document.getElementById('timeline-stat-first').innerHTML = `
+      <div style="font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${e(firstUser.name)} (${e(firstUser.email)})">${e(firstUser.name)}</div>
+      <div style="font-size:11px;color:var(--muted);font-weight:normal;margin-top:2px;">on ${firstRegStr}</div>
+    `;
+    
+    document.getElementById('timeline-stat-avg-pre').textContent = formatAvgDuration(totalPreMs, countPre);
+    document.getElementById('timeline-stat-avg-post').textContent = formatAvgDuration(totalPostMs, countPost);
+    
+    tbody.innerHTML = users.map((u, i) => {
+      const preDuration = getDurationString(u.created_at_iso, u.pre_submitted_at_iso);
+      const postDuration = getDurationString(u.pre_submitted_at_iso, u.post_submitted_at_iso);
+      
+      let statusColor = '#64748b';
+      let statusBg = '#f1f5f9';
+      if (u.status === 'pre_done') {
+        statusColor = '#0369a1';
+        statusBg = '#e0f2fe';
+      } else if (u.status === 'post_done') {
+        statusColor = '#15803d';
+        statusBg = '#dcfce7';
+      }
+      
+      const badgeStyle = `display:inline-block;padding:4px 8px;border-radius:12px;font-size:11px;font-weight:600;color:${statusColor};background:${statusBg};text-transform:uppercase;`;
+      
+      // Connecting lines and progress chain HTML
+      const progressHtml = `
+        <div style="display:flex;align-items:center;gap:12px;font-size:12px;padding:8px 0;">
+          <!-- Registered -->
+          <div style="display:flex;align-items:center;gap:4px;flex-shrink:0;">
+            <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--teal);" title="Registered"></span>
+            <span style="font-weight:500;color:var(--navy);font-size:11px;">Reg: ${u.created_at || 'N/A'}</span>
+          </div>
+          
+          <!-- Line 1 -->
+          <div style="flex-grow:1;height:2px;background:${u.pre_submitted_at_iso ? 'var(--teal)' : '#cbd5e1'};min-width:30px;position:relative;">
+            ${preDuration ? `<span style="position:absolute;top:-15px;left:50%;transform:translateX(-50%);font-size:9px;color:#475569;font-weight:600;white-space:nowrap;background:#f8fafc;padding:0 4px;border-radius:4px;">⏱️ ${preDuration}</span>` : ''}
+          </div>
+          
+          <!-- Pre Survey -->
+          <div style="display:flex;align-items:center;gap:4px;flex-shrink:0;">
+            <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${u.pre_submitted_at_iso ? 'var(--teal)' : '#cbd5e1'};" title="Pre-AI Survey"></span>
+            <span style="font-weight:500;color:${u.pre_submitted_at_iso ? 'var(--navy)' : 'var(--muted)'};font-size:11px;">Pre: ${u.pre_at || 'Pending'}</span>
+          </div>
+
+          <!-- Line 2 -->
+          <div style="flex-grow:1;height:2px;background:${u.post_submitted_at_iso ? 'var(--green)' : '#cbd5e1'};min-width:30px;position:relative;">
+            ${postDuration ? `<span style="position:absolute;top:-15px;left:50%;transform:translateX(-50%);font-size:9px;color:#475569;font-weight:600;white-space:nowrap;background:#f8fafc;padding:0 4px;border-radius:4px;">⏱️ ${postDuration}</span>` : ''}
+          </div>
+
+          <!-- Post Survey -->
+          <div style="display:flex;align-items:center;gap:4px;flex-shrink:0;">
+            <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${u.post_submitted_at_iso ? 'var(--green)' : '#cbd5e1'};" title="Post-Workshop Survey"></span>
+            <span style="font-weight:500;color:${u.post_submitted_at_iso ? 'var(--navy)' : 'var(--muted)'};font-size:11px;">Post: ${u.post_at || 'Pending'}</span>
+          </div>
+        </div>
+      `;
+      
+      return `
+        <tr style="border-bottom:1px solid #f1f5f9;">
+          <td style="padding:12px; font-weight:600; color:var(--muted);">${i + 1}</td>
+          <td style="padding:12px;">
+            <div style="font-weight:600;color:var(--navy);font-size:13px;">${e(u.name)}</div>
+            <div style="color:var(--muted);font-size:11.5px;margin-top:2px;">${e(u.email)}</div>
+          </td>
+          <td style="padding:12px; font-size:12.5px; color:#475569;">${u.created_at || 'N/A'}</td>
+          <td style="padding:12px;">${progressHtml}</td>
+          <td style="padding:12px;"><span style="${badgeStyle}">${u.status.replace('_', ' ')}</span></td>
+        </tr>
+      `;
+    }).join('');
+    
+  } catch(err) {
+    console.error(err);
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:30px;color:red">Failed to load timeline. Please check server logs.</td></tr>';
   }
 }
 

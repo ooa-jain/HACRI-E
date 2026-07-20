@@ -145,3 +145,50 @@ async def test_auto_reminder_worker(app_with_mock):
     u = await database["users"].find_one({"email": "eligible@example.com"})
     assert u.get("pre_reminder_sent_at") is not None
 
+
+@pytest.mark.asyncio
+async def test_survey_users_api_timestamps(client: AsyncClient):
+    from app.db import get_db
+    from datetime import datetime, timezone
+    database = get_db()
+    
+    # Insert a user with explicit registration and submission times
+    created_val = datetime(2026, 7, 20, 10, 0, 0, tzinfo=timezone.utc)
+    pre_val = datetime(2026, 7, 20, 11, 0, 0, tzinfo=timezone.utc)
+    post_val = datetime(2026, 7, 20, 12, 0, 0, tzinfo=timezone.utc)
+    
+    await database["users"].insert_one({
+        "email": "timeline_student@example.com",
+        "name": "Timeline Student",
+        "program": "Dept of CS",
+        "status": "post_done",
+        "created_at": created_val,
+        "pre_submitted_at": pre_val,
+        "post_submitted_at": post_val,
+    })
+
+    # Unauthorized access check
+    resp_unauth = await client.get("/admin/api/survey/users")
+    assert resp_unauth.status_code == 403
+
+    # Authenticate as survey admin
+    client.cookies.set("survey_admin_session", "1")
+
+    # Get users list for Dept of CS
+    resp = await client.get("/admin/api/survey/users?dept=Dept of CS")
+    assert resp.status_code == 200
+    users_list = resp.json()
+    assert len(users_list) == 1
+    
+    student = users_list[0]
+    assert student["email"] == "timeline_student@example.com"
+    assert "created_at" in student
+    assert "created_at_iso" in student
+    assert "pre_submitted_at_iso" in student
+    assert "post_submitted_at_iso" in student
+    
+    # Verify ISO formatting correctness
+    assert student["created_at_iso"].startswith("2026-07-20T10:00:00")
+    assert student["pre_submitted_at_iso"].startswith("2026-07-20T11:00:00")
+    assert student["post_submitted_at_iso"].startswith("2026-07-20T12:00:00")
+
