@@ -382,22 +382,34 @@ async def run_bulk_reminder_task(task_id: str, type_name: str, pending_users: li
             
         sent_inc = 0
         failed_inc = 0
-        try:
-            if type_name == "pre-pending":
-                await _send_pre_alert_email(u["email"], u["name"], req)
-                await db["users"].update_one(
-                    {"email": u["email"]},
-                    {"$set": {"pre_reminder_sent_at": datetime.now(timezone.utc)}}
-                )
-            else:
-                await _send_alert_email(u["email"], u["name"], req)
-                await db["users"].update_one(
-                    {"email": u["email"]},
-                    {"$set": {"post_reminder_sent_at": datetime.now(timezone.utc)}}
-                )
-            sent_inc = 1
-        except Exception as e:
-            log.warning("Bulk email failed for %s: %s", u["email"], e)
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                if type_name == "pre-pending":
+                    await _send_pre_alert_email(u["email"], u["name"], req)
+                    await db["users"].update_one(
+                        {"email": u["email"]},
+                        {"$set": {"pre_reminder_sent_at": datetime.now(timezone.utc)}}
+                    )
+                else:
+                    await _send_alert_email(u["email"], u["name"], req)
+                    await db["users"].update_one(
+                        {"email": u["email"]},
+                        {"$set": {"post_reminder_sent_at": datetime.now(timezone.utc)}}
+                    )
+                sent_inc = 1
+                break  # Success
+            except Exception as e:
+                err_str = str(e).lower()
+                if "451" in err_str or "ratelimit" in err_str or "too many connections" in err_str:
+                    log.warning("Rate limit hit for %s (attempt %d). Sleeping 60s...", u["email"], attempt + 1)
+                    await asyncio.sleep(60.0)
+                else:
+                    log.warning("Bulk email failed for %s: %s", u["email"], e)
+                    failed_inc = 1
+                    break
+        else:
+            log.error("Exhausted retries for %s due to rate limit.", u["email"])
             failed_inc = 1
             
         await db["admin_tasks"].update_one(
@@ -865,7 +877,12 @@ async def run_auto_reminder_worker():
                             {"email": email, "pre_reminder_sent_at": "sending"},
                             {"$unset": {"pre_reminder_sent_at": ""}}
                         )
-                        await asyncio.sleep(5.0)  # Back off a bit on failure
+                        err_str = str(ex).lower()
+                        if "451" in err_str or "ratelimit" in err_str:
+                            logger.warning(f"Rate limit hit for auto-reminder. Sleeping 60s...")
+                            await asyncio.sleep(60.0)
+                        else:
+                            await asyncio.sleep(5.0)  # Back off a bit on other failures
             else:
                 logger.info("Auto-reminders are disabled.")
         except Exception as e:
