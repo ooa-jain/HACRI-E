@@ -389,7 +389,7 @@
   </div>
 
   {% else %}
-  <!-- ── Step 1: Enter Username to Request OTP ────────────────── -->
+  <!-- ── Step 1a: Request OTP by email ────────────────────────── -->
   <form method="post" action="/admin/survey/request-otp" id="otp-form">
     <div class="field">
       <label>Admin Username</label>
@@ -407,9 +407,69 @@
     </button>
   </form>
 
-  <div class="otp-note">
+  <!-- ── Step 1b: Direct password login (no email needed) ─────── -->
+  <form method="post" action="/admin/login" id="password-form" style="display:none;">
+    <div class="field">
+      <label>Admin Username</label>
+      <div class="input-wrapper">
+        <span class="input-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        </span>
+        <input type="text" name="username" id="pw-username-input" autocomplete="username"
+               placeholder="e.g. survey or deeksha_admin" />
+      </div>
+    </div>
+    <div class="field">
+      <label>Admin Password</label>
+      <div class="input-wrapper">
+        <span class="input-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        </span>
+        <input type="password" name="password" id="pw-password-input" autocomplete="current-password"
+               placeholder="Enter administrative password" />
+      </div>
+    </div>
+    <button type="submit" class="btn">
+      Sign in
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+    </button>
+  </form>
+
+  <div class="toggle-link-container">
+    <a id="step1-toggle" class="toggle-link">Can't receive the OTP email? Login with password instead</a>
+  </div>
+
+  <div class="otp-note" id="otp-help">
     Enter your administrative username (<code>survey</code> or <code>deeksha_admin</code>) to receive a secure login OTP on your registered email address.
   </div>
+
+  <script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const otpForm = document.getElementById("otp-form");
+    const pwForm = document.getElementById("password-form");
+    const toggle = document.getElementById("step1-toggle");
+    const otpHelp = document.getElementById("otp-help");
+    let otpMode = true;
+    if (toggle) {
+      toggle.addEventListener("click", (e) => {
+        e.preventDefault();
+        otpMode = !otpMode;
+        otpForm.style.display = otpMode ? "block" : "none";
+        pwForm.style.display = otpMode ? "none" : "block";
+        otpHelp.style.display = otpMode ? "block" : "none";
+        // Only require fields of the visible form so the browser doesn't block submit.
+        document.getElementById("username-input").required = otpMode;
+        document.getElementById("pw-username-input").required = !otpMode;
+        document.getElementById("pw-password-input").required = !otpMode;
+        toggle.textContent = otpMode
+          ? "Can't receive the OTP email? Login with password instead"
+          : "Use OTP email verification instead";
+        (otpMode ? document.getElementById("username-input")
+                 : document.getElementById("pw-username-input")).focus();
+      });
+    }
+  });
+  </script>
   {% endif %}
 </div>
 

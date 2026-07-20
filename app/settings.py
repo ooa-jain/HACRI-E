@@ -42,6 +42,12 @@ class Settings(BaseSettings):
     # stay under provider per-second limits. Set to 0 to send as fast as possible.
     email_batch_delay_seconds: float = 0.4
 
+    # When the provider replies with an outbound rate-limit (e.g. Hostinger 451
+    # "hostinger_out_ratelimit"), wait this many seconds and retry the same
+    # message once before giving up. If it is still limited, the batch stops
+    # early and reports how many were sent so no recipients are burned.
+    email_ratelimit_cooldown_seconds: float = 60.0
+
     @model_validator(mode="before")
     @classmethod
     def populate_smtp_defaults(cls, data: Any) -> Any:
