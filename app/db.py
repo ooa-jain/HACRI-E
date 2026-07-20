@@ -169,7 +169,7 @@ async def verify_otp(key: str, otp: str) -> bool:
 async def get_all_flags() -> dict[str, Any]:
     flags: dict[str, Any] = {}
     async for doc in get_db()[FLAGS].find():
-        if doc["key"] in ("post_delay_days", "auto_reminder_delay_days"):
+        if doc["key"] in ("post_delay_days", "auto_reminder_delay_days", "auto_reminder_repeat_days"):
             try:
                 flags[doc["key"]] = int(doc.get("value", 0))
             except (ValueError, TypeError):
@@ -184,6 +184,7 @@ async def get_all_flags() -> dict[str, Any]:
     flags.setdefault(FLAG_TEST_MODE,   False)
     flags.setdefault("auto_reminders_enabled", False)
     flags.setdefault("auto_reminder_delay_days", 5)
+    flags.setdefault("auto_reminder_repeat_days", 1)
     return flags
 
 
@@ -333,8 +334,10 @@ async def list_survey_users(limit: int = 10_000, dept: str | None = None, ug_or_
             "post_at":             _fmt(post_sub),
             "post_submitted_at_iso": post_sub.isoformat() if isinstance(post_sub, datetime) else "",
             "orientation_at":      _fmt(u.get("orientation_at")),
-            "pre_reminder_at":     _fmt(pre_reminder),
-            "post_reminder_at":    _fmt(post_reminder),
+            "pre_reminder_at":     _fmt(pre_reminder) if isinstance(pre_reminder, datetime) else "",
+            "post_reminder_at":    _fmt(post_reminder) if isinstance(post_reminder, datetime) else "",
+            "pre_reminder_count":  int(u.get("pre_reminder_count", 0) or 0),
+            "post_reminder_count": int(u.get("post_reminder_count", 0) or 0),
             "reminder_clicked_at": _fmt(clicked),
             "completed_after_reminder": completed_after,
             "last_email_error":    u.get("last_email_error", ""),

@@ -310,6 +310,14 @@ async def api_set_flags(request: Request):
                 {"$set": {"key": "auto_reminder_delay_days", "value": val, "updated_at": _now()}},
                 upsert=True,
             )
+        if "auto_reminder_repeat_days" in body:
+            from app.db import _now
+            val = max(1, int(body["auto_reminder_repeat_days"]))
+            await get_db()[FLAGS].update_one(
+                {"key": "auto_reminder_repeat_days"},
+                {"$set": {"key": "auto_reminder_repeat_days", "value": val, "updated_at": _now()}},
+                upsert=True,
+            )
     # Orientation admin can only toggle orientation flag
     if _is_ori_admin(request) and FLAG_ORIENTATION in body:
         await set_flag(FLAG_ORIENTATION, bool(body[FLAG_ORIENTATION]))
@@ -363,81 +371,85 @@ async def api_survey_dept_stats(request: Request):
     return JSONResponse(stats)
 
 
-class FakeRequest:
-    def __init__(self, base_url: str):
-        self.base_url = base_url
-
-
 async def run_bulk_reminder_task(task_id: str, type_name: str, pending_users: list[dict], base_url: str):
+    """Send reminders to every pending user over a SINGLE SMTP connection.
+
+    Reusing one connection (via emailer.SmtpBatchSender) is what makes large
+    batches fast and keeps us under the provider's "too many connections" limit,
+    so there is no longer a 100-recipient cap. Progress is written to the
+    admin_tasks doc so the dashboard can poll it live.
+    """
     import asyncio
     from datetime import datetime, timezone
     from app.db import get_db
-    
+    from app import emailer
+    from app.routes.landing import email_to_slug
+
     db = get_db()
-    req = FakeRequest(base_url)
-    
-    for i, u in enumerate(pending_users):
-        if i > 0:
-            await asyncio.sleep(2.5)  # respect SMTP rate limits (Hostinger strict limits)
-            
-        sent_inc = 0
-        failed_inc = 0
-        max_retries = 3
-        for attempt in range(max_retries):
-            try:
-                if type_name == "pre-pending":
-                    await _send_pre_alert_email(u["email"], u["name"], req)
+    delay = max(0.0, float(getattr(settings, "email_batch_delay_seconds", 0.4)))
+
+    if type_name == "pre-pending":
+        stamp_field = "pre_reminder_sent_at"
+        count_field = "pre_reminder_count"
+        build_msg = emailer.build_pre_reminder_message
+    else:
+        stamp_field = "post_reminder_sent_at"
+        count_field = "post_reminder_count"
+        build_msg = emailer.build_post_reminder_message
+
+    sent = 0
+    failed = 0
+    try:
+        async with emailer.SmtpBatchSender() as sender:
+            for i, u in enumerate(pending_users):
+                if i > 0 and delay:
+                    await asyncio.sleep(delay)
+
+                email = u.get("email")
+                name = u.get("name", "")
+                if not email:
+                    continue
+
+                try:
+                    slug = email_to_slug(email)
+                    resume_link = f"{base_url}/resume/{slug}?src=reminder"
+                    await sender.send(build_msg(email, name, resume_link))
                     await db["users"].update_one(
-                        {"email": u["email"]},
-                        {"$set": {"pre_reminder_sent_at": datetime.now(timezone.utc)},
+                        {"email": email},
+                        {"$set": {stamp_field: datetime.now(timezone.utc)},
+                         "$inc": {count_field: 1},
                          "$unset": {"last_email_error": "", "email_failed_at": ""}}
                     )
-                else:
-                    await _send_alert_email(u["email"], u["name"], req)
+                    sent += 1
+                except Exception as e:
+                    failed += 1
+                    log.warning("Bulk email failed for %s: %s", email, e)
                     await db["users"].update_one(
-                        {"email": u["email"]},
-                        {"$set": {"post_reminder_sent_at": datetime.now(timezone.utc)},
-                         "$unset": {"last_email_error": "", "email_failed_at": ""}}
+                        {"email": email},
+                        {"$set": {"last_email_error": str(e),
+                                  "email_failed_at": datetime.now(timezone.utc)}}
                     )
-                sent_inc = 1
-                break  # Success
-            except Exception as e:
-                err_str = str(e).lower()
-                if "451" in err_str or "ratelimit" in err_str or "too many connections" in err_str:
-                    log.warning("Rate limit hit for %s (attempt %d). Sleeping 60s...", u["email"], attempt + 1)
-                    await asyncio.sleep(60.0)
-                else:
-                    log.warning("Bulk email failed for %s: %s", u["email"], e)
-                    failed_inc = 1
-                    await db["users"].update_one(
-                        {"email": u["email"]},
-                        {"$set": {"last_email_error": str(e), "email_failed_at": datetime.now(timezone.utc)}}
-                    )
-                    break
-        else:
-            log.error("Exhausted retries for %s due to rate limit.", u["email"])
-            failed_inc = 1
-            await db["users"].update_one(
-                {"email": u["email"]},
-                {"$set": {"last_email_error": "Rate limit exhausted (451)", "email_failed_at": datetime.now(timezone.utc)}}
-            )
-            
+
+                # Persist progress every message so the poller shows live counts.
+                await db["admin_tasks"].update_one(
+                    {"_id": task_id},
+                    {"$set": {"sent": sent, "failed": failed,
+                              "updated_at": datetime.now(timezone.utc)}}
+                )
+    except Exception as e:
+        # Connection/login failure — mark everything remaining as failed.
+        log.exception("Bulk reminder task %s aborted: %s", task_id, e)
         await db["admin_tasks"].update_one(
             {"_id": task_id},
-            {
-                "$inc": {"sent": sent_inc, "failed": failed_inc},
-                "$set": {"updated_at": datetime.now(timezone.utc)}
-            }
+            {"$set": {"status": "error", "error": str(e),
+                      "updated_at": datetime.now(timezone.utc)}}
         )
-        
+        return
+
     await db["admin_tasks"].update_one(
         {"_id": task_id},
-        {
-            "$set": {
-                "status": "completed",
-                "updated_at": datetime.now(timezone.utc)
-            }
-        }
+        {"$set": {"status": "completed", "sent": sent, "failed": failed,
+                  "updated_at": datetime.now(timezone.utc)}}
     )
 
 
@@ -452,11 +464,11 @@ async def api_send_pre_pending(
         raise HTTPException(status_code=403)
     users = await list_survey_users(dept=dept or None, ug_or_pg=ug_or_pg or None)
     pending = [u for u in users if u.get("status") in ("not_started", None)]
-    
-    # Sort so those who never received a reminder come first, then limit to 100
+
+    # Sort so those who never received a reminder come first. No cap — the batch
+    # sender reuses one SMTP connection, so all pending recipients are handled.
     pending.sort(key=lambda u: bool(u.get("pre_reminder_at")))
-    pending = pending[:100]
-    
+
     import secrets
     task_id = "pre_" + secrets.token_hex(8)
     
@@ -489,15 +501,6 @@ async def api_send_pre_pending(
     })
 
 
-async def _send_pre_alert_email(email: str, name: str, request: Request) -> None:
-    from app import emailer
-    from app.routes.landing import email_to_slug
-    slug = email_to_slug(email)
-    base_url = str(request.base_url).rstrip("/")
-    resume_link = f"{base_url}/resume/{slug}?src=reminder"
-    await emailer.send_pre_reminder_email(email, name, resume_link)
-
-
 # ── Orientation responses (both admins can view) ───────────────────────────────
 @router.get("/admin/api/orientation/responses")
 async def api_orientation_responses(request: Request):
@@ -518,11 +521,11 @@ async def api_send_alert(
         raise HTTPException(status_code=403)
     users = await list_survey_users(dept=dept or None, ug_or_pg=ug_or_pg or None)
     pending = [u for u in users if u.get("status") == STATUS_PRE_DONE]
-    
-    # Sort so those who never received a reminder come first, then limit to 100
+
+    # Sort so those who never received a reminder come first. No cap — the batch
+    # sender reuses one SMTP connection, so all pending recipients are handled.
     pending.sort(key=lambda u: bool(u.get("post_reminder_at")))
-    pending = pending[:100]
-    
+
     import secrets
     task_id = "post_" + secrets.token_hex(8)
     
@@ -555,15 +558,6 @@ async def api_send_alert(
     })
 
 
-async def _send_alert_email(email: str, name: str, request: Request) -> None:
-    from app import emailer
-    from app.routes.landing import email_to_slug
-    slug = email_to_slug(email)
-    base_url = str(request.base_url).rstrip("/")
-    resume_link = f"{base_url}/resume/{slug}?src=reminder"
-    await emailer.send_post_reminder_email(email, name, resume_link)
-
-
 @router.get("/admin/api/alert/status/{task_id}")
 async def api_get_alert_status(request: Request, task_id: str):
     if not _is_survey_admin(request):
@@ -577,8 +571,9 @@ async def api_get_alert_status(request: Request, task_id: str):
         "type": task["type"],
         "status": task["status"],
         "total": task["total"],
-        "sent": task["sent"],
-        "failed": task["failed"]
+        "sent": task.get("sent", 0),
+        "failed": task.get("failed", 0),
+        "error": task.get("error", ""),
     })
 
 
@@ -822,95 +817,184 @@ async def api_email_notification_stats(request: Request):
     return JSONResponse(stats)
 
 
-async def run_auto_reminder_worker():
+logger = logging.getLogger("hacri-e.auto-reminders")
+
+# How often the worker wakes to check for due reminders (seconds).
+AUTO_REMINDER_TICK_SECONDS = 3600  # hourly
+
+
+def _reminder_is_due(prev, resend_cutoff) -> bool:
+    """Decide (in Python, so we never mix types in a DB query) whether a
+    reminder is due given the previously-stored stamp value.
+
+    Due when: never sent (absent / None), a legacy "sending" sentinel, or the
+    last send was on/before the daily resend cutoff.
+    """
+    from datetime import datetime, timezone
+    if prev is None or prev == "sending":
+        return True
+    if isinstance(prev, datetime):
+        # Some drivers (and mongomock) return naive datetimes; treat as UTC so
+        # we never compare naive against aware.
+        if prev.tzinfo is None:
+            prev = prev.replace(tzinfo=timezone.utc)
+        return prev <= resend_cutoff
+    return False  # unknown type — leave it alone
+
+
+async def _run_daily_reminders(
+    db,
+    *,
+    status_values: list,
+    reg_field: str,
+    stamp_field: str,
+    count_field: str,
+    build_msg,
+    reg_cutoff,
+    resend_cutoff,
+    now,
+    delay: float,
+) -> dict:
+    """One reminder pass for a single kind (pre or post).
+
+    Sends over ONE shared SMTP connection and re-sends daily until the student
+    completes the relevant survey. Returns {'sent': n, 'failed': m}.
+    """
     import asyncio
-    import logging
-    from datetime import datetime, timezone, timedelta
-    from app.db import get_db, get_all_flags
+    from pymongo import ReturnDocument
     from app.settings import settings
     from app import emailer
     from app.routes.landing import email_to_slug
 
-    logger = logging.getLogger("hacri-e.auto-reminders")
-    logger.info("Auto-reminder background task starting...")
+    # Broad candidate query — only datetime fields are range-compared here, so
+    # this is safe on both MongoDB and mongomock. Fine-grained "is it due yet?"
+    # is decided in Python below.
+    candidates = []
+    async for u in db["users"].find({
+        "status": {"$in": status_values},
+        reg_field: {"$lte": reg_cutoff},
+    }):
+        if u.get("email") and _reminder_is_due(u.get(stamp_field), resend_cutoff):
+            candidates.append(u)
 
+    if not candidates:
+        return {"sent": 0, "failed": 0}
+
+    base_url = settings.public_base_url.rstrip("/")
+    sent = 0
+    failed = 0
+
+    async with emailer.SmtpBatchSender() as sender:
+        for i, u in enumerate(candidates):
+            email = u["email"]
+            name = u.get("name", "")
+            prev = u.get(stamp_field)
+
+            # Atomically claim by matching the EXACT prior value (no type-mixed
+            # range query). If another worker already claimed it, skip.
+            if prev is None and stamp_field not in u:
+                match = {stamp_field: {"$exists": False}}
+            else:
+                match = {stamp_field: prev}
+            claim = await db["users"].find_one_and_update(
+                {"email": email, **match},
+                {"$set": {stamp_field: now}},
+                return_document=ReturnDocument.BEFORE,
+            )
+            if claim is None:
+                continue  # lost the race to another worker
+
+            try:
+                if i > 0 and delay:
+                    await asyncio.sleep(delay)
+                slug = email_to_slug(email)
+                resume_link = f"{base_url}/resume/{slug}?src=reminder"
+                logger.info("Sending automated %s reminder to %s...", stamp_field, email)
+                await sender.send(build_msg(email, name, resume_link))
+                await db["users"].update_one(
+                    {"email": email},
+                    {"$inc": {count_field: 1},
+                     "$unset": {"last_email_error": "", "email_failed_at": ""}},
+                )
+                sent += 1
+            except Exception as ex:  # roll the claim back so we retry next tick
+                logger.error("Failed auto-reminder to %s: %s", email, ex)
+                restore = {"$set": {stamp_field: prev}} if prev is not None or stamp_field in u \
+                    else {"$unset": {stamp_field: ""}}
+                restore.setdefault("$set", {})
+                restore["$set"].update({
+                    "last_email_error": str(ex),
+                    "email_failed_at": now,
+                })
+                await db["users"].update_one({"email": email}, restore)
+                failed += 1
+
+    return {"sent": sent, "failed": failed}
+
+
+async def process_auto_reminders() -> dict:
+    """Run a single auto-reminder pass across baseline- and post-pending
+    students. Safe to call directly (used by tests) or on a schedule."""
+    from datetime import datetime, timezone, timedelta
+    from app.db import get_db, get_all_flags, STATUS_PRE_DONE
+    from app import emailer
+
+    flags = await get_all_flags()
+    if not flags.get("auto_reminders_enabled", False):
+        return {"enabled": False, "pre": {"sent": 0, "failed": 0}, "post": {"sent": 0, "failed": 0}}
+
+    delay_days = int(flags.get("auto_reminder_delay_days", 5) or 5)
+    repeat_days = int(flags.get("auto_reminder_repeat_days", 1) or 1)
+    post_enabled = bool(flags.get("post_survey_enabled", True))
+    batch_delay = max(0.0, float(getattr(settings, "email_batch_delay_seconds", 0.4)))
+
+    db = get_db()
+    now = datetime.now(timezone.utc)
+    reg_cutoff = now - timedelta(days=delay_days)
+    resend_cutoff = now - timedelta(days=repeat_days)
+
+    # Baseline (pre) reminders: registered but never started the survey.
+    pre = await _run_daily_reminders(
+        db,
+        status_values=[None, "not_started"],
+        reg_field="created_at",
+        stamp_field="pre_reminder_sent_at",
+        count_field="pre_reminder_count",
+        build_msg=emailer.build_pre_reminder_message,
+        reg_cutoff=reg_cutoff,
+        resend_cutoff=resend_cutoff,
+        now=now,
+        delay=batch_delay,
+    )
+
+    # Post reminders: completed baseline but not the post-workshop survey.
+    post = {"sent": 0, "failed": 0}
+    if post_enabled:
+        post = await _run_daily_reminders(
+            db,
+            status_values=[STATUS_PRE_DONE],
+            reg_field="pre_submitted_at",
+            stamp_field="post_reminder_sent_at",
+            count_field="post_reminder_count",
+            build_msg=emailer.build_post_reminder_message,
+            reg_cutoff=reg_cutoff,
+            resend_cutoff=resend_cutoff,
+            now=now,
+            delay=batch_delay,
+        )
+
+    logger.info("Auto-reminder pass complete: pre=%s post=%s", pre, post)
+    return {"enabled": True, "pre": pre, "post": post}
+
+
+async def run_auto_reminder_worker():
+    """Background loop: sends the first reminder after the configured delay and
+    then re-sends daily until the student completes the survey."""
+    import asyncio
+    logger.info("Auto-reminder background task starting...")
     while True:
         try:
-            flags = await get_all_flags()
-            enabled = flags.get("auto_reminders_enabled", False)
-            delay_days = flags.get("auto_reminder_delay_days", 5)
-
-            if enabled:
-                logger.info(f"Checking for auto-reminders (delay: {delay_days} days)...")
-                db = get_db()
-                
-                # Check users created at least delay_days ago who have not finished pre-survey
-                cutoff_time = datetime.now(timezone.utc) - timedelta(days=delay_days)
-                cursor = db["users"].find({
-                    "status": {"$in": [None, "not_started"]},
-                    "pre_reminder_sent_at": {"$exists": False},
-                    "created_at": {"$lte": cutoff_time}
-                })
-                
-                async for u in cursor:
-                    email = u.get("email")
-                    name = u.get("name", "")
-                    if not email:
-                        continue
-                    
-                    try:
-                        # Atomic lock: try to claim this reminder task
-                        result = await db["users"].update_one(
-                            {
-                                "email": email, 
-                                "pre_reminder_sent_at": {"$exists": False}
-                            },
-                            {"$set": {"pre_reminder_sent_at": "sending"}}
-                        )
-                        
-                        if result.modified_count == 0:
-                            # Another worker already claimed this user
-                            continue
-                            
-                        slug = email_to_slug(email)
-                        base_url = settings.public_base_url.rstrip("/")
-                        resume_link = f"{base_url}/resume/{slug}?src=reminder"
-                        
-                        logger.info(f"Sending automated pre-reminder to {email}...")
-                        await emailer.send_pre_reminder_email(email, name, resume_link)
-                        
-                        await db["users"].update_one(
-                            {"email": email},
-                            {"$set": {"pre_reminder_sent_at": datetime.now(timezone.utc)},
-                             "$unset": {"last_email_error": "", "email_failed_at": ""}}
-                        )
-                        logger.info(f"Automated pre-reminder successfully sent and updated for {email}.")
-                        
-                        # Respect Hostinger rate limit
-                        await asyncio.sleep(2.5)
-                        
-                    except Exception as ex:
-                        logger.error(f"Failed to send auto-reminder to {email}: {ex}")
-                        err_str = str(ex).lower()
-                        if "451" in err_str or "ratelimit" in err_str:
-                            logger.warning(f"Rate limit hit for auto-reminder. Sleeping 60s...")
-                            await db["users"].update_one(
-                                {"email": email, "pre_reminder_sent_at": "sending"},
-                                {"$unset": {"pre_reminder_sent_at": ""},
-                                 "$set": {"last_email_error": "Rate limit (451)", "email_failed_at": datetime.now(timezone.utc)}}
-                            )
-                            await asyncio.sleep(60.0)
-                        else:
-                            await db["users"].update_one(
-                                {"email": email, "pre_reminder_sent_at": "sending"},
-                                {"$unset": {"pre_reminder_sent_at": ""},
-                                 "$set": {"last_email_error": str(ex), "email_failed_at": datetime.now(timezone.utc)}}
-                            )
-                            await asyncio.sleep(5.0)  # Back off a bit on other failures
-            else:
-                logger.info("Auto-reminders are disabled.")
-        except Exception as e:
-            logger.error(f"Error in auto-reminder worker loop: {e}")
-        
-        # Sleep for 1 hour
-        await asyncio.sleep(3600)
+            await process_auto_reminders()
+        except Exception as e:  # never let the loop die
+            logger.error("Error in auto-reminder worker loop: %s", e)
+        await asyncio.sleep(AUTO_REMINDER_TICK_SECONDS)
