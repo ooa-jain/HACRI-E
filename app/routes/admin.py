@@ -389,13 +389,15 @@ async def run_bulk_reminder_task(task_id: str, type_name: str, pending_users: li
                     await _send_pre_alert_email(u["email"], u["name"], req)
                     await db["users"].update_one(
                         {"email": u["email"]},
-                        {"$set": {"pre_reminder_sent_at": datetime.now(timezone.utc)}}
+                        {"$set": {"pre_reminder_sent_at": datetime.now(timezone.utc)},
+                         "$unset": {"last_email_error": "", "email_failed_at": ""}}
                     )
                 else:
                     await _send_alert_email(u["email"], u["name"], req)
                     await db["users"].update_one(
                         {"email": u["email"]},
-                        {"$set": {"post_reminder_sent_at": datetime.now(timezone.utc)}}
+                        {"$set": {"post_reminder_sent_at": datetime.now(timezone.utc)},
+                         "$unset": {"last_email_error": "", "email_failed_at": ""}}
                     )
                 sent_inc = 1
                 break  # Success
@@ -407,10 +409,18 @@ async def run_bulk_reminder_task(task_id: str, type_name: str, pending_users: li
                 else:
                     log.warning("Bulk email failed for %s: %s", u["email"], e)
                     failed_inc = 1
+                    await db["users"].update_one(
+                        {"email": u["email"]},
+                        {"$set": {"last_email_error": str(e), "email_failed_at": datetime.now(timezone.utc)}}
+                    )
                     break
         else:
             log.error("Exhausted retries for %s due to rate limit.", u["email"])
             failed_inc = 1
+            await db["users"].update_one(
+                {"email": u["email"]},
+                {"$set": {"last_email_error": "Rate limit exhausted (451)", "email_failed_at": datetime.now(timezone.utc)}}
+            )
             
         await db["admin_tasks"].update_one(
             {"_id": task_id},
@@ -871,7 +881,8 @@ async def run_auto_reminder_worker():
                         
                         await db["users"].update_one(
                             {"email": email},
-                            {"$set": {"pre_reminder_sent_at": datetime.now(timezone.utc)}}
+                            {"$set": {"pre_reminder_sent_at": datetime.now(timezone.utc)},
+                             "$unset": {"last_email_error": "", "email_failed_at": ""}}
                         )
                         logger.info(f"Automated pre-reminder successfully sent and updated for {email}.")
                         
@@ -880,16 +891,21 @@ async def run_auto_reminder_worker():
                         
                     except Exception as ex:
                         logger.error(f"Failed to send auto-reminder to {email}: {ex}")
-                        # Revert lock on failure so it can be retried later
-                        await db["users"].update_one(
-                            {"email": email, "pre_reminder_sent_at": "sending"},
-                            {"$unset": {"pre_reminder_sent_at": ""}}
-                        )
                         err_str = str(ex).lower()
                         if "451" in err_str or "ratelimit" in err_str:
                             logger.warning(f"Rate limit hit for auto-reminder. Sleeping 60s...")
+                            await db["users"].update_one(
+                                {"email": email, "pre_reminder_sent_at": "sending"},
+                                {"$unset": {"pre_reminder_sent_at": ""},
+                                 "$set": {"last_email_error": "Rate limit (451)", "email_failed_at": datetime.now(timezone.utc)}}
+                            )
                             await asyncio.sleep(60.0)
                         else:
+                            await db["users"].update_one(
+                                {"email": email, "pre_reminder_sent_at": "sending"},
+                                {"$unset": {"pre_reminder_sent_at": ""},
+                                 "$set": {"last_email_error": str(ex), "email_failed_at": datetime.now(timezone.utc)}}
+                            )
                             await asyncio.sleep(5.0)  # Back off a bit on other failures
             else:
                 logger.info("Auto-reminders are disabled.")

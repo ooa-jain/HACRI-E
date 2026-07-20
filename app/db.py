@@ -337,6 +337,8 @@ async def list_survey_users(limit: int = 10_000, dept: str | None = None, ug_or_
             "post_reminder_at":    _fmt(post_reminder),
             "reminder_clicked_at": _fmt(clicked),
             "completed_after_reminder": completed_after,
+            "last_email_error":    u.get("last_email_error", ""),
+            "email_failed_at":     _fmt(u.get("email_failed_at")),
         })
     return result
 

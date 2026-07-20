@@ -1056,7 +1056,8 @@ function renderUsers(data){
         ${u.post_reminder_at ? `<div><strong>Post Sent:</strong> ${e(u.post_reminder_at)}</div>` : ''}
         ${u.reminder_clicked_at ? `<div style="color:#d97706;font-weight:600;"><strong>Clicked:</strong> ${e(u.reminder_clicked_at)}</div>` : ''}
         ${u.completed_after_reminder ? `<div style="color:var(--green);font-weight:700;margin-top:2px;">✨ Completed After Email ✓</div>` : ''}
-        ${(!u.pre_reminder_at && !u.post_reminder_at && !u.reminder_clicked_at) ? '<span style="color:var(--muted)">—</span>' : ''}
+        ${u.last_email_error ? `<div style="color:#dc2626;font-weight:600;margin-top:4px;line-height:1.2;"><strong>Failed:</strong> ${e(u.last_email_error)} <br><span style="font-size:9px">${e(u.email_failed_at)}</span></div>` : ''}
+        ${(!u.pre_reminder_at && !u.post_reminder_at && !u.reminder_clicked_at && !u.last_email_error) ? '<span style="color:var(--muted)">—</span>' : ''}
       </td>
       <td>
         <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
