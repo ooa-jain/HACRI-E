@@ -300,6 +300,16 @@ async def api_set_flags(request: Request):
                 {"$set": {"key": "post_delay_days", "value": val, "updated_at": _now()}},
                 upsert=True,
             )
+        if "auto_reminders_enabled" in body:
+            await set_flag("auto_reminders_enabled", bool(body["auto_reminders_enabled"]))
+        if "auto_reminder_delay_days" in body:
+            from app.db import _now
+            val = int(body["auto_reminder_delay_days"])
+            await get_db()[FLAGS].update_one(
+                {"key": "auto_reminder_delay_days"},
+                {"$set": {"key": "auto_reminder_delay_days", "value": val, "updated_at": _now()}},
+                upsert=True,
+            )
     # Orientation admin can only toggle orientation flag
     if _is_ori_admin(request) and FLAG_ORIENTATION in body:
         await set_flag(FLAG_ORIENTATION, bool(body[FLAG_ORIENTATION]))
@@ -672,3 +682,63 @@ async def api_email_notification_stats(request: Request):
     from app.db import get_email_notification_stats
     stats = await get_email_notification_stats()
     return JSONResponse(stats)
+
+
+async def run_auto_reminder_worker():
+    import asyncio
+    import logging
+    from datetime import datetime, timezone, timedelta
+    from app.db import get_db, get_all_flags
+    from app.settings import settings
+    from app import emailer
+    from app.routes.landing import email_to_slug
+
+    logger = logging.getLogger("hacri-e.auto-reminders")
+    logger.info("Auto-reminder background task starting...")
+
+    while True:
+        try:
+            flags = await get_all_flags()
+            enabled = flags.get("auto_reminders_enabled", False)
+            delay_days = flags.get("auto_reminder_delay_days", 5)
+
+            if enabled:
+                logger.info(f"Checking for auto-reminders (delay: {delay_days} days)...")
+                db = get_db()
+                
+                # Check users created at least delay_days ago who have not finished pre-survey
+                cutoff_time = datetime.now(timezone.utc) - timedelta(days=delay_days)
+                cursor = db["users"].find({
+                    "status": {"$in": [None, "not_started"]},
+                    "pre_reminder_sent_at": {"$exists": False},
+                    "created_at": {"$lte": cutoff_time}
+                })
+                
+                async for u in cursor:
+                    email = u.get("email")
+                    name = u.get("name", "")
+                    if not email:
+                        continue
+                    
+                    try:
+                        slug = email_to_slug(email)
+                        base_url = settings.public_base_url.rstrip("/")
+                        resume_link = f"{base_url}/resume/{slug}?src=reminder"
+                        
+                        logger.info(f"Sending automated pre-reminder to {email}...")
+                        await emailer.send_pre_reminder_email(email, name, resume_link)
+                        
+                        await db["users"].update_one(
+                            {"email": email},
+                            {"$set": {"pre_reminder_sent_at": datetime.now(timezone.utc)}}
+                        )
+                        logger.info(f"Automated pre-reminder successfully sent and updated for {email}.")
+                    except Exception as ex:
+                        logger.error(f"Failed to send auto-reminder to {email}: {ex}")
+            else:
+                logger.info("Auto-reminders are disabled.")
+        except Exception as e:
+            logger.error(f"Error in auto-reminder worker loop: {e}")
+        
+        # Sleep for 1 hour
+        await asyncio.sleep(3600)

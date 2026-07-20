@@ -422,6 +422,25 @@ input:checked+.slider:before{transform:translateX(24px)}
 
       <div class="toggle-row" style="margin-top:20px;border-top:1px solid var(--border);padding-top:20px">
         <div>
+          <div style="font-size:14px;font-weight:600">📧 Automated Baseline Reminders</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:3px">Automatically send reminder emails to registered students who have not completed their baseline survey.</div>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="tog-auto-reminders" onchange="toggleFlag('auto_reminders_enabled',this.checked)" />
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border)">
+        <div>
+          <div style="font-size:13px;font-weight:600">Auto-Reminder Delay (Days)</div>
+          <div style="font-size:11.5px;color:var(--muted);margin-top:3px">Days to wait after registration before sending reminder</div>
+        </div>
+        <input type="number" id="inp-auto-reminder-delay" min="1" max="365" style="width:75px;padding:6px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;outline:none;text-align:center;font-family:inherit;" onchange="updateAutoReminderDelay(this.value)" />
+      </div>
+
+      <div class="toggle-row" style="margin-top:20px;border-top:1px solid var(--border);padding-top:20px">
+        <div>
           <div style="font-size:14px;font-weight:600">🛠️ Developer Test Mode (Bypass Validations)</div>
           <div style="font-size:12px;color:var(--muted);margin-top:3px">If enabled, students can navigate the wizard and submit the survey without selecting all options, and a "Bypass Validations / Auto-Fill" button will appear on the survey form for quick testing.</div>
         </div>
@@ -744,6 +763,8 @@ async function loadFlags(){
   document.getElementById('tog-post-survey').checked = !!d.post_survey_enabled;
   document.getElementById('tog-test-mode').checked = !!d.test_mode_enabled;
   document.getElementById('inp-post-delay').value = d.post_delay_days || 0;
+  document.getElementById('tog-auto-reminders').checked = !!d.auto_reminders_enabled;
+  document.getElementById('inp-auto-reminder-delay').value = d.auto_reminder_delay_days || 5;
   document.getElementById('ov-flag').innerHTML =
     d.survey_enabled ? '🟢 <b>Open</b> — students can register and submit surveys'
                      : '🔴 <b>Closed</b> — new submissions are blocked';
@@ -765,6 +786,12 @@ async function toggleFlag(key, val){
 async function updatePostDelay(val){
   const days = parseInt(val) || 0;
   await fetch('/admin/api/flags',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({post_delay_days:days})});
+  loadFlags();
+}
+
+async function updateAutoReminderDelay(val){
+  const days = parseInt(val) || 5;
+  await fetch('/admin/api/flags',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({auto_reminder_delay_days:days})});
   loadFlags();
 }
 

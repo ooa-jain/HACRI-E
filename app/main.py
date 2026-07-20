@@ -45,8 +45,19 @@ async def lifespan(app: FastAPI):
     log.info("Starting HACRI-E + Deeksharambh app...")
     await db.init_indexes()
     log.info("Mongo indexes ready.")
+    
+    # Start auto-reminder background task
+    import asyncio
+    from app.routes.admin import run_auto_reminder_worker
+    worker_task = asyncio.create_task(run_auto_reminder_worker())
+    
     yield
     log.info("Shutting down...")
+    worker_task.cancel()
+    try:
+        await worker_task
+    except asyncio.CancelledError:
+        pass
     await db.close_client()
 
 
