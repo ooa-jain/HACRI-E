@@ -2,7 +2,7 @@ from __future__ import annotations
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
-from pydantic import Field, model_validator
+from pydantic import AliasChoices, Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -29,11 +29,20 @@ class Settings(BaseSettings):
     survey_admin_otp_email: str = "santosh.ks@jainuniversity.ac.in"
     orientation_admin_otp_email: str = "santosh.ks@jainuniversity.ac.in"
 
-    # SMTP
-    smtp_host: str | None = None
-    smtp_port: int = 465
-    smtp_user: str | None = None
-    smtp_pass: str | None = None
+    # SMTP — each field accepts several common env-var spellings so config from
+    # different providers (Hostinger, Gmail, …) works without renaming keys.
+    #   Host : SMTP_HOST | SMTP_SERVER
+    #   Port : SMTP_PORT                 (465 = implicit TLS, 587 = STARTTLS)
+    #   User : SMTP_USER | SMTP_EMAIL | EMAIL_USER
+    #   Pass : SMTP_PASS | SMTP_PASSWORD | EMAIL_PASS
+    smtp_host: str | None = Field(
+        default=None, validation_alias=AliasChoices("smtp_host", "smtp_server"))
+    smtp_port: int = Field(
+        default=465, validation_alias=AliasChoices("smtp_port"))
+    smtp_user: str | None = Field(
+        default=None, validation_alias=AliasChoices("smtp_user", "smtp_email", "email_user"))
+    smtp_pass: str | None = Field(
+        default=None, validation_alias=AliasChoices("smtp_pass", "smtp_password", "email_pass"))
     email_from: str = "HACRI-E <noreply@juooa.cloud>"
     email_dry_run: bool = True
 
@@ -48,21 +57,20 @@ class Settings(BaseSettings):
     # early and reports how many were sent so no recipients are burned.
     email_ratelimit_cooldown_seconds: float = 60.0
 
-    @model_validator(mode="before")
-    @classmethod
-    def populate_smtp_defaults(cls, data: Any) -> Any:
-        if isinstance(data, dict):
-            # Case insensitive check for keys
-            # Pydantic settings loads keys in lowercase or original depending on configuration.
-            # We check both lowercase and original casing.
-            email_user = data.get("email_user") or data.get("EMAIL_USER")
-            email_pass = data.get("email_pass") or data.get("EMAIL_PASS")
-            
-            if not data.get("smtp_user") and not data.get("SMTP_USER") and email_user:
-                data["smtp_user"] = email_user
-            if not data.get("smtp_pass") and not data.get("SMTP_PASS") and email_pass:
-                data["smtp_pass"] = email_pass
-        return data
+    @model_validator(mode="after")
+    def _finalise_smtp(self) -> "Settings":
+        # Gmail app passwords are displayed in 4×4 groups with spaces, but the
+        # real secret has no spaces. Strip them for Gmail so login succeeds
+        # whether the value was pasted with or without spaces.
+        if self.smtp_pass and self.smtp_host and "gmail" in self.smtp_host.lower():
+            self.smtp_pass = self.smtp_pass.replace(" ", "")
+
+        # Most providers (Gmail especially) require the From address to match the
+        # authenticated mailbox. If EMAIL_FROM was left at the default, use the
+        # SMTP login address so mail isn't rejected or rewritten.
+        if self.smtp_user and self.email_from == "HACRI-E <noreply@juooa.cloud>":
+            self.email_from = f"JAIN Office of Academics <{self.smtp_user}>"
+        return self
 
 
 
