@@ -395,14 +395,17 @@ async def run_bulk_reminder_task(task_id: str, type_name: str, pending_users: li
     db = get_db()
     delay = max(0.0, float(getattr(settings, "email_batch_delay_seconds", 0.4)))
 
-    if type_name == "pre-pending":
-        stamp_field = "pre_reminder_sent_at"
-        count_field = "pre_reminder_count"
-        build_msg = emailer.build_pre_reminder_message
-    else:
-        stamp_field = "post_reminder_sent_at"
-        count_field = "post_reminder_count"
-        build_msg = emailer.build_post_reminder_message
+    # Each pending entry may carry its own "kind" ("pre" | "post") — used by the
+    # custom-segment sender where one batch mixes baseline and post reminders.
+    # Entries without a kind fall back to the task-level type.
+    default_kind = "pre" if type_name == "pre-pending" else "post"
+
+    def _fields_for(kind: str):
+        if kind == "pre":
+            return ("pre_reminder_sent_at", "pre_reminder_count",
+                    emailer.build_pre_reminder_message)
+        return ("post_reminder_sent_at", "post_reminder_count",
+                emailer.build_post_reminder_message)
 
     cooldown = max(0.0, float(getattr(settings, "email_ratelimit_cooldown_seconds", 60.0)))
 
@@ -420,6 +423,7 @@ async def run_bulk_reminder_task(task_id: str, type_name: str, pending_users: li
                 if not email:
                     continue
 
+                stamp_field, count_field, build_msg = _fields_for(u.get("kind") or default_kind)
                 slug = email_to_slug(email)
                 resume_link = f"{base_url}/resume/{slug}?src=reminder"
                 msg = build_msg(email, name, resume_link)
@@ -609,6 +613,54 @@ async def api_send_alert(
         "task_id": task_id,
         "total_pending": len(pending)
     })
+
+
+# ── Send reminders to an explicit list of students (segment drill-down) ───────
+@router.post("/admin/api/alert/custom")
+async def api_send_custom_alert(request: Request, background_tasks: BackgroundTasks):
+    """Send reminders to a specific set of students, e.g. the "clicked but not
+    submitted" segment from the Email Notifications drill-down. The reminder
+    kind is chosen per student: not-started → baseline (pre), pre-done → post.
+    Students who already finished both surveys are skipped."""
+    if not _is_survey_admin(request):
+        raise HTTPException(status_code=403)
+    try:
+        body = await request.json()
+        emails = [str(e).strip().lower() for e in (body.get("emails") or []) if e]
+    except Exception:
+        raise HTTPException(status_code=400, detail="Expected JSON body {emails: [...]}")
+    if not emails:
+        raise HTTPException(status_code=400, detail="No recipients given")
+    emails = emails[:5000]
+
+    db = get_db()
+    pending = []
+    async for u in db["users"].find({"email": {"$in": emails}}):
+        status_v = u.get("status")
+        if status_v in (None, "not_started"):
+            kind = "pre"
+        elif status_v == STATUS_PRE_DONE:
+            kind = "post"
+        else:
+            continue  # both surveys done — nothing to remind about
+        pending.append({"email": u["email"], "name": u.get("name", ""), "kind": kind})
+
+    task_id = "custom_" + secrets.token_hex(8)
+    from datetime import datetime, timezone
+    await db["admin_tasks"].insert_one({
+        "_id": task_id,
+        "type": "custom",
+        "status": "running",
+        "total": len(pending),
+        "sent": 0,
+        "failed": 0,
+        "started_at": datetime.now(timezone.utc),
+        "updated_at": datetime.now(timezone.utc),
+    })
+
+    base_url = str(request.base_url).rstrip("/")
+    background_tasks.add_task(run_bulk_reminder_task, task_id, "custom", pending, base_url)
+    return JSONResponse({"ok": True, "task_id": task_id, "total_pending": len(pending)})
 
 
 @router.get("/admin/api/alert/status/{task_id}")
@@ -862,11 +914,15 @@ async def api_background_analysis(
 
 
 @router.get("/admin/api/email-notification/stats")
-async def api_email_notification_stats(request: Request):
+async def api_email_notification_stats(
+    request: Request,
+    dept: str = Query(default=""),
+    ug_or_pg: str = Query(default=""),
+):
     if not _is_survey_admin(request):
         raise HTTPException(status_code=403)
     from app.db import get_email_notification_stats
-    stats = await get_email_notification_stats()
+    stats = await get_email_notification_stats(dept=dept or None, ug_or_pg=ug_or_pg or None)
     return JSONResponse(stats)
 
 
