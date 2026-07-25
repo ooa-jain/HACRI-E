@@ -304,8 +304,11 @@ def _fmt(dt: Any) -> str:
 async def list_survey_users(limit: int = 10_000, dept: str | None = None, ug_or_pg: str | None = None) -> list[dict]:
     import base64
     query = {}
-    if dept:
-        query["program"] = dept
+    if dept and dept not in ("All Departments", "all", "All"):
+        if dept in ("No Program", "No Department", "none", "None"):
+            query["program"] = {"$in": ["", None, "No Program", "No Department"]}
+        else:
+            query["program"] = dept
     if ug_or_pg:
         query["ug_or_pg"] = ug_or_pg
 
@@ -378,8 +381,11 @@ async def list_matched_users(
     """Return {email: {pre: fields, post: fields}} for users with both surveys done."""
     db = get_db()
     query = {"status": STATUS_POST_DONE}
-    if program:
-        query["program"] = program
+    if program and program not in ("All Departments", "all", "All"):
+        if program in ("No Program", "No Department", "none", "None"):
+            query["program"] = {"$in": ["", None, "No Program", "No Department"]}
+        else:
+            query["program"] = program
     if ug_or_pg:
         query["ug_or_pg"] = ug_or_pg
     matched: dict[str, dict] = {}

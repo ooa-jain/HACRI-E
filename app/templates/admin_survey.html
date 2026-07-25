@@ -959,21 +959,26 @@ async function loadUsers() {
 }
 
 function populateDeptDropdowns(data) {
-  const depts = Array.from(new Set(data.map(u => u.program).filter(Boolean))).sort();
-  
   const mainDeptSelect = document.getElementById('dept-filter');
   const targetDeptSelect = document.getElementById('target-dept-select');
 
-  const curMain = mainDeptSelect.value;
-  const curTarget = targetDeptSelect.value;
+  // If already populated, don't shrink the options list when a filter is applied
+  if (mainDeptSelect && mainDeptSelect.options.length > 1) {
+    return;
+  }
+
+  const depts = Array.from(new Set(data.map(u => u.program).filter(Boolean))).sort();
+  
+  const curMain = mainDeptSelect ? mainDeptSelect.value : '';
+  const curTarget = targetDeptSelect ? targetDeptSelect.value : '';
 
   const optionsHtml = '<option value="">All Departments</option>' + depts.map(d => `<option value="${e(d)}">${e(d)}</option>`).join('');
 
-  mainDeptSelect.innerHTML = optionsHtml;
-  targetDeptSelect.innerHTML = optionsHtml;
+  if (mainDeptSelect) mainDeptSelect.innerHTML = optionsHtml;
+  if (targetDeptSelect) targetDeptSelect.innerHTML = optionsHtml;
 
-  if (curMain) mainDeptSelect.value = curMain;
-  if (curTarget) targetDeptSelect.value = curTarget;
+  if (curMain && mainDeptSelect) mainDeptSelect.value = curMain;
+  if (curTarget && targetDeptSelect) targetDeptSelect.value = curTarget;
 }
 
 function applyFilters() {
@@ -1172,34 +1177,46 @@ function setTargetCohort(cohort, btn) {
   updateTargetedRecipientCount();
 }
 
-function updateTargetedRecipientCount() {
+async function updateTargetedRecipientCount() {
   const dept = document.getElementById('target-dept-select') ? document.getElementById('target-dept-select').value : '';
   const level = document.getElementById('target-level-select') ? document.getElementById('target-level-select').value : '';
 
-  let filtered = users;
-  if (dept) filtered = filtered.filter(u => u.program === dept);
-  if (level) filtered = filtered.filter(u => u.ug_or_pg === level);
-
-  let targetCount = 0;
-  let label = '';
-
-  if (currentTargetCohort === 'pre-pending') {
-    targetCount = filtered.filter(u => u.status === 'not_started' || !u.status).length;
-    label = 'Pending Baseline (Pre) Survey';
-  } else if (currentTargetCohort === 'sent-not-clicked') {
-    targetCount = filtered.filter(u => (u.pre_reminder_at || u.post_reminder_at || u.pre_reminder_count > 0 || u.post_reminder_count > 0) && !u.reminder_clicked_at && u.status !== 'post_done').length;
-    label = 'Sent Mail, Not Clicked Yet';
-  } else if (currentTargetCohort === 'all-pending') {
-    targetCount = filtered.filter(u => u.status !== 'post_done').length;
-    label = 'All Uncompleted Students';
-  } else { // post-pending
-    targetCount = filtered.filter(u => u.status === 'pre_done').length;
-    label = 'Pending Post-Workshop Survey';
-  }
-
   const displayEl = document.getElementById('target-count-display');
   if (displayEl) {
-    displayEl.innerHTML = `Target: <span class="text-lg underline">${targetCount} students</span> for <strong>${label}</strong> ${dept ? `(Dept: ${dept})` : '(All Departments)'}`;
+    displayEl.innerHTML = `Computing targeted recipients…`;
+  }
+
+  try {
+    const params = new URLSearchParams({dept: dept || '', ug_or_pg: level || ''});
+    const r = await fetch('/admin/api/survey/users?' + params.toString());
+    if (!r.ok) throw new Error();
+    const targetedUsers = await r.json();
+
+    let filtered = targetedUsers;
+    let targetCount = 0;
+    let label = '';
+
+    if (currentTargetCohort === 'pre-pending') {
+      targetCount = filtered.filter(u => u.status === 'not_started' || !u.status).length;
+      label = 'Pending Baseline (Pre) Survey';
+    } else if (currentTargetCohort === 'sent-not-clicked') {
+      targetCount = filtered.filter(u => (u.pre_reminder_at || u.post_reminder_at || u.pre_reminder_count > 0 || u.post_reminder_count > 0) && !u.reminder_clicked_at && u.status !== 'post_done').length;
+      label = 'Sent Mail, Not Clicked Yet';
+    } else if (currentTargetCohort === 'all-pending') {
+      targetCount = filtered.filter(u => u.status !== 'post_done').length;
+      label = 'All Uncompleted Students';
+    } else { // post-pending
+      targetCount = filtered.filter(u => u.status === 'pre_done').length;
+      label = 'Pending Post-Workshop Survey';
+    }
+
+    if (displayEl) {
+      displayEl.innerHTML = `Target: <span class="text-lg underline">${targetCount} students</span> for <strong>${label}</strong> ${dept ? `(Dept: ${dept})` : '(All Departments)'}`;
+    }
+  } catch (err) {
+    if (displayEl) {
+      displayEl.innerHTML = `<span class="text-rose-600">Error calculating recipients</span>`;
+    }
   }
 }
 

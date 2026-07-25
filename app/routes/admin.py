@@ -807,8 +807,11 @@ async def admin_export_cohort(
 
     db = get_db()
     query = {}
-    if dept:
-        query["program"] = dept
+    if dept and dept not in ("All Departments", "all", "All"):
+        if dept in ("No Program", "No Department", "none", "None"):
+            query["program"] = {"$in": ["", None, "No Program", "No Department"]}
+        else:
+            query["program"] = dept
     if ug_or_pg:
         query["ug_or_pg"] = ug_or_pg
 
@@ -916,8 +919,11 @@ async def api_background_analysis(
     db = get_db()
     
     query = {"status": STATUS_POST_DONE}
-    if dept:
-        query["program"] = dept
+    if dept and dept not in ("All Departments", "all", "All"):
+        if dept in ("No Program", "No Department", "none", "None"):
+            query["program"] = {"$in": ["", None, "No Program", "No Department"]}
+        else:
+            query["program"] = dept
     if ug_or_pg:
         query["ug_or_pg"] = ug_or_pg
         
