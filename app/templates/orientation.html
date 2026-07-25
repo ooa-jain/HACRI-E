@@ -890,6 +890,11 @@ footer{text-align:center;padding-top:1.75rem;font-size:11px;color:var(--muted);o
     <div class="ty-em">🎓</div>
     <div class="ty-t">Your story is written!</div>
     <div class="ty-s">Thank you for being part of Deeksharambh 2026. Your anonymous feedback shapes the next batch's first week. Welcome to the JAIN family! ❤️</div>
+    <div style="margin-top:20px;">
+      <a href="/survey/post" style="display:inline-block;padding:12px 28px;background:#e6b324;color:#0d2147;font-size:15px;font-weight:700;border-radius:10px;text-decoration:none;box-shadow:0 4px 14px rgba(230,179,36,0.35);">
+        Continue to Post-Workshop Survey &rarr;
+      </a>
+    </div>
   </div>
 
   <!-- ── ANSWERED RESULTS (populated by showThanks) ── -->
@@ -1158,13 +1163,10 @@ async function submitForm(){
     });
     if(res.ok){
       const j = await res.json().catch(()=>({}));
-      if(j && j.id) state.id = j.id;   // use the server-issued id
-      // Redirect to post survey after orientation submission
-      if (j && j.redirect) {
-        document.getElementById("spin").classList.remove("show");
-        window.location.href = j.redirect;
-        return;
-      }
+      if(j && j.id) state.id = j.id;
+      document.getElementById("spin").classList.remove("show");
+      window.location.href = (j && j.redirect) ? j.redirect : "/survey/post";
+      return;
     } else {
       console.error('Submit failed, HTTP', res.status);
     }

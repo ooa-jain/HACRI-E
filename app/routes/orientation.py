@@ -36,7 +36,6 @@ async def orientation_get(
     pre_name = await get_pre_name(email)
     display_name = pre_name or name
     already_done = bool(user and user.get("orientation_submitted", False))
-
     saved_responses = {}
     if already_done:
         ori_doc = await get_db()["orientation_responses"].find_one({"email": email}, sort=[("submitted_at", -1)])
