@@ -230,3 +230,59 @@ async def test_survey_users_api_timestamps(client: AsyncClient):
     assert student["pre_submitted_at_iso"].startswith("2026-07-20T11:00:00")
     assert student["post_submitted_at_iso"].startswith("2026-07-20T12:00:00")
 
+
+@pytest.mark.asyncio
+async def test_reminder_link_routes_to_orientation_first(client: AsyncClient):
+    """Test that clicking a post reminder link forces user to orientation first,
+    even when FLAG_ORIENTATION setting is False in admin settings."""
+    from app.db import get_db, set_flag, STATUS_PRE_DONE, FLAG_ORIENTATION
+    from app.routes.landing import email_to_slug
+    from app.deps import make_csrf_token
+
+    db = get_db()
+    await set_flag(FLAG_ORIENTATION, False)
+
+    email = "reminder.orientation@example.com"
+    name = "Reminder Orientation Student"
+
+    # Insert user who finished pre-survey but has NOT done orientation
+    await db["users"].insert_one({
+        "email": email,
+        "name": name,
+        "program": "Dept of CS",
+        "status": STATUS_PRE_DONE,
+    })
+
+    slug = email_to_slug(email)
+
+    # 1. Click resume link from reminder email
+    resp_resume = await client.get(f"/resume/{slug}?src=reminder", follow_redirects=False)
+    assert resp_resume.status_code == 303
+    assert resp_resume.headers["location"] == "/orientation"
+
+    # 2. Access /orientation -> should load form (200 OK) even with FLAG_ORIENTATION=False
+    resp_ori = await client.get("/orientation", follow_redirects=False)
+    assert resp_ori.status_code == 200
+
+    # 3. Accessing /survey/post BEFORE orientation submission -> redirected to /orientation
+    resp_post_before = await client.get("/survey/post", follow_redirects=False)
+    assert resp_post_before.status_code == 303
+    assert resp_post_before.headers["location"] == "/orientation"
+
+    # 4. Submit orientation
+    csrf = make_csrf_token()
+    client.cookies.set("hacri_csrf", csrf)
+    resp_submit = await client.post(
+        "/api/orientation/submit",
+        json={"q1": "Great session", "csrf": csrf},
+    )
+    assert resp_submit.status_code == 200
+    res_json = resp_submit.json()
+    assert res_json["ok"] is True
+    assert res_json["redirect"] == "/survey/post"
+
+    # 5. Accessing /survey/post AFTER orientation submission -> loads form successfully (200 OK)
+    resp_post_after = await client.get("/survey/post", follow_redirects=False)
+    assert resp_post_after.status_code == 200
+
+

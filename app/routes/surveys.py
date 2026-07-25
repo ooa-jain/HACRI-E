@@ -315,10 +315,10 @@ async def post_get(
     pre_enabled = await get_flag(FLAG_PRE_SURVEY, default=True)
     orientation_enabled = await get_flag(FLAG_ORIENTATION, default=False)
     status_v = user.get("status")
+    is_reminder = bool(user.get("reminder_clicked_at"))
 
-    if orientation_enabled:
-        if not user.get("orientation_submitted"):
-            return RedirectResponse(url="/orientation", status_code=303)
+    if (orientation_enabled or is_reminder) and not user.get("orientation_submitted"):
+        return RedirectResponse(url="/orientation", status_code=303)
 
     if pre_enabled:
         if status_v not in (STATUS_PRE_DONE, STATUS_POST_DONE):
@@ -383,10 +383,10 @@ async def post_post(
     pre_enabled = await get_flag(FLAG_PRE_SURVEY, default=True)
     orientation_enabled = await get_flag(FLAG_ORIENTATION, default=False)
     status_v = user.get("status")
+    is_reminder = bool(user.get("reminder_clicked_at"))
 
-    if orientation_enabled:
-        if not user.get("orientation_submitted"):
-            return RedirectResponse(url="/orientation", status_code=303)
+    if (orientation_enabled or is_reminder) and not user.get("orientation_submitted"):
+        return RedirectResponse(url="/orientation", status_code=303)
 
     if pre_enabled:
         if status_v not in (STATUS_PRE_DONE, STATUS_POST_DONE):

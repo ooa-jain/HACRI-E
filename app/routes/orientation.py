@@ -32,13 +32,6 @@ async def orientation_get(
         from fastapi.responses import RedirectResponse
         return RedirectResponse(url=f"/results/{email_to_slug(email)}", status_code=303)
 
-    # If flag is off, show disabled page
-    enabled = await get_flag(FLAG_ORIENTATION, default=False)
-    if not enabled:
-        return request.app.state.templates.TemplateResponse(
-            request, "orientation_disabled.html", {}, status_code=200
-        )
-
     # Get name from pre-survey record if available (more accurate)
     pre_name = await get_pre_name(email)
     display_name = pre_name or name
@@ -66,10 +59,6 @@ async def orientation_submit(
     request: Request,
     session: Annotated[dict, Depends(get_current_session)],
 ):
-    enabled = await get_flag(FLAG_ORIENTATION, default=False)
-    if not enabled:
-        return JSONResponse({"ok": False, "error": "Orientation not enabled"}, status_code=403)
-
     email = session["email"]
     name  = session["name"]
 

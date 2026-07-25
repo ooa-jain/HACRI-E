@@ -128,12 +128,13 @@ async def landing_post(
     orientation_enabled = await get_flag(FLAG_ORIENTATION, default=False)
     orientation_submitted = bool(user.get("orientation_submitted", False))
     pre_enabled = await get_flag(FLAG_PRE_SURVEY, default=True)
+    from_reminder = bool(user.get("reminder_clicked_at"))
 
     if status_v == STATUS_POST_DONE:
         dest_url = f"/results/{email_to_slug(identity.email)}"
     elif pre_enabled and status_v != STATUS_PRE_DONE:
         dest_url = "/survey/pre"
-    elif orientation_enabled and not orientation_submitted:
+    elif (orientation_enabled or from_reminder) and not orientation_submitted:
         dest_url = "/orientation"
     else:
         dest_url = "/survey/post"
@@ -155,6 +156,7 @@ async def resume_session(request: Request, email_slug: str, src: str | None = No
     if not user:
         return RedirectResponse(url="/", status_code=303)
 
+    is_reminder = (src == "reminder") or bool(user.get("reminder_clicked_at"))
     if src == "reminder":
         from datetime import datetime, timezone
         await db["users"].update_one(
@@ -171,7 +173,7 @@ async def resume_session(request: Request, email_slug: str, src: str | None = No
         dest_url = f"/results/{email_slug}"
     elif pre_enabled and status_v != STATUS_PRE_DONE:
         dest_url = "/survey/pre"
-    elif orientation_enabled and not orientation_submitted:
+    elif (orientation_enabled or is_reminder) and not orientation_submitted:
         dest_url = "/orientation"
     else:
         dest_url = "/survey/post"
