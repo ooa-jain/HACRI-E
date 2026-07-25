@@ -1148,37 +1148,44 @@ async function submitForm(){
   document.getElementById("sec9").classList.remove("active");
   document.getElementById("spin").classList.add("show");
   document.getElementById("pf").style.width="100%";
-  document.getElementById("plb").textContent="Submitting...";
+  const plb = document.getElementById("plb");
+  if (plb) plb.textContent="Saving & Redirecting to AI Survey...";
 
   // Keep a local backup first so an answer is never lost.
   try{localStorage.setItem(STORAGE_KEY,JSON.stringify([...(JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]")),state]));}catch(e){}
 
-  // ── Send the response to the server so it lands in MongoDB and shows up
-  //    in the admin dashboard, the Excel export and the /result snapshot. ──
+  let redirected = false;
+  function navToNext(url){
+    if (redirected) return;
+    redirected = true;
+    window.location.href = url || "/survey/post";
+  }
+
+  // Safety fallback: if fetch takes longer than 1.5s, proceed to AI survey anyway
+  const safetyTimer = setTimeout(() => {
+    navToNext("/survey/post");
+  }, 1500);
+
   try{
     const res = await fetch('/api/orientation/submit', {
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify(state)
     });
+    clearTimeout(safetyTimer);
     if(res.ok){
       const j = await res.json().catch(()=>({}));
-      if(j && j.id) state.id = j.id;
-      document.getElementById("spin").classList.remove("show");
-      window.location.href = (j && j.redirect) ? j.redirect : "/survey/post";
+      navToNext((j && j.redirect) ? j.redirect : "/survey/post");
       return;
     } else {
-      console.error('Submit failed, HTTP', res.status);
+      console.error('Submit HTTP error:', res.status);
+      navToNext("/survey/post");
     }
   }catch(err){
-    // Network down — the user still sees their thank-you screen and the
-    // localStorage backup above preserves their answers.
     console.error('Submit network error:', err);
+    clearTimeout(safetyTimer);
+    navToNext("/survey/post");
   }
-
-  // Server manages submission state via session
-  document.getElementById("spin").classList.remove("show");
-  showThanks();
 }
 
 function showThanks(){
@@ -1855,21 +1862,9 @@ upd(0);
   vid.addEventListener('stalled', ()=> setTimeout(()=>{ if(vid.readyState<2) dismissVideo(); }, 3500));
 })();
 
-// On page load check: if already completed, show thank-you
+// On page load check: if already completed, go straight to AI survey (/survey/post)
 if (window._ALREADY_DONE) {
-  // Hide video overlay
-  const overlay = document.getElementById('videoOverlay');
-  if (overlay) overlay.remove();
-  document.body.style.overflow = '';
-  
-  // Hide all sections
-  for (let i = 0; i <= 9; i++) {
-    const sec = document.getElementById("sec" + i);
-    if (sec) sec.classList.remove("active");
-  }
-  
-  // Show thanks screen
-  showThanks();
+  window.location.href = "/survey/post";
 }
 
 // ── PDF download feature removed ──
