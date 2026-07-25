@@ -558,6 +558,197 @@ async def api_send_alert(
     })
 
 
+def _fmt_duration(seconds: float | None) -> str:
+    if seconds is None or seconds < 0:
+        return "—"
+    mins = int(seconds // 60)
+    if mins < 60:
+        return f"{mins}m"
+    hrs = mins // 60
+    rem_mins = mins % 60
+    if hrs < 24:
+        return f"{hrs}h {rem_mins}m" if rem_mins > 0 else f"{hrs}h"
+    days = hrs // 24
+    rem_hrs = hrs % 24
+    return f"{days}d {rem_hrs}h"
+
+
+@router.post("/admin/api/alert/targeted")
+async def api_send_targeted_alert(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    target_type: str = Query(default="post-pending"),
+    dept: str = Query(default=""),
+    ug_or_pg: str = Query(default=""),
+):
+    if not _is_survey_admin(request):
+        raise HTTPException(status_code=403)
+    users = await list_survey_users(dept=dept or None, ug_or_pg=ug_or_pg or None)
+    
+    if target_type == "pre-pending":
+        pending = [u for u in users if u.get("status") in ("not_started", None)]
+        task_prefix = "pre_"
+        type_name = "pre-pending"
+    elif target_type == "sent-not-clicked":
+        pending = [u for u in users if (u.get("pre_reminder_at") or u.get("post_reminder_at") or u.get("pre_reminder_count", 0) > 0 or u.get("post_reminder_count", 0) > 0) and not u.get("reminder_clicked_at") and u.get("status") != STATUS_POST_DONE]
+        task_prefix = "unclicked_"
+        type_name = "post-pending"
+    elif target_type == "all-pending":
+        pending = [u for u in users if u.get("status") != STATUS_POST_DONE]
+        task_prefix = "all_"
+        type_name = "post-pending"
+    else:  # post-pending default
+        pending = [u for u in users if u.get("status") == STATUS_PRE_DONE]
+        task_prefix = "post_"
+        type_name = "post-pending"
+
+    pending.sort(key=lambda u: bool(u.get("post_reminder_at") or u.get("pre_reminder_at")))
+
+    import secrets
+    task_id = task_prefix + secrets.token_hex(8)
+    
+    db = get_db()
+    from datetime import datetime, timezone
+    await db["admin_tasks"].insert_one({
+        "_id": task_id,
+        "type": type_name,
+        "status": "running",
+        "total": len(pending),
+        "sent": 0,
+        "failed": 0,
+        "started_at": datetime.now(timezone.utc),
+        "updated_at": datetime.now(timezone.utc)
+    })
+    
+    base_url = str(request.base_url).rstrip("/")
+    background_tasks.add_task(
+        run_bulk_reminder_task,
+        task_id,
+        type_name,
+        pending,
+        base_url
+    )
+    
+    return JSONResponse({
+        "ok": True,
+        "task_id": task_id,
+        "total_pending": len(pending)
+    })
+
+
+@router.get("/admin/api/survey/time-analysis")
+async def api_time_analysis(
+    request: Request,
+    dept: str = Query(default=""),
+    ug_or_pg: str = Query(default=""),
+):
+    if not (_is_survey_admin(request) or _is_ori_admin(request)):
+        raise HTTPException(status_code=403)
+    users = await list_survey_users(limit=10000, dept=dept or None, ug_or_pg=ug_or_pg or None)
+    
+    dept_map = {}
+    student_times = []
+    
+    for u in users:
+        c_iso = u.get("created_at_iso")
+        pre_iso = u.get("pre_submitted_at_iso")
+        post_iso = u.get("post_submitted_at_iso")
+        
+        pre_mins = None
+        post_mins = None
+        total_mins = None
+        
+        try:
+            if c_iso and pre_iso:
+                t0 = datetime.fromisoformat(c_iso)
+                t1 = datetime.fromisoformat(pre_iso)
+                pre_mins = max(0.0, (t1 - t0).total_seconds() / 60.0)
+        except Exception:
+            pass
+
+        try:
+            if pre_iso and post_iso:
+                t1 = datetime.fromisoformat(pre_iso)
+                t2 = datetime.fromisoformat(post_iso)
+                post_mins = max(0.0, (t2 - t1).total_seconds() / 60.0)
+            elif c_iso and post_iso:
+                t0 = datetime.fromisoformat(c_iso)
+                t2 = datetime.fromisoformat(post_iso)
+                post_mins = max(0.0, (t2 - t0).total_seconds() / 60.0)
+        except Exception:
+            pass
+
+        try:
+            if c_iso and post_iso:
+                t0 = datetime.fromisoformat(c_iso)
+                t2 = datetime.fromisoformat(post_iso)
+                total_mins = max(0.0, (t2 - t0).total_seconds() / 60.0)
+        except Exception:
+            pass
+
+        d_name = u.get("program") or "No Department"
+        if d_name not in dept_map:
+            dept_map[d_name] = {
+                "dept": d_name,
+                "total_users": 0,
+                "pre_mins_sum": 0.0, "pre_count": 0,
+                "post_mins_sum": 0.0, "post_count": 0,
+                "total_mins_sum": 0.0, "total_count": 0,
+            }
+
+        dm = dept_map[d_name]
+        dm["total_users"] += 1
+        if pre_mins is not None:
+            dm["pre_mins_sum"] += pre_mins
+            dm["pre_count"] += 1
+        if post_mins is not None:
+            dm["post_mins_sum"] += post_mins
+            dm["post_count"] += 1
+        if total_mins is not None:
+            dm["total_mins_sum"] += total_mins
+            dm["total_count"] += 1
+
+        student_times.append({
+            "name": u.get("name"),
+            "email": u.get("email"),
+            "program": d_name,
+            "ug_or_pg": u.get("ug_or_pg"),
+            "status": u.get("status"),
+            "created_at": u.get("created_at"),
+            "pre_at": u.get("pre_at"),
+            "post_at": u.get("post_at"),
+            "pre_mins": round(pre_mins, 1) if pre_mins is not None else None,
+            "post_mins": round(post_mins, 1) if post_mins is not None else None,
+            "total_mins": round(total_mins, 1) if total_mins is not None else None,
+            "pre_fmt": _fmt_duration(pre_mins * 60 if pre_mins is not None else None),
+            "post_fmt": _fmt_duration(post_mins * 60 if post_mins is not None else None),
+            "total_fmt": _fmt_duration(total_mins * 60 if total_mins is not None else None),
+        })
+
+    dept_averages = []
+    for d_name, dm in dept_map.items():
+        avg_pre = (dm["pre_mins_sum"] / dm["pre_count"]) if dm["pre_count"] > 0 else None
+        avg_post = (dm["post_mins_sum"] / dm["post_count"]) if dm["post_count"] > 0 else None
+        avg_total = (dm["total_mins_sum"] / dm["total_count"]) if dm["total_count"] > 0 else None
+        dept_averages.append({
+            "dept": d_name,
+            "total_users": dm["total_users"],
+            "avg_pre_mins": round(avg_pre, 1) if avg_pre is not None else None,
+            "avg_post_mins": round(avg_post, 1) if avg_post is not None else None,
+            "avg_total_mins": round(avg_total, 1) if avg_total is not None else None,
+            "avg_pre_fmt": _fmt_duration(avg_pre * 60 if avg_pre is not None else None),
+            "avg_post_fmt": _fmt_duration(avg_post * 60 if avg_post is not None else None),
+            "avg_total_fmt": _fmt_duration(avg_total * 60 if avg_total is not None else None),
+        })
+
+    dept_averages.sort(key=lambda x: x["dept"])
+
+    return JSONResponse({
+        "departments": dept_averages,
+        "students": student_times
+    })
+
+
 @router.get("/admin/api/alert/status/{task_id}")
 async def api_get_alert_status(request: Request, task_id: str):
     if not _is_survey_admin(request):
