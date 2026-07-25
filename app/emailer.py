@@ -392,7 +392,7 @@ def build_post_reminder_message(email: str, name: str, resume_link: str) -> MIME
     body_text = (
         f"Hi {name},\n\n"
         "Thank you for completing the Pre-AI Survey.\n\n"
-        f"You haven't yet submitted the Post-Workshop Survey. Please click the link below to directly resume and complete it:\n{resume_link}\n\n"
+        f"You haven't yet submitted the Deeksharambh Orientation Survey and Post-Workshop Survey. Please click the link below to directly resume and complete them:\n{resume_link}\n\n"
         "Thank you,\nOffice of Academics\nJAIN (Deemed-to-be University)"
     )
     return _build_html_message(email, name, subject, body_text, html_body)
