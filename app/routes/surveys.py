@@ -274,9 +274,17 @@ async def pre_done(
     session: Annotated[dict, Depends(get_current_session)],
 ):
     """Thank the user after the pre-survey and remind them to keep using the
-    same email for any upcoming forms. No post-survey link is shown here."""
+    same email for any upcoming forms."""
     orientation_enabled = await get_flag(FLAG_ORIENTATION, default=False)
+    post_enabled = await get_flag("post_survey_enabled", default=True)
     user = await get_db()["users"].find_one({"email": session.get("email")})
+    from_reminder = bool(
+        user and (
+            user.get("reminder_clicked_at")
+            or user.get("post_reminder_sent_at")
+            or (user.get("post_reminder_count", 0) > 0)
+        )
+    )
     orientation_submitted = bool(user and user.get("orientation_submitted", False))
     return request.app.state.templates.TemplateResponse(
         request,
@@ -284,7 +292,9 @@ async def pre_done(
         {
             "name": session.get("name", ""),
             "email": session.get("email", ""),
-            "orientation_enabled": orientation_enabled and not orientation_submitted,
+            "orientation_enabled": (orientation_enabled or from_reminder) and not orientation_submitted,
+            "post_enabled": post_enabled or from_reminder,
+            "already_done": orientation_submitted,
         },
     )
 

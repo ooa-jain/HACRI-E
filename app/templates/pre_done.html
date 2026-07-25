@@ -14,6 +14,9 @@
   {% if orientation_enabled %}
   <p style="margin-top:1rem">Next step: please fill the <strong>Deeksharambh Orientation Survey</strong>.</p>
   <a class="btn primary" href="/orientation">Continue to Orientation Survey →</a>
+  {% elif post_enabled and not already_done %}
+  <p style="margin-top:1rem">Next step: please proceed to the <strong>Post-Workshop AI Survey</strong>.</p>
+  <a class="btn primary" href="/survey/post">Continue to Post-Workshop Survey →</a>
   {% else %}
   <p style="margin-top:1rem">You're all done for now. You may close this tab.</p>
   <a class="btn primary" href="/">← Back to home</a>

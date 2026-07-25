@@ -33,6 +33,19 @@ async def orientation_get(
         from fastapi.responses import RedirectResponse
         return RedirectResponse(url=f"/results/{email_to_slug(email)}", status_code=303)
 
+    orientation_enabled = await get_flag(FLAG_ORIENTATION, default=False)
+    from_reminder = bool(
+        user and (
+            user.get("reminder_clicked_at")
+            or user.get("post_reminder_sent_at")
+            or (user.get("post_reminder_count", 0) > 0)
+        )
+    )
+    if not orientation_enabled and not from_reminder:
+        return request.app.state.templates.TemplateResponse(
+            request, "orientation_disabled.html", {}, status_code=200
+        )
+
     already_done = bool(user and user.get("orientation_submitted", False))
     if not already_done:
         ori_doc = await get_db()["orientation_responses"].find_one({"email": {"$in": [clean_email, email]}})
