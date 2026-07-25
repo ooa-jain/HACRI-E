@@ -302,11 +302,17 @@ async def post_get(
         from app.routes.landing import email_to_slug
         return RedirectResponse(url=f"/results/{email_to_slug(session['email'])}", status_code=303)
 
-    if not await get_flag(FLAG_SURVEY, default=True):
+    is_reminder = bool(
+        user.get("reminder_clicked_at")
+        or user.get("post_reminder_sent_at")
+        or (user.get("post_reminder_count", 0) > 0)
+    )
+
+    if not is_reminder and not await get_flag(FLAG_SURVEY, default=True):
         return RedirectResponse(url="/locked", status_code=303)
 
     post_enabled = await get_flag("post_survey_enabled", default=True)
-    if not post_enabled:
+    if not post_enabled and not is_reminder:
         return request.app.state.templates.TemplateResponse(
             request, "post_locked.html",
             {"reason": "disabled", "name": user.get("name", "")}
@@ -315,7 +321,6 @@ async def post_get(
     pre_enabled = await get_flag(FLAG_PRE_SURVEY, default=True)
     orientation_enabled = await get_flag(FLAG_ORIENTATION, default=False)
     status_v = user.get("status")
-    is_reminder = bool(user.get("reminder_clicked_at"))
 
     if (orientation_enabled or is_reminder) and not user.get("orientation_submitted"):
         return RedirectResponse(url="/orientation", status_code=303)
@@ -373,17 +378,22 @@ async def post_post(
     if not user:
         return RedirectResponse(url="/", status_code=303)
 
-    if not await get_flag(FLAG_SURVEY, default=True):
+    is_reminder = bool(
+        user.get("reminder_clicked_at")
+        or user.get("post_reminder_sent_at")
+        or (user.get("post_reminder_count", 0) > 0)
+    )
+
+    if not is_reminder and not await get_flag(FLAG_SURVEY, default=True):
         return RedirectResponse(url="/locked", status_code=303)
 
     post_enabled = await get_flag("post_survey_enabled", default=True)
-    if not post_enabled:
+    if not post_enabled and not is_reminder:
         raise HTTPException(status_code=400, detail="Post survey is closed.")
 
     pre_enabled = await get_flag(FLAG_PRE_SURVEY, default=True)
     orientation_enabled = await get_flag(FLAG_ORIENTATION, default=False)
     status_v = user.get("status")
-    is_reminder = bool(user.get("reminder_clicked_at"))
 
     if (orientation_enabled or is_reminder) and not user.get("orientation_submitted"):
         return RedirectResponse(url="/orientation", status_code=303)

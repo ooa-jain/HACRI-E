@@ -32,18 +32,24 @@ async def deeksha_landing_get(
     hacri_session: str | None = Cookie(default=None),
     hacri_csrf:    str | None = Cookie(default=None),
 ):
-    orientation_enabled = await get_flag(FLAG_ORIENTATION, default=False)
-    if not orientation_enabled:
-        return request.app.state.templates.TemplateResponse(
-            request, "orientation_disabled.html", {}, status_code=200
-        )
-
-    # Check if already has session (returning student)
     user = None
     if hacri_session:
         sess = deps._unsign(hacri_session)
         if sess and "email" in sess:
             user = await get_db()["users"].find_one({"email": sess["email"]})
+
+    orientation_enabled = await get_flag(FLAG_ORIENTATION, default=False)
+    from_reminder = bool(
+        user and (
+            user.get("reminder_clicked_at")
+            or user.get("post_reminder_sent_at")
+            or (user.get("post_reminder_count", 0) > 0)
+        )
+    )
+    if not orientation_enabled and not from_reminder:
+        return request.app.state.templates.TemplateResponse(
+            request, "orientation_disabled.html", {}, status_code=200
+        )
 
     csrf = hacri_csrf or make_csrf_token()
     response = request.app.state.templates.TemplateResponse(
@@ -66,7 +72,15 @@ async def deeksha_landing_post(
     hacri_csrf: str | None = Cookie(default=None),
 ):
     orientation_enabled = await get_flag(FLAG_ORIENTATION, default=False)
-    if not orientation_enabled:
+    existing_user = await get_db()["users"].find_one({"email": email.strip().lower()})
+    from_reminder = bool(
+        existing_user and (
+            existing_user.get("reminder_clicked_at")
+            or existing_user.get("post_reminder_sent_at")
+            or (existing_user.get("post_reminder_count", 0) > 0)
+        )
+    )
+    if not orientation_enabled and not from_reminder:
         return request.app.state.templates.TemplateResponse(
             request, "orientation_disabled.html", {}, status_code=200
         )

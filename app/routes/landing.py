@@ -128,7 +128,11 @@ async def landing_post(
     orientation_enabled = await get_flag(FLAG_ORIENTATION, default=False)
     orientation_submitted = bool(user.get("orientation_submitted", False))
     pre_enabled = await get_flag(FLAG_PRE_SURVEY, default=True)
-    from_reminder = bool(user.get("reminder_clicked_at"))
+    from_reminder = bool(
+        user.get("reminder_clicked_at")
+        or user.get("post_reminder_sent_at")
+        or (user.get("post_reminder_count", 0) > 0)
+    )
 
     if status_v == STATUS_POST_DONE:
         dest_url = f"/results/{email_to_slug(identity.email)}"
@@ -156,13 +160,19 @@ async def resume_session(request: Request, email_slug: str, src: str | None = No
     if not user:
         return RedirectResponse(url="/", status_code=303)
 
-    is_reminder = (src == "reminder") or bool(user.get("reminder_clicked_at"))
-    if src == "reminder":
-        from datetime import datetime, timezone
-        await db["users"].update_one(
-            {"email": email},
-            {"$set": {"reminder_clicked_at": datetime.now(timezone.utc)}}
-        )
+    is_reminder = (
+        (src == "reminder")
+        or bool(user.get("reminder_clicked_at"))
+        or bool(user.get("post_reminder_sent_at"))
+        or (user.get("post_reminder_count", 0) > 0)
+    )
+    if is_reminder:
+        if not user.get("reminder_clicked_at"):
+            from datetime import datetime, timezone
+            await db["users"].update_one(
+                {"email": email},
+                {"$set": {"reminder_clicked_at": datetime.now(timezone.utc)}}
+            )
 
     status_v = user.get("status")
     orientation_enabled = await get_flag(FLAG_ORIENTATION, default=False)

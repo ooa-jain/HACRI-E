@@ -286,3 +286,66 @@ async def test_reminder_link_routes_to_orientation_first(client: AsyncClient):
     assert resp_post_after.status_code == 200
 
 
+@pytest.mark.asyncio
+async def test_reminder_link_bypasses_disabled_post_and_orientation_flags(client: AsyncClient):
+    """Test that when a user uses a post reminder link, they can access orientation
+    AND post survey even if FLAG_ORIENTATION, post_survey_enabled, and FLAG_SURVEY are False."""
+    from app.db import get_db, set_flag, STATUS_PRE_DONE, FLAG_ORIENTATION, FLAG_SURVEY
+    from app.routes.landing import email_to_slug
+    from app.deps import make_csrf_token
+
+    db = get_db()
+    # Turn OFF orientation, post survey, and global survey settings in admin settings
+    await set_flag(FLAG_ORIENTATION, False)
+    await set_flag("post_survey_enabled", False)
+    await set_flag(FLAG_SURVEY, False)
+
+    email = "reminder.all_disabled@example.com"
+    name = "Reminder All Disabled Student"
+
+    await db["users"].insert_one({
+        "email": email,
+        "name": name,
+        "program": "Dept of CS",
+        "status": STATUS_PRE_DONE,
+    })
+
+    slug = email_to_slug(email)
+
+    # 1. Click resume link from reminder email
+    resp_resume = await client.get(f"/resume/{slug}?src=reminder", follow_redirects=False)
+    assert resp_resume.status_code == 303
+    assert resp_resume.headers["location"] == "/orientation"
+
+    # 2. Access /orientation -> should load orientation form (200 OK)
+    resp_ori = await client.get("/orientation", follow_redirects=False)
+    assert resp_ori.status_code == 200
+
+    # 3. Accessing /survey/post BEFORE orientation submission -> redirected to /orientation
+    resp_post_before = await client.get("/survey/post", follow_redirects=False)
+    assert resp_post_before.status_code == 303
+    assert resp_post_before.headers["location"] == "/orientation"
+
+    # 4. Submit orientation
+    csrf = make_csrf_token()
+    client.cookies.set("hacri_csrf", csrf)
+    resp_submit = await client.post(
+        "/api/orientation/submit",
+        json={"q1": "Great session", "csrf": csrf},
+    )
+    assert resp_submit.status_code == 200
+    res_json = resp_submit.json()
+    assert res_json["ok"] is True
+    assert res_json["redirect"] == "/survey/post"
+
+    # 5. Accessing /survey/post AFTER orientation submission -> loads form (200 OK) even with flags set to False
+    resp_post_after = await client.get("/survey/post", follow_redirects=False)
+    assert resp_post_after.status_code == 200
+    assert "Post-Workshop Survey" in resp_post_after.text or "hacri_csrf" in resp_post_after.headers.get("set-cookie", "") or "form" in resp_post_after.text.lower()
+
+    # Reset flags to True
+    await set_flag(FLAG_SURVEY, True)
+    await set_flag("post_survey_enabled", True)
+
+
+
