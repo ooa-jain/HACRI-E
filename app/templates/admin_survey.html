@@ -300,6 +300,11 @@ input:checked+.slider:before{transform:translateX(24px)}
           <option value="not_started">Registered (Pending Baseline)</option>
           <option value="pre_done">Pre Done (Pending Post-Workshop)</option>
           <option value="post_done">Both Done</option>
+          <option value="email_sent">📧 Email Reminders Sent</option>
+          <option value="clicked">🔗 Clicked Link from Email</option>
+          <option value="sent_not_clicked">⏳ Email Sent (Not Clicked Yet)</option>
+          <option value="completed_after">✨ Completed After Email</option>
+          <option value="failed">⚠️ Email Delivery Failed</option>
         </select>
       </div>
     </div>
@@ -320,6 +325,10 @@ input:checked+.slider:before{transform:translateX(24px)}
           <div class="stat"><div class="stat-n" id="ov-pending-pre">—</div><div class="stat-l">Pending Baseline</div></div>
           <div class="stat"><div class="stat-n" id="ov-post">—</div><div class="stat-l">Post Done</div></div>
           <div class="stat"><div class="stat-n" id="ov-pending">—</div><div class="stat-l">Pending Post</div></div>
+          <div class="stat" style="border-left:4px solid #2563eb;"><div class="stat-n" id="ov-email-sent" style="color:#2563eb;">—</div><div class="stat-l">Emails Sent</div></div>
+          <div class="stat" style="border-left:4px solid #d97706;"><div class="stat-n" id="ov-email-clicked" style="color:#d97706;">—</div><div class="stat-l">Clicked Link</div></div>
+          <div class="stat" style="border-left:4px solid #0284c7;"><div class="stat-n" id="ov-email-unclicked" style="color:#0284c7;">—</div><div class="stat-l">Sent, Not Clicked</div></div>
+          <div class="stat" style="border-left:4px solid #10b981;"><div class="stat-n" id="ov-email-completed" style="color:#10b981;">—</div><div class="stat-l">Completed After Email</div></div>
         </div>
         <div class="card" style="margin-bottom: 0;">
           <div style="font-size:13px;color:var(--muted);margin-bottom:6px">Survey Status</div>
@@ -570,6 +579,30 @@ input:checked+.slider:before{transform:translateX(24px)}
     <div class="card" style="margin-bottom:16px;">
       <h3 style="font-size:15px;color:var(--navy);margin-bottom:6px;font-weight:700">📧 Email Notifications &amp; Tracking</h3>
       <p style="font-size:12.5px;color:var(--muted);margin-bottom:16px">Track department-wise reminder delivery, user link clicks, survey completion rates, and active drafts.</p>
+    </div>
+
+    <!-- Email Summary Cards Grid -->
+    <div class="stat-grid" style="margin-bottom: 20px; display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px;">
+      <div class="stat" style="border-left: 4px solid var(--blue); background: #fff; padding: 16px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+        <div class="stat-n" id="en-stat-sent" style="font-size: 24px; font-weight: 700; color: var(--navy);">0</div>
+        <div class="stat-l" style="font-size: 12px; color: var(--muted); margin-top: 4px;">Total Reminders Sent</div>
+      </div>
+      <div class="stat" style="border-left: 4px solid #d97706; background: #fff; padding: 16px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+        <div class="stat-n" id="en-stat-clicked" style="font-size: 24px; font-weight: 700; color: #d97706;">0</div>
+        <div class="stat-l" style="font-size: 12px; color: var(--muted); margin-top: 4px;">Clicked Email Link</div>
+      </div>
+      <div class="stat" style="border-left: 4px solid #0284c7; background: #fff; padding: 16px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+        <div class="stat-n" id="en-stat-unclicked" style="font-size: 24px; font-weight: 700; color: #0284c7;">0</div>
+        <div class="stat-l" style="font-size: 12px; color: var(--muted); margin-top: 4px;">Sent, Not Clicked Yet</div>
+      </div>
+      <div class="stat" style="border-left: 4px solid var(--green); background: #fff; padding: 16px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+        <div class="stat-n" id="en-stat-completed" style="font-size: 24px; font-weight: 700; color: var(--green);">0</div>
+        <div class="stat-l" style="font-size: 12px; color: var(--muted); margin-top: 4px;">Completed After Email</div>
+      </div>
+      <div class="stat" style="border-left: 4px solid #0369a1; background: #fff; padding: 16px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+        <div class="stat-n" id="en-stat-draft" style="font-size: 24px; font-weight: 700; color: #0369a1;">0</div>
+        <div class="stat-l" style="font-size: 12px; color: var(--muted); margin-top: 4px;">Left in Draft</div>
+      </div>
     </div>
     
     <div id="email-notif-result" style="display:none;margin-bottom:16px"></div>
@@ -963,11 +996,25 @@ function updateOverviewStats(dept, level) {
   const pendingPre = total - pre;
   const pendingPost = pre - post;
 
+  const emailSentCount = filtered.filter(u => u.pre_reminder_at || u.post_reminder_at || u.pre_reminder_count > 0 || u.post_reminder_count > 0).length;
+  const clickedCount = filtered.filter(u => u.reminder_clicked_at).length;
+  const unclickedCount = filtered.filter(u => (u.pre_reminder_at || u.post_reminder_at || u.pre_reminder_count > 0 || u.post_reminder_count > 0) && !u.reminder_clicked_at).length;
+  const completedAfterCount = filtered.filter(u => u.completed_after_reminder).length;
+
   document.getElementById('ov-total').textContent   = total;
   document.getElementById('ov-pre').textContent     = pre;
   document.getElementById('ov-pending-pre').textContent = pendingPre;
   document.getElementById('ov-post').textContent    = post;
   document.getElementById('ov-pending').textContent = pendingPost;
+
+  const elSent = document.getElementById('ov-email-sent');
+  if (elSent) elSent.textContent = emailSentCount;
+  const elClicked = document.getElementById('ov-email-clicked');
+  if (elClicked) elClicked.textContent = clickedCount;
+  const elUnclicked = document.getElementById('ov-email-unclicked');
+  if (elUnclicked) elUnclicked.textContent = unclickedCount;
+  const elCompleted = document.getElementById('ov-email-completed');
+  if (elCompleted) elCompleted.textContent = completedAfterCount;
 
   // Update dynamic pie chart & legend percentages
   const pctPost = total > 0 ? ((post / total) * 100).toFixed(1) : 0;
@@ -1061,6 +1108,16 @@ function renderUsers(data){
   if (statusFilter) {
     if (statusFilter === 'not_started') {
       filtered = filtered.filter(u => u.status === 'not_started' || !u.status);
+    } else if (statusFilter === 'email_sent') {
+      filtered = filtered.filter(u => u.pre_reminder_at || u.post_reminder_at || u.pre_reminder_count > 0 || u.post_reminder_count > 0);
+    } else if (statusFilter === 'clicked') {
+      filtered = filtered.filter(u => u.reminder_clicked_at);
+    } else if (statusFilter === 'sent_not_clicked') {
+      filtered = filtered.filter(u => (u.pre_reminder_at || u.post_reminder_at || u.pre_reminder_count > 0 || u.post_reminder_count > 0) && !u.reminder_clicked_at);
+    } else if (statusFilter === 'completed_after') {
+      filtered = filtered.filter(u => u.completed_after_reminder);
+    } else if (statusFilter === 'failed') {
+      filtered = filtered.filter(u => u.last_email_error);
     } else {
       filtered = filtered.filter(u => u.status === statusFilter);
     }
@@ -1320,6 +1377,24 @@ function renderEmailNotificationStats(data) {
     tbody.innerHTML='<tr><td colspan="9" style="text-align:center;padding:20px;color:var(--muted)">No department data found</td></tr>';
     return;
   }
+
+  // Aggregate stats across all departments
+  const totalSent = data.reduce((acc, d) => acc + (d.pre_sent || 0) + (d.post_sent || 0), 0);
+  const totalClicked = data.reduce((acc, d) => acc + (d.clicked || 0), 0);
+  const totalNotClicked = Math.max(0, totalSent - totalClicked);
+  const totalCompletedAfter = data.reduce((acc, d) => acc + (d.completed_after || 0), 0);
+  const totalDraft = data.reduce((acc, d) => acc + (d.in_draft || 0), 0);
+
+  const elSent = document.getElementById('en-stat-sent');
+  if (elSent) elSent.textContent = totalSent;
+  const elClicked = document.getElementById('en-stat-clicked');
+  if (elClicked) elClicked.textContent = totalClicked;
+  const elUnclicked = document.getElementById('en-stat-unclicked');
+  if (elUnclicked) elUnclicked.textContent = totalNotClicked;
+  const elCompleted = document.getElementById('en-stat-completed');
+  if (elCompleted) elCompleted.textContent = totalCompletedAfter;
+  const elDraft = document.getElementById('en-stat-draft');
+  if (elDraft) elDraft.textContent = totalDraft;
   tbody.innerHTML = data.map((d,i)=>`
     <tr>
       <td style="color:var(--muted)">${i+1}</td>
