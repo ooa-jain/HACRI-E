@@ -7,12 +7,9 @@
   --navy:#0d2147;--navy-deep:#0a1628;--navy-mid:#112a5e;
   --gold:#e6b324;--gold-l:#fff8e1;--gold-d:#8a6000;--gold-m:#f5d76e;
   --c2:#e6b324;--c2l:#fff8e1;--c2d:#8a6000;
-  --bg:#f7f6ff;--card:#fff;--text:#1a1a2e;--muted:#64637a;
+  --bg:#f8fafc;--card:#ffffff;--text:#0d2147;--muted:#475569;
   --border:rgba(13,33,71,0.12);--radius:16px;
   --shadow:0 2px 16px rgba(13,33,71,0.07);
-}
-@media(prefers-color-scheme:dark){
-  :root{--bg:#111827;--card:#1e2435;--text:#e8e7f8;--muted:#9997b8;--border:rgba(255,255,255,0.1)}
 }
 
 
@@ -169,15 +166,15 @@
 .section.active.cols-2 .q.full-col textarea{font-size:14px}
 @keyframes up{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 .sec-eye{display:inline-flex;align-items:center;background:var(--gold-l);color:var(--gold-d);border-radius:20px;padding:4px 13px;font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;margin-bottom:8px;border:1px solid rgba(230,179,36,0.25)}
-.sec-title{font-size:21px;font-weight:700;letter-spacing:-0.3px;margin-bottom:4px}
-.sec-sub{font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:1.25rem}
+.sec-title{font-size:22px;font-weight:800;letter-spacing:-0.3px;margin-bottom:4px;color:#0d2147 !important;}
+.sec-sub{font-size:13.5px;color:#475569 !important;line-height:1.6;margin-bottom:1.25rem}
 
 /* ── QUESTION BLOCKS ── */
-.q{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:1.2rem 1.2rem 1rem;margin-bottom:.9rem;box-shadow:var(--shadow)}
-.ql{font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--navy);margin-bottom:7px;display:flex;align-items:center;gap:6px;opacity:0.6}
+.q{background:#ffffff !important;border:1px solid var(--border);border-radius:var(--radius);padding:1.2rem 1.2rem 1rem;margin-bottom:.9rem;box-shadow:var(--shadow)}
+.ql{font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#0d2147;margin-bottom:7px;display:flex;align-items:center;gap:6px;opacity:0.8}
 .ql::after{content:"";flex:1;height:1px;background:var(--border)}
-.qt{font-size:15px;font-weight:500;color:var(--text);margin-bottom:12px;line-height:1.5}
-.qhint{font-size:11.5px;color:var(--muted);font-weight:400;display:block;margin-top:2px}
+.qt{font-size:15px;font-weight:600;color:#0d2147 !important;margin-bottom:12px;line-height:1.5}
+.qhint{font-size:11.5px;color:#64748b;font-weight:400;display:block;margin-top:2px}
 
 /* ── CHIPS ── */
 .chips{display:flex;flex-wrap:wrap;gap:7px}
@@ -512,6 +509,23 @@ footer{text-align:center;padding-top:1.75rem;font-size:11px;color:var(--muted);o
     <div class="vo-actions">
       <button class="vo-skip" id="voSkip" onclick="dismissVideo()">Skip & Start Survey →</button>
       <span class="vo-time" id="voTime"></span>
+    </div>
+  </div>
+</div>
+
+<!-- TOP WELCOME BANNER -->
+<div class="welcome-card" style="background: linear-gradient(135deg, #0d2147 0%, #112a5e 100%); color: #ffffff; padding: 22px 26px; border-radius: 16px; margin-bottom: 24px; box-shadow: 0 6px 20px rgba(13, 33, 71, 0.15); border: 1px solid rgba(230, 179, 36, 0.3);">
+  <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+    <div>
+      <h2 style="margin: 0 0 6px 0; font-size: 20px; font-weight: 700; color: #ffffff; font-family: inherit;">
+        Happy to see you again{% if prefill_name %}, <span style="color: #f5d76e;">{{ prefill_name }}</span>{% endif %}{% if prefill_dept %} <span style="font-size: 14px; opacity: 0.85; font-weight: 400; color: #cbd5e1;">({{ prefill_dept }})</span>{% endif %}! 👋
+      </h2>
+      <p style="margin: 0; font-size: 13.5px; color: rgba(255, 255, 255, 0.9); line-height: 1.5;">
+        Please fill out all parts of the form to explore and track your AI journey.
+      </p>
+    </div>
+    <div style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); padding: 6px 14px; border-radius: 20px; font-size: 11px; font-weight: 700; color: #f5d76e; text-transform: uppercase; letter-spacing: 0.8px;">
+      ✦ Deeksharambh 2026
     </div>
   </div>
 </div>

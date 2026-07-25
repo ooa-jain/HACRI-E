@@ -43,11 +43,14 @@ async def orientation_get(
         if ori_doc:
             saved_responses = ori_doc.get("data", {})
 
+    dept = user.get("program", "") if user else ""
+
     return request.app.state.templates.TemplateResponse(
         request, "orientation.html",
         {
             "prefill_email": email,
             "prefill_name": display_name,
+            "prefill_dept": dept,
             "already_done": already_done,
             "saved_responses": saved_responses,
         },
