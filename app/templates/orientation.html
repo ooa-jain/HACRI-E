@@ -1,12 +1,8 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>My Deeksharambh Story 2026 — JAIN University</title>
-<!-- html2pdf removed (PDF download feature deprecated) -->
+{% extends "base.html" %}
+{% block title %}My Deeksharambh Story 2026{% endblock %}
+{% block content %}
 <style>
-*{box-sizing:border-box;margin:0;padding:0}
+
 :root{
   --navy:#0d2147;--navy-deep:#0a1628;--navy-mid:#112a5e;
   --gold:#e6b324;--gold-l:#fff8e1;--gold-d:#8a6000;--gold-m:#f5d76e;
@@ -18,12 +14,12 @@
 @media(prefers-color-scheme:dark){
   :root{--bg:#111827;--card:#1e2435;--text:#e8e7f8;--muted:#9997b8;--border:rgba(255,255,255,0.1)}
 }
-body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;background-color:#f8fafc;color:var(--text);min-height:100vh;padding:0 0 4rem 0;padding-top:70px;background-image:radial-gradient(at 0% 0%, rgba(6, 182, 212, 0.04) 0px, transparent 50%),radial-gradient(at 100% 100%, rgba(245, 158, 11, 0.04) 0px, transparent 50%);background-attachment:fixed}
-.wrap{width:100%;max-width:min(95%,760px);margin:0 auto;padding:1.25rem 1rem;box-sizing:border-box}
-@media(min-width:600px){.wrap{max-width:min(92%,820px);padding:1.4rem 1.25rem}}
-@media(min-width:900px){.wrap{max-width:min(90%,980px);padding:1.6rem 1.5rem}}
-@media(min-width:1200px){.wrap{max-width:min(88%,1100px);padding:1.75rem 2rem}}
-@media(min-width:1600px){.wrap{max-width:min(85%,1200px);padding:2rem 2.5rem}}
+
+
+@media(min-width:600px){}
+@media(min-width:900px){}
+@media(min-width:1200px){}
+@media(min-width:1600px){}
 
 /* 2-column layout: only on wide screens (desktop). Phones/tablets stay single column. */
 @media(min-width:1200px){
@@ -39,19 +35,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-seri
 }
 
 /* ── FIXED NAVBAR ── */
-.navbar-fixed{
-  position:fixed;top:0;left:0;right:0;
-  background:rgba(255,255,255,0.85);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
-  border-bottom:1px solid rgba(15,23,42,0.06);
-  height:70px;display:flex;align-items:center;justify-content:space-between;
-  padding:0 2rem;z-index:1000;box-shadow:0 4px 18px -4px rgba(15,23,42,0.04);
-}
-.navbar-fixed .nav-left{display:flex;align-items:center;gap:20px;}
-.navbar-fixed .nav-logo{height:46px;object-fit:contain;transition:transform .35s ease,filter .35s ease;cursor:pointer}
-.navbar-fixed .nav-logo:hover{transform:scale(1.08);filter:brightness(1.1) drop-shadow(0 2px 6px rgba(13,33,71,0.25))}
-.navbar-fixed .nav-divider{width:1px;height:30px;background:#e0e0e0;}
-.navbar-fixed .nav-text{font-size:14px;font-weight:700;color:var(--navy);letter-spacing:1.2px;text-transform:uppercase;transition:color .3s ease,letter-spacing .3s ease;cursor:default}
-.navbar-fixed .nav-text:hover{color:var(--gold);letter-spacing:1.6px}
+
+
+
+
+
+
+
 
 /* ── VIDEO INTRO OVERLAY (fullscreen) ── */
 #videoOverlay{
@@ -144,22 +134,21 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-seri
 @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.85)}}
 
 /* ── HERO ── */
-.hero{background:linear-gradient(160deg,#0a1628 0%,#0d2147 45%,#112a5e 100%);border-radius:24px;overflow:hidden;margin-bottom:1.75rem;box-shadow:0 12px 48px rgba(10,22,40,0.45)}
-.hero-geo{position:absolute;inset:0;pointer-events:none;overflow:hidden}
-.hero-top{background:rgba(255,255,255,0.05);border-bottom:1px solid rgba(230,179,36,0.18);padding:13px 22px;display:none;align-items:center;justify-content:space-between;gap:10px;position:relative}
-.hero-logo-wrap{background:#fff;border-radius:10px;padding:6px 14px;display:flex;align-items:center;box-shadow:0 4px 14px rgba(0,0,0,0.25);transition:transform .35s ease,box-shadow .35s ease;cursor:pointer}
-.hero-logo-wrap:hover{transform:translateY(-2px) scale(1.04);box-shadow:0 8px 22px rgba(0,0,0,0.35)}
-.hero-logo{height:40px;object-fit:contain}
-.hero-pill{background:rgba(230,179,36,0.14);border:1px solid rgba(230,179,36,0.38);border-radius:20px;padding:4px 14px;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;color:#f0c842;white-space:nowrap}
-.hero-body{padding:2rem 2rem 1.5rem;color:#fff;text-align:center;position:relative}
-.hero-arc1{position:absolute;top:-60px;right:-60px;width:220px;height:220px;border-radius:50%;border:1px solid rgba(230,179,36,0.1)}
-.hero-arc2{position:absolute;bottom:-50px;left:-50px;width:160px;height:160px;border-radius:50%;border:1px solid rgba(230,179,36,0.08)}
-.hero-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(230,179,36,0.12);border:1px solid rgba(230,179,36,0.3);border-radius:20px;padding:5px 16px;font-size:11px;letter-spacing:1px;text-transform:uppercase;margin-bottom:14px;color:#f0c842;font-weight:600}
-.hero h1{font-size:26px;font-weight:700;letter-spacing:-0.4px;line-height:1.2;margin-bottom:6px}
-.hero h1 em{font-style:normal;color:var(--gold)}
-.hero p{font-size:13px;opacity:0.75;line-height:1.7;max-width:380px;margin:0 auto}
+
+
+
+
+
+
+
+
+
+
+
+
+
 .anon-note{display:inline-flex;align-items:center;gap:7px;margin-top:14px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);border-radius:10px;padding:7px 14px;font-size:12px;opacity:0.85;color:#fff}
-.hero-prog{background:rgba(255,255,255,0.05);border-top:1px solid rgba(230,179,36,0.12);padding:11px 22px}
+
 .prog-bar{background:rgba(255,255,255,0.1);border-radius:10px;height:4px;overflow:hidden}
 .prog-fill{height:100%;background:linear-gradient(90deg,#e6b324,#f5d76e);border-radius:10px;transition:width .45s cubic-bezier(.4,0,.2,1);width:0%}
 .prog-meta{display:flex;justify-content:space-between;margin-top:6px;font-size:11px;color:rgba(255,255,255,0.55)}
@@ -335,9 +324,9 @@ select:focus{border-color:var(--navy)}
 
 footer{text-align:center;padding-top:1.75rem;font-size:11px;color:var(--muted);opacity:0.6}
 @media(max-width:600px){
-  body{padding-left:0.6rem;padding-right:0.6rem}
-  .navbar-fixed{padding:0 1rem}
-  .hero h1{font-size:22px}.av-grid{grid-template-columns:repeat(2,1fr)}
+  
+  
+  .av-grid{grid-template-columns:repeat(2,1fr)}
   .sum-grid{grid-template-columns:1fr}.nbt{width:38px;height:38px;font-size:12px}
   .em-opt{min-width:70px}.star-btn{width:42px;height:42px}
   .q{padding:1rem .9rem .85rem}
@@ -347,21 +336,20 @@ footer{text-align:center;padding-top:1.75rem;font-size:11px;color:var(--muted);o
   .bnx{max-width:100%}
   .nav{flex-direction:column-reverse;gap:.6rem}
   /* Hero on mobile: smaller padding, smaller logo */
-  .hero{border-radius:18px}
-  .hero-body{padding:1.5rem 1.25rem 1.25rem}
-  .hero-top{padding:11px 16px}
-  .hero-logo{height:34px}
-  .hero-pill{font-size:9px;padding:3px 11px;letter-spacing:1px}
+  
+  
+  
+  
   /* Make sure avatar grid doesn't break */
   .av-grid{gap:10px}
   /* Stronger touch targets */
   .ag,.em-opt,.nbt,.star-btn{min-height:44px}
   /* Prevent horizontal scroll on small screens */
-  body,.wrap,.q,.hero,.ty{overflow-x:hidden;max-width:100%}
+  body,.wrap,.q,
   img,svg,video{max-width:100%;height:auto}
 }
 @media(min-width:601px) and (max-width:900px){
-  .navbar-fixed{padding:0 1.5rem}
+  
   .video-intro video{max-height:360px}
 }
 @media(max-width:900px){
@@ -480,18 +468,30 @@ footer{text-align:center;padding-top:1.75rem;font-size:11px;color:var(--muted);o
   font-size:18px;font-weight:800;color:#0d2147;
 }
 </style>
-</head>
-<body>
-<!-- FIXED NAVBAR -->
-<div class="navbar-fixed">
-  <div class="nav-left">
-    <img src="/static/logo.png" class="nav-logo" alt="JAIN University">
-    <div class="nav-divider"></div>
-    <div class="nav-text">Freshers 2026</div>
-  </div>
-</div>
+<section class="card">
+  <header style="margin-bottom: 2rem; border-bottom: 2px solid var(--border-color); padding-bottom: 1rem;">
+    <h1>My Deeksharambh Story</h1>
+    <p class="lede">Deeksharambh 2026 · JAIN University</p>
+    <p class="muted">Tell us how it felt — honestly and openly. Takes about 5 minutes.</p>
+  </header>
 
-<div class="wrap">
+  <!-- ── PROGRESS TRACKER ── -->
+  <div class="wizard-progress" id="wizard-progress">
+    <div class="wizard-progress-bar" id="wizard-progress-bar"></div>
+    <button type="button" class="wizard-step active" onclick="goTo(0)"><div class="wizard-step-circle">0</div><span class="wizard-step-label">Intro</span></button>
+    <button type="button" class="wizard-step" onclick="goTo(1)"><div class="wizard-step-circle">1</div><span class="wizard-step-label">Vibe</span></button>
+    <button type="button" class="wizard-step" onclick="goTo(2)"><div class="wizard-step-circle">2</div><span class="wizard-step-label">Transition</span></button>
+    <button type="button" class="wizard-step" onclick="goTo(3)"><div class="wizard-step-circle">3</div><span class="wizard-step-label">Footsteps</span></button>
+    <button type="button" class="wizard-step" onclick="goTo(4)"><div class="wizard-step-circle">4</div><span class="wizard-step-label">Orientation</span></button>
+    <button type="button" class="wizard-step" onclick="goTo(5)"><div class="wizard-step-circle">5</div><span class="wizard-step-label">Bridge</span></button>
+    <button type="button" class="wizard-step" onclick="goTo(6)"><div class="wizard-step-circle">6</div><span class="wizard-step-label">NEP</span></button>
+    <button type="button" class="wizard-step" onclick="goTo(7)"><div class="wizard-step-circle">7</div><span class="wizard-step-label">Gen Z</span></button>
+    <button type="button" class="wizard-step" onclick="goTo(8)"><div class="wizard-step-circle">8</div><span class="wizard-step-label">Belonging</span></button>
+    <button type="button" class="wizard-step" onclick="goTo(9)"><div class="wizard-step-circle">9</div><span class="wizard-step-label">Ratings</span></button>
+  </div>
+
+  <div style="margin-top: 24px;">
+
 
 <!-- FULLSCREEN VIDEO OVERLAY -->
 <div id="videoOverlay">
@@ -512,25 +512,6 @@ footer{text-align:center;padding-top:1.75rem;font-size:11px;color:var(--muted);o
       <button class="vo-skip" id="voSkip" onclick="dismissVideo()">Skip & Start Survey →</button>
       <span class="vo-time" id="voTime"></span>
     </div>
-  </div>
-</div>
-
-<!-- HERO -->
-<div class="hero">
-  <div class="hero-top">
-    <div class="hero-logo-wrap"><img src="/static/logo.png" class="hero-logo" alt="JAIN University"></div>
-    <div class="hero-pill">Freshers 2026</div>
-  </div>
-  <div class="hero-body">
-    <div class="hero-arc1"></div><div class="hero-arc2"></div>
-    <div class="hero-badge">✦ Deeksharambh 2026</div>
-    <h1>My <em>Deeksharambh</em> Story</h1>
-    <p>Your first chapter at JAIN starts here. Tell us how it felt — honestly and openly. Takes about 5 minutes.</p>
-    <div class="anon-note">🔒 This form is <strong>&nbsp;completely anonymous&nbsp;</strong> — we do not collect your name. Be 100% frank!</div>
-  </div>
-  <div class="hero-prog">
-    <div class="prog-bar"><div class="prog-fill" id="pf"></div></div>
-    <div class="prog-meta"><span id="plb">Step 1 of 10</span><span id="ppc">0% done</span></div>
   </div>
 </div>
 
@@ -973,10 +954,17 @@ const TOTAL=10;
 
 function sv(id,v){document.getElementById(id).textContent=v;}
 function upd(n){
-  const pct=Math.round((n/TOTAL)*100);
-  document.getElementById("pf").style.width=pct+"%";
-  document.getElementById("plb").textContent="Step "+(n+1)+" of "+TOTAL;
-  document.getElementById("ppc").textContent=pct+"% done";
+  const steps = document.querySelectorAll('.wizard-step');
+  steps.forEach((st, idx) => {
+    if(idx < n) st.classList.add('completed');
+    else st.classList.remove('completed');
+    
+    if(idx === n) st.classList.add('active');
+    else st.classList.remove('active');
+  });
+  
+  const pb = document.getElementById('wizard-progress-bar');
+  if(pb) pb.style.width = (n / (steps.length - 1)) * 100 + '%';
 }
 function goTo(n){
   if(n===1){const prog=document.getElementById("program")?.value?.trim();if(!state.school||!prog||!state.ugpg){alert("Please complete all fields before continuing.");return;}state.program=prog;}
@@ -1869,5 +1857,8 @@ if (window._ALREADY_DONE) {
 
 // ── PDF download feature removed ──
 </script>
-</body>
-</html>
+
+
+  </div>
+</section>
+{% endblock %}

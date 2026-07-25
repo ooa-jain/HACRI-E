@@ -316,13 +316,13 @@ async def post_get(
     orientation_enabled = await get_flag(FLAG_ORIENTATION, default=False)
     status_v = user.get("status")
 
+    if orientation_enabled:
+        if not user.get("orientation_submitted"):
+            return RedirectResponse(url="/orientation", status_code=303)
+
     if pre_enabled:
         if status_v not in (STATUS_PRE_DONE, STATUS_POST_DONE):
             return RedirectResponse(url="/survey/pre?msg=complete_pre_first", status_code=303)
-    else:
-        if orientation_enabled:
-            if not user.get("orientation_submitted"):
-                return RedirectResponse(url="/orientation", status_code=303)
 
     delay_days = await get_setting_int("post_delay_days", default=0)
     if delay_days > 0:
@@ -384,13 +384,13 @@ async def post_post(
     orientation_enabled = await get_flag(FLAG_ORIENTATION, default=False)
     status_v = user.get("status")
 
+    if orientation_enabled:
+        if not user.get("orientation_submitted"):
+            return RedirectResponse(url="/orientation", status_code=303)
+
     if pre_enabled:
         if status_v not in (STATUS_PRE_DONE, STATUS_POST_DONE):
             return RedirectResponse(url="/survey/pre?msg=complete_pre_first", status_code=303)
-    else:
-        if orientation_enabled:
-            if not user.get("orientation_submitted"):
-                return RedirectResponse(url="/orientation", status_code=303)
 
     delay_days = await get_setting_int("post_delay_days", default=0)
     if delay_days > 0:
