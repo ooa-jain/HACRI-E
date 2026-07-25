@@ -857,7 +857,7 @@ function e(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').r
 
 async function loadFlags() {
   try {
-    const r = await fetch('/admin/api/survey/flags');
+    const r = await fetch('/admin/api/flags');
     const f = await r.json();
     document.getElementById('tog-survey').checked = !!f.survey_enabled;
     document.getElementById('tog-pre-survey').checked = !!f.pre_survey_enabled;
@@ -865,8 +865,8 @@ async function loadFlags() {
     document.getElementById('tog-post-survey').checked = !!f.post_survey_enabled;
     document.getElementById('tog-auto-reminders').checked = !!f.auto_reminders_enabled;
     
-    if (document.getElementById('inp-post-delay')) document.getElementById('inp-post-delay').value = f.post_survey_delay_days || 0;
-    if (document.getElementById('inp-auto-reminder-delay')) document.getElementById('inp-auto-reminder-delay').value = f.auto_reminder_first_delay_days || 5;
+    if (document.getElementById('inp-post-delay')) document.getElementById('inp-post-delay').value = f.post_delay_days || f.post_survey_delay_days || 0;
+    if (document.getElementById('inp-auto-reminder-delay')) document.getElementById('inp-auto-reminder-delay').value = f.auto_reminder_delay_days || f.auto_reminder_first_delay_days || 5;
     if (document.getElementById('inp-auto-reminder-repeat')) document.getElementById('inp-auto-reminder-repeat').value = f.auto_reminder_repeat_days || 1;
 
     const flagEl = document.getElementById('ov-flag');
@@ -879,7 +879,7 @@ async function loadFlags() {
 
 async function toggleFlag(flag, value) {
   try {
-    const r = await fetch('/admin/api/survey/flags', {
+    const r = await fetch('/admin/api/flags', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({[flag]: value})
@@ -899,13 +899,13 @@ async function saveAllSettings(btn) {
     orientation_enabled: document.getElementById('tog-orientation').checked,
     post_survey_enabled: document.getElementById('tog-post-survey').checked,
     auto_reminders_enabled: document.getElementById('tog-auto-reminders').checked,
-    post_survey_delay_days: parseInt(document.getElementById('inp-post-delay').value) || 0,
-    auto_reminder_first_delay_days: parseInt(document.getElementById('inp-auto-reminder-delay').value) || 5,
+    post_delay_days: parseInt(document.getElementById('inp-post-delay').value) || 0,
+    auto_reminder_delay_days: parseInt(document.getElementById('inp-auto-reminder-delay').value) || 5,
     auto_reminder_repeat_days: parseInt(document.getElementById('inp-auto-reminder-repeat').value) || 1,
   };
 
   try {
-    const r = await fetch('/admin/api/survey/flags', {
+    const r = await fetch('/admin/api/flags', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify(payload)

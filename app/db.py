@@ -169,7 +169,11 @@ async def verify_otp(key: str, otp: str) -> bool:
 async def get_all_flags() -> dict[str, Any]:
     flags: dict[str, Any] = {}
     async for doc in get_db()[FLAGS].find():
-        if doc["key"] in ("post_delay_days", "auto_reminder_delay_days", "auto_reminder_repeat_days"):
+        if doc["key"] in (
+            "post_delay_days", "post_survey_delay_days",
+            "auto_reminder_delay_days", "auto_reminder_first_delay_days",
+            "auto_reminder_repeat_days"
+        ):
             try:
                 flags[doc["key"]] = int(doc.get("value", 0))
             except (ValueError, TypeError):
@@ -185,6 +189,9 @@ async def get_all_flags() -> dict[str, Any]:
     flags.setdefault("auto_reminders_enabled", False)
     flags.setdefault("auto_reminder_delay_days", 5)
     flags.setdefault("auto_reminder_repeat_days", 1)
+    
+    flags["post_survey_delay_days"] = flags.get("post_delay_days", flags.get("post_survey_delay_days", 0))
+    flags["auto_reminder_first_delay_days"] = flags.get("auto_reminder_delay_days", flags.get("auto_reminder_first_delay_days", 5))
     return flags
 
 
