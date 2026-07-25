@@ -152,18 +152,27 @@ class SmtpBatchSender:
             self._client = None
 
     async def send(self, msg) -> None:
-        """Send one message. Reconnects once if the connection dropped."""
+        """Send one message. Reconnects once if the connection is dropped or None."""
         if self.dry_run:
             _dry_run_log_message(msg)
             return
+
+        if self._client is None or not self._client.is_connected:
+            log.info("SMTP client not connected; establishing connection.")
+            await self._connect()
+
         try:
             await self._client.send_message(msg)  # type: ignore[union-attr]
-        except aiosmtplib.SMTPServerDisconnected:
-            # Connection dropped mid-batch — reconnect once and retry.
-            log.warning("SMTP connection dropped; reconnecting for next message.")
+        except (aiosmtplib.SMTPServerDisconnected, aiosmtplib.SMTPConnectError, aiosmtplib.SMTPException) as e:
+            # Reconnect once and retry
+            log.warning("SMTP send failed (%s); reconnecting and retrying once.", e)
             await self._close()
-            await self._connect()
-            await self._client.send_message(msg)  # type: ignore[union-attr]
+            try:
+                await self._connect()
+                await self._client.send_message(msg)  # type: ignore[union-attr]
+            except Exception as retry_err:
+                log.error("SMTP retry failed: %s", retry_err)
+                raise retry_err
 
 
 # ── Public API ───────────────────────────────────────────────────────────────
