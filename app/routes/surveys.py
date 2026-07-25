@@ -322,7 +322,14 @@ async def post_get(
     orientation_enabled = await get_flag(FLAG_ORIENTATION, default=False)
     status_v = user.get("status")
 
-    if (orientation_enabled or is_reminder) and not user.get("orientation_submitted"):
+    has_ori = bool(user.get("orientation_submitted"))
+    if not has_ori:
+        ori_doc = await get_db()["orientation_responses"].find_one({"email": {"$in": [session["email"], session["email"].lower()]}})
+        if ori_doc:
+            has_ori = True
+            await get_db()["users"].update_one({"_id": user["_id"]}, {"$set": {"orientation_submitted": True}})
+
+    if (orientation_enabled or is_reminder) and not has_ori:
         return RedirectResponse(url="/orientation", status_code=303)
 
     if pre_enabled:
@@ -395,7 +402,14 @@ async def post_post(
     orientation_enabled = await get_flag(FLAG_ORIENTATION, default=False)
     status_v = user.get("status")
 
-    if (orientation_enabled or is_reminder) and not user.get("orientation_submitted"):
+    has_ori = bool(user.get("orientation_submitted"))
+    if not has_ori:
+        ori_doc = await get_db()["orientation_responses"].find_one({"email": {"$in": [user.get("email", ""), user.get("email", "").lower()]}})
+        if ori_doc:
+            has_ori = True
+            await get_db()["users"].update_one({"_id": user["_id"]}, {"$set": {"orientation_submitted": True}})
+
+    if (orientation_enabled or is_reminder) and not has_ori:
         return RedirectResponse(url="/orientation", status_code=303)
 
     if pre_enabled:

@@ -274,11 +274,12 @@ async def get_post_fields(email: str) -> dict | None:
 async def save_orientation_response(email: str, name: str, data: dict) -> str:
     """Store orientation form data. Returns doc id."""
     now = _now()
+    clean_email = email.strip().lower()
     res = await get_db()[ORI].insert_one(
-        {"email": email, "name": name, "submitted_at": now, "data": data}
+        {"email": clean_email, "name": name, "submitted_at": now, "data": data}
     )
     await get_db()[USERS].update_one(
-        {"email": email},
+        {"$or": [{"email": clean_email}, {"email": email}]},
         {"$set": {"orientation_submitted": True, "orientation_at": now, "updated_at": now}},
     )
     return str(res.inserted_id)

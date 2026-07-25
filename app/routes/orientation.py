@@ -24,23 +24,31 @@ async def orientation_get(
     session: Annotated[dict, Depends(get_current_session)],
 ):
     email = session["email"]
+    clean_email = email.strip().lower()
     name  = session["name"]
 
-    user = await get_db()["users"].find_one({"email": email})
+    user = await get_db()["users"].find_one({"$or": [{"email": clean_email}, {"email": email}]})
     if user and user.get("status") == STATUS_POST_DONE:
         from app.routes.landing import email_to_slug
         from fastapi.responses import RedirectResponse
         return RedirectResponse(url=f"/results/{email_to_slug(email)}", status_code=303)
 
+    already_done = bool(user and user.get("orientation_submitted", False))
+    if not already_done:
+        ori_doc = await get_db()["orientation_responses"].find_one({"email": {"$in": [clean_email, email]}})
+        if ori_doc:
+            already_done = True
+            await get_db()["users"].update_one({"$or": [{"email": clean_email}, {"email": email}]}, {"$set": {"orientation_submitted": True}})
+
+    saved_responses = {}
+    if already_done:
+        ori_doc = await get_db()["orientation_responses"].find_one({"email": {"$in": [clean_email, email]}}, sort=[("submitted_at", -1)])
+        if ori_doc:
+            saved_responses = ori_doc.get("data", {})
+
     # Get name from pre-survey record if available (more accurate)
     pre_name = await get_pre_name(email)
     display_name = pre_name or name
-    already_done = bool(user and user.get("orientation_submitted", False))
-    saved_responses = {}
-    if already_done:
-        ori_doc = await get_db()["orientation_responses"].find_one({"email": email}, sort=[("submitted_at", -1)])
-        if ori_doc:
-            saved_responses = ori_doc.get("data", {})
 
     dept = user.get("program", "") if user else ""
 
@@ -73,13 +81,18 @@ async def orientation_submit(
         return JSONResponse({"ok": False, "error": "Empty payload"}, status_code=400)
 
     data.pop("_id", None)
-    data["email"] = email
+    clean_email = email.strip().lower()
+    data["email"] = clean_email
     data["name"]  = name
     if not data.get("id"):
         data["id"] = str(uuid.uuid4())[:8]
 
     await save_orientation_response(email, name, data)
 
-    # After orientation → always go to post survey
-    # (post survey itself checks if pre is done; if not, shows message)
+    db = get_db()
+    await db["users"].update_one(
+        {"$or": [{"email": clean_email}, {"email": email}]},
+        {"$set": {"orientation_submitted": True}}
+    )
+
     return JSONResponse({"ok": True, "id": data["id"], "redirect": "/survey/post"})

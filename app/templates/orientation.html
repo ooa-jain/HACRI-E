@@ -1149,7 +1149,7 @@ async function submitForm(){
   document.getElementById("spin").classList.add("show");
   document.getElementById("pf").style.width="100%";
   const plb = document.getElementById("plb");
-  if (plb) plb.textContent="Saving & Redirecting to AI Survey...";
+  if (plb) plb.textContent="Redirecting to AI Survey...";
 
   // Keep a local backup first so an answer is never lost.
   try{localStorage.setItem(STORAGE_KEY,JSON.stringify([...(JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]")),state]));}catch(e){}
@@ -1161,10 +1161,10 @@ async function submitForm(){
     window.location.href = url || "/survey/post";
   }
 
-  // Safety fallback: if fetch takes longer than 1.5s, proceed to AI survey anyway
+  // Instant safety fallback: navigate immediately to AI survey in 400ms
   const safetyTimer = setTimeout(() => {
     navToNext("/survey/post");
-  }, 1500);
+  }, 400);
 
   try{
     const res = await fetch('/api/orientation/submit', {
@@ -1862,9 +1862,9 @@ upd(0);
   vid.addEventListener('stalled', ()=> setTimeout(()=>{ if(vid.readyState<2) dismissVideo(); }, 3500));
 })();
 
-// On page load check: if already completed, go straight to AI survey (/survey/post)
-if (window._ALREADY_DONE) {
-  window.location.href = "/survey/post";
+// On page load check: if already completed, show thanks screen & continue button
+if (window._ALREADY_DONE && typeof showThanks === 'function') {
+  showThanks();
 }
 
 // ── PDF download feature removed ──
