@@ -14,7 +14,8 @@
     <span style="font-size: 22px;">🛠️</span>
     <div>
       <strong style="font-size: 14px; display: block; letter-spacing: 0.5px;">Developer Test Mode Active</strong>
-      <span style="font-size: 12px; opacity: 0.9;">Bypass validations is enabled. You can skip or auto-fill orientation and survey.</span>
+      <span style="font-size: 12px; opacity: 0.9;">Bypass validations is enabled. You can skip or auto-fill orientation
+        and survey.</span>
     </div>
   </div>
   <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
@@ -62,7 +63,8 @@
       <span class="wizard-step-label">Orientation</span>
     </button>
     {% endif %}
-    <button type="button" class="wizard-step {% if not has_ori_step %}active{% endif %}" data-step="{{ 1 if has_ori_step else 0 }}">
+    <button type="button" class="wizard-step {% if not has_ori_step %}active{% endif %}"
+      data-step="{{ 1 if has_ori_step else 0 }}">
       <div class="wizard-step-circle">A</div>
       <span class="wizard-step-label">Background</span>
     </button>
@@ -99,12 +101,16 @@
     <!-- ── STEP 0 — Deeksharambh Orientation Survey ─────────────────────── -->
     <fieldset class="section wizard-section active" data-step-section="0">
       <legend>🎓 Part 1 · Deeksharambh Orientation Survey</legend>
-      <p class="muted" style="margin-bottom: 20px;">Please complete the Deeksharambh Orientation feedback before proceeding to AI Post Survey 2.</p>
+      <p class="muted" style="margin-bottom: 20px;">Please complete the Deeksharambh Orientation feedback before
+        proceeding to AI Post Survey 2.</p>
 
       <!-- Welcome Banner -->
-      <div style="background: linear-gradient(135deg, #0d2147 0%, #112a5e 100%); color: #ffffff; padding: 20px 24px; border-radius: 14px; margin-bottom: 24px; border: 1px solid rgba(230, 179, 36, 0.3);">
+      <div
+        style="background: linear-gradient(135deg, #0d2147 0%, #112a5e 100%); color: #ffffff; padding: 20px 24px; border-radius: 14px; margin-bottom: 24px; border: 1px solid rgba(230, 179, 36, 0.3);">
         <h2 style="margin: 0 0 6px 0; font-size: 18px; font-weight: 700; color: #ffffff;">
-          Happy to see you again{% if prefill_name %}, <span style="color: #f5d76e;">{{ prefill_name }}</span>{% endif %}{% if prefill_dept %} <span style="font-size: 13px; opacity: 0.85; font-weight: 400; color: #cbd5e1;">({{ prefill_dept }})</span>{% endif %}! 👋
+          Happy to see you again{% if prefill_name %}, <span style="color: #f5d76e;">{{ prefill_name }}</span>{% endif
+          %}{% if prefill_dept %} <span style="font-size: 13px; opacity: 0.85; font-weight: 400; color: #cbd5e1;">({{
+            prefill_dept }})</span>{% endif %}! 👋
         </h2>
         <p style="margin: 0; font-size: 13px; color: rgba(255, 255, 255, 0.9);">
           Share your orientation experience, then seamlessly continue to AI Post Survey 2 below.
@@ -112,18 +118,27 @@
       </div>
 
       <div class="sub-section-card">
-        <h3 class="subhead" style="font-size: 14px; font-weight: 700; color: var(--navy); margin-bottom: 16px; border-bottom: 1px solid var(--border); padding-bottom: 8px;">Academic Context & Vibe Check</h3>
+        <h3 class="subhead"
+          style="font-size: 14px; font-weight: 700; color: var(--navy); margin-bottom: 16px; border-bottom: 1px solid var(--border); padding-bottom: 8px;">
+          Academic Context & Vibe Check</h3>
 
         <div class="question">
-          <label class="q-label" style="display: block; font-weight: 600; margin-bottom: 8px;">Which School are you part of?</label>
+          <label class="q-label" style="display: block; font-weight: 600; margin-bottom: 8px;">Which School are you part
+            of?</label>
           <div class="q-body">
-            <select id="ori_school" style="width: 100%; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 14px; outline: none; background: #fff;">
+            <select id="ori_school"
+              style="width: 100%; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 14px; outline: none; background: #fff;">
               <option value="">-- Select your School --</option>
-              <option value="FET" {% if saved_responses.get('school') == 'FET' %}selected{% endif %}>FET — Faculty of Engineering & Technology</option>
-              <option value="CMS" {% if saved_responses.get('school') == 'CMS' %}selected{% endif %}>CMS — Center for Management Studies</option>
-              <option value="FCS" {% if saved_responses.get('school') == 'FCS' %}selected{% endif %}>FCS — Faculty of Commerce & Sciences</option>
-              <option value="SAHS" {% if saved_responses.get('school') == 'SAHS' %}selected{% endif %}>SAHS — School of Allied Health Sciences</option>
-              <option value="Other" {% if saved_responses.get('school') == 'Other' %}selected{% endif %}>Other School</option>
+              <option value="FET" {% if saved_responses.get('school')=='FET' %}selected{% endif %}>FET — Faculty of
+                Engineering & Technology</option>
+              <option value="CMS" {% if saved_responses.get('school')=='CMS' %}selected{% endif %}>CMS — Center for
+                Management Studies</option>
+              <option value="FCS" {% if saved_responses.get('school')=='FCS' %}selected{% endif %}>FCS — Faculty of
+                Commerce & Sciences</option>
+              <option value="SAHS" {% if saved_responses.get('school')=='SAHS' %}selected{% endif %}>SAHS — School of
+                Allied Health Sciences</option>
+              <option value="Other" {% if saved_responses.get('school')=='Other' %}selected{% endif %}>Other School
+              </option>
             </select>
           </div>
         </div>
@@ -131,34 +146,45 @@
         <div class="question" style="margin-top: 20px;">
           <label class="q-label" style="display: block; font-weight: 600; margin-bottom: 8px;">Programme Name:</label>
           <div class="q-body">
-            <input type="text" id="ori_program" placeholder="e.g. B.Tech (AI & ML), B.Com, MBA..." value="{{ saved_responses.get('program', prefill_dept) }}" style="width: 100%; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 14px; outline: none;" />
+            <input type="text" id="ori_program" placeholder="e.g. B.Tech (AI & ML), B.Com, MBA..."
+              value="{{ saved_responses.get('program', prefill_dept) }}"
+              style="width: 100%; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 14px; outline: none;" />
           </div>
         </div>
 
         <div class="question likert" style="margin-top: 20px;">
-          <p class="q-label"><strong>Overall Vibe:</strong> Rate the overall vibe of Deeksharambh 2026 (1 = Low · 10 = Outstanding)</p>
+          <p class="q-label"><strong>Overall Vibe:</strong> Rate the overall vibe of Deeksharambh 2026 (1 = Low · 10 =
+            Outstanding)</p>
           <div class="sl-wrap" style="padding: 10px 0;">
-            <input type="range" min="1" max="10" value="{{ saved_responses.get('q2', 8) }}" id="ori_q2" step="1" oninput="document.getElementById('ori_q2_val').textContent = this.value;" style="width: 80%;" />
-            <span id="ori_q2_val" style="font-weight: 700; font-size: 16px; margin-left: 12px; color: var(--navy);">{{ saved_responses.get('q2', 8) }}</span>
+            <input type="range" min="1" max="10" value="{{ saved_responses.get('q2', 8) }}" id="ori_q2" step="1"
+              oninput="document.getElementById('ori_q2_val').textContent = this.value;" style="width: 80%;" />
+            <span id="ori_q2_val" style="font-weight: 700; font-size: 16px; margin-left: 12px; color: var(--navy);">{{
+              saved_responses.get('q2', 8) }}</span>
           </div>
         </div>
 
         <div class="question likert" style="margin-top: 20px;">
-          <p class="q-label"><strong>Belonging:</strong> I feel I belong at JAIN University (1 = Disagree · 10 = Strongly Agree)</p>
+          <p class="q-label"><strong>Belonging:</strong> I feel I belong at JAIN University (1 = Disagree · 10 =
+            Strongly Agree)</p>
           <div class="sl-wrap" style="padding: 10px 0;">
-            <input type="range" min="1" max="10" value="{{ saved_responses.get('q29', 9) }}" id="ori_q29" step="1" oninput="document.getElementById('ori_q29_val').textContent = this.value;" style="width: 80%;" />
-            <span id="ori_q29_val" style="font-weight: 700; font-size: 16px; margin-left: 12px; color: var(--navy);">{{ saved_responses.get('q29', 9) }}</span>
+            <input type="range" min="1" max="10" value="{{ saved_responses.get('q29', 9) }}" id="ori_q29" step="1"
+              oninput="document.getElementById('ori_q29_val').textContent = this.value;" style="width: 80%;" />
+            <span id="ori_q29_val" style="font-weight: 700; font-size: 16px; margin-left: 12px; color: var(--navy);">{{
+              saved_responses.get('q29', 9) }}</span>
           </div>
         </div>
 
         <div class="question" style="margin-top: 20px;">
           <label class="q-label">What were your most helpful aspects of the Orientation Programme overall?</label>
-          <textarea id="ori_helpful" rows="3" placeholder="Tell us what you liked most..." style="width: 100%; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 14px; outline: none;">{{ saved_responses.get('helpful_aspects', '') }}</textarea>
+          <textarea id="ori_helpful" rows="3" placeholder="Tell us what you liked most..."
+            style="width: 100%; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 14px; outline: none;">{{ saved_responses.get('helpful_aspects', '') }}</textarea>
         </div>
       </div>
 
       <div style="margin-top: 28px; display: flex; justify-content: flex-end;">
-        <button type="button" class="btn primary" id="btn-complete-orientation" onclick="finishOrientationAndGoToAISurvey()" style="font-size: 15px; font-weight: 700; padding: 12px 28px; background: linear-gradient(135deg, #0d2147 0%, #112a5e 100%); color: #fff; border: none; border-radius: 10px; cursor: pointer; box-shadow: 0 4px 14px rgba(13,33,71,0.25);">
+        <button type="button" class="btn primary" id="btn-complete-orientation"
+          onclick="finishOrientationAndGoToAISurvey()"
+          style="font-size: 15px; font-weight: 700; padding: 12px 28px; background: linear-gradient(135deg, #0d2147 0%, #112a5e 100%); color: #fff; border: none; border-radius: 10px; cursor: pointer; box-shadow: 0 4px 14px rgba(13,33,71,0.25);">
           Complete Orientation & Go to AI Post Survey 2 →
         </button>
       </div>
@@ -166,103 +192,141 @@
     {% endif %}
 
     <!-- ── SECTION A — Your Background ──────────────────────────────────── -->
-    <fieldset class="section wizard-section {% if not has_ori_step %}active{% endif %}" data-step-section="{{ 1 if has_ori_step else 0 }}">
+    <fieldset class="section wizard-section {% if not has_ori_step %}active{% endif %}"
+      data-step-section="{{ 1 if has_ori_step else 0 }}">
       <legend>Section A · Your Background</legend>
       <p class="muted" style="margin-bottom: 20px;">Please provide your background details.</p>
 
       <div class="sub-section-card">
-        <h3 class="subhead" style="font-size: 14px; font-weight: 700; color: var(--navy); margin-bottom: 16px; border-bottom: 1px solid var(--border); padding-bottom: 8px;">Parent Details</h3>
+        <h3 class="subhead"
+          style="font-size: 14px; font-weight: 700; color: var(--navy); margin-bottom: 16px; border-bottom: 1px solid var(--border); padding-bottom: 8px;">
+          Parent Details</h3>
 
         <!-- ── Father's Details ── -->
-        <h4 style="font-size: 13px; font-weight: 700; color: var(--navy); margin-bottom: 12px; padding: 8px 12px; background: #f0f4ff; border-radius: 6px;">👨 Father's Details</h4>
-        
+        <h4
+          style="font-size: 13px; font-weight: 700; color: var(--navy); margin-bottom: 12px; padding: 8px 12px; background: #f0f4ff; border-radius: 6px;">
+          👨 Father's Details</h4>
+
         <div class="question">
           <label class="q-label" style="display: block; font-weight: 600; margin-bottom: 8px;">Father's Name:</label>
           <div class="q-body">
-            <input type="text" name="father_name" placeholder="Enter father's name" required value="{{ values.get('father_name', '') }}" style="width: 100%; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 14px; outline: none;" />
+            <input type="text" name="father_name" placeholder="Enter father's name" required
+              value="{{ values.get('father_name', '') }}"
+              style="width: 100%; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 14px; outline: none;" />
           </div>
         </div>
 
         <div class="question" style="margin-top: 20px;">
           <label class="q-label" style="display: block; font-weight: 600; margin-bottom: 8px;">Occupation:</label>
           <div class="q-body">
-            <select name="father_occupation" id="father_occupation" required onchange="toggleOccupationFields()" style="width: 100%; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 14px; outline: none; background: #fff;">
+            <select name="father_occupation" id="father_occupation" required onchange="toggleOccupationFields()"
+              style="width: 100%; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 14px; outline: none; background: #fff;">
               <option value="">-- Select --</option>
-              <option value="Salaried" {% if values.get('father_occupation') == 'Salaried' %}selected{% endif %}>Salaried</option>
-              <option value="Entrepreneur" {% if values.get('father_occupation') == 'Entrepreneur' %}selected{% endif %}>Entrepreneur</option>
-              <option value="Homemaker" {% if values.get('father_occupation') == 'Homemaker' %}selected{% endif %}>Homemaker</option>
+              <option value="Salaried" {% if values.get('father_occupation')=='Salaried' %}selected{% endif %}>Salaried
+              </option>
+              <option value="Entrepreneur" {% if values.get('father_occupation')=='Entrepreneur' %}selected{% endif %}>
+                Entrepreneur</option>
+              <option value="Homemaker" {% if values.get('father_occupation')=='Homemaker' %}selected{% endif %}>
+                Homemaker</option>
             </select>
           </div>
         </div>
 
         <!-- Father: If Salaried -->
         <div class="question" id="org_name_group" style="display: none; margin-top: 20px;">
-          <label class="q-label" style="display: block; font-weight: 600; margin-bottom: 8px;">Organization Name:</label>
+          <label class="q-label" style="display: block; font-weight: 600; margin-bottom: 8px;">Organization
+            Name:</label>
           <div class="q-body">
-            <input type="text" name="organization_name" id="organization_name" placeholder="Enter organization name" value="{{ values.get('organization_name', '') }}" style="width: 100%; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 14px; outline: none;" />
+            <input type="text" name="organization_name" id="organization_name" placeholder="Enter organization name"
+              value="{{ values.get('organization_name', '') }}"
+              style="width: 100%; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 14px; outline: none;" />
           </div>
         </div>
 
         <!-- Father: If Entrepreneur -->
         <div class="question" id="biz_name_group" style="display: none; margin-top: 20px;">
-          <label class="q-label" style="display: block; font-weight: 600; margin-bottom: 8px;">Father's Business / Firm Name:</label>
+          <label class="q-label" style="display: block; font-weight: 600; margin-bottom: 8px;">Father's Business / Firm
+            Name:</label>
           <div class="q-body">
-            <input type="text" name="business_name" id="business_name" placeholder="Enter business name" value="{{ values.get('business_name', '') }}" style="width: 100%; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 14px; outline: none;" />
+            <input type="text" name="business_name" id="business_name" placeholder="Enter business name"
+              value="{{ values.get('business_name', '') }}"
+              style="width: 100%; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 14px; outline: none;" />
           </div>
         </div>
 
         <div class="question" id="biz_type_group" style="display: none; margin-top: 20px;">
           <label class="q-label" style="display: block; font-weight: 600; margin-bottom: 4px;">Type of Business:</label>
-          <p class="muted" style="margin-top: 0; margin-bottom: 8px; font-size: 12px; color: var(--muted);">(Explain in your own words what business they do, e.g. retail shop, software consulting, manufacturing, etc.)</p>
+          <p class="muted" style="margin-top: 0; margin-bottom: 8px; font-size: 12px; color: var(--muted);">(Explain in
+            your own words what business they do, e.g. retail shop, software consulting, manufacturing, etc.)</p>
           <div class="q-body">
-            <textarea name="business_type" id="business_type" rows="3" placeholder="Describe the business..." maxlength="500" style="width: 100%; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 14px; outline: none; resize: vertical;">{{ values.get('business_type', '') }}</textarea>
+            <textarea name="business_type" id="business_type" rows="3" placeholder="Describe the business..."
+              maxlength="500"
+              style="width: 100%; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 14px; outline: none; resize: vertical;">{{ values.get('business_type', '') }}</textarea>
           </div>
         </div>
 
         <!-- ── Mother's Details ── -->
         <div style="margin-top: 28px; border-top: 2px solid var(--border); padding-top: 20px;">
-          <h4 style="font-size: 13px; font-weight: 700; color: var(--navy); margin-bottom: 12px; padding: 8px 12px; background: #fdf2f8; border-radius: 6px;">👩 Mother's Details</h4>
-          
+          <h4
+            style="font-size: 13px; font-weight: 700; color: var(--navy); margin-bottom: 12px; padding: 8px 12px; background: #fdf2f8; border-radius: 6px;">
+            👩 Mother's Details</h4>
+
           <div class="question">
             <label class="q-label" style="display: block; font-weight: 600; margin-bottom: 8px;">Mother's Name:</label>
             <div class="q-body">
-              <input type="text" name="mother_name" placeholder="Enter mother's name" required value="{{ values.get('mother_name', '') }}" style="width: 100%; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 14px; outline: none;" />
+              <input type="text" name="mother_name" placeholder="Enter mother's name" required
+                value="{{ values.get('mother_name', '') }}"
+                style="width: 100%; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 14px; outline: none;" />
             </div>
           </div>
 
           <div class="question" style="margin-top: 20px;">
             <label class="q-label" style="display: block; font-weight: 600; margin-bottom: 8px;">Occupation:</label>
             <div class="q-body">
-              <select name="mother_occupation" id="mother_occupation" required onchange="toggleOccupationFields()" style="width: 100%; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 14px; outline: none; background: #fff;">
+              <select name="mother_occupation" id="mother_occupation" required onchange="toggleOccupationFields()"
+                style="width: 100%; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 14px; outline: none; background: #fff;">
                 <option value="">-- Select --</option>
-                <option value="Salaried" {% if values.get('mother_occupation') == 'Salaried' %}selected{% endif %}>Salaried</option>
-                <option value="Entrepreneur" {% if values.get('mother_occupation') == 'Entrepreneur' %}selected{% endif %}>Entrepreneur</option>
-                <option value="Homemaker" {% if values.get('mother_occupation') == 'Homemaker' %}selected{% endif %}>Homemaker</option>
+                <option value="Salaried" {% if values.get('mother_occupation')=='Salaried' %}selected{% endif %}>
+                  Salaried</option>
+                <option value="Entrepreneur" {% if values.get('mother_occupation')=='Entrepreneur' %}selected{% endif
+                  %}>Entrepreneur</option>
+                <option value="Homemaker" {% if values.get('mother_occupation')=='Homemaker' %}selected{% endif %}>
+                  Homemaker</option>
               </select>
             </div>
           </div>
 
           <!-- Mother: If Salaried -->
           <div class="question" id="mother_org_name_group" style="display: none; margin-top: 20px;">
-            <label class="q-label" style="display: block; font-weight: 600; margin-bottom: 8px;">Organization Name:</label>
+            <label class="q-label" style="display: block; font-weight: 600; margin-bottom: 8px;">Organization
+              Name:</label>
             <div class="q-body">
-              <input type="text" name="mother_organization_name" id="mother_organization_name" placeholder="Enter organization name" value="{{ values.get('mother_organization_name', '') }}" style="width: 100%; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 14px; outline: none;" />
+              <input type="text" name="mother_organization_name" id="mother_organization_name"
+                placeholder="Enter organization name" value="{{ values.get('mother_organization_name', '') }}"
+                style="width: 100%; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 14px; outline: none;" />
             </div>
           </div>
 
           <!-- Mother: If Entrepreneur -->
           <div class="question" id="mother_biz_name_group" style="display: none; margin-top: 20px;">
-            <label class="q-label" style="display: block; font-weight: 600; margin-bottom: 8px;">Mother's Business / Firm Name:</label>
+            <label class="q-label" style="display: block; font-weight: 600; margin-bottom: 8px;">Mother's Business /
+              Firm Name:</label>
             <div class="q-body">
-              <input type="text" name="mother_business_name" id="mother_business_name" placeholder="Enter business name" value="{{ values.get('mother_business_name', '') }}" style="width: 100%; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 14px; outline: none;" />
+              <input type="text" name="mother_business_name" id="mother_business_name" placeholder="Enter business name"
+                value="{{ values.get('mother_business_name', '') }}"
+                style="width: 100%; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 14px; outline: none;" />
             </div>
           </div>
 
           <div class="question" id="mother_biz_type_group" style="display: none; margin-top: 20px;">
-            <label class="q-label" style="display: block; font-weight: 600; margin-bottom: 4px;">Type of Business:</label>
-            <p class="muted" style="margin-top: 0; margin-bottom: 8px; font-size: 12px; color: var(--muted);">(Explain in your own words what business they do, e.g. retail shop, software consulting, manufacturing, etc.)</p>
+            <label class="q-label" style="display: block; font-weight: 600; margin-bottom: 4px;">Type of
+              Business:</label>
+            <p class="muted" style="margin-top: 0; margin-bottom: 8px; font-size: 12px; color: var(--muted);">(Explain
+              in your own words what business they do, e.g. retail shop, software consulting, manufacturing, etc.)</p>
             <div class="q-body">
-              <textarea name="mother_business_type" id="mother_business_type" rows="3" placeholder="Describe the business..." maxlength="500" style="width: 100%; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 14px; outline: none; resize: vertical;">{{ values.get('mother_business_type', '') }}</textarea>
+              <textarea name="mother_business_type" id="mother_business_type" rows="3"
+                placeholder="Describe the business..." maxlength="500"
+                style="width: 100%; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 14px; outline: none; resize: vertical;">{{ values.get('mother_business_type', '') }}</textarea>
             </div>
           </div>
         </div>
@@ -609,7 +673,8 @@
           <p class="q-label"><strong>{{ key }}.</strong>
             {% if key == "G2a" %}I know how to use AI tools to research a target market or industry
             {% elif key == "G2b" %}I can use AI to analyse competitors and their positioning
-            {% elif key == "G2c" %}I understand the limitations of AI-generated market research and know when to verify it
+            {% elif key == "G2c" %}I understand the limitations of AI-generated market research and know when to verify
+            it
             independently
             {% endif %}
           </p>
@@ -737,143 +802,225 @@
 
       <!-- ── PRaiSE AI Framework Infographic ─────────────────────────── -->
       <div style="margin-top: 28px; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 24px rgba(27,42,74,0.12);">
-        
+
         <!-- Header Banner -->
-        <div style="padding: 24px 28px; color: #1B2A4A; border-bottom: 1px solid #e5e7eb; display: flex; align-items: flex-start; gap: 22px; background: #ffffff;">
-          <img src="/static/logosmall.png" alt="Logo" style="height: 72px; width: auto; object-fit: contain; flex-shrink: 0; margin-top: -4px;">
-          <div style="text-align: left;">
-            <h3 style="font-size: 22px; font-weight: 800; margin: 0 0 6px 0; letter-spacing: 0.5px; color: #1B2A4A;">
+        <div
+          style="padding: 24px 28px; color: #1B2A4A; border-bottom: 1px solid #e5e7eb; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; background: #ffffff; text-align: center;">
+          <img src="/static/logosmall.png" alt="Logo"
+            style="height: 72px; width: auto; object-fit: contain; flex-shrink: 0; margin-top: -4px;">
+          <div style="text-align: center;">
+            <h3 style="font-size: 22px; font-weight: 800; margin: 0 0 8px 0; letter-spacing: 0.5px; color: #1B2A4A; text-align: center;">
               PRAISE AI FRAMEWORK AT JAIN DEEMED TO BE UNIVERSITY
             </h3>
-            <p style="font-size: 15px; margin: 0; color: #4b5563; line-height: 1.6; max-width: 800px; font-weight: 500;">
-              We at JAIN (Deemed-to-be University), we have identified four pillars under the <span style="color: #c2951b; font-weight: 700;">PRaiSE</span> framework to drive relevant AI opportunities as part of your curriculum. Please select one pillar to which you would like to contribute.
+            <p
+              style="font-size: 15px; margin: 0 auto; color: #4b5563; line-height: 1.6; max-width: 800px; font-weight: 500; text-align: center;">
+              We at JAIN (Deemed-to-be University) have identified four pillars under the <span
+                style="color: #c2951b; font-weight: 700;">PRaiSE</span> framework to drive relevant AI opportunities as
+              part of your curriculum. Please select one pillar to which you would like to contribute.
             </p>
           </div>
         </div>
 
         <!-- Diamond Diagram — Centered with spacious badges -->
-        <div style="background: linear-gradient(180deg, #f0f4ff 0%, #ffffff 100%); padding: 36px 16px 28px; display: flex; justify-content: center; overflow: hidden;">
+        <div
+          style="background: linear-gradient(180deg, #f0f4ff 0%, #ffffff 100%); padding: 36px 16px 28px; display: flex; justify-content: center; overflow: hidden;">
           <div style="position: relative; width: 440px; height: 320px; max-width: 100%;">
-            
+
             <!-- Diamond shape centered -->
-            <div style="position: absolute; top: 50%; left: 50%; width: 140px; height: 140px; background: linear-gradient(135deg, #f5ce4e 0%, #e6a817 50%, #d4960d 100%); transform: translate(-50%, -50%) rotate(45deg); border-radius: 14px; box-shadow: 0 8px 32px rgba(201,168,76,0.35); z-index: 1;"></div>
+            <div
+              style="position: absolute; top: 50%; left: 50%; width: 140px; height: 140px; background: linear-gradient(135deg, #f5ce4e 0%, #e6a817 50%, #d4960d 100%); transform: translate(-50%, -50%) rotate(45deg); border-radius: 14px; box-shadow: 0 8px 32px rgba(201,168,76,0.35); z-index: 1;">
+            </div>
 
             <!-- Center PRaiSE label -->
-            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 5; text-align: center; pointer-events: none;">
-              <div style="font-size: 24px; font-weight: 900; color: #1B2A4A; letter-spacing: 1.5px; text-shadow: 0 1px 3px rgba(255,255,255,0.7);">PRaiSE</div>
+            <div
+              style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 5; text-align: center; pointer-events: none;">
+              <div
+                style="font-size: 24px; font-weight: 900; color: #1B2A4A; letter-spacing: 1.5px; text-shadow: 0 1px 3px rgba(255,255,255,0.7);">
+                PRaiSE</div>
             </div>
 
             <!-- Top: Human Excellence (2) -->
-            <div style="position: absolute; top: 8px; left: 50%; transform: translateX(-50%); z-index: 10; text-align: center;">
-              <div style="background: #1B2A4A; color: #fff; font-size: 11px; font-weight: 800; width: 24px; height: 24px; line-height: 24px; border-radius: 50%; display: inline-block; margin-bottom: 4px; box-shadow: 0 2px 6px rgba(0,0,0,0.15);">2</div>
-              <div style="font-size: 12px; font-weight: 700; color: #1B2A4A; white-space: nowrap;">AI for Human Excellence</div>
+            <div
+              style="position: absolute; top: 8px; left: 50%; transform: translateX(-50%); z-index: 10; text-align: center;">
+              <div
+                style="background: #1B2A4A; color: #fff; font-size: 11px; font-weight: 800; width: 24px; height: 24px; line-height: 24px; border-radius: 50%; display: inline-block; margin-bottom: 4px; box-shadow: 0 2px 6px rgba(0,0,0,0.15);">
+                2</div>
+              <div style="font-size: 12px; font-weight: 700; color: #1B2A4A; white-space: nowrap;">AI for Human
+                Excellence</div>
             </div>
 
             <!-- Right: Societal Impact (1) -->
-            <div style="position: absolute; top: 50%; right: 10px; transform: translateY(-50%); z-index: 10; text-align: center;">
-              <div style="background: #1B7A3D; color: #fff; font-size: 11px; font-weight: 800; width: 24px; height: 24px; line-height: 24px; border-radius: 50%; display: inline-block; margin-bottom: 4px; box-shadow: 0 2px 6px rgba(0,0,0,0.15);">1</div>
-              <div style="font-size: 12px; font-weight: 700; color: #1B2A4A; white-space: nowrap;">AI for Societal<br>Impact</div>
+            <div
+              style="position: absolute; top: 50%; right: 10px; transform: translateY(-50%); z-index: 10; text-align: center;">
+              <div
+                style="background: #1B7A3D; color: #fff; font-size: 11px; font-weight: 800; width: 24px; height: 24px; line-height: 24px; border-radius: 50%; display: inline-block; margin-bottom: 4px; box-shadow: 0 2px 6px rgba(0,0,0,0.15);">
+                1</div>
+              <div style="font-size: 12px; font-weight: 700; color: #1B2A4A; white-space: nowrap;">AI for
+                Societal<br>Impact</div>
             </div>
 
             <!-- Bottom: Entrepreneurship (4) -->
-            <div style="position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); z-index: 10; text-align: center;">
-              <div style="background: #1B7A3D; color: #fff; font-size: 11px; font-weight: 800; width: 24px; height: 24px; line-height: 24px; border-radius: 50%; display: inline-block; margin-bottom: 4px; box-shadow: 0 2px 6px rgba(0,0,0,0.15);">4</div>
-              <div style="font-size: 12px; font-weight: 700; color: #1B2A4A; white-space: nowrap;">AI for Entrepreneurship</div>
+            <div
+              style="position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); z-index: 10; text-align: center;">
+              <div
+                style="background: #1B7A3D; color: #fff; font-size: 11px; font-weight: 800; width: 24px; height: 24px; line-height: 24px; border-radius: 50%; display: inline-block; margin-bottom: 4px; box-shadow: 0 2px 6px rgba(0,0,0,0.15);">
+                4</div>
+              <div style="font-size: 12px; font-weight: 700; color: #1B2A4A; white-space: nowrap;">AI for
+                Entrepreneurship</div>
             </div>
 
             <!-- Left: Social Good (3) -->
-            <div style="position: absolute; top: 50%; left: 10px; transform: translateY(-50%); z-index: 10; text-align: center;">
-              <div style="background: #C9A84C; color: #fff; font-size: 11px; font-weight: 800; width: 24px; height: 24px; line-height: 24px; border-radius: 50%; display: inline-block; margin-bottom: 4px; box-shadow: 0 2px 6px rgba(0,0,0,0.15);">3</div>
-              <div style="font-size: 12px; font-weight: 700; color: #1B2A4A; white-space: nowrap;">AI for Social<br>Good</div>
+            <div
+              style="position: absolute; top: 50%; left: 10px; transform: translateY(-50%); z-index: 10; text-align: center;">
+              <div
+                style="background: #C9A84C; color: #fff; font-size: 11px; font-weight: 800; width: 24px; height: 24px; line-height: 24px; border-radius: 50%; display: inline-block; margin-bottom: 4px; box-shadow: 0 2px 6px rgba(0,0,0,0.15);">
+                3</div>
+              <div style="font-size: 12px; font-weight: 700; color: #1B2A4A; white-space: nowrap;">AI for Social<br>Good
+              </div>
             </div>
           </div>
         </div>
 
         <!-- Tagline below diamond -->
         <div style="text-align: center; padding: 0 20px 20px; background: #fff;">
-          <div style="font-size: 12px; font-weight: 700; color: #1B7A3D; line-height: 1.4;">Promoting Responsible AI Impact on Society and Economy</div>
-          <div style="font-size: 11px; font-weight: 600; color: #6b7280; margin-top: 3px;">JAIN AI Centre for Excellence</div>
+          <div style="font-size: 12px; font-weight: 700; color: #1B7A3D; line-height: 1.4;">Promoting Responsible AI
+            Impact on Society and Economy</div>
+          <div style="font-size: 11px; font-weight: 600; color: #6b7280; margin-top: 3px;">JAIN AI Centre for Excellence
+          </div>
         </div>
 
         <!-- Pillar Cards — 2x2 Grid -->
-        <div style="padding: 0 20px 24px; background: #fff; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px;">
+        <div
+          style="padding: 0 20px 24px; background: #fff; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px;">
 
           <!-- Card 1: Societal Impact -->
-          <div style="border-left: 4px solid #1B7A3D; background: #f0fdf4; border-radius: 10px; padding: 16px 18px; transition: transform 0.2s;">
+          <div
+            style="border-left: 4px solid #1B7A3D; background: #f0fdf4; border-radius: 10px; padding: 16px 18px; transition: transform 0.2s;">
             <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
-              <div style="width: 36px; height: 36px; border-radius: 8px; background: #dcfce7; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1B7A3D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+              <div
+                style="width: 36px; height: 36px; border-radius: 8px; background: #dcfce7; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1B7A3D" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" />
+                  <path d="M2 12h20" />
+                </svg>
               </div>
               <div>
-                <span style="background: #1B7A3D; color: #fff; font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 8px; display: inline-block; margin-bottom: 2px;">PILLAR 1</span>
+                <span
+                  style="background: #1B7A3D; color: #fff; font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 8px; display: inline-block; margin-bottom: 2px;">PILLAR
+                  1</span>
                 <div style="font-size: 14px; font-weight: 800; color: #1B2A4A;">Societal Impact</div>
               </div>
             </div>
-            <p style="font-size: 12.5px; color: #374151; line-height: 1.55; margin: 0;">Inclusive, AI-enabled curriculum architecture aligned to diverse learner pathways and evolving industry and Society needs</p>
+            <p style="font-size: 12.5px; color: #374151; line-height: 1.55; margin: 0;">Inclusive, AI-enabled curriculum
+              architecture aligned to diverse learner pathways and evolving industry and Society needs</p>
           </div>
 
           <!-- Card 2: Human Excellence -->
-          <div style="border-left: 4px solid #1B2A4A; background: #f0f4ff; border-radius: 10px; padding: 16px 18px; transition: transform 0.2s;">
+          <div
+            style="border-left: 4px solid #1B2A4A; background: #f0f4ff; border-radius: 10px; padding: 16px 18px; transition: transform 0.2s;">
             <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
-              <div style="width: 36px; height: 36px; border-radius: 8px; background: #e0e7ff; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1B2A4A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a7 7 0 0 1 7 7c0 2.38-1.19 4.47-3 5.74V17a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1v-2.26C6.19 13.47 5 11.38 5 9a7 7 0 0 1 7-7z"/><path d="M9 21h6"/><path d="M10 17v4"/><path d="M14 17v4"/></svg>
+              <div
+                style="width: 36px; height: 36px; border-radius: 8px; background: #e0e7ff; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1B2A4A" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <path
+                    d="M12 2a7 7 0 0 1 7 7c0 2.38-1.19 4.47-3 5.74V17a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1v-2.26C6.19 13.47 5 11.38 5 9a7 7 0 0 1 7-7z" />
+                  <path d="M9 21h6" />
+                  <path d="M10 17v4" />
+                  <path d="M14 17v4" />
+                </svg>
               </div>
               <div>
-                <span style="background: #1B2A4A; color: #fff; font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 8px; display: inline-block; margin-bottom: 2px;">PILLAR 2</span>
+                <span
+                  style="background: #1B2A4A; color: #fff; font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 8px; display: inline-block; margin-bottom: 2px;">PILLAR
+                  2</span>
                 <div style="font-size: 14px; font-weight: 800; color: #1B2A4A;">Human Excellence</div>
               </div>
             </div>
-            <p style="font-size: 12.5px; color: #374151; line-height: 1.55; margin: 0;">Bring out the Best that we can achieve using thoughtfully designed AI – Human Collaboration</p>
+            <p style="font-size: 12.5px; color: #374151; line-height: 1.55; margin: 0;">Bring out the Best that we can
+              achieve using thoughtfully designed AI – Human Collaboration</p>
           </div>
 
           <!-- Card 3: Social Good -->
-          <div style="border-left: 4px solid #C9A84C; background: #fffbeb; border-radius: 10px; padding: 16px 18px; transition: transform 0.2s;">
+          <div
+            style="border-left: 4px solid #C9A84C; background: #fffbeb; border-radius: 10px; padding: 16px 18px; transition: transform 0.2s;">
             <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
-              <div style="width: 36px; height: 36px; border-radius: 8px; background: #fef3c7; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C9A84C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.42 4.58a5.4 5.4 0 0 0-7.65 0l-.77.78-.77-.78a5.4 5.4 0 0 0-7.65 0C1.46 6.7 1.33 10.28 4 13l8 8 8-8c2.67-2.72 2.54-6.3.42-8.42z"/></svg>
+              <div
+                style="width: 36px; height: 36px; border-radius: 8px; background: #fef3c7; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C9A84C" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <path
+                    d="M20.42 4.58a5.4 5.4 0 0 0-7.65 0l-.77.78-.77-.78a5.4 5.4 0 0 0-7.65 0C1.46 6.7 1.33 10.28 4 13l8 8 8-8c2.67-2.72 2.54-6.3.42-8.42z" />
+                </svg>
               </div>
               <div>
-                <span style="background: #C9A84C; color: #fff; font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 8px; display: inline-block; margin-bottom: 2px;">PILLAR 3</span>
+                <span
+                  style="background: #C9A84C; color: #fff; font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 8px; display: inline-block; margin-bottom: 2px;">PILLAR
+                  3</span>
                 <div style="font-size: 14px; font-weight: 800; color: #1B2A4A;">Social Good</div>
               </div>
             </div>
-            <p style="font-size: 12.5px; color: #374151; line-height: 1.55; margin: 0;">Make sure AI is used for Good by identifying and executing AI projects that makes an impact on the Society</p>
+            <p style="font-size: 12.5px; color: #374151; line-height: 1.55; margin: 0;">Make sure AI is used for Good by
+              identifying and executing AI projects that makes an impact on the Society</p>
           </div>
 
           <!-- Card 4: Entrepreneurship -->
-          <div style="border-left: 4px solid #7c3aed; background: #f5f3ff; border-radius: 10px; padding: 16px 18px; transition: transform 0.2s;">
+          <div
+            style="border-left: 4px solid #7c3aed; background: #f5f3ff; border-radius: 10px; padding: 16px 18px; transition: transform 0.2s;">
             <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
-              <div style="width: 36px; height: 36px; border-radius: 8px; background: #ede9fe; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>
+              <div
+                style="width: 36px; height: 36px; border-radius: 8px; background: #ede9fe; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z" />
+                  <path
+                    d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z" />
+                  <path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0" />
+                  <path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5" />
+                </svg>
               </div>
               <div>
-                <span style="background: #7c3aed; color: #fff; font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 8px; display: inline-block; margin-bottom: 2px;">PILLAR 4</span>
+                <span
+                  style="background: #7c3aed; color: #fff; font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 8px; display: inline-block; margin-bottom: 2px;">PILLAR
+                  4</span>
                 <div style="font-size: 14px; font-weight: 800; color: #1B2A4A;">Entrepreneurship</div>
               </div>
             </div>
-            <p style="font-size: 12.5px; color: #374151; line-height: 1.55; margin: 0;">Agentic AI workflow clubbed with Industry mentorship to drive an innovation ecosystem enabling the creation of responsible, scalable, and market-ready ventures</p>
+            <p style="font-size: 12.5px; color: #374151; line-height: 1.55; margin: 0;">Agentic AI workflow clubbed with
+              Industry mentorship to drive an innovation ecosystem enabling the creation of responsible, scalable, and
+              market-ready ventures</p>
+          </div>
         </div>
-      </div>
 
-      <!-- ── Mandatory PRaiSE Initiative Question ─────────────────────────── -->
-      <div class="question" style="margin-top: 24px; padding: 22px; background: #ffffff; border: 2px solid var(--gold); border-radius: 14px; box-shadow: 0 4px 16px rgba(27,42,74,0.06);">
-        <label class="q-label" for="praise_initiative" style="display: block; font-weight: 700; color: var(--navy); font-size: 15px; margin-bottom: 8px;">
-          Please select one pillar to which you would like to contribute: <span style="color: #ef4444; font-weight: 800;">*</span>
-        </label>
-        <p class="muted" style="font-size: 12.5px; color: var(--muted); margin-bottom: 14px; line-height: 1.4;">
-          Please select one of the PRaiSE pillars or None based on where you plan to contribute:
-        </p>
-        <div class="q-body">
-          <select name="praise_initiative" id="praise_initiative" required style="width: 100%; padding: 12px 14px; border: 1.5px solid var(--border); border-radius: 8px; font-family: inherit; font-size: 14px; outline: none; background: #fff; color: var(--navy); font-weight: 600;">
-            <option value="">-- Select Initiative Area --</option>
-            <option value="Societal Impact" {% if values.get('praise_initiative') == 'Societal Impact' %}selected{% endif %}>Societal Impact</option>
-            <option value="Human Excellence" {% if values.get('praise_initiative') == 'Human Excellence' %}selected{% endif %}>Human Excellence</option>
-            <option value="Social Good" {% if values.get('praise_initiative') == 'Social Good' %}selected{% endif %}>Social Good</option>
-            <option value="Entrepreneurship" {% if values.get('praise_initiative') == 'Entrepreneurship' %}selected{% endif %}>Entrepreneurship</option>
-            <option value="None" {% if values.get('praise_initiative') == 'None' %}selected{% endif %}>None</option>
-          </select>
+        <!-- ── Mandatory PRaiSE Initiative Question ─────────────────────────── -->
+        <div class="question"
+          style="margin-top: 24px; padding: 22px; background: #ffffff; border: 2px solid var(--gold); border-radius: 14px; box-shadow: 0 4px 16px rgba(27,42,74,0.06);">
+          <label class="q-label" for="praise_initiative"
+            style="display: block; font-weight: 700; color: var(--navy); font-size: 15px; margin-bottom: 8px;">
+            Please select one pillar to which you would like to contribute: <span
+              style="color: #ef4444; font-weight: 800;">*</span>
+          </label>
+          <p class="muted" style="font-size: 12.5px; color: var(--muted); margin-bottom: 14px; line-height: 1.4;">
+            Please select one of the PRaiSE pillars or None based on where you plan to contribute:
+          </p>
+          <div class="q-body">
+            <select name="praise_initiative" id="praise_initiative" required
+              style="width: 100%; padding: 12px 14px; border: 1.5px solid var(--border); border-radius: 8px; font-family: inherit; font-size: 14px; outline: none; background: #fff; color: var(--navy); font-weight: 600;">
+              <option value="">-- Select Initiative Area --</option>
+              <option value="Societal Impact" {% if values.get('praise_initiative')=='Societal Impact' %}selected{%
+                endif %}>Societal Impact</option>
+              <option value="Human Excellence" {% if values.get('praise_initiative')=='Human Excellence' %}selected{%
+                endif %}>Human Excellence</option>
+              <option value="Social Good" {% if values.get('praise_initiative')=='Social Good' %}selected{% endif %}>
+                Social Good</option>
+              <option value="Entrepreneurship" {% if values.get('praise_initiative')=='Entrepreneurship' %}selected{%
+                endif %}>Entrepreneurship</option>
+              <option value="None" {% if values.get('praise_initiative')=='None' %}selected{% endif %}>None</option>
+            </select>
+          </div>
         </div>
-      </div>
 
     </fieldset>
 
@@ -891,305 +1038,305 @@
     let currentStep = {{ draft_step or 0 }};
     const totalSteps = 7;
 
-    const form = document.getElementById('survey-form');
-    const steps = document.querySelectorAll('.wizard-step');
-    const sections = document.querySelectorAll('.wizard-section');
-    const prevBtn = document.getElementById('prev-btn');
-    const nextBtn = document.getElementById('next-btn');
-    const submitBtn = document.getElementById('submit-btn');
-    const progressBar = document.getElementById('wizard-progress-bar');
+  const form = document.getElementById('survey-form');
+  const steps = document.querySelectorAll('.wizard-step');
+  const sections = document.querySelectorAll('.wizard-section');
+  const prevBtn = document.getElementById('prev-btn');
+  const nextBtn = document.getElementById('next-btn');
+  const submitBtn = document.getElementById('submit-btn');
+  const progressBar = document.getElementById('wizard-progress-bar');
 
-    // --- LocalStorage Auto-save Progress ("Where he left off") ---
-    const storageKey = 'hacri_post_draft';
+  // --- LocalStorage Auto-save Progress ("Where he left off") ---
+  const storageKey = 'hacri_post_draft';
 
-    let saveTimeout = null;
-    function saveDraft() {
-      const data = {
-        step: currentStep,
-        fields: {}
-      };
+  let saveTimeout = null;
+  function saveDraft() {
+    const data = {
+      step: currentStep,
+      fields: {}
+    };
+
+    const formElements = form.querySelectorAll('input, select, textarea');
+    formElements.forEach(el => {
+      if (!el.name || el.name === 'csrf') return;
+
+      if (el.type === 'radio') {
+        if (el.checked) {
+          data.fields[el.name] = el.value;
+        }
+      } else if (el.type === 'checkbox') {
+        if (!data.fields[el.name]) {
+          data.fields[el.name] = [];
+        }
+        if (el.checked) {
+          data.fields[el.name].push(el.value);
+        }
+      } else {
+        data.fields[el.name] = el.value;
+      }
+    });
+
+    localStorage.setItem(storageKey, JSON.stringify(data));
+
+    clearTimeout(saveTimeout);
+    saveTimeout = setTimeout(() => {
+      const csrfToken = document.querySelector('input[name="csrf"]')?.value;
+      fetch('/survey/draft/post', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          csrf: csrfToken,
+          step: currentStep,
+          fields: data.fields
+        })
+      }).catch(err => console.warn('Failed to sync draft with server:', err));
+    }, 1000);
+  }
+
+  function restoreDraft() {
+    const saved = localStorage.getItem(storageKey);
+    if (!saved) return false;
+
+    try {
+      const data = JSON.parse(saved);
+      if (!data || !data.fields) return false;
 
       const formElements = form.querySelectorAll('input, select, textarea');
       formElements.forEach(el => {
         if (!el.name || el.name === 'csrf') return;
 
+        const val = data.fields[el.name];
+        if (val === undefined) return;
+
         if (el.type === 'radio') {
-          if (el.checked) {
-            data.fields[el.name] = el.value;
+          if (el.value == val) {
+            el.checked = true;
           }
         } else if (el.type === 'checkbox') {
-          if (!data.fields[el.name]) {
-            data.fields[el.name] = [];
-          }
-          if (el.checked) {
-            data.fields[el.name].push(el.value);
+          if (Array.isArray(val) && val.includes(el.value)) {
+            el.checked = true;
           }
         } else {
-          data.fields[el.name] = el.value;
+          el.value = val;
         }
       });
 
-      localStorage.setItem(storageKey, JSON.stringify(data));
+      if (data.step !== undefined && data.step >= 0 && data.step < totalSteps) {
+        currentStep = data.step;
+      }
+      toggleOccupationFields();
+      return true;
+    } catch (e) {
+      console.error('Error restoring draft:', e);
+      return false;
+    }
+  }
 
-      clearTimeout(saveTimeout);
-      saveTimeout = setTimeout(() => {
-        const csrfToken = document.querySelector('input[name="csrf"]')?.value;
-        fetch('/survey/draft/post', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            csrf: csrfToken,
-            step: currentStep,
-            fields: data.fields
-          })
-        }).catch(err => console.warn('Failed to sync draft with server:', err));
-      }, 1000);
+  // Bind save events
+  form.addEventListener('input', saveDraft);
+  form.addEventListener('change', saveDraft);
+
+  function showStep(stepIndex) {
+    currentStep = stepIndex;
+
+    // Update steps tracker
+    steps.forEach((step, idx) => {
+      step.classList.remove('active', 'completed');
+      if (idx === currentStep) {
+        step.classList.add('active');
+      } else if (idx < currentStep) {
+        step.classList.add('completed');
+      }
+    });
+
+    // Update progress bar width
+    const progressPercent = (currentStep / (totalSteps - 1)) * 100;
+    progressBar.style.width = `${progressPercent}%`;
+
+    // Toggle sections visibility
+    sections.forEach((section, idx) => {
+      section.classList.remove('active');
+      if (idx === currentStep) {
+        section.classList.add('active');
+      }
+    });
+
+    // Navigation buttons toggle
+    if (currentStep === 0) {
+      prevBtn.style.display = 'none';
+    } else {
+      prevBtn.style.display = 'inline-flex';
     }
 
-    function restoreDraft() {
-      const saved = localStorage.getItem(storageKey);
-      if (!saved) return false;
-
-      try {
-        const data = JSON.parse(saved);
-        if (!data || !data.fields) return false;
-
-        const formElements = form.querySelectorAll('input, select, textarea');
-        formElements.forEach(el => {
-          if (!el.name || el.name === 'csrf') return;
-
-          const val = data.fields[el.name];
-          if (val === undefined) return;
-
-          if (el.type === 'radio') {
-            if (el.value == val) {
-              el.checked = true;
-            }
-          } else if (el.type === 'checkbox') {
-            if (Array.isArray(val) && val.includes(el.value)) {
-              el.checked = true;
-            }
-          } else {
-            el.value = val;
-          }
-        });
-
-        if (data.step !== undefined && data.step >= 0 && data.step < totalSteps) {
-          currentStep = data.step;
-        }
-        toggleOccupationFields();
-        return true;
-      } catch (e) {
-        console.error('Error restoring draft:', e);
-        return false;
-      }
+    if (currentStep === totalSteps - 1) {
+      nextBtn.style.display = 'none';
+      submitBtn.style.display = 'inline-flex';
+    } else {
+      nextBtn.style.display = 'inline-flex';
+      submitBtn.style.display = 'none';
     }
 
-    // Bind save events
-    form.addEventListener('input', saveDraft);
-    form.addEventListener('change', saveDraft);
+    // Scroll smoothly to start of survey card
+    document.querySelector('.card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    saveDraft();
+  }
 
-    function showStep(stepIndex) {
-      currentStep = stepIndex;
+  window.showStep = showStep;
 
-      // Update steps tracker
-      steps.forEach((step, idx) => {
-        step.classList.remove('active', 'completed');
-        if (idx === currentStep) {
-          step.classList.add('active');
-        } else if (idx < currentStep) {
-          step.classList.add('completed');
-        }
-      });
-
-      // Update progress bar width
-      const progressPercent = (currentStep / (totalSteps - 1)) * 100;
-      progressBar.style.width = `${progressPercent}%`;
-
-      // Toggle sections visibility
-      sections.forEach((section, idx) => {
-        section.classList.remove('active');
-        if (idx === currentStep) {
-          section.classList.add('active');
-        }
-      });
-
-      // Navigation buttons toggle
-      if (currentStep === 0) {
-        prevBtn.style.display = 'none';
-      } else {
-        prevBtn.style.display = 'inline-flex';
-      }
-
-      if (currentStep === totalSteps - 1) {
-        nextBtn.style.display = 'none';
-        submitBtn.style.display = 'inline-flex';
-      } else {
-        nextBtn.style.display = 'inline-flex';
-        submitBtn.style.display = 'none';
-      }
-
-      // Scroll smoothly to start of survey card
-      document.querySelector('.card').scrollIntoView({ behavior: 'smooth', block: 'start' });
-      saveDraft();
+  window.finishOrientationAndGoToAISurvey = async function () {
+    const btn = document.getElementById("btn-complete-orientation");
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = "Saving Orientation... ⏳";
     }
 
-    window.showStep = showStep;
+    const schoolEl = document.getElementById("ori_school");
+    const progEl = document.getElementById("ori_program");
+    const q2El = document.getElementById("ori_q2");
+    const q29El = document.getElementById("ori_q29");
+    const helpfulEl = document.getElementById("ori_helpful");
 
-    window.finishOrientationAndGoToAISurvey = async function() {
-      const btn = document.getElementById("btn-complete-orientation");
-      if (btn) {
-        btn.disabled = true;
-        btn.textContent = "Saving Orientation... ⏳";
-      }
-
-      const schoolEl = document.getElementById("ori_school");
-      const progEl = document.getElementById("ori_program");
-      const q2El = document.getElementById("ori_q2");
-      const q29El = document.getElementById("ori_q29");
-      const helpfulEl = document.getElementById("ori_helpful");
-
-      const oriPayload = {
-        school: schoolEl ? schoolEl.value : "",
-        program: progEl ? progEl.value : "",
-        q2: q2El ? parseInt(q2El.value) : 8,
-        q29: q29El ? parseInt(q29El.value) : 9,
-        helpful_aspects: helpfulEl ? helpfulEl.value : "",
-        completed_in_survey2: true,
-        timestamp: new Date().toISOString()
-      };
-
-      try {
-        const res = await fetch('/api/orientation/submit', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(oriPayload)
-        });
-        if (res.ok || window._TEST_MODE) {
-          console.log("Orientation submitted successfully");
-        }
-      } catch (err) {
-        console.error("Orientation submit error:", err);
-      }
-
-      showStep(1);
+    const oriPayload = {
+      school: schoolEl ? schoolEl.value : "",
+      program: progEl ? progEl.value : "",
+      q2: q2El ? parseInt(q2El.value) : 8,
+      q29: q29El ? parseInt(q29El.value) : 9,
+      helpful_aspects: helpfulEl ? helpfulEl.value : "",
+      completed_in_survey2: true,
+      timestamp: new Date().toISOString()
     };
 
-    function validateCurrentSection() {
-      if (window._TEST_MODE) return true;
-      const section = document.querySelector(`.wizard-section[data-step-section="${currentStep}"]`);
-      if (!section) return true;
-
-      // Clear previous validation indicators
-      section.querySelectorAll('.question.error-pulse').forEach(q => q.classList.remove('error-pulse'));
-
-      const inputs = section.querySelectorAll('input[required], select[required], textarea[required]');
-      let isValid = true;
-      const radioGroups = {};
-      let firstInvalidElement = null;
-
-      inputs.forEach(input => {
-        if (input.type === 'radio') {
-          if (!radioGroups[input.name]) {
-            radioGroups[input.name] = [];
-          }
-          radioGroups[input.name].push(input);
-        } else {
-          if (!input.checkValidity()) {
-            isValid = false;
-            if (!firstInvalidElement) firstInvalidElement = input;
-            const questionCard = input.closest('.question');
-            if (questionCard) {
-              questionCard.classList.add('error-pulse');
-            }
-          }
-        }
+    try {
+      const res = await fetch('/api/orientation/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(oriPayload)
       });
+      if (res.ok || window._TEST_MODE) {
+        console.log("Orientation submitted successfully");
+      }
+    } catch (err) {
+      console.error("Orientation submit error:", err);
+    }
 
-      // Radio groups validation
-      for (const name in radioGroups) {
-        const group = radioGroups[name];
-        const isAnyChecked = group.some(r => r.checked);
-        if (!isAnyChecked) {
+    showStep(1);
+  };
+
+  function validateCurrentSection() {
+    if (window._TEST_MODE) return true;
+    const section = document.querySelector(`.wizard-section[data-step-section="${currentStep}"]`);
+    if (!section) return true;
+
+    // Clear previous validation indicators
+    section.querySelectorAll('.question.error-pulse').forEach(q => q.classList.remove('error-pulse'));
+
+    const inputs = section.querySelectorAll('input[required], select[required], textarea[required]');
+    let isValid = true;
+    const radioGroups = {};
+    let firstInvalidElement = null;
+
+    inputs.forEach(input => {
+      if (input.type === 'radio') {
+        if (!radioGroups[input.name]) {
+          radioGroups[input.name] = [];
+        }
+        radioGroups[input.name].push(input);
+      } else {
+        if (!input.checkValidity()) {
           isValid = false;
-          if (!firstInvalidElement) firstInvalidElement = group[0];
-          const questionCard = group[0].closest('.question');
+          if (!firstInvalidElement) firstInvalidElement = input;
+          const questionCard = input.closest('.question');
           if (questionCard) {
             questionCard.classList.add('error-pulse');
           }
         }
       }
+    });
 
-      if (!isValid && firstInvalidElement) {
-        firstInvalidElement.focus({ preventScroll: true });
-        const questionCard = firstInvalidElement.closest('.question');
+    // Radio groups validation
+    for (const name in radioGroups) {
+      const group = radioGroups[name];
+      const isAnyChecked = group.some(r => r.checked);
+      if (!isAnyChecked) {
+        isValid = false;
+        if (!firstInvalidElement) firstInvalidElement = group[0];
+        const questionCard = group[0].closest('.question');
         if (questionCard) {
-          questionCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        } else {
-          firstInvalidElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-
-        // Native bubble validation trigger
-        if (firstInvalidElement.type !== 'radio') {
-          firstInvalidElement.reportValidity();
-        } else {
-          firstInvalidElement.setCustomValidity('Please select one of the agreement options.');
-          firstInvalidElement.reportValidity();
-          firstInvalidElement.setCustomValidity('');
+          questionCard.classList.add('error-pulse');
         }
       }
-
-      return isValid;
     }
 
-    nextBtn.addEventListener('click', () => {
-      if (validateCurrentSection()) {
-        if (currentStep < totalSteps - 1) {
-          showStep(currentStep + 1);
-        }
-      }
-    });
-
-    prevBtn.addEventListener('click', () => {
-      if (currentStep > 0) {
-        showStep(currentStep - 1);
-      }
-    });
-
-    // Jump validation for steps clicked directly in progress bar
-    steps.forEach((step, idx) => {
-      step.addEventListener('click', () => {
-        if (idx < currentStep) {
-          showStep(idx);
-        } else if (idx > currentStep) {
-          // Validate intermediate sections
-          let target = currentStep;
-          while (target < idx) {
-            if (!validateCurrentSection()) {
-              break;
-            }
-            target++;
-          }
-          showStep(target);
-        }
-      });
-    });
-
-    // Final submit validation
-    form.addEventListener('submit', (e) => {
-      if (!validateCurrentSection()) {
-        e.preventDefault();
+    if (!isValid && firstInvalidElement) {
+      firstInvalidElement.focus({ preventScroll: true });
+      const questionCard = firstInvalidElement.closest('.question');
+      if (questionCard) {
+        questionCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
       } else {
-        localStorage.removeItem(storageKey);
+        firstInvalidElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+
+      // Native bubble validation trigger
+      if (firstInvalidElement.type !== 'radio') {
+        firstInvalidElement.reportValidity();
+      } else {
+        firstInvalidElement.setCustomValidity('Please select one of the agreement options.');
+        firstInvalidElement.reportValidity();
+        firstInvalidElement.setCustomValidity('');
+      }
+    }
+
+    return isValid;
+  }
+
+  nextBtn.addEventListener('click', () => {
+    if (validateCurrentSection()) {
+      if (currentStep < totalSteps - 1) {
+        showStep(currentStep + 1);
+      }
+    }
+  });
+
+  prevBtn.addEventListener('click', () => {
+    if (currentStep > 0) {
+      showStep(currentStep - 1);
+    }
+  });
+
+  // Jump validation for steps clicked directly in progress bar
+  steps.forEach((step, idx) => {
+    step.addEventListener('click', () => {
+      if (idx < currentStep) {
+        showStep(idx);
+      } else if (idx > currentStep) {
+        // Validate intermediate sections
+        let target = currentStep;
+        while (target < idx) {
+          if (!validateCurrentSection()) {
+            break;
+          }
+          target++;
+        }
+        showStep(target);
       }
     });
+  });
 
-    // Restore draft if exists, else start at step 0
-    restoreDraft();
-    toggleOccupationFields();
-    showStep(currentStep);
+  // Final submit validation
+  form.addEventListener('submit', (e) => {
+    if (!validateCurrentSection()) {
+      e.preventDefault();
+    } else {
+      localStorage.removeItem(storageKey);
+    }
+  });
+
+  // Restore draft if exists, else start at step 0
+  restoreDraft();
+  toggleOccupationFields();
+  showStep(currentStep);
   });
 
   function autoFillOrientation() {
@@ -1284,13 +1431,13 @@
     if (occSelect) {
       occSelect.value = "Entrepreneur";
       occSelect.dispatchEvent(new Event('change', { bubbles: true }));
-      
+
       const fNameInput = document.getElementsByName('father_name')[0];
       if (fNameInput) fNameInput.value = "Test Father";
-      
+
       const bNameInput = document.getElementById('business_name');
       if (bNameInput) bNameInput.value = "Test Enterprise Ltd";
-      
+
       const bTypeInput = document.getElementById('business_type');
       if (bTypeInput) bTypeInput.value = "Test business type detailing entrepreneurship.";
     }
@@ -1350,29 +1497,29 @@
       if (occValue === 'Salaried') {
         if (orgGroup) orgGroup.style.display = 'block';
         if (orgInput) orgInput.required = true;
-        
+
         if (bizNameGroup) bizNameGroup.style.display = 'none';
         if (bizNameInput) { bizNameInput.required = false; }
-        
+
         if (bizTypeGroup) bizTypeGroup.style.display = 'none';
         if (bizTypeInput) { bizTypeInput.required = false; }
       } else if (occValue === 'Entrepreneur') {
         if (orgGroup) orgGroup.style.display = 'none';
         if (orgInput) { orgInput.required = false; }
-        
+
         if (bizNameGroup) bizNameGroup.style.display = 'block';
         if (bizNameInput) bizNameInput.required = true;
-        
+
         if (bizTypeGroup) bizTypeGroup.style.display = 'block';
         if (bizTypeInput) bizTypeInput.required = true;
       } else {
         // Homemaker or empty
         if (orgGroup) orgGroup.style.display = 'none';
         if (orgInput) { orgInput.required = false; }
-        
+
         if (bizNameGroup) bizNameGroup.style.display = 'none';
         if (bizNameInput) { bizNameInput.required = false; }
-        
+
         if (bizTypeGroup) bizTypeGroup.style.display = 'none';
         if (bizTypeInput) { bizTypeInput.required = false; }
       }
