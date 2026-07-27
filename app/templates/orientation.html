@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}My Deeksharambh Story 2026{% endblock %}
+{% block title %}Deeksharambh 2026 Orientation{% endblock %}
 {% block content %}
 <style>
 
@@ -466,9 +466,37 @@ footer{text-align:center;padding-top:1.75rem;font-size:11px;color:var(--muted);o
   font-size:18px;font-weight:800;color:#0d2147;
 }
 </style>
+
+<script>
+  window._TEST_MODE = {{ "true" if test_mode_enabled else "false" }};
+</script>
+
+{% if test_mode_enabled %}
+<div style="background: linear-gradient(135deg, #1e1b4b 0%, #4338ca 100%); color: #fff; padding: 16px 20px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; border: 1px solid rgba(255,255,255,0.2);">
+  <div style="display: flex; align-items: center; gap: 10px;">
+    <span style="font-size: 22px;">🛠️</span>
+    <div>
+      <strong style="font-size: 14px; display: block; letter-spacing: 0.5px;">Developer Test Mode Active</strong>
+      <span style="font-size: 12px; opacity: 0.9;">Bypass validations enabled. You can skip or auto-fill orientation.</span>
+    </div>
+  </div>
+  <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+    <button type="button" class="btn" onclick="autoFillOrientation()" style="background: #ffffff; color: #4f46e5; border: none; font-size: 12px; font-weight: 700; padding: 8px 14px; border-radius: 6px; cursor: pointer;">
+      ⚡ Auto-Fill Orientation
+    </button>
+    <button type="button" class="btn" onclick="dismissVideo()" style="background: #fef3c7; color: #92400e; border: none; font-size: 12px; font-weight: 700; padding: 8px 14px; border-radius: 6px; cursor: pointer;">
+      ⏩ Skip Video
+    </button>
+    <a href="/survey/post" class="btn" style="background: #dcfce7; color: #166534; border: none; font-size: 12px; font-weight: 700; padding: 8px 14px; border-radius: 6px; text-decoration: none; font-weight: 700;">
+      🚀 Go to AI Survey 2 →
+    </a>
+  </div>
+</div>
+{% endif %}
+
 <section class="card">
   <header style="margin-bottom: 2rem; border-bottom: 2px solid var(--border-color); padding-bottom: 1rem;">
-    <h1>My Deeksharambh Story</h1>
+    <h1>Deeksharambh 2026 Orientation</h1>
     <p class="lede">Deeksharambh 2026 · JAIN University</p>
     <p class="muted">Tell us how it felt — honestly and openly. Takes about 5 minutes.</p>
   </header>
@@ -504,7 +532,7 @@ footer{text-align:center;padding-top:1.75rem;font-size:11px;color:var(--muted);o
   </div>
   <!-- Bottom bar -->
   <div class="vo-bottom">
-    <div class="vo-caption">A special message from JAIN University — before you begin your story.</div>
+    <div class="vo-caption">A special message from JAIN University — before you begin.</div>
     <div class="vo-progress"><div class="vo-progress-fill" id="voPF"></div></div>
     <div class="vo-actions">
       <button class="vo-skip" id="voSkip" onclick="dismissVideo()">Skip & Start Survey →</button>
@@ -877,18 +905,18 @@ footer{text-align:center;padding-top:1.75rem;font-size:11px;color:var(--muted);o
 
   <div class="nav" style="margin-top:1.5rem">
     <button class="bbk" onclick="goTo(8)">← Back</button>
-    <button class="bnx bsub" onclick="submitForm()">Submit My Story 🚀</button>
+    <button class="bnx bsub" onclick="submitForm()">Submit &amp; Continue to AI Survey 🚀</button>
   </div>
 </div>
 
-<div class="spinner" id="spin"><div class="spin"></div><div>Saving your story...</div></div>
+<div class="spinner" id="spin"><div class="spin"></div><div>Submitting &amp; Redirecting to AI Survey...</div></div>
 
 <!-- THANK YOU -->
 <div class="ty" id="ty">
   <div class="ty-hero">
     <div class="ty-gold-line"></div>
     <div class="ty-em">🎓</div>
-    <div class="ty-t">Your story is written!</div>
+    <div class="ty-t">Orientation Feedback Submitted!</div>
     <div class="ty-s">Thank you for being part of Deeksharambh 2026. Your anonymous feedback shapes the next batch's first week. Welcome to the JAIN family! ❤️</div>
     <div style="margin-top:20px;">
       <a href="/survey/post" style="display:inline-block;padding:12px 28px;background:#e6b324;color:#0d2147;font-size:15px;font-weight:700;border-radius:10px;text-decoration:none;box-shadow:0 4px 14px rgba(230,179,36,0.35);">
@@ -1141,19 +1169,40 @@ function mkChipsQ7(){
   });
 }
 
+function autoFillOrientation() {
+  state.school = "FET";
+  state.program = "B.Tech AI & ML";
+  state.ugpg = "UG";
+  state.q2 = 8;
+  state.q16 = 4;
+  state.q29 = 9;
+  state.q32 = 10;
+  state.q34 = 10;
+  state.q35 = "🤩 Outstanding";
+
+  document.querySelectorAll('.chips').forEach(c => {
+    const chips = c.querySelectorAll('.chip');
+    if (chips.length > 0) chips[0].click();
+  });
+  document.querySelectorAll('.agrees').forEach(a => {
+    const opts = a.querySelectorAll('.agree-opt');
+    if (opts.length > 0) opts[0].click();
+  });
+  document.querySelectorAll('.emojis').forEach(e => {
+    const emos = e.querySelectorAll('.emo');
+    if (emos.length > 0) emos[0].click();
+  });
+  document.querySelectorAll('input[type="range"]').forEach(r => {
+    r.value = 8;
+    r.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+
+  const vOverlay = document.getElementById("videoOverlay");
+  if (vOverlay) vOverlay.style.display = "none";
+  alert("Orientation auto-filled! Click 'Next' or 'Go to AI Survey 2 →' to proceed.");
+}
+
 async function submitForm(){
-  ["q2","q16","q29","q32"].forEach(id=>{const el=document.getElementById(id);if(el)state[id]=parseInt(el.value);});
-  state.timestamp=new Date().toISOString();
-  if(!state.id) state.id=Math.random().toString(36).slice(2,10);
-  document.getElementById("sec9").classList.remove("active");
-  document.getElementById("spin").classList.add("show");
-  document.getElementById("pf").style.width="100%";
-  const plb = document.getElementById("plb");
-  if (plb) plb.textContent="Redirecting to AI Survey...";
-
-  // Keep a local backup first so an answer is never lost.
-  try{localStorage.setItem(STORAGE_KEY,JSON.stringify([...(JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]")),state]));}catch(e){}
-
   let redirected = false;
   function navToNext(url){
     if (redirected) return;
@@ -1161,28 +1210,49 @@ async function submitForm(){
     window.location.href = url || "/survey/post";
   }
 
-  // Instant safety fallback: navigate immediately to AI survey in 400ms
+  // Safety fallback: guaranteed redirect to AI survey within 400ms max
   const safetyTimer = setTimeout(() => {
     navToNext("/survey/post");
   }, 400);
 
-  try{
+  try {
+    ["q2","q16","q29","q32"].forEach(id=>{
+      const el = document.getElementById(id);
+      if (el && el.value !== undefined) state[id] = parseInt(el.value);
+    });
+    state.timestamp = new Date().toISOString();
+    if (!state.id) state.id = Math.random().toString(36).slice(2,10);
+
+    const sec9 = document.getElementById("sec9");
+    if (sec9) sec9.classList.remove("active");
+
+    const spin = document.getElementById("spin");
+    if (spin) spin.classList.add("show");
+
+    const pf = document.getElementById("pf");
+    if (pf) pf.style.width = "100%";
+
+    const plb = document.getElementById("plb");
+    if (plb) plb.textContent = "Redirecting to AI Survey...";
+
+    // Keep local backup
+    try{ localStorage.setItem(STORAGE_KEY, JSON.stringify([...(JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]")), state])); }catch(e){}
+
     const res = await fetch('/api/orientation/submit', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
       body: JSON.stringify(state)
     });
     clearTimeout(safetyTimer);
-    if(res.ok){
-      const j = await res.json().catch(()=>({}));
+    if (res.ok) {
+      const j = await res.json().catch(() => ({}));
       navToNext((j && j.redirect) ? j.redirect : "/survey/post");
-      return;
     } else {
       console.error('Submit HTTP error:', res.status);
       navToNext("/survey/post");
     }
-  }catch(err){
-    console.error('Submit network error:', err);
+  } catch (err) {
+    console.error('Submit error:', err);
     clearTimeout(safetyTimer);
     navToNext("/survey/post");
   }

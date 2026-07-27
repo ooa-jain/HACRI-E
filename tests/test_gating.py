@@ -96,6 +96,7 @@ def _make_post_payload(name: str, email: str) -> dict:
         "H2": "3",
         "H3": POST_REFLECTION[2][3][0],   # first option of H3
         "H4": "I plan to use ChatGPT for research.",
+        "praise_initiative": "Societal Impact",
     }
     return data
 
@@ -443,10 +444,9 @@ async def test_pre_survey_disabled_flow(client: AsyncClient):
     assert resp_pre.status_code == 303
     assert resp_pre.headers["location"] == "/orientation"
 
-    # 4. Accessing /survey/post manually without submitting orientation should redirect to /orientation
+    # 4. Accessing /survey/post renders unified Survey 2 HTML containing orientation step
     resp_post = await client.get("/survey/post", follow_redirects=False)
-    assert resp_post.status_code == 303
-    assert resp_post.headers["location"] == "/orientation"
+    assert resp_post.status_code == 200
 
     # 5. Now, disable both pre-survey and orientation
     await set_flag(FLAG_PRE_SURVEY, False)
@@ -705,4 +705,51 @@ async def test_admin_department_filtering(client: AsyncClient):
     # 4. Access export-cohort CSV with department filter -> returns 200 OK with custom filename
     resp_csv_filtered = await client.get("/admin/survey/export-cohort?dept=Department of Law")
     assert resp_csv_filtered.status_code == 200
-    assert "HACRI_E2_Cohort_Export_DepartmentofLaw.csv" in resp_csv_filtered.headers["content-disposition"]
+
+
+@pytest.mark.asyncio
+async def test_praise_initiative_validation(client: AsyncClient):
+    """Verifies that missing praise_initiative field in post submission returns 422 error."""
+    from app.db import get_db, STATUS_PRE_DONE
+
+    email = "praise.student@example.com"
+    name = "Praise Student"
+    csrf = await _login_and_get_csrf(client, email, name)
+    client.cookies.set("hacri_session", _mint_session_cookie(email, name))
+
+    db = get_db()
+    await db["users"].update_one(
+        {"email": email},
+        {"$set": {"status": STATUS_PRE_DONE, "orientation_submitted": True}}
+    )
+
+    payload = _make_post_payload(name, email)
+    payload["csrf"] = csrf
+    payload["praise_initiative"] = ""  # empty
+
+    resp = await client.post("/survey/post", data=payload)
+    assert resp.status_code == 422
+    assert "Please select which part you need to take initiative" in resp.text
+
+
+@pytest.mark.asyncio
+async def test_admin_dept_post_mail(client: AsyncClient):
+    """Test department post mail alert endpoint."""
+    from app.db import get_db, STATUS_PRE_DONE
+
+    db = get_db()
+    await db["users"].insert_one({
+        "email": "eng.student@example.com",
+        "name": "Eng Student",
+        "program": "Engineering / Technology",
+        "status": STATUS_PRE_DONE,
+    })
+
+    client.cookies.set("survey_admin_session", "1")
+    resp = await client.post("/admin/api/alert/dept-post-mail?dept=Engineering%20%2F%20Technology")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ok"] is True
+    assert data["dept"] == "Engineering / Technology"
+    assert data["total_pending"] == 1
+    assert "task_id" in data

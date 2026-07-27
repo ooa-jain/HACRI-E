@@ -264,10 +264,9 @@ async def test_reminder_link_routes_to_orientation_first(client: AsyncClient):
     resp_ori = await client.get("/orientation", follow_redirects=False)
     assert resp_ori.status_code == 200
 
-    # 3. Accessing /survey/post BEFORE orientation submission -> redirected to /orientation
+    # 3. Accessing /survey/post BEFORE orientation submission -> loads form with integrated orientation (200 OK)
     resp_post_before = await client.get("/survey/post", follow_redirects=False)
-    assert resp_post_before.status_code == 303
-    assert resp_post_before.headers["location"] == "/orientation"
+    assert resp_post_before.status_code == 200
 
     # 4. Submit orientation
     csrf = make_csrf_token()
@@ -321,10 +320,9 @@ async def test_reminder_link_bypasses_disabled_post_and_orientation_flags(client
     resp_ori = await client.get("/orientation", follow_redirects=False)
     assert resp_ori.status_code == 200
 
-    # 3. Accessing /survey/post BEFORE orientation submission -> redirected to /orientation
+    # 3. Accessing /survey/post BEFORE orientation submission -> loads form with integrated orientation (200 OK)
     resp_post_before = await client.get("/survey/post", follow_redirects=False)
-    assert resp_post_before.status_code == 303
-    assert resp_post_before.headers["location"] == "/orientation"
+    assert resp_post_before.status_code == 200
 
     # 4. Submit orientation
     csrf = make_csrf_token()

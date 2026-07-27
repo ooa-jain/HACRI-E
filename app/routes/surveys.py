@@ -143,6 +143,7 @@ def _build_post_fields(form: Any) -> dict[str, Any]:
     fields["H2"] = coerce_int(form.get("H2"))        # 1-5 scale
     fields["H3"] = coerce_str(form.get("H3"))        # radio → option text
     fields["H4"] = coerce_text(form.get("H4"), max_len=2000)
+    fields["praise_initiative"] = coerce_str(form.get("praise_initiative"))
 
     return fields
 
@@ -339,8 +340,16 @@ async def post_get(
             has_ori = True
             await get_db()["users"].update_one({"_id": user["_id"]}, {"$set": {"orientation_submitted": True}})
 
-    if (orientation_enabled or is_reminder) and not has_ori:
-        return RedirectResponse(url="/orientation", status_code=303)
+    saved_responses = {}
+    if has_ori:
+        ori_doc = await get_db()["orientation_responses"].find_one({"email": {"$in": [session["email"], session["email"].lower()]}}, sort=[("submitted_at", -1)])
+        if ori_doc:
+            saved_responses = ori_doc.get("data", {})
+
+    from app.db import get_pre_name
+    pre_name = await get_pre_name(session["email"])
+    display_name = pre_name or user.get("name", session.get("name", ""))
+    dept = user.get("program", "") if user else ""
 
     if pre_enabled:
         if status_v not in (STATUS_PRE_DONE, STATUS_POST_DONE):
@@ -374,6 +383,12 @@ async def post_get(
     draft_step = db_draft.get("step", 0)
     extra = {
         "draft_step": draft_step,
+        "orientation_enabled": orientation_enabled or is_reminder,
+        "orientation_submitted": has_ori,
+        "prefill_email": session["email"],
+        "prefill_name": display_name,
+        "prefill_dept": dept,
+        "saved_responses": saved_responses,
     }
     return await _render_form(request, "post_survey.html", values=draft_fields, extra_ctx=extra)
 
@@ -418,9 +433,6 @@ async def post_post(
         if ori_doc:
             has_ori = True
             await get_db()["users"].update_one({"_id": user["_id"]}, {"$set": {"orientation_submitted": True}})
-
-    if (orientation_enabled or is_reminder) and not has_ori:
-        return RedirectResponse(url="/orientation", status_code=303)
 
     if pre_enabled:
         if status_v not in (STATUS_PRE_DONE, STATUS_POST_DONE):
@@ -477,6 +489,10 @@ async def post_post(
                 errors.append("Please enter Mother's Business Name.")
             if not fields.get("mother_business_type"):
                 errors.append("Please explain Mother's Type of Business.")
+
+        # Mandatory PRaiSE initiative validation
+        if not fields.get("praise_initiative"):
+            errors.append("Please select which part you need to take initiative in Jain Deemed to be University.")
 
     if errors:
         response = await _render_form(

@@ -182,7 +182,7 @@ async def get_all_flags() -> dict[str, Any]:
             flags[doc["key"]] = bool(doc.get("enabled", True))
     flags.setdefault(FLAG_SURVEY,      True)
     flags.setdefault(FLAG_PRE_SURVEY,  True)
-    flags.setdefault(FLAG_ORIENTATION, False)
+    flags.setdefault(FLAG_ORIENTATION, True)
     flags.setdefault(FLAG_POST_SURVEY, True)
     flags.setdefault(FLAG_POST_DELAY,  0)
     flags.setdefault(FLAG_TEST_MODE,   False)

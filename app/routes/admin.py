@@ -558,6 +558,54 @@ async def api_send_alert(
     })
 
 
+@router.post("/admin/api/alert/dept-post-mail")
+async def api_send_dept_post_mail(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    dept: str = Query(..., description="Target department name"),
+):
+    """Send post survey email (Orientation -> Post flow) to all pending students in a specific department."""
+    if not _is_survey_admin(request):
+        raise HTTPException(status_code=403)
+
+    users = await list_survey_users(dept=dept or None)
+    pending = [u for u in users if u.get("status") == STATUS_PRE_DONE]
+    pending.sort(key=lambda u: bool(u.get("post_reminder_at")))
+
+    import secrets
+    task_id = "dept_post_" + secrets.token_hex(8)
+
+    db = get_db()
+    from datetime import datetime, timezone
+    await db["admin_tasks"].insert_one({
+        "_id": task_id,
+        "type": "dept-post-pending",
+        "dept": dept,
+        "status": "running",
+        "total": len(pending),
+        "sent": 0,
+        "failed": 0,
+        "started_at": datetime.now(timezone.utc),
+        "updated_at": datetime.now(timezone.utc)
+    })
+
+    base_url = str(request.base_url).rstrip("/")
+    background_tasks.add_task(
+        run_bulk_reminder_task,
+        task_id,
+        "post-pending",
+        pending,
+        base_url
+    )
+
+    return JSONResponse({
+        "ok": True,
+        "task_id": task_id,
+        "total_pending": len(pending),
+        "dept": dept
+    })
+
+
 def _fmt_duration(seconds: float | None) -> str:
     if seconds is None or seconds < 0:
         return "—"

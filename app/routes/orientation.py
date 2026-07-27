@@ -64,6 +64,8 @@ async def orientation_get(
     display_name = pre_name or name
 
     dept = user.get("program", "") if user else ""
+    from app.db import FLAG_TEST_MODE
+    test_mode = await get_flag(FLAG_TEST_MODE, default=False)
 
     return request.app.state.templates.TemplateResponse(
         request, "orientation.html",
@@ -73,6 +75,7 @@ async def orientation_get(
             "prefill_dept": dept,
             "already_done": already_done,
             "saved_responses": saved_responses,
+            "test_mode_enabled": test_mode,
         },
     )
 

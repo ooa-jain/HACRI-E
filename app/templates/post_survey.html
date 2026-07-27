@@ -5,22 +5,38 @@
   window._TEST_MODE = {{ "true" if test_mode_enabled else "false" }};
 </script>
 
+{% set has_ori_step = orientation_enabled and not orientation_submitted %}
+
 {% if test_mode_enabled %}
 <div
-  style="background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%); color: #fff; padding: 16px 20px; border-radius: var(--radius-md); margin-bottom: 20px; box-shadow: var(--shadow-md); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
-  <div style="display: flex; align-items: center; gap: 8px;">
-    <span style="font-size: 20px;">🛠️</span>
+  style="background: linear-gradient(135deg, #1e1b4b 0%, #4338ca 100%); color: #fff; padding: 16px 20px; border-radius: var(--radius-md, 12px); margin-bottom: 20px; box-shadow: var(--shadow-md); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; border: 1px solid rgba(255,255,255,0.2);">
+  <div style="display: flex; align-items: center; gap: 10px;">
+    <span style="font-size: 22px;">🛠️</span>
     <div>
-      <strong style="font-size: 14px; display: block;">Developer Test Mode Active</strong>
-      <span style="font-size: 12px; opacity: 0.9;">Bypass validations is enabled. You can submit without filling all
-        fields.</span>
+      <strong style="font-size: 14px; display: block; letter-spacing: 0.5px;">Developer Test Mode Active</strong>
+      <span style="font-size: 12px; opacity: 0.9;">Bypass validations is enabled. You can skip or auto-fill orientation and survey.</span>
     </div>
   </div>
-  <button type="button" class="btn"
-    style="background: #ffffff; color: #4f46e5; border: none; font-size: 13px; font-weight: 700; padding: 8px 16px; border-radius: 6px; cursor: pointer; transition: all 0.2s; width: auto; height: auto;"
-    onclick="autoFillSurvey()">
-    ⚡ Auto-Fill Survey
-  </button>
+  <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+    {% if has_ori_step %}
+    <button type="button" class="btn" onclick="autoFillOrientation()"
+      style="background: #e0e7ff; color: #3730a3; border: none; font-size: 12px; font-weight: 700; padding: 8px 14px; border-radius: 6px; cursor: pointer; width: auto; height: auto;">
+      ⚡ Auto-Fill Orientation
+    </button>
+    <button type="button" class="btn" onclick="jumpToAISurvey2()"
+      style="background: #dcfce7; color: #166534; border: none; font-size: 12px; font-weight: 700; padding: 8px 14px; border-radius: 6px; cursor: pointer; width: auto; height: auto;">
+      🚀 Go to AI Survey 2
+    </button>
+    {% endif %}
+    <button type="button" class="btn" onclick="autoFillPostSurvey()"
+      style="background: #ffffff; color: #4f46e5; border: none; font-size: 12px; font-weight: 700; padding: 8px 14px; border-radius: 6px; cursor: pointer; width: auto; height: auto;">
+      ⚡ Auto-Fill Survey 2
+    </button>
+    <button type="button" class="btn" onclick="autoFillSurvey()"
+      style="background: #f3e8ff; color: #6b21a8; border: none; font-size: 12px; font-weight: 700; padding: 8px 14px; border-radius: 6px; cursor: pointer; width: auto; height: auto;">
+      ⚡ Auto-Fill ALL
+    </button>
+  </div>
 </div>
 {% endif %}
 
@@ -28,8 +44,7 @@
   <header class="card-head">
     <h1>Survey 2</h1>
     <p class="lede">HACRI-E · Human–AI Collaboration Readiness Index · <strong>~10–15 minutes</strong></p>
-    <p class="muted">Please rate your agreement with each statement. 1 = Strongly Disagree · 5 = Strongly Agree. (Blue =
-      AI Literacy · Gold = AI Readiness).</p>
+    <p class="muted">Please rate your agreement with each statement. 1 = Strongly Disagree · 5 = Strongly Agree.</p>
   </header>
 
   {% if errors %}
@@ -41,31 +56,37 @@
   <!-- ── PROGRESS TRACKER ── -->
   <div class="wizard-progress" id="wizard-progress">
     <div class="wizard-progress-bar" id="wizard-progress-bar"></div>
+    {% if has_ori_step %}
     <button type="button" class="wizard-step active" data-step="0">
+      <div class="wizard-step-circle">🎓</div>
+      <span class="wizard-step-label">Orientation</span>
+    </button>
+    {% endif %}
+    <button type="button" class="wizard-step {% if not has_ori_step %}active{% endif %}" data-step="{{ 1 if has_ori_step else 0 }}">
       <div class="wizard-step-circle">A</div>
       <span class="wizard-step-label">Background</span>
     </button>
-    <button type="button" class="wizard-step" data-step="1">
+    <button type="button" class="wizard-step" data-step="{{ 2 if has_ori_step else 1 }}">
       <div class="wizard-step-circle">B</div>
       <span class="wizard-step-label">Literacy</span>
     </button>
-    <button type="button" class="wizard-step" data-step="2">
+    <button type="button" class="wizard-step" data-step="{{ 3 if has_ori_step else 2 }}">
       <div class="wizard-step-circle">D</div>
       <span class="wizard-step-label">Attitudes</span>
     </button>
-    <button type="button" class="wizard-step" data-step="3">
+    <button type="button" class="wizard-step" data-step="{{ 4 if has_ori_step else 3 }}">
       <div class="wizard-step-circle">E</div>
       <span class="wizard-step-label">Ethics</span>
     </button>
-    <button type="button" class="wizard-step" data-step="4">
+    <button type="button" class="wizard-step" data-step="{{ 5 if has_ori_step else 4 }}">
       <div class="wizard-step-circle">F</div>
       <span class="wizard-step-label">Readiness</span>
     </button>
-    <button type="button" class="wizard-step" data-step="5">
+    <button type="button" class="wizard-step" data-step="{{ 6 if has_ori_step else 5 }}">
       <div class="wizard-step-circle">G</div>
       <span class="wizard-step-label">Application</span>
     </button>
-    <button type="button" class="wizard-step" data-step="6">
+    <button type="button" class="wizard-step" data-step="{{ 7 if has_ori_step else 6 }}">
       <div class="wizard-step-circle">H</div>
       <span class="wizard-step-label">Reflection</span>
     </button>
@@ -74,8 +95,78 @@
   <form method="post" action="/survey/post" class="survey" id="survey-form">
     <input type="hidden" name="csrf" value="{{ csrf_token }}" />
 
-    <!-- ── SECTION A — Your Background ──────────────────────────────────── -->
+    {% if has_ori_step %}
+    <!-- ── STEP 0 — Deeksharambh Orientation Survey ─────────────────────── -->
     <fieldset class="section wizard-section active" data-step-section="0">
+      <legend>🎓 Part 1 · Deeksharambh Orientation Survey</legend>
+      <p class="muted" style="margin-bottom: 20px;">Please complete the Deeksharambh Orientation feedback before proceeding to AI Post Survey 2.</p>
+
+      <!-- Welcome Banner -->
+      <div style="background: linear-gradient(135deg, #0d2147 0%, #112a5e 100%); color: #ffffff; padding: 20px 24px; border-radius: 14px; margin-bottom: 24px; border: 1px solid rgba(230, 179, 36, 0.3);">
+        <h2 style="margin: 0 0 6px 0; font-size: 18px; font-weight: 700; color: #ffffff;">
+          Happy to see you again{% if prefill_name %}, <span style="color: #f5d76e;">{{ prefill_name }}</span>{% endif %}{% if prefill_dept %} <span style="font-size: 13px; opacity: 0.85; font-weight: 400; color: #cbd5e1;">({{ prefill_dept }})</span>{% endif %}! 👋
+        </h2>
+        <p style="margin: 0; font-size: 13px; color: rgba(255, 255, 255, 0.9);">
+          Share your orientation experience, then seamlessly continue to AI Post Survey 2 below.
+        </p>
+      </div>
+
+      <div class="sub-section-card">
+        <h3 class="subhead" style="font-size: 14px; font-weight: 700; color: var(--navy); margin-bottom: 16px; border-bottom: 1px solid var(--border); padding-bottom: 8px;">Academic Context & Vibe Check</h3>
+
+        <div class="question">
+          <label class="q-label" style="display: block; font-weight: 600; margin-bottom: 8px;">Which School are you part of?</label>
+          <div class="q-body">
+            <select id="ori_school" style="width: 100%; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 14px; outline: none; background: #fff;">
+              <option value="">-- Select your School --</option>
+              <option value="FET" {% if saved_responses.get('school') == 'FET' %}selected{% endif %}>FET — Faculty of Engineering & Technology</option>
+              <option value="CMS" {% if saved_responses.get('school') == 'CMS' %}selected{% endif %}>CMS — Center for Management Studies</option>
+              <option value="FCS" {% if saved_responses.get('school') == 'FCS' %}selected{% endif %}>FCS — Faculty of Commerce & Sciences</option>
+              <option value="SAHS" {% if saved_responses.get('school') == 'SAHS' %}selected{% endif %}>SAHS — School of Allied Health Sciences</option>
+              <option value="Other" {% if saved_responses.get('school') == 'Other' %}selected{% endif %}>Other School</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="question" style="margin-top: 20px;">
+          <label class="q-label" style="display: block; font-weight: 600; margin-bottom: 8px;">Programme Name:</label>
+          <div class="q-body">
+            <input type="text" id="ori_program" placeholder="e.g. B.Tech (AI & ML), B.Com, MBA..." value="{{ saved_responses.get('program', prefill_dept) }}" style="width: 100%; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 14px; outline: none;" />
+          </div>
+        </div>
+
+        <div class="question likert" style="margin-top: 20px;">
+          <p class="q-label"><strong>Overall Vibe:</strong> Rate the overall vibe of Deeksharambh 2026 (1 = Low · 10 = Outstanding)</p>
+          <div class="sl-wrap" style="padding: 10px 0;">
+            <input type="range" min="1" max="10" value="{{ saved_responses.get('q2', 8) }}" id="ori_q2" step="1" oninput="document.getElementById('ori_q2_val').textContent = this.value;" style="width: 80%;" />
+            <span id="ori_q2_val" style="font-weight: 700; font-size: 16px; margin-left: 12px; color: var(--navy);">{{ saved_responses.get('q2', 8) }}</span>
+          </div>
+        </div>
+
+        <div class="question likert" style="margin-top: 20px;">
+          <p class="q-label"><strong>Belonging:</strong> I feel I belong at JAIN University (1 = Disagree · 10 = Strongly Agree)</p>
+          <div class="sl-wrap" style="padding: 10px 0;">
+            <input type="range" min="1" max="10" value="{{ saved_responses.get('q29', 9) }}" id="ori_q29" step="1" oninput="document.getElementById('ori_q29_val').textContent = this.value;" style="width: 80%;" />
+            <span id="ori_q29_val" style="font-weight: 700; font-size: 16px; margin-left: 12px; color: var(--navy);">{{ saved_responses.get('q29', 9) }}</span>
+          </div>
+        </div>
+
+        <div class="question" style="margin-top: 20px;">
+          <label class="q-label">What were your most helpful aspects of the Orientation Programme overall?</label>
+          <textarea id="ori_helpful" rows="3" placeholder="Tell us what you liked most..." style="width: 100%; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 14px; outline: none;">{{ saved_responses.get('helpful_aspects', '') }}</textarea>
+        </div>
+      </div>
+
+      <div style="margin-top: 28px; display: flex; justify-content: flex-end;">
+        <button type="button" class="btn primary" id="btn-complete-orientation" onclick="finishOrientationAndGoToAISurvey()" style="font-size: 15px; font-weight: 700; padding: 12px 28px; background: linear-gradient(135deg, #0d2147 0%, #112a5e 100%); color: #fff; border: none; border-radius: 10px; cursor: pointer; box-shadow: 0 4px 14px rgba(13,33,71,0.25);">
+          Complete Orientation & Go to AI Post Survey 2 →
+        </button>
+      </div>
+    </fieldset>
+    {% endif %}
+
+    <!-- ── SECTION A — Your Background ──────────────────────────────────── -->
+    <fieldset class="section wizard-section {% if not has_ori_step %}active{% endif %}" data-step-section="{{ 1 if has_ori_step else 0 }}">
       <legend>Section A · Your Background</legend>
       <p class="muted" style="margin-bottom: 20px;">Please provide your background details.</p>
 
@@ -648,40 +739,40 @@
           </div>
         </div>
 
-        <!-- Diamond Diagram — Centered -->
-        <div style="background: linear-gradient(180deg, #f0f4ff 0%, #ffffff 100%); padding: 32px 20px 24px; display: flex; justify-content: center;">
-          <div style="position: relative; width: 260px; height: 260px;">
+        <!-- Diamond Diagram — Centered with spacious badges -->
+        <div style="background: linear-gradient(180deg, #f0f4ff 0%, #ffffff 100%); padding: 36px 16px 28px; display: flex; justify-content: center; overflow: hidden;">
+          <div style="position: relative; width: 440px; height: 320px; max-width: 100%;">
             
-            <!-- Diamond shape -->
-            <div style="position: absolute; top: 35px; left: 35px; width: 190px; height: 190px; background: linear-gradient(135deg, #f5ce4e 0%, #e6a817 50%, #d4960d 100%); transform: rotate(45deg); border-radius: 14px; box-shadow: 0 8px 32px rgba(201,168,76,0.35);"></div>
+            <!-- Diamond shape centered -->
+            <div style="position: absolute; top: 50%; left: 50%; width: 140px; height: 140px; background: linear-gradient(135deg, #f5ce4e 0%, #e6a817 50%, #d4960d 100%); transform: translate(-50%, -50%) rotate(45deg); border-radius: 14px; box-shadow: 0 8px 32px rgba(201,168,76,0.35); z-index: 1;"></div>
 
-            <!-- Center label -->
-            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 2; text-align: center;">
-              <div style="font-size: 26px; font-weight: 900; color: #1B2A4A; letter-spacing: 1.5px; text-shadow: 0 1px 3px rgba(255,255,255,0.7);">PRaiSE</div>
+            <!-- Center PRaiSE label -->
+            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 5; text-align: center; pointer-events: none;">
+              <div style="font-size: 24px; font-weight: 900; color: #1B2A4A; letter-spacing: 1.5px; text-shadow: 0 1px 3px rgba(255,255,255,0.7);">PRaiSE</div>
             </div>
 
             <!-- Top: Human Excellence (2) -->
-            <div style="position: absolute; top: -8px; left: 50%; transform: translateX(-50%); z-index: 3; text-align: center;">
-              <div style="background: #1B2A4A; color: #fff; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 10px; display: inline-block; margin-bottom: 2px;">2</div>
-              <div style="font-size: 11px; font-weight: 700; color: #1B2A4A; white-space: nowrap;">AI for Human Excellence</div>
+            <div style="position: absolute; top: 8px; left: 50%; transform: translateX(-50%); z-index: 10; text-align: center;">
+              <div style="background: #1B2A4A; color: #fff; font-size: 11px; font-weight: 800; width: 24px; height: 24px; line-height: 24px; border-radius: 50%; display: inline-block; margin-bottom: 4px; box-shadow: 0 2px 6px rgba(0,0,0,0.15);">2</div>
+              <div style="font-size: 12px; font-weight: 700; color: #1B2A4A; white-space: nowrap;">AI for Human Excellence</div>
             </div>
 
             <!-- Right: Societal Impact (1) -->
-            <div style="position: absolute; top: 50%; right: -58px; transform: translateY(-50%); z-index: 3; text-align: center;">
-              <div style="background: #1B7A3D; color: #fff; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 10px; display: inline-block; margin-bottom: 2px;">1</div>
-              <div style="font-size: 11px; font-weight: 700; color: #1B2A4A; white-space: nowrap;">AI for Societal<br>Impact</div>
+            <div style="position: absolute; top: 50%; right: 10px; transform: translateY(-50%); z-index: 10; text-align: center;">
+              <div style="background: #1B7A3D; color: #fff; font-size: 11px; font-weight: 800; width: 24px; height: 24px; line-height: 24px; border-radius: 50%; display: inline-block; margin-bottom: 4px; box-shadow: 0 2px 6px rgba(0,0,0,0.15);">1</div>
+              <div style="font-size: 12px; font-weight: 700; color: #1B2A4A; white-space: nowrap;">AI for Societal<br>Impact</div>
             </div>
 
             <!-- Bottom: Entrepreneurship (4) -->
-            <div style="position: absolute; bottom: -14px; left: 50%; transform: translateX(-50%); z-index: 3; text-align: center;">
-              <div style="background: #1B7A3D; color: #fff; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 10px; display: inline-block; margin-bottom: 2px;">4</div>
-              <div style="font-size: 11px; font-weight: 700; color: #1B2A4A; white-space: nowrap;">AI for Entrepreneurship</div>
+            <div style="position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); z-index: 10; text-align: center;">
+              <div style="background: #1B7A3D; color: #fff; font-size: 11px; font-weight: 800; width: 24px; height: 24px; line-height: 24px; border-radius: 50%; display: inline-block; margin-bottom: 4px; box-shadow: 0 2px 6px rgba(0,0,0,0.15);">4</div>
+              <div style="font-size: 12px; font-weight: 700; color: #1B2A4A; white-space: nowrap;">AI for Entrepreneurship</div>
             </div>
 
             <!-- Left: Social Good (3) -->
-            <div style="position: absolute; top: 50%; left: -44px; transform: translateY(-50%); z-index: 3; text-align: center;">
-              <div style="background: #C9A84C; color: #fff; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 10px; display: inline-block; margin-bottom: 2px;">3</div>
-              <div style="font-size: 11px; font-weight: 700; color: #1B2A4A; white-space: nowrap;">AI for Social<br>Good</div>
+            <div style="position: absolute; top: 50%; left: 10px; transform: translateY(-50%); z-index: 10; text-align: center;">
+              <div style="background: #C9A84C; color: #fff; font-size: 11px; font-weight: 800; width: 24px; height: 24px; line-height: 24px; border-radius: 50%; display: inline-block; margin-bottom: 4px; box-shadow: 0 2px 6px rgba(0,0,0,0.15);">3</div>
+              <div style="font-size: 12px; font-weight: 700; color: #1B2A4A; white-space: nowrap;">AI for Social<br>Good</div>
             </div>
           </div>
         </div>
@@ -749,7 +840,26 @@
               </div>
             </div>
             <p style="font-size: 12.5px; color: #374151; line-height: 1.55; margin: 0;">Agentic AI workflow clubbed with Industry mentorship to drive an innovation ecosystem enabling the creation of responsible, scalable, and market-ready ventures</p>
-          </div>
+        </div>
+      </div>
+
+      <!-- ── Mandatory PRaiSE Initiative Question ─────────────────────────── -->
+      <div class="question" style="margin-top: 24px; padding: 22px; background: #ffffff; border: 2px solid var(--gold); border-radius: 14px; box-shadow: 0 4px 16px rgba(27,42,74,0.06);">
+        <label class="q-label" for="praise_initiative" style="display: block; font-weight: 700; color: var(--navy); font-size: 15px; margin-bottom: 8px;">
+          Which part do you need to take initiative in Jain Deemed to be University? <span style="color: #ef4444; font-weight: 800;">*</span>
+        </label>
+        <p class="muted" style="font-size: 12.5px; color: var(--muted); margin-bottom: 14px; line-height: 1.4;">
+          Please select one of the PRaiSE pillars or None based on where you plan to take initiative:
+        </p>
+        <div class="q-body">
+          <select name="praise_initiative" id="praise_initiative" required style="width: 100%; padding: 12px 14px; border: 1.5px solid var(--border); border-radius: 8px; font-family: inherit; font-size: 14px; outline: none; background: #fff; color: var(--navy); font-weight: 600;">
+            <option value="">-- Select Initiative Area --</option>
+            <option value="Societal Impact" {% if values.get('praise_initiative') == 'Societal Impact' %}selected{% endif %}>Societal Impact</option>
+            <option value="Human Excellence" {% if values.get('praise_initiative') == 'Human Excellence' %}selected{% endif %}>Human Excellence</option>
+            <option value="Social Good" {% if values.get('praise_initiative') == 'Social Good' %}selected{% endif %}>Social Good</option>
+            <option value="Entrepreneurship" {% if values.get('praise_initiative') == 'Entrepreneurship' %}selected{% endif %}>Entrepreneurship</option>
+            <option value="None" {% if values.get('praise_initiative') == 'None' %}selected{% endif %}>None</option>
+          </select>
         </div>
       </div>
 
@@ -914,6 +1024,47 @@
       saveDraft();
     }
 
+    window.showStep = showStep;
+
+    window.finishOrientationAndGoToAISurvey = async function() {
+      const btn = document.getElementById("btn-complete-orientation");
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = "Saving Orientation... ⏳";
+      }
+
+      const schoolEl = document.getElementById("ori_school");
+      const progEl = document.getElementById("ori_program");
+      const q2El = document.getElementById("ori_q2");
+      const q29El = document.getElementById("ori_q29");
+      const helpfulEl = document.getElementById("ori_helpful");
+
+      const oriPayload = {
+        school: schoolEl ? schoolEl.value : "",
+        program: progEl ? progEl.value : "",
+        q2: q2El ? parseInt(q2El.value) : 8,
+        q29: q29El ? parseInt(q29El.value) : 9,
+        helpful_aspects: helpfulEl ? helpfulEl.value : "",
+        completed_in_survey2: true,
+        timestamp: new Date().toISOString()
+      };
+
+      try {
+        const res = await fetch('/api/orientation/submit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(oriPayload)
+        });
+        if (res.ok || window._TEST_MODE) {
+          console.log("Orientation submitted successfully");
+        }
+      } catch (err) {
+        console.error("Orientation submit error:", err);
+      }
+
+      showStep(1);
+    };
+
     function validateCurrentSection() {
       if (window._TEST_MODE) return true;
       const section = document.querySelector(`.wizard-section[data-step-section="${currentStep}"]`);
@@ -1029,7 +1180,47 @@
     showStep(currentStep);
   });
 
-  function autoFillSurvey() {
+  function autoFillOrientation() {
+    const schoolEl = document.getElementById("ori_school");
+    if (schoolEl && schoolEl.options.length > 1) schoolEl.selectedIndex = 1;
+    const progEl = document.getElementById("ori_program");
+    if (progEl) progEl.value = "B.Tech (AI & ML)";
+
+    const oriSection = document.querySelector('[data-step-section="0"]');
+    if (oriSection) {
+      oriSection.querySelectorAll('input[type="radio"]').forEach((r, idx) => {
+        if (idx % 3 === 0) r.checked = true;
+      });
+      oriSection.querySelectorAll('select').forEach(s => {
+        if (s.options.length > 1) s.selectedIndex = 1;
+      });
+      oriSection.querySelectorAll('textarea').forEach(t => {
+        t.value = "Test response for orientation.";
+      });
+    }
+    skipVideo();
+    alert("Orientation section auto-filled!");
+  }
+
+  function autoFillPostSurvey() {
+    autoFillSurveyFields();
+  }
+
+  function skipVideo() {
+    const vOverlay = document.getElementById('videoOverlay');
+    if (vOverlay) vOverlay.style.display = 'none';
+  }
+
+  function jumpToAISurvey2() {
+    skipVideo();
+    if (window.finishOrientationAndGoToAISurvey) {
+      window.finishOrientationAndGoToAISurvey();
+    } else if (window.showStep) {
+      window.showStep(1);
+    }
+  }
+
+  function autoFillSurveyFields() {
     // 1. Radio groups
     const radios = document.querySelectorAll('input[type="radio"]');
     const radioGroups = {};
@@ -1123,7 +1314,11 @@
     document.querySelectorAll('input, select, textarea').forEach(el => {
       el.dispatchEvent(new Event('change', { bubbles: true }));
     });
-    alert("Survey auto-filled! You can now navigate through and submit.");
+  }
+
+  function autoFillSurvey() {
+    autoFillOrientation();
+    autoFillSurveyFields();
   }
 
   function toggleOccupationFields() {
