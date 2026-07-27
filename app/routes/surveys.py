@@ -492,7 +492,7 @@ async def post_post(
 
         # Mandatory PRaiSE initiative validation
         if not fields.get("praise_initiative"):
-            errors.append("Please select which part you need to take initiative in Jain Deemed to be University.")
+            errors.append("Please select one pillar to which you would like to contribute.")
 
     if errors:
         response = await _render_form(

@@ -729,7 +729,7 @@ async def test_praise_initiative_validation(client: AsyncClient):
 
     resp = await client.post("/survey/post", data=payload)
     assert resp.status_code == 422
-    assert "Please select which part you need to take initiative" in resp.text
+    assert "Please select one pillar to which you would like to contribute" in resp.text
 
 
 @pytest.mark.asyncio
