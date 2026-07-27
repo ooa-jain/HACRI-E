@@ -87,17 +87,6 @@
 </section>
 {% endif %}
 
-{% if h1_url or h2_url or h3_url %}
-<section class="card">
-  <h2>Section H — Cohort Reflection (POST)</h2>
-  <div class="hist-grid">
-    {% if h1_url %}<div><h3>H1 · Understanding change</h3><img class="chart" src="{{ h1_url }}" /></div>{% endif %}
-    {% if h2_url %}<div><h3>H2 · Most useful</h3><img class="chart" src="{{ h2_url }}" /></div>{% endif %}
-    {% if h3_url %}<div><h3>H3 · Most valuable part</h3><img class="chart" src="{{ h3_url }}" /></div>{% endif %}
-  </div>
-</section>
-{% endif %}
-
 {% if csv_url %}
 <section class="card">
   <h2>Download your scorecard</h2>

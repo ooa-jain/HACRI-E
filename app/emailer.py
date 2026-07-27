@@ -238,33 +238,11 @@ def build_results_email(
     )
 
     msg = EmailMessage()
-    msg["Subject"] = "Your HACRI-E2 Workshop Results"
+    msg["Subject"] = "Your HACRI-E Workshop Results"
     msg["From"] = settings.email_from
     msg["To"] = f"{name} <{email}>"
     msg.set_content(_plain_text_fallback(name, results_url, deltas))
     msg.add_alternative(html_body, subtype="html")
-
-    # Attach PNGs
-    for label, path in png_paths.items():
-        if path and path.exists():
-            with open(path, "rb") as f:
-                data = f.read()
-            msg.add_attachment(
-                data,
-                maintype="image",
-                subtype="png",
-                filename=path.name,
-            )
-
-    # Attach CSV
-    if csv_path and csv_path.exists():
-        with open(csv_path, "rb") as f:
-            msg.add_attachment(
-                f.read(),
-                maintype="text",
-                subtype="csv",
-                filename=csv_path.name,
-            )
 
     return msg
 
@@ -275,7 +253,7 @@ def _plain_text_fallback(name: str, results_url: str, deltas: dict) -> str:
     post = deltas.get("post", {})
     return (
         f"Hi {name},\n\n"
-        f"Thank you for completing the HACRI-E2 Pre and Post surveys.\n\n"
+        f"Thank you for completing the HACRI-E Pre and Post surveys.\n\n"
         f"Pre  — Literacy: {pre.get('lit')}, Readiness: {pre.get('read')}, "
         f"Quadrant: {pre.get('quadrant')}, Band: {pre.get('band')}\n"
         f"Post — Literacy: {post.get('lit')}, Readiness: {post.get('read')}, "
@@ -283,9 +261,8 @@ def _plain_text_fallback(name: str, results_url: str, deltas: dict) -> str:
         f"Δ Literacy: {deltas.get('delta_lit')}\n"
         f"Δ Readiness: {deltas.get('delta_read')}\n"
         f"Movement: {deltas.get('movement')}\n\n"
-        f"View your full results online: {results_url}\n"
-        f"Charts and the scorecard CSV are attached.\n\n"
-        f"— HACRI-E2"
+        f"View your full results online: {results_url}\n\n"
+        f"— HACRI-E"
     )
 
 
