@@ -203,6 +203,14 @@
           </div>
         </div>
 
+        <!-- Father: If Entrepreneur -->
+        <div class="question" id="biz_name_group" style="display: none; margin-top: 20px;">
+          <label class="q-label" style="display: block; font-weight: 600; margin-bottom: 8px;">Father's Business / Firm Name:</label>
+          <div class="q-body">
+            <input type="text" name="business_name" id="business_name" placeholder="Enter business name" value="{{ values.get('business_name', '') }}" style="width: 100%; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 14px; outline: none;" />
+          </div>
+        </div>
+
         <div class="question" id="biz_type_group" style="display: none; margin-top: 20px;">
           <label class="q-label" style="display: block; font-weight: 600; margin-bottom: 4px;">Type of Business:</label>
           <p class="muted" style="margin-top: 0; margin-bottom: 8px; font-size: 12px; color: var(--muted);">(Explain in your own words what business they do, e.g. retail shop, software consulting, manufacturing, etc.)</p>
@@ -242,9 +250,13 @@
             </div>
           </div>
 
-
-
-
+          <!-- Mother: If Entrepreneur -->
+          <div class="question" id="mother_biz_name_group" style="display: none; margin-top: 20px;">
+            <label class="q-label" style="display: block; font-weight: 600; margin-bottom: 8px;">Mother's Business / Firm Name:</label>
+            <div class="q-body">
+              <input type="text" name="mother_business_name" id="mother_business_name" placeholder="Enter business name" value="{{ values.get('mother_business_name', '') }}" style="width: 100%; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 14px; outline: none;" />
+            </div>
+          </div>
 
           <div class="question" id="mother_biz_type_group" style="display: none; margin-top: 20px;">
             <label class="q-label" style="display: block; font-weight: 600; margin-bottom: 4px;">Type of Business:</label>
@@ -1276,6 +1288,8 @@
       const fNameInput = document.getElementsByName('father_name')[0];
       if (fNameInput) fNameInput.value = "Test Father";
       
+      const bNameInput = document.getElementById('business_name');
+      if (bNameInput) bNameInput.value = "Test Enterprise Ltd";
       
       const bTypeInput = document.getElementById('business_type');
       if (bTypeInput) bTypeInput.value = "Test business type detailing entrepreneurship.";
@@ -1328,32 +1342,39 @@
       const occValue = occSelect.value;
       const orgGroup = document.getElementById('org_name_group');
       const orgInput = document.getElementById('organization_name');
+      const bizNameGroup = document.getElementById('biz_name_group');
+      const bizNameInput = document.getElementById('business_name');
       const bizTypeGroup = document.getElementById('biz_type_group');
       const bizTypeInput = document.getElementById('business_type');
 
       if (occValue === 'Salaried') {
-        orgGroup.style.display = 'block';
-        orgInput.required = true;
+        if (orgGroup) orgGroup.style.display = 'block';
+        if (orgInput) orgInput.required = true;
         
-        bizTypeGroup.style.display = 'none';
-        bizTypeInput.required = false;
-        bizTypeInput.value = '';
+        if (bizNameGroup) bizNameGroup.style.display = 'none';
+        if (bizNameInput) { bizNameInput.required = false; }
+        
+        if (bizTypeGroup) bizTypeGroup.style.display = 'none';
+        if (bizTypeInput) { bizTypeInput.required = false; }
       } else if (occValue === 'Entrepreneur') {
-        orgGroup.style.display = 'none';
-        orgInput.required = false;
-        orgInput.value = '';
+        if (orgGroup) orgGroup.style.display = 'none';
+        if (orgInput) { orgInput.required = false; }
         
-        bizTypeGroup.style.display = 'block';
-        bizTypeInput.required = true;
+        if (bizNameGroup) bizNameGroup.style.display = 'block';
+        if (bizNameInput) bizNameInput.required = true;
+        
+        if (bizTypeGroup) bizTypeGroup.style.display = 'block';
+        if (bizTypeInput) bizTypeInput.required = true;
       } else {
         // Homemaker or empty
-        orgGroup.style.display = 'none';
-        orgInput.required = false;
-        orgInput.value = '';
+        if (orgGroup) orgGroup.style.display = 'none';
+        if (orgInput) { orgInput.required = false; }
         
-        bizTypeGroup.style.display = 'none';
-        bizTypeInput.required = false;
-        bizTypeInput.value = '';
+        if (bizNameGroup) bizNameGroup.style.display = 'none';
+        if (bizNameInput) { bizNameInput.required = false; }
+        
+        if (bizTypeGroup) bizTypeGroup.style.display = 'none';
+        if (bizTypeInput) { bizTypeInput.required = false; }
       }
     }
 
@@ -1363,34 +1384,45 @@
       const mOccValue = mOccSelect.value;
       const mOrgGroup = document.getElementById('mother_org_name_group');
       const mOrgInput = document.getElementById('mother_organization_name');
+      const mBizNameGroup = document.getElementById('mother_biz_name_group');
+      const mBizNameInput = document.getElementById('mother_business_name');
       const mBizTypeGroup = document.getElementById('mother_biz_type_group');
       const mBizTypeInput = document.getElementById('mother_business_type');
 
       if (mOccValue === 'Salaried') {
-        mOrgGroup.style.display = 'block';
-        mOrgInput.required = true;
+        if (mOrgGroup) mOrgGroup.style.display = 'block';
+        if (mOrgInput) mOrgInput.required = true;
 
-        mBizTypeGroup.style.display = 'none';
-        mBizTypeInput.required = false;
-        mBizTypeInput.value = '';
+        if (mBizNameGroup) mBizNameGroup.style.display = 'none';
+        if (mBizNameInput) { mBizNameInput.required = false; }
+
+        if (mBizTypeGroup) mBizTypeGroup.style.display = 'none';
+        if (mBizTypeInput) { mBizTypeInput.required = false; }
       } else if (mOccValue === 'Entrepreneur') {
-        mOrgGroup.style.display = 'none';
-        mOrgInput.required = false;
-        mOrgInput.value = '';
+        if (mOrgGroup) mOrgGroup.style.display = 'none';
+        if (mOrgInput) { mOrgInput.required = false; }
 
-        mBizTypeGroup.style.display = 'block';
-        mBizTypeInput.required = true;
+        if (mBizNameGroup) mBizNameGroup.style.display = 'block';
+        if (mBizNameInput) mBizNameInput.required = true;
+
+        if (mBizTypeGroup) mBizTypeGroup.style.display = 'block';
+        if (mBizTypeInput) mBizTypeInput.required = true;
       } else {
         // Homemaker or empty
-        mOrgGroup.style.display = 'none';
-        mOrgInput.required = false;
-        mOrgInput.value = '';
+        if (mOrgGroup) mOrgGroup.style.display = 'none';
+        if (mOrgInput) { mOrgInput.required = false; }
 
-        mBizTypeGroup.style.display = 'none';
-        mBizTypeInput.required = false;
-        mBizTypeInput.value = '';
+        if (mBizNameGroup) mBizNameGroup.style.display = 'none';
+        if (mBizNameInput) { mBizNameInput.required = false; }
+
+        if (mBizTypeGroup) mBizTypeGroup.style.display = 'none';
+        if (mBizTypeInput) { mBizTypeInput.required = false; }
       }
     }
   }
+
+  // Run on page load to restore UI state for saved/restored values
+  document.addEventListener('DOMContentLoaded', toggleOccupationFields);
+  toggleOccupationFields();
 </script>
 {% endblock %}
