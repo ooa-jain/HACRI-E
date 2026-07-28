@@ -1004,6 +1004,42 @@
             </div>
           </div>
 
+          <!-- INTERACTIVE MONTH CALENDAR GRID -->
+          <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-3">
+              <div>
+                <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <span>🗓️</span> <span>Interactive Calendar — Click Any Date to View Department Filling</span>
+                </h3>
+                <p class="text-xs text-slate-500">Click any date to see total students filled, pre &amp; post breakdown, and department-by-department activity on that day.</p>
+              </div>
+
+              <!-- Month Navigation Controls -->
+              <div class="flex items-center gap-2">
+                <button onclick="changeCalMonth(-1)" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs px-3 py-1.5 rounded-lg transition">◀ Prev</button>
+                <span id="cal-month-year-title" class="text-sm font-extrabold text-slate-900 px-2">July 2026</span>
+                <button onclick="changeCalMonth(1)" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs px-3 py-1.5 rounded-lg transition">Next ▶</button>
+                <button onclick="resetCalToToday()" class="bg-blue-50 text-blue-700 hover:bg-blue-100 font-bold text-xs px-3 py-1.5 rounded-lg transition">Today</button>
+              </div>
+            </div>
+
+            <!-- Calendar Days Header -->
+            <div class="grid grid-cols-7 gap-1 text-center font-bold text-xs text-slate-500 uppercase tracking-wider bg-slate-50 py-2.5 rounded-lg border border-slate-200">
+              <div class="text-rose-500">Sun</div>
+              <div>Mon</div>
+              <div>Tue</div>
+              <div>Wed</div>
+              <div>Thu</div>
+              <div>Fri</div>
+              <div>Sat</div>
+            </div>
+
+            <!-- Calendar Month Grid Container -->
+            <div id="interactive-cal-grid" class="grid grid-cols-7 gap-1.5 min-h-[340px]">
+              <!-- JS rendered cells -->
+            </div>
+          </div>
+
           <!-- Overall Calendar Stat Cards -->
           <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
             <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm border-l-4 border-l-blue-600">
@@ -1118,6 +1154,94 @@
       </div>
 
     </main>
+  </div>
+</div>
+
+<!-- DATE DETAIL & DEPARTMENT BREAKDOWN MODAL -->
+<div id="date-detail-modal" class="hidden fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+  <div class="bg-white rounded-2xl max-w-4xl w-full p-6 shadow-2xl border border-slate-200 space-y-6 animate-[modalFadeIn_0.2s_ease] max-h-[90vh] overflow-y-auto">
+    <!-- Header -->
+    <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+      <div>
+        <h3 id="date-modal-title" class="text-base font-extrabold text-slate-900 flex items-center gap-2">
+          <span>📅</span> <span id="date-modal-title-text">Submissions Detail for 2026-07-28</span>
+        </h3>
+        <p class="text-xs text-slate-500 mt-0.5">Complete department filling breakdown and student response list on this date.</p>
+      </div>
+      <button onclick="closeDateDetailModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-600 text-lg font-bold rounded-lg w-8 h-8 flex items-center justify-center leading-none">&times;</button>
+    </div>
+
+    <!-- Stat Badges -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div class="bg-blue-50/70 p-3.5 rounded-xl border border-blue-200">
+        <div class="text-[11px] font-bold text-blue-700">Total Filled on Date</div>
+        <div id="date-modal-stat-total" class="text-xl font-extrabold text-blue-900 mt-0.5">0</div>
+      </div>
+      <div class="bg-teal-50/70 p-3.5 rounded-xl border border-teal-200">
+        <div class="text-[11px] font-bold text-teal-700">Baseline (Pre) Filled</div>
+        <div id="date-modal-stat-pre" class="text-xl font-extrabold text-teal-900 mt-0.5">0</div>
+      </div>
+      <div class="bg-emerald-50/70 p-3.5 rounded-xl border border-emerald-200">
+        <div class="text-[11px] font-bold text-emerald-700">Post-Workshop Filled</div>
+        <div id="date-modal-stat-post" class="text-xl font-extrabold text-emerald-900 mt-0.5">0</div>
+      </div>
+      <div class="bg-indigo-50/70 p-3.5 rounded-xl border border-indigo-200">
+        <div class="text-[11px] font-bold text-indigo-700">Active Departments</div>
+        <div id="date-modal-stat-depts" class="text-xl font-extrabold text-indigo-900 mt-0.5">0</div>
+      </div>
+    </div>
+
+    <!-- Department Breakdown Table -->
+    <div class="space-y-3">
+      <h4 class="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+        <span>🏢</span> <span>Department Filling Breakdown on Selected Date</span>
+      </h4>
+      <div class="overflow-x-auto rounded-xl border border-slate-200">
+        <table class="w-full text-left text-xs border-collapse">
+          <thead>
+            <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold">
+              <th class="p-3">#</th>
+              <th class="p-3">Department Name</th>
+              <th class="p-3">Baseline (Pre)</th>
+              <th class="p-3">Post-Workshop</th>
+              <th class="p-3">Total Filled on Date</th>
+              <th class="p-3">% Share of Day's Filling</th>
+            </tr>
+          </thead>
+          <tbody id="date-modal-dept-tbody" class="divide-y divide-slate-100">
+            <tr><td colspan="6" class="text-center p-6 text-slate-400">No submissions recorded on this date</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Student Submissions List Table -->
+    <div class="space-y-3">
+      <h4 class="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+        <span>👨‍🎓</span> <span>Student Submissions Log on Selected Date</span>
+      </h4>
+      <div class="overflow-x-auto rounded-xl border border-slate-200 max-h-60 overflow-y-auto">
+        <table class="w-full text-left text-xs border-collapse">
+          <thead>
+            <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold">
+              <th class="p-3">#</th>
+              <th class="p-3">Student Name</th>
+              <th class="p-3">Email Address</th>
+              <th class="p-3">Department</th>
+              <th class="p-3">Survey Type</th>
+              <th class="p-3">Time Logged</th>
+            </tr>
+          </thead>
+          <tbody id="date-modal-student-tbody" class="divide-y divide-slate-100">
+            <tr><td colspan="6" class="text-center p-6 text-slate-400">No student responses logged on this date</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="flex justify-end pt-2">
+      <button onclick="closeDateDetailModal()" class="bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs px-5 py-2 rounded-xl transition">Close View</button>
+    </div>
   </div>
 </div>
 
@@ -2252,6 +2376,9 @@ function renderDateAnalysisUI(data) {
     if (cur && Array.from(select.options).some(o => o.value === cur)) select.value = cur;
   }
 
+  // Render Interactive Month Calendar Grid
+  renderInteractiveMonthCalendar();
+
   // Render Department Table
   renderDeptCalendarTable(depts);
 
@@ -2260,6 +2387,170 @@ function renderDateAnalysisUI(data) {
 
   // Render Chart
   renderCalendarChart();
+}
+
+// INTERACTIVE MONTH CALENDAR LOGIC
+let currentCalYear = new Date().getFullYear();
+let currentCalMonth = new Date().getMonth();
+
+const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+function changeCalMonth(delta) {
+  currentCalMonth += delta;
+  if (currentCalMonth < 0) {
+    currentCalMonth = 11;
+    currentCalYear--;
+  } else if (currentCalMonth > 11) {
+    currentCalMonth = 0;
+    currentCalYear++;
+  }
+  renderInteractiveMonthCalendar();
+}
+
+function resetCalToToday() {
+  const d = new Date();
+  currentCalYear = d.getFullYear();
+  currentCalMonth = d.getMonth();
+  renderInteractiveMonthCalendar();
+}
+
+function renderInteractiveMonthCalendar() {
+  const titleEl = document.getElementById('cal-month-year-title');
+  const gridEl = document.getElementById('interactive-cal-grid');
+  if (!gridEl) return;
+
+  if (titleEl) titleEl.textContent = `${monthNames[currentCalMonth]} ${currentCalYear}`;
+
+  const todayStr = dateAnalysisData ? dateAnalysisData.today_date : new Date().toISOString().split('T')[0];
+
+  const firstDayIndex = new Date(currentCalYear, currentCalMonth, 1).getDay();
+  const daysInMonth = new Date(currentCalYear, currentCalMonth + 1, 0).getDate();
+
+  const byDateMap = (dateAnalysisData && dateAnalysisData.by_date) ? dateAnalysisData.by_date : {};
+
+  let html = '';
+
+  // Empty lead padding cells
+  for (let i = 0; i < firstDayIndex; i++) {
+    html += `<div class="bg-slate-50/50 rounded-xl border border-slate-100 p-2 min-h-[75px] opacity-40"></div>`;
+  }
+
+  // Days 1..daysInMonth
+  for (let day = 1; day <= daysInMonth; day++) {
+    const monthFormatted = String(currentCalMonth + 1).padStart(2, '0');
+    const dayFormatted = String(day).padStart(2, '0');
+    const dateStr = `${currentCalYear}-${monthFormatted}-${dayFormatted}`;
+
+    const dateInfo = byDateMap[dateStr];
+    const isToday = dateStr === todayStr;
+
+    const hasData = dateInfo && dateInfo.total > 0;
+    const totalCount = hasData ? dateInfo.total : 0;
+    const preCount = hasData ? dateInfo.pre : 0;
+    const postCount = hasData ? dateInfo.post : 0;
+
+    let bgClass = 'bg-white hover:bg-slate-50 border-slate-200';
+    if (isToday) {
+      bgClass = 'bg-emerald-50/80 border-emerald-500 ring-2 ring-emerald-500/20';
+    } else if (hasData) {
+      bgClass = 'bg-gradient-to-b from-blue-50/60 to-white border-blue-300 hover:border-blue-500 hover:shadow-md';
+    }
+
+    html += `
+      <div onclick="openDateDetailModal('${dateStr}')" 
+           class="${bgClass} rounded-xl border p-2 min-h-[75px] cursor-pointer transition flex flex-col justify-between group relative overflow-hidden">
+        
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-extrabold ${isToday ? 'text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded' : 'text-slate-800'}">${day}</span>
+          ${isToday ? '<span class="text-[9px] font-bold text-emerald-700 uppercase tracking-tighter">Today</span>' : ''}
+        </div>
+
+        <div class="mt-1">
+          ${hasData ? `
+            <div class="bg-blue-600 group-hover:bg-blue-700 text-white font-extrabold text-[10px] px-1.5 py-0.5 rounded-md shadow-xs flex items-center justify-between">
+              <span>✨ ${totalCount} filled</span>
+            </div>
+            <div class="text-[9px] text-slate-500 font-semibold mt-1 flex justify-between">
+              <span class="text-teal-700">Pre: ${preCount}</span>
+              <span class="text-emerald-700">Post: ${postCount}</span>
+            </div>
+          ` : `
+            <div class="text-[10px] text-slate-300 font-medium">No activity</div>
+          `}
+        </div>
+      </div>
+    `;
+  }
+
+  gridEl.innerHTML = html;
+}
+
+function openDateDetailModal(dateStr) {
+  const modal = document.getElementById('date-detail-modal');
+  if (!modal) return;
+
+  const dateInfo = (dateAnalysisData && dateAnalysisData.by_date) ? dateAnalysisData.by_date[dateStr] : null;
+
+  document.getElementById('date-modal-title-text').textContent = `Submissions Detail for ${dateStr}`;
+
+  if (!dateInfo || dateInfo.total === 0) {
+    document.getElementById('date-modal-stat-total').textContent = '0';
+    document.getElementById('date-modal-stat-pre').textContent = '0';
+    document.getElementById('date-modal-stat-post').textContent = '0';
+    document.getElementById('date-modal-stat-depts').textContent = '0';
+
+    document.getElementById('date-modal-dept-tbody').innerHTML = '<tr><td colspan="6" class="text-center p-6 text-slate-400 font-medium">No survey submissions recorded on this date</td></tr>';
+    document.getElementById('date-modal-student-tbody').innerHTML = '<tr><td colspan="6" class="text-center p-6 text-slate-400 font-medium">No student responses logged on this date</td></tr>';
+  } else {
+    document.getElementById('date-modal-stat-total').textContent = dateInfo.total || 0;
+    document.getElementById('date-modal-stat-pre').textContent = dateInfo.pre || 0;
+    document.getElementById('date-modal-stat-post').textContent = dateInfo.post || 0;
+
+    const deptList = dateInfo.dept_breakdown || [];
+    document.getElementById('date-modal-stat-depts').textContent = deptList.length;
+
+    // Dept Breakdown Table
+    document.getElementById('date-modal-dept-tbody').innerHTML = deptList.map((d, i) => {
+      const pct = dateInfo.total > 0 ? ((d.total / dateInfo.total) * 100).toFixed(1) : 0;
+      return `
+        <tr class="hover:bg-slate-50 transition">
+          <td class="p-3 text-slate-400 font-medium">${i + 1}</td>
+          <td class="p-3 font-bold text-slate-900">${e(d.dept)}</td>
+          <td class="p-3 text-teal-700 font-bold">${d.pre}</td>
+          <td class="p-3 text-emerald-700 font-bold">${d.post}</td>
+          <td class="p-3 font-extrabold text-blue-700">${d.total}</td>
+          <td class="p-3">
+            <div class="flex items-center gap-2">
+              <div class="w-24 bg-slate-100 h-2 rounded-full overflow-hidden">
+                <div class="bg-blue-600 h-full rounded-full" style="width:${pct}%"></div>
+              </div>
+              <span class="text-xs font-bold text-slate-700">${pct}%</span>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    // Students Log Table
+    const students = dateInfo.students || [];
+    document.getElementById('date-modal-student-tbody').innerHTML = students.map((s, i) => `
+      <tr class="hover:bg-slate-50 transition">
+        <td class="p-3 text-slate-400 font-medium">${i + 1}</td>
+        <td class="p-3 font-bold text-slate-900">${e(s.name)}</td>
+        <td class="p-3 font-mono text-slate-500 text-[11px]">${e(s.email)}</td>
+        <td class="p-3 font-semibold text-slate-700">${e(s.dept)}</td>
+        <td class="p-3">${s.type === 'post' ? '<span class="badge bg-green">POST WORKSHOP</span>' : '<span class="badge bg-blue">BASELINE PRE</span>'}</td>
+        <td class="p-3 text-slate-500 font-mono text-[11px]">${e(s.time)}</td>
+      </tr>
+    `).join('');
+  }
+
+  modal.classList.remove('hidden');
+}
+
+function closeDateDetailModal() {
+  const modal = document.getElementById('date-detail-modal');
+  if (modal) modal.classList.add('hidden');
 }
 
 function renderDeptCalendarTable(depts) {
@@ -2301,7 +2592,11 @@ function renderDailyTimelineTable(timeline, todayStr) {
         <td class="p-3 text-teal-700 font-bold">${t.pre}</td>
         <td class="p-3 text-emerald-700 font-bold">${t.post}</td>
         <td class="p-3 text-slate-900 font-extrabold">${t.total}</td>
-        <td class="p-3">${t.total > 10 ? '<span class="badge bg-green">High Volume</span>' : t.total > 0 ? '<span class="badge bg-blue">Active</span>' : '<span class="badge bg-gray">Quiet</span>'}</td>
+        <td class="p-3">
+          <button onclick="openDateDetailModal('${t.date}')" class="bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold px-2.5 py-1 rounded-lg transition flex items-center gap-1">
+            <span>🔍</span> View Dept Breakdown
+          </button>
+        </td>
       </tr>
     `;
   }).join('');

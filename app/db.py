@@ -712,28 +712,35 @@ async def verify_admin_otp(username: str, otp: str) -> bool:
 async def get_date_analysis_data() -> dict[str, Any]:
     """
     Calculate calendar and date-wise survey response metrics per department and overall.
-    Tracks start date, today's filling count, peak (Max) day, and lowest (Min) day per department.
+    Tracks start date, today's filling count, peak (Max) day, and lowest (Min) day per department,
+    plus full date-by-date department breakdowns and student submission logs.
     """
     db = get_db()
     today_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
-    # Map email to program (department)
-    email_to_dept: dict[str, str] = {}
+    # Map email to program (department) and name
+    email_to_user: dict[str, dict[str, str]] = {}
     async for u in db[USERS].find({}):
         email = u.get("email")
         if email:
             dept = u.get("program") or "Other"
-            email_to_dept[email] = dept.strip() or "Other"
+            name = u.get("name") or "Student"
+            email_to_user[email] = {
+                "dept": dept.strip() or "Other",
+                "name": name
+            }
 
-    # Structure: dept -> date_str -> {"pre": int, "post": int, "total": int}
     dept_daily: dict[str, dict[str, dict[str, int]]] = {}
     overall_daily: dict[str, dict[str, int]] = {}
+    by_date: dict[str, dict[str, Any]] = {}
 
-    def add_entry(dept_name: str, dt: Any, survey_kind: str):
+    def add_entry(dept_name: str, dt: Any, survey_kind: str, email: str):
         if not isinstance(dt, datetime):
             return
         date_str = dt.strftime("%Y-%m-%d")
+        time_str = dt.strftime("%H:%M:%S")
 
+        # Department daily
         if dept_name not in dept_daily:
             dept_daily[dept_name] = {}
         if date_str not in dept_daily[dept_name]:
@@ -741,22 +748,51 @@ async def get_date_analysis_data() -> dict[str, Any]:
         dept_daily[dept_name][date_str][survey_kind] += 1
         dept_daily[dept_name][date_str]["total"] += 1
 
+        # Overall daily
         if date_str not in overall_daily:
             overall_daily[date_str] = {"pre": 0, "post": 0, "total": 0}
         overall_daily[date_str][survey_kind] += 1
         overall_daily[date_str]["total"] += 1
 
+        # Date detail breakdown
+        if date_str not in by_date:
+            by_date[date_str] = {
+                "date": date_str,
+                "pre": 0,
+                "post": 0,
+                "total": 0,
+                "dept_counts": {},
+                "students": []
+            }
+        d_info = by_date[date_str]
+        d_info[survey_kind] += 1
+        d_info["total"] += 1
+
+        if dept_name not in d_info["dept_counts"]:
+            d_info["dept_counts"][dept_name] = {"pre": 0, "post": 0, "total": 0}
+        d_info["dept_counts"][dept_name][survey_kind] += 1
+        d_info["dept_counts"][dept_name]["total"] += 1
+
+        user_info = email_to_user.get(email, {"name": "Student", "dept": dept_name})
+        d_info["students"].append({
+            "name": user_info.get("name", "Student"),
+            "email": email,
+            "dept": dept_name,
+            "type": survey_kind,
+            "time": time_str
+        })
+
     async for doc in db[PRE].find({}):
-        email = doc.get("email")
-        dept_name = email_to_dept.get(email, "Other")
+        email = doc.get("email", "")
+        dept_name = email_to_user.get(email, {}).get("dept", "Other")
         sub_at = doc.get("submitted_at")
-        add_entry(dept_name, sub_at, "pre")
+        add_entry(dept_name, sub_at, "pre", email)
 
     async for doc in db[POST].find({}):
-        email = doc.get("email")
-        dept_name = email_to_dept.get(email, "Other")
+        email = doc.get("email", "")
+        dept_name = email_to_user.get(email, {}).get("dept", "Other")
         sub_at = doc.get("submitted_at")
-        add_entry(dept_name, sub_at, "post")
+        add_entry(dept_name, sub_at, "post", email)
 
     def compute_calendar_stats(daily_dict: dict[str, dict[str, int]], d_name: str):
         if not daily_dict:
@@ -853,11 +889,33 @@ async def get_date_analysis_data() -> dict[str, Any]:
 
     all_dates = sorted(list(overall_daily.keys()))
 
+    # Build formatted by_date output
+    formatted_by_date: dict[str, dict[str, Any]] = {}
+    for d_str, d_info in by_date.items():
+        dept_list_for_date = []
+        for d_name, d_c in d_info["dept_counts"].items():
+            dept_list_for_date.append({
+                "dept": d_name,
+                "pre": d_c["pre"],
+                "post": d_c["post"],
+                "total": d_c["total"]
+            })
+        dept_list_for_date.sort(key=lambda x: x["total"], reverse=True)
+        formatted_by_date[d_str] = {
+            "date": d_str,
+            "pre": d_info["pre"],
+            "post": d_info["post"],
+            "total": d_info["total"],
+            "dept_breakdown": dept_list_for_date,
+            "students": d_info["students"]
+        }
+
     return {
         "overall": overall_stats,
         "departments": dept_summaries,
         "all_dates": all_dates,
         "today_date": today_str,
+        "by_date": formatted_by_date,
         "highlights": {
             "highest_single_day": highest_single_day_dept,
             "lowest_single_day": lowest_single_day_dept,
