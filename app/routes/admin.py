@@ -343,32 +343,22 @@ async def api_survey_users(
     ))
 
 
+@router.get("/admin/api/survey/dept-analysis")
+async def api_survey_dept_analysis(request: Request):
+    if not _is_survey_admin(request):
+        raise HTTPException(status_code=403)
+    from app.db import get_dept_analysis_data
+    return JSONResponse(await get_dept_analysis_data())
+
+
 @router.get("/admin/api/survey/dept-stats")
 async def api_survey_dept_stats(request: Request):
     if not _is_survey_admin(request):
         raise HTTPException(status_code=403)
-    
-    from app.db import get_dept_stats
-    from app.routes.shared_analysis import get_dept_token
-    
-    raw_stats = await get_dept_stats()
-    
-    # Append two shareable tokens per department (pre and post)
-    stats = []
-    for s in raw_stats:
-        dept_name = s["dept"]
-        token_pre = get_dept_token(dept_name, "pre")
-        token_post = get_dept_token(dept_name, "post")
-        base = str(settings.public_base_url).rstrip('/')
-        stats.append({
-            **s,
-            "token_pre": token_pre,
-            "token_post": token_post,
-            "share_url_pre": f"{base}/shared/analysis?dept={dept_name}&token={token_pre}&type=pre",
-            "share_url_post": f"{base}/shared/analysis?dept={dept_name}&token={token_post}&type=post",
-        })
-        
-    return JSONResponse(stats)
+    from app.db import get_dept_analysis_data
+    data = await get_dept_analysis_data()
+    return JSONResponse(data["departments"])
+
 
 
 async def run_bulk_reminder_task(task_id: str, type_name: str, pending_users: list[dict], base_url: str):

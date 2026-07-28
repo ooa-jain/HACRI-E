@@ -569,29 +569,174 @@
 
       <!-- 7. DEPARTMENT ANALYSIS PANEL -->
       <div class="panel" id="p-dept-analysis">
-        <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
-          <div>
-            <h2 class="text-base font-bold text-slate-900">🏢 Department-Wise Breakdown &amp; Sharing</h2>
-            <p class="text-xs text-slate-500">View department level metrics, copy public analytical links, or download report presentations.</p>
+        <div class="space-y-6">
+          <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                <span>🏢</span> <span>Department-Wise Breakdown &amp; Overall Analysis</span>
+              </h2>
+              <p class="text-xs text-slate-500">View overall statistics, copy public analytical links, inspect literacy &amp; readiness score averages, and download report decks.</p>
+            </div>
+            <a href="/shared/departments" target="_blank" class="bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold px-4 py-2 rounded-lg shadow-sm transition flex items-center gap-2 self-start md:self-auto">
+              <span>🌐</span> <span>Open Public Directory</span>
+            </a>
           </div>
 
-          <div class="overflow-x-auto">
-            <table class="w-full text-left text-xs border-collapse">
-              <thead>
-                <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold">
-                  <th class="p-3">#</th>
-                  <th class="p-3">Department Name</th>
-                  <th class="p-3">Registered</th>
-                  <th class="p-3">Pre Done</th>
-                  <th class="p-3">Post Done</th>
-                  <th class="p-3">Post Pending</th>
-                  <th class="p-3">Public Analysis Links &amp; Exports</th>
-                </tr>
-              </thead>
-              <tbody id="dept-tbody" class="divide-y divide-slate-100">
-                <tr><td colspan="7" class="text-center p-6 text-slate-400">Loading department statistics…</td></tr>
-              </tbody>
-            </table>
+          <!-- OVERALL DEPARTMENT ANALYSIS CARD (ALL DEPARTMENTS COMBINED) -->
+          <div class="bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-950 text-white p-6 rounded-2xl shadow-xl border border-slate-700 space-y-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-700/80 pb-4">
+              <div>
+                <span class="inline-block px-3 py-1 bg-amber-400 text-slate-950 rounded-full text-[11px] font-extrabold uppercase tracking-wider mb-1">
+                  🌐 Overall Analysis (All Departments)
+                </span>
+                <h3 class="text-lg font-extrabold tracking-tight">University-Wide AI Survey Report &amp; Links</h3>
+                <p class="text-xs text-slate-300">Combined pre and post survey metrics for all students across all academic departments.</p>
+              </div>
+            </div>
+
+            <!-- Overall Stat Badges -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-3 text-center">
+              <div class="bg-slate-800/80 p-3 rounded-xl border border-slate-700/60">
+                <div id="ov-dept-reg" class="text-xl font-extrabold text-white">0</div>
+                <div class="text-[10px] font-medium text-slate-400 uppercase mt-0.5">Registered</div>
+              </div>
+              <div class="bg-slate-800/80 p-3 rounded-xl border border-slate-700/60">
+                <div id="ov-dept-pre" class="text-xl font-extrabold text-teal-400">0</div>
+                <div class="text-[10px] font-medium text-slate-400 uppercase mt-0.5">Pre Done</div>
+              </div>
+              <div class="bg-slate-800/80 p-3 rounded-xl border border-slate-700/60">
+                <div id="ov-dept-post" class="text-xl font-extrabold text-emerald-400">0</div>
+                <div class="text-[10px] font-medium text-slate-400 uppercase mt-0.5">Post Done</div>
+              </div>
+              <div class="bg-slate-800/80 p-3 rounded-xl border border-slate-700/60">
+                <div id="ov-dept-lit-pre" class="text-xl font-extrabold text-amber-400">—</div>
+                <div class="text-[10px] font-medium text-slate-400 uppercase mt-0.5">Avg Pre Lit</div>
+              </div>
+              <div class="bg-slate-800/80 p-3 rounded-xl border border-slate-700/60">
+                <div id="ov-dept-read-pre" class="text-xl font-extrabold text-sky-400">—</div>
+                <div class="text-[10px] font-medium text-slate-400 uppercase mt-0.5">Avg Pre Read</div>
+              </div>
+              <div class="bg-slate-800/80 p-3 rounded-xl border border-slate-700/60">
+                <div id="ov-dept-lit-post" class="text-xl font-extrabold text-emerald-300">—</div>
+                <div class="text-[10px] font-medium text-slate-400 uppercase mt-0.5">Avg Post Lit</div>
+              </div>
+              <div class="bg-slate-800/80 p-3 rounded-xl border border-slate-700/60">
+                <div id="ov-dept-read-post" class="text-xl font-extrabold text-teal-300">—</div>
+                <div class="text-[10px] font-medium text-slate-400 uppercase mt-0.5">Avg Post Read</div>
+              </div>
+            </div>
+
+            <!-- Overall Share Links -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 pt-2">
+              <!-- Pre Baseline Overall Link -->
+              <div class="bg-slate-800/90 p-4 rounded-xl border border-slate-700/80 space-y-2">
+                <div class="flex items-center justify-between text-xs font-bold text-teal-300">
+                  <span>📝 Baseline (Pre) Overall Analysis Link</span>
+                  <span class="text-[10px] bg-teal-950 text-teal-300 border border-teal-800 px-2 py-0.5 rounded-full uppercase">Baseline Report</span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <input type="text" id="inp-overall-link-pre" readonly class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 font-mono select-all focus:outline-none" />
+                  <button onclick="copyDeptLink(document.getElementById('inp-overall-link-pre').value)" class="bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition">🔗 Copy Link</button>
+                </div>
+                <div class="flex items-center gap-2 pt-1">
+                  <a id="btn-overall-view-pre" href="#" target="_blank" class="bg-sky-700 hover:bg-sky-800 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition flex items-center gap-1">📈 View Overall Pre Analysis</a>
+                  <a id="btn-overall-excel-pre" href="#" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition flex items-center gap-1">📥 Excel Export</a>
+                  <a id="btn-overall-ppt-pre" href="#" class="bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-bold px-3 py-1.5 rounded-lg transition flex items-center gap-1">📊 PPT Deck</a>
+                </div>
+              </div>
+
+              <!-- Post Survey Overall Link -->
+              <div class="bg-slate-800/90 p-4 rounded-xl border border-slate-700/80 space-y-2">
+                <div class="flex items-center justify-between text-xs font-bold text-emerald-300">
+                  <span>📊 Post-Workshop Overall Analysis Link</span>
+                  <span class="text-[10px] bg-emerald-950 text-emerald-300 border border-emerald-800 px-2 py-0.5 rounded-full uppercase">Post Workshop</span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <input type="text" id="inp-overall-link-post" readonly class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 font-mono select-all focus:outline-none" />
+                  <button onclick="copyDeptLink(document.getElementById('inp-overall-link-post').value)" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition">🔗 Copy Link</button>
+                </div>
+                <div class="flex items-center gap-2 pt-1">
+                  <a id="btn-overall-view-post" href="#" target="_blank" class="bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition flex items-center gap-1">📊 View Overall Post Analysis</a>
+                  <a id="btn-overall-excel-post" href="#" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition flex items-center gap-1">📥 Excel Export</a>
+                  <a id="btn-overall-ppt-post" href="#" class="bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-bold px-3 py-1.5 rounded-lg transition flex items-center gap-1">📊 PPT Deck</a>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- DEPARTMENT AVERAGE RANKINGS & HIGHLIGHTS -->
+          <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <span>🏆</span> <span>Department Score Highlights &amp; Comparison (Calculated on Average)</span>
+                </h3>
+                <p class="text-xs text-slate-500">Ranked strictly by department mean scores (not total student population).</p>
+              </div>
+
+              <div class="flex items-center gap-2 bg-slate-100 p-1 rounded-lg">
+                <button id="btn-rank-pre" onclick="setRankingSurveyType('pre', this)" class="px-3 py-1 rounded text-xs font-bold bg-white text-slate-900 shadow-sm">Baseline (Pre)</button>
+                <button id="btn-rank-post" onclick="setRankingSurveyType('post', this)" class="px-3 py-1 rounded text-xs font-medium text-slate-600 hover:text-slate-900">Post Workshop</button>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div class="bg-emerald-50 border border-emerald-200 p-4 rounded-xl">
+                <div class="text-[11px] font-extrabold text-emerald-800 uppercase tracking-wider">🏆 Highest Avg AI Literacy</div>
+                <div id="rank-hi-lit-dept" class="text-base font-extrabold text-emerald-950 mt-1">Loading…</div>
+                <div id="rank-hi-lit-score" class="text-xs font-bold text-emerald-700 mt-0.5">Score: — / 5.0</div>
+              </div>
+
+              <div class="bg-rose-50 border border-rose-200 p-4 rounded-xl">
+                <div class="text-[11px] font-extrabold text-rose-800 uppercase tracking-wider">⚠️ Lowest Avg AI Literacy</div>
+                <div id="rank-lo-lit-dept" class="text-base font-extrabold text-rose-950 mt-1">Loading…</div>
+                <div id="rank-lo-lit-score" class="text-xs font-bold text-rose-700 mt-0.5">Score: — / 5.0</div>
+              </div>
+
+              <div class="bg-teal-50 border border-teal-200 p-4 rounded-xl">
+                <div class="text-[11px] font-extrabold text-teal-800 uppercase tracking-wider">🚀 Highest Avg AI Readiness</div>
+                <div id="rank-hi-read-dept" class="text-base font-extrabold text-teal-950 mt-1">Loading…</div>
+                <div id="rank-hi-read-score" class="text-xs font-bold text-teal-700 mt-0.5">Score: — / 5.0</div>
+              </div>
+
+              <div class="bg-amber-50 border border-amber-200 p-4 rounded-xl">
+                <div class="text-[11px] font-extrabold text-amber-800 uppercase tracking-wider">📉 Lowest Avg AI Readiness</div>
+                <div id="rank-lo-read-dept" class="text-base font-extrabold text-amber-950 mt-1">Loading…</div>
+                <div id="rank-lo-read-score" class="text-xs font-bold text-amber-700 mt-0.5">Score: — / 5.0</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- INTERACTIVE DEPARTMENT BAR CHARTS -->
+          <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
+            <h3 class="text-sm font-bold text-slate-900">📊 Department-Wise AI Literacy &amp; Readiness Bar Graph (Mean Average Scores)</h3>
+            <div class="relative h-80 w-full">
+              <canvas id="adminDeptBarChart"></canvas>
+            </div>
+          </div>
+
+          <!-- DETAILED DEPARTMENT BREAKDOWN TABLE -->
+          <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
+            <h3 class="text-sm font-bold text-slate-900">📋 All Departments Analytical Directory &amp; Share Links</h3>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold">
+                    <th class="p-3">#</th>
+                    <th class="p-3">Department Name</th>
+                    <th class="p-3">Registered</th>
+                    <th class="p-3">Pre Done</th>
+                    <th class="p-3">Post Done</th>
+                    <th class="p-3">Avg Pre Lit / Read</th>
+                    <th class="p-3">Avg Post Lit / Read</th>
+                    <th class="p-3">Public Analysis Links &amp; Exports</th>
+                  </tr>
+                </thead>
+                <tbody id="dept-tbody" class="divide-y divide-slate-100">
+                  <tr><td colspan="8" class="text-center p-6 text-slate-400">Loading department statistics…</td></tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
@@ -1545,41 +1690,182 @@ async function resendDeptReminder(btn, dept, type) {
 }
 
 // DEPARTMENT STATS & PUBLIC LINKS
-let deptStats = [];
+let deptAnalysisData = null;
+let currentRankingSurveyType = 'pre';
+let adminDeptBarChartInstance = null;
+
 async function loadDeptStats() {
-  const r = await fetch('/admin/api/survey/dept-stats');
-  if (!r.ok) return;
-  deptStats = await r.json();
-  renderDeptStats(deptStats);
+  try {
+    const r = await fetch('/admin/api/survey/dept-analysis');
+    if (!r.ok) return;
+    deptAnalysisData = await r.json();
+    renderDeptAnalysis(deptAnalysisData);
+  } catch(err) {
+    console.error('Error loading dept analysis data:', err);
+  }
 }
 
-function renderDeptStats(data) {
+function renderDeptAnalysis(data) {
+  if (!data) return;
+  const ov = data.overall || {};
+  const depts = data.departments || [];
+  const rankings = data.rankings || {};
+
+  // Populate Overall Card
+  if (document.getElementById('ov-dept-reg')) document.getElementById('ov-dept-reg').textContent = ov.registered || 0;
+  if (document.getElementById('ov-dept-pre')) document.getElementById('ov-dept-pre').textContent = ov.pre_done || 0;
+  if (document.getElementById('ov-dept-post')) document.getElementById('ov-dept-post').textContent = ov.post_done || 0;
+  if (document.getElementById('ov-dept-lit-pre')) document.getElementById('ov-dept-lit-pre').textContent = ov.avg_lit_pre !== null && ov.avg_lit_pre !== undefined ? `${ov.avg_lit_pre}` : '—';
+  if (document.getElementById('ov-dept-read-pre')) document.getElementById('ov-dept-read-pre').textContent = ov.avg_read_pre !== null && ov.avg_read_pre !== undefined ? `${ov.avg_read_pre}` : '—';
+  if (document.getElementById('ov-dept-lit-post')) document.getElementById('ov-dept-lit-post').textContent = ov.avg_lit_post !== null && ov.avg_lit_post !== undefined ? `${ov.avg_lit_post}` : '—';
+  if (document.getElementById('ov-dept-read-post')) document.getElementById('ov-dept-read-post').textContent = ov.avg_read_post !== null && ov.avg_read_post !== undefined ? `${ov.avg_read_post}` : '—';
+
+  // Populate Overall Links
+  if (document.getElementById('inp-overall-link-pre')) document.getElementById('inp-overall-link-pre').value = ov.share_url_pre || '';
+  if (document.getElementById('btn-overall-view-pre')) document.getElementById('btn-overall-view-pre').href = ov.share_url_pre || '#';
+  if (document.getElementById('btn-overall-excel-pre')) document.getElementById('btn-overall-excel-pre').href = `/shared/analysis/export-excel?dept=Overall&token=${ov.token_pre}&type=pre`;
+  if (document.getElementById('btn-overall-ppt-pre')) document.getElementById('btn-overall-ppt-pre').href = `/shared/analysis/download-ppt?dept=Overall&token=${ov.token_pre}&type=pre`;
+
+  if (document.getElementById('inp-overall-link-post')) document.getElementById('inp-overall-link-post').value = ov.share_url_post || '';
+  if (document.getElementById('btn-overall-view-post')) document.getElementById('btn-overall-view-post').href = ov.share_url_post || '#';
+  if (document.getElementById('btn-overall-excel-post')) document.getElementById('btn-overall-excel-post').href = `/shared/analysis/export-excel?dept=Overall&token=${ov.token_post}&type=post`;
+  if (document.getElementById('btn-overall-ppt-post')) document.getElementById('btn-overall-ppt-post').href = `/shared/analysis/download-ppt?dept=Overall&token=${ov.token_post}&type=post`;
+
+  // Render Rankings
+  renderRankings(rankings, currentRankingSurveyType);
+
+  // Render Bar Chart
+  renderAdminDeptBarChart(depts, currentRankingSurveyType);
+
+  // Render Table
+  renderDeptTable(depts);
+}
+
+function setRankingSurveyType(type, btn) {
+  currentRankingSurveyType = type;
+  const btnPre = document.getElementById('btn-rank-pre');
+  const btnPost = document.getElementById('btn-rank-post');
+  if (btnPre) btnPre.className = type === 'pre'
+    ? 'px-3 py-1 rounded text-xs font-bold bg-white text-slate-900 shadow-sm'
+    : 'px-3 py-1 rounded text-xs font-medium text-slate-600 hover:text-slate-900';
+  if (btnPost) btnPost.className = type === 'post'
+    ? 'px-3 py-1 rounded text-xs font-bold bg-white text-slate-900 shadow-sm'
+    : 'px-3 py-1 rounded text-xs font-medium text-slate-600 hover:text-slate-900';
+
+  if (deptAnalysisData) {
+    renderRankings(deptAnalysisData.rankings || {}, type);
+    renderAdminDeptBarChart(deptAnalysisData.departments || [], type);
+  }
+}
+
+function renderRankings(rankings, type) {
+  const rLit = type === 'post' ? rankings.lit_post : rankings.lit_pre;
+  const rRead = type === 'post' ? rankings.read_post : rankings.read_pre;
+
+  if (document.getElementById('rank-hi-lit-dept')) document.getElementById('rank-hi-lit-dept').textContent = (rLit && rLit.highest) ? rLit.highest.dept : 'N/A';
+  if (document.getElementById('rank-hi-lit-score')) document.getElementById('rank-hi-lit-score').textContent = (rLit && rLit.highest) ? `Score: ${rLit.highest.score} / 5.0` : 'Score: —';
+
+  if (document.getElementById('rank-lo-lit-dept')) document.getElementById('rank-lo-lit-dept').textContent = (rLit && rLit.lowest) ? rLit.lowest.dept : 'N/A';
+  if (document.getElementById('rank-lo-lit-score')) document.getElementById('rank-lo-lit-score').textContent = (rLit && rLit.lowest) ? `Score: ${rLit.lowest.score} / 5.0` : 'Score: —';
+
+  if (document.getElementById('rank-hi-read-dept')) document.getElementById('rank-hi-read-dept').textContent = (rRead && rRead.highest) ? rRead.highest.dept : 'N/A';
+  if (document.getElementById('rank-hi-read-score')) document.getElementById('rank-hi-read-score').textContent = (rRead && rRead.highest) ? `Score: ${rRead.highest.score} / 5.0` : 'Score: —';
+
+  if (document.getElementById('rank-lo-read-dept')) document.getElementById('rank-lo-read-dept').textContent = (rRead && rRead.lowest) ? rRead.lowest.dept : 'N/A';
+  if (document.getElementById('rank-lo-read-score')) document.getElementById('rank-lo-read-score').textContent = (rRead && rRead.lowest) ? `Score: ${rRead.lowest.score} / 5.0` : 'Score: —';
+}
+
+function renderAdminDeptBarChart(depts, type) {
+  const barCanvas = document.getElementById('adminDeptBarChart');
+  if (!barCanvas || typeof Chart === 'undefined') return;
+
+  const labels = depts.map(d => d.dept);
+  const litKey = type === 'post' ? 'avg_lit_post' : 'avg_lit_pre';
+  const readKey = type === 'post' ? 'avg_read_post' : 'avg_read_pre';
+
+  const litData = depts.map(d => (d[litKey] !== null && d[litKey] !== undefined) ? d[litKey] : 0);
+  const readData = depts.map(d => (d[readKey] !== null && d[readKey] !== undefined) ? d[readKey] : 0);
+
+  if (adminDeptBarChartInstance) {
+    adminDeptBarChartInstance.data.labels = labels;
+    adminDeptBarChartInstance.data.datasets[0].data = litData;
+    adminDeptBarChartInstance.data.datasets[1].data = readData;
+    adminDeptBarChartInstance.update();
+  } else {
+    const ctx = barCanvas.getContext('2d');
+    adminDeptBarChartInstance = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: 'Avg AI Literacy Score (1–5)',
+            data: litData,
+            backgroundColor: '#10b981',
+            borderRadius: 4
+          },
+          {
+            label: 'Avg AI Readiness Score (1–5)',
+            data: readData,
+            backgroundColor: '#0d9488',
+            borderRadius: 4
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: { beginAtZero: true, max: 5.0, ticks: { stepSize: 1.0 } },
+          x: { ticks: { autoSkip: false, maxRotation: 45, minRotation: 0 } }
+        },
+        plugins: {
+          legend: { position: 'top' }
+        }
+      }
+    });
+  }
+}
+
+function renderDeptTable(depts) {
   const tbody = document.getElementById('dept-tbody');
-  if(!data.length){ tbody.innerHTML='<tr><td colspan="7" class="text-center p-6 text-slate-400">No departments found</td></tr>'; return; }
-  tbody.innerHTML = data.map((d,i)=>`
+  if (!tbody) return;
+  if (!depts.length) {
+    tbody.innerHTML = '<tr><td colspan="8" class="text-center p-6 text-slate-400">No departments found</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = depts.map((d, i) => `
     <tr class="hover:bg-slate-50 transition">
-      <td class="p-3 text-slate-400">${i+1}</td>
+      <td class="p-3 text-slate-400">${i + 1}</td>
       <td class="p-3 font-semibold text-slate-900">
-        <a href="#" onclick="viewDeptUsers('${e(d.dept)}'); return false;" class="text-blue-600 hover:underline">
+        <a href="#" onclick="viewDeptUsers('${e(d.dept)}'); return false;" class="text-blue-600 hover:underline font-bold">
           ${e(d.dept || 'Unnamed Department')}
         </a>
       </td>
       <td class="p-3"><span class="badge bg-gray">${d.registered}</span></td>
       <td class="p-3"><span class="badge bg-blue">${d.pre_done}</span></td>
       <td class="p-3"><span class="badge bg-green">${d.post_done}</span></td>
-      <td class="p-3"><span class="badge bg-gray" style="background:#fee2e2;color:#991b1b;">${d.post_pending}</span></td>
+      <td class="p-3 text-xs font-semibold text-slate-700">
+        <span class="text-emerald-700">Lit: ${d.avg_lit_pre !== null ? d.avg_lit_pre : '—'}</span> / 
+        <span class="text-teal-700">Read: ${d.avg_read_pre !== null ? d.avg_read_pre : '—'}</span>
+      </td>
+      <td class="p-3 text-xs font-semibold text-slate-700">
+        <span class="text-emerald-700">Lit: ${d.avg_lit_post !== null ? d.avg_lit_post : '—'}</span> / 
+        <span class="text-teal-700">Read: ${d.avg_read_post !== null ? d.avg_read_post : '—'}</span>
+      </td>
       <td class="p-3 space-y-1.5">
         <div class="flex items-center gap-1.5 flex-wrap">
           <span class="text-[10px] font-bold text-teal-600 uppercase">PRE</span>
-          <button class="bg-teal-600 hover:bg-teal-700 text-white text-[11px] font-bold px-2 py-0.5 rounded" onclick="copyDeptLink('/shared/analysis?dept=' + encodeURIComponent(d.dept) + '&token=' + d.token_pre + '&type=pre')">🔗 Copy</button>
-          <a href="/shared/analysis?dept=${encodeURIComponent(d.dept)}&token=${d.token_pre}&type=pre" target="_blank" class="bg-sky-700 hover:bg-sky-800 text-white text-[11px] font-bold px-2 py-0.5 rounded">📈 View</a>
+          <button class="bg-teal-600 hover:bg-teal-700 text-white text-[11px] font-bold px-2 py-0.5 rounded" onclick="copyDeptLink('${d.share_url_pre}')">🔗 Copy</button>
+          <a href="${d.share_url_pre}" target="_blank" class="bg-sky-700 hover:bg-sky-800 text-white text-[11px] font-bold px-2 py-0.5 rounded">📈 View</a>
           <a href="/shared/analysis/export-excel?dept=${encodeURIComponent(d.dept)}&token=${d.token_pre}&type=pre" class="bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold px-2 py-0.5 rounded">📥 Excel</a>
           <a href="/shared/analysis/download-ppt?dept=${encodeURIComponent(d.dept)}&token=${d.token_pre}&type=pre" class="bg-amber-500 hover:bg-amber-600 text-slate-900 text-[11px] font-bold px-2 py-0.5 rounded">📊 PPT</a>
         </div>
         <div class="flex items-center gap-1.5 flex-wrap">
           <span class="text-[10px] font-bold text-emerald-600 uppercase">POST</span>
-          <button class="bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold px-2 py-0.5 rounded" onclick="copyDeptLink('/shared/analysis?dept=' + encodeURIComponent(d.dept) + '&token=' + d.token_post + '&type=post')">🔗 Copy</button>
-          <a href="/shared/analysis?dept=${encodeURIComponent(d.dept)}&token=${d.token_post}&type=post" target="_blank" class="bg-emerald-800 hover:bg-emerald-900 text-white text-[11px] font-bold px-2 py-0.5 rounded">📊 View</a>
+          <button class="bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold px-2 py-0.5 rounded" onclick="copyDeptLink('${d.share_url_post}')">🔗 Copy</button>
+          <a href="${d.share_url_post}" target="_blank" class="bg-emerald-800 hover:bg-emerald-900 text-white text-[11px] font-bold px-2 py-0.5 rounded">📊 View</a>
           <a href="/shared/analysis/export-excel?dept=${encodeURIComponent(d.dept)}&token=${d.token_post}&type=post" class="bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold px-2 py-0.5 rounded">📥 Excel</a>
           <a href="/shared/analysis/download-ppt?dept=${encodeURIComponent(d.dept)}&token=${d.token_post}&type=post" class="bg-amber-500 hover:bg-amber-600 text-slate-900 text-[11px] font-bold px-2 py-0.5 rounded">📊 PPT</a>
         </div>

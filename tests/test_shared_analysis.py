@@ -110,3 +110,47 @@ async def test_shared_departments_directory(client: AsyncClient):
     
     assert f"token={token_pre}" in resp.text
     assert f"token={token_post}" in resp.text
+
+
+@pytest.mark.asyncio
+async def test_overall_department_analysis(client: AsyncClient):
+    db = get_db()
+    
+    # 1. Add users from two departments with pre-survey responses
+    await db["users"].insert_one({
+        "email": "user1@dept1.com", "name": "User One", "program": "Engineering", "status": STATUS_POST_DONE
+    })
+    await db["users"].insert_one({
+        "email": "user2@dept2.com", "name": "User Two", "program": "Business", "status": STATUS_POST_DONE
+    })
+    
+    sample_fields_high = {"B1": 5, "B2": 5, "D1a": 5, "D1b": 5}
+    sample_fields_low = {"B1": 1, "B2": 1, "D1a": 1, "D1b": 1}
+
+    await db["pre_responses"].insert_one({"email": "user1@dept1.com", "fields": sample_fields_high})
+    await db["pre_responses"].insert_one({"email": "user2@dept2.com", "fields": sample_fields_low})
+
+    # 2. Verify Overall Token Access
+    token_overall_pre = get_dept_token("Overall", "pre")
+    token_overall_post = get_dept_token("Overall", "post")
+
+    resp_pre = await client.get(f"/shared/analysis?dept=Overall&token={token_overall_pre}&type=pre")
+    assert resp_pre.status_code == 200
+    assert "Overall" in resp_pre.text
+    assert "Department-Wise AI Literacy & AI Readiness Bar Graph" in resp_pre.text
+
+    resp_post = await client.get(f"/shared/analysis?dept=Overall&token={token_overall_post}&type=post")
+    assert resp_post.status_code == 200
+
+    # 3. Test Admin Dept Analysis API with cookie auth
+    client.cookies.set("survey_admin_session", "1")
+    resp_api = await client.get("/admin/api/survey/dept-analysis")
+    assert resp_api.status_code == 200
+    data = resp_api.json()
+    
+    assert data["overall"]["dept"] == "Overall"
+    assert data["overall"]["registered"] == 2
+    assert "rankings" in data
+    assert data["rankings"]["lit_pre"]["highest"]["dept"] == "Engineering"
+    assert data["rankings"]["lit_pre"]["lowest"]["dept"] == "Business"
+

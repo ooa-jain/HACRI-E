@@ -304,7 +304,7 @@ def _fmt(dt: Any) -> str:
 async def list_survey_users(limit: int = 10_000, dept: str | None = None, ug_or_pg: str | None = None) -> list[dict]:
     import base64
     query = {}
-    if dept and dept not in ("All Departments", "all", "All"):
+    if dept and dept.strip().lower() not in ("all departments", "all", "overall"):
         if dept in ("No Program", "No Department", "none", "None"):
             query["program"] = {"$in": ["", None, "No Program", "No Department"]}
         else:
@@ -381,7 +381,7 @@ async def list_matched_users(
     """Return {email: {pre: fields, post: fields}} for users with both surveys done."""
     db = get_db()
     query = {"status": STATUS_POST_DONE}
-    if program and program not in ("All Departments", "all", "All"):
+    if program and program.strip().lower() not in ("all departments", "all", "overall"):
         if program in ("No Program", "No Department", "none", "None"):
             query["program"] = {"$in": ["", None, "No Program", "No Department"]}
         else:
@@ -398,36 +398,177 @@ async def list_matched_users(
     return matched
 
 
-async def get_dept_stats() -> list[dict]:
-    """Return per-department stats: registered, pre_done, post_done counts."""
+async def get_dept_analysis_data() -> dict[str, Any]:
+    """
+    Calculate department-wise registration, completion, and AI Literacy & Readiness scores.
+    Uses AVERAGE (mean score) for department ranking/comparisons.
+    """
+    from app.scoring import score_for_user
+    from app.routes.shared_analysis import get_dept_token
     db = get_db()
-    pipeline = [
-        {"$group": {
-            "_id": "$program",
-            "registered": {"$sum": 1},
-            "pre_done":  {"$sum": {"$cond": [{"$in": ["$status", [STATUS_PRE_DONE, STATUS_POST_DONE]]}, 1, 0]}},
-            "post_done": {"$sum": {"$cond": [{"$eq": ["$status", STATUS_POST_DONE]}, 1, 0]}},
-        }},
-        {"$sort": {"_id": 1}},
-    ]
-    results = []
-    res = db[USERS].aggregate(pipeline)
-    import inspect
-    if inspect.isawaitable(res):
-        cursor = await res
-    else:
-        cursor = res
-    async for doc in cursor:
-        dept = doc["_id"] or ""
-        results.append({
-            "dept":       dept,
-            "registered": doc["registered"],
-            "pre_done":   doc["pre_done"],
-            "post_done":  doc["post_done"],
-            "pre_pending":  doc["registered"] - doc["pre_done"],
-            "post_pending": doc["pre_done"] - doc["post_done"],
+
+    email_to_dept: dict[str, str] = {}
+    dept_user_counts: dict[str, dict[str, int]] = {}
+
+    async for u in db[USERS].find({}):
+        email = u.get("email")
+        if not email:
+            continue
+        dept = u.get("program") or "Other"
+        dept = dept.strip() or "Other"
+        email_to_dept[email] = dept
+
+        if dept not in dept_user_counts:
+            dept_user_counts[dept] = {"registered": 0, "pre_done": 0, "post_done": 0}
+
+        dept_user_counts[dept]["registered"] += 1
+        st = u.get("status")
+        if st in (STATUS_PRE_DONE, STATUS_POST_DONE):
+            dept_user_counts[dept]["pre_done"] += 1
+        if st == STATUS_POST_DONE:
+            dept_user_counts[dept]["post_done"] += 1
+
+    pre_scores_by_dept: dict[str, list[tuple[float, float]]] = {}
+    post_scores_by_dept: dict[str, list[tuple[float, float]]] = {}
+
+    async for doc in db[PRE].find({}):
+        email = doc.get("email")
+        dept = email_to_dept.get(email, "Other")
+        fields = doc.get("fields", {})
+        scores = score_for_user(fields)
+        lit = scores.get("lit")
+        read = scores.get("read")
+        if lit is not None and read is not None:
+            if dept not in pre_scores_by_dept:
+                pre_scores_by_dept[dept] = []
+            pre_scores_by_dept[dept].append((float(lit), float(read)))
+
+    async for doc in db[POST].find({}):
+        email = doc.get("email")
+        dept = email_to_dept.get(email, "Other")
+        fields = doc.get("fields", {})
+        scores = score_for_user(fields)
+        lit = scores.get("lit")
+        read = scores.get("read")
+        if lit is not None and read is not None:
+            if dept not in post_scores_by_dept:
+                post_scores_by_dept[dept] = []
+            post_scores_by_dept[dept].append((float(lit), float(read)))
+
+    all_depts = sorted(list(set(dept_user_counts.keys()) | set(pre_scores_by_dept.keys()) | set(post_scores_by_dept.keys())))
+
+    dept_list = []
+    overall_registered = sum(c["registered"] for c in dept_user_counts.values())
+    overall_pre_done = sum(c["pre_done"] for c in dept_user_counts.values())
+    overall_post_done = sum(c["post_done"] for c in dept_user_counts.values())
+
+    all_pre_lit: list[float] = []
+    all_pre_read: list[float] = []
+    all_post_lit: list[float] = []
+    all_post_read: list[float] = []
+
+    base_url = str(settings.public_base_url).rstrip('/')
+
+    for dept in all_depts:
+        counts = dept_user_counts.get(dept, {"registered": 0, "pre_done": 0, "post_done": 0})
+        reg = counts["registered"]
+        pre_d = counts["pre_done"]
+        post_d = counts["post_done"]
+
+        pre_pairs = pre_scores_by_dept.get(dept, [])
+        post_pairs = post_scores_by_dept.get(dept, [])
+
+        avg_lit_pre = round(sum(p[0] for p in pre_pairs) / len(pre_pairs), 2) if pre_pairs else None
+        avg_read_pre = round(sum(p[1] for p in pre_pairs) / len(pre_pairs), 2) if pre_pairs else None
+
+        avg_lit_post = round(sum(p[0] for p in post_pairs) / len(post_pairs), 2) if post_pairs else None
+        avg_read_post = round(sum(p[1] for p in post_pairs) / len(post_pairs), 2) if post_pairs else None
+
+        if pre_pairs:
+            all_pre_lit.extend([p[0] for p in pre_pairs])
+            all_pre_read.extend([p[1] for p in pre_pairs])
+        if post_pairs:
+            all_post_lit.extend([p[0] for p in post_pairs])
+            all_post_read.extend([p[1] for p in post_pairs])
+
+        token_pre = get_dept_token(dept, "pre")
+        token_post = get_dept_token(dept, "post")
+
+        dept_list.append({
+            "dept": dept,
+            "registered": reg,
+            "pre_done": pre_d,
+            "post_done": post_d,
+            "pre_pending": max(0, reg - pre_d),
+            "post_pending": max(0, pre_d - post_d),
+            "avg_lit_pre": avg_lit_pre,
+            "avg_read_pre": avg_read_pre,
+            "avg_lit_post": avg_lit_post,
+            "avg_read_post": avg_read_post,
+            "pre_count": len(pre_pairs),
+            "post_count": len(post_pairs),
+            "token_pre": token_pre,
+            "token_post": token_post,
+            "share_url_pre": f"{base_url}/shared/analysis?dept={dept}&token={token_pre}&type=pre",
+            "share_url_post": f"{base_url}/shared/analysis?dept={dept}&token={token_post}&type=post",
         })
-    return results
+
+    overall_avg_lit_pre = round(sum(all_pre_lit) / len(all_pre_lit), 2) if all_pre_lit else None
+    overall_avg_read_pre = round(sum(all_pre_read) / len(all_pre_read), 2) if all_pre_read else None
+    overall_avg_lit_post = round(sum(all_post_lit) / len(all_post_lit), 2) if all_post_lit else None
+    overall_avg_read_post = round(sum(all_post_read) / len(all_post_read), 2) if all_post_read else None
+
+    token_overall_pre = get_dept_token("Overall", "pre")
+    token_overall_post = get_dept_token("Overall", "post")
+
+    overall_data = {
+        "dept": "Overall",
+        "registered": overall_registered,
+        "pre_done": overall_pre_done,
+        "post_done": overall_post_done,
+        "pre_pending": max(0, overall_registered - overall_pre_done),
+        "post_pending": max(0, overall_pre_done - overall_post_done),
+        "avg_lit_pre": overall_avg_lit_pre,
+        "avg_read_pre": overall_avg_read_pre,
+        "avg_lit_post": overall_avg_lit_post,
+        "avg_read_post": overall_avg_read_post,
+        "pre_count": len(all_pre_lit),
+        "post_count": len(all_post_lit),
+        "token_pre": token_overall_pre,
+        "token_post": token_overall_post,
+        "share_url_pre": f"{base_url}/shared/analysis?dept=Overall&token={token_overall_pre}&type=pre",
+        "share_url_post": f"{base_url}/shared/analysis?dept=Overall&token={token_overall_post}&type=post",
+    }
+
+    def find_rankings(key: str) -> dict[str, dict[str, Any] | None]:
+        valid = [d for d in dept_list if d[key] is not None]
+        if not valid:
+            return {"highest": None, "lowest": None}
+        sorted_depts = sorted(valid, key=lambda x: x[key], reverse=True)
+        return {
+            "highest": {"dept": sorted_depts[0]["dept"], "score": sorted_depts[0][key]},
+            "lowest": {"dept": sorted_depts[-1]["dept"], "score": sorted_depts[-1][key]}
+        }
+
+    rankings = {
+        "lit_pre": find_rankings("avg_lit_pre"),
+        "read_pre": find_rankings("avg_read_pre"),
+        "lit_post": find_rankings("avg_lit_post"),
+        "read_post": find_rankings("avg_read_post"),
+    }
+
+    return {
+        "overall": overall_data,
+        "departments": dept_list,
+        "rankings": rankings
+    }
+
+
+async def get_dept_stats() -> list[dict]:
+    """Return per-department stats: registered, pre_done, post_done counts + avg scores."""
+    data = await get_dept_analysis_data()
+    return data["departments"]
+
 
 
 async def get_dept_students(dept: str) -> list[dict]:

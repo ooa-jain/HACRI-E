@@ -159,9 +159,15 @@
         </thead>
         <tbody>
           {% for d in dept_list %}
-          <tr>
+          <tr {% if d.dept_key == 'Overall' %}style="background: #f0fdf4; font-weight: bold;"{% endif %}>
             <td style="color: var(--gray);">{{ loop.index }}</td>
-            <td class="dept-name">{{ d.name }}</td>
+            <td class="dept-name">
+              {% if d.dept_key == 'Overall' %}
+                <span style="display:inline-flex;align-items:center;gap:6px;color:#0d9488;">🌐 {{ d.name }}</span>
+              {% else %}
+                {{ d.name }}
+              {% endif %}
+            </td>
             <td style="text-align: center;">
               <span class="badge badge-gray">{{ d.registered }}</span>
             </td>
@@ -173,10 +179,10 @@
             </td>
             <td>
               <div class="actions" style="justify-content: center;">
-                <a href="/shared/analysis?dept={{ d.name | urlencode }}&token={{ d.token_pre }}&type=pre" target="_blank" class="btn btn-pre">
+                <a href="/shared/analysis?dept={{ (d.dept_key or d.name) | urlencode }}&token={{ d.token_pre }}&type=pre" target="_blank" class="btn btn-pre">
                   📈 Pre Survey
                 </a>
-                <a href="/shared/analysis?dept={{ d.name | urlencode }}&token={{ d.token_post }}&type=post" target="_blank" class="btn btn-post">
+                <a href="/shared/analysis?dept={{ (d.dept_key or d.name) | urlencode }}&token={{ d.token_post }}&type=post" target="_blank" class="btn btn-post">
                   📊 Post Survey
                 </a>
               </div>

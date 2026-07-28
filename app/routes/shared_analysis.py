@@ -44,6 +44,9 @@ async def shared_analysis_get(
     if not verify_token(dept, token, survey_type):
         raise HTTPException(status_code=403, detail="Access denied: Invalid or expired sharing link.")
 
+    from app.db import get_dept_analysis_data
+    analysis_data = await get_dept_analysis_data()
+
     # Fetch users for this department
     users_list = await list_survey_users(dept=dept)
     
@@ -51,6 +54,22 @@ async def shared_analysis_get(
     pre_done = sum(1 for u in users_list if u.get("status") in ("pre_done", "post_done"))
     post_done = sum(1 for u in users_list if u.get("status") == "post_done")
     pending = pre_done - post_done
+
+    # Find department or overall scores
+    dept_info = None
+    if dept.lower() in ("overall", "all", "all departments"):
+        dept_info = analysis_data["overall"]
+    else:
+        for d in analysis_data["departments"]:
+            if d["dept"].strip().lower() == dept.strip().lower():
+                dept_info = d
+                break
+    if not dept_info:
+        dept_info = {
+            "dept": dept,
+            "avg_lit_pre": None, "avg_read_pre": None,
+            "avg_lit_post": None, "avg_read_post": None,
+        }
 
     return request.app.state.templates.TemplateResponse(
         request,
@@ -63,8 +82,13 @@ async def shared_analysis_get(
             "pre_done": pre_done,
             "post_done": post_done,
             "pending": pending,
+            "dept_info": dept_info,
+            "overall_info": analysis_data["overall"],
+            "dept_list": analysis_data["departments"],
+            "rankings": analysis_data["rankings"],
         }
     )
+
 
 @router.get("/shared/analysis/export-excel")
 async def shared_export_excel(
@@ -246,23 +270,35 @@ async def shared_chart_h1(
 
 @router.get("/shared/departments", response_class=HTMLResponse)
 async def shared_departments_list(request: Request):
-    from app.db import get_dept_stats
-    raw_stats = await get_dept_stats()
+    from app.db import get_dept_analysis_data
+    analysis_data = await get_dept_analysis_data()
     
     dept_list = []
-    for item in raw_stats:
+    # 1. Add Overall entry at top
+    ov = analysis_data["overall"]
+    dept_list.append({
+        "name": "Overall (All Departments)",
+        "dept_key": "Overall",
+        "registered": ov["registered"],
+        "pre_done": ov["pre_done"],
+        "post_done": ov["post_done"],
+        "token_pre": ov["token_pre"],
+        "token_post": ov["token_post"]
+    })
+
+    # 2. Add individual departments
+    for item in analysis_data["departments"]:
         dept = item["dept"]
         if not dept:
             continue
-        token_pre = get_dept_token(dept, "pre")
-        token_post = get_dept_token(dept, "post")
         dept_list.append({
             "name": dept,
+            "dept_key": dept,
             "registered": item["registered"],
             "pre_done": item["pre_done"],
             "post_done": item["post_done"],
-            "token_pre": token_pre,
-            "token_post": token_post
+            "token_pre": item["token_pre"],
+            "token_post": item["token_post"]
         })
         
     return request.app.state.templates.TemplateResponse(
@@ -272,3 +308,4 @@ async def shared_departments_list(request: Request):
             "dept_list": dept_list,
         }
     )
+
