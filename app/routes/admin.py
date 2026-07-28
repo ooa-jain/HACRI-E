@@ -351,6 +351,15 @@ async def api_survey_dept_analysis(request: Request):
     return JSONResponse(await get_dept_analysis_data())
 
 
+@router.get("/admin/api/survey/date-analysis")
+async def api_survey_date_analysis(request: Request):
+    if not _is_survey_admin(request):
+        raise HTTPException(status_code=403)
+    from app.db import get_date_analysis_data
+    return JSONResponse(await get_date_analysis_data())
+
+
+
 @router.get("/admin/api/survey/dept-stats")
 async def api_survey_dept_stats(request: Request):
     if not _is_survey_admin(request):

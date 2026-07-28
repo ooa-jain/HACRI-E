@@ -154,3 +154,32 @@ async def test_overall_department_analysis(client: AsyncClient):
     assert data["rankings"]["lit_pre"]["highest"]["dept"] == "Engineering"
     assert data["rankings"]["lit_pre"]["lowest"]["dept"] == "Business"
 
+
+@pytest.mark.asyncio
+async def test_calendar_date_analysis(client: AsyncClient):
+    db = get_db()
+    from datetime import datetime, timezone
+    now = datetime.now(timezone.utc)
+
+    await db["users"].insert_one({
+        "email": "student1@eng.com", "name": "Eng Student", "program": "Engineering", "status": STATUS_POST_DONE
+    })
+    await db["pre_responses"].insert_one({
+        "email": "student1@eng.com", "submitted_at": now, "fields": {"B1": 4}
+    })
+
+    client.cookies.set("survey_admin_session", "1")
+    resp = await client.get("/admin/api/survey/date-analysis")
+    assert resp.status_code == 200
+    data = resp.json()
+
+    assert "overall" in data
+    assert "departments" in data
+    assert "highlights" in data
+    assert data["overall"]["total_responses"] == 1
+    assert data["overall"]["today_total"] == 1
+    assert data["departments"][0]["dept"] == "Engineering"
+    assert data["departments"][0]["start_date"] == now.strftime("%Y-%m-%d")
+    assert data["departments"][0]["max_day"]["total"] == 1
+
+

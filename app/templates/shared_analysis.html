@@ -450,6 +450,9 @@ body {
         </div>
         <div style="font-size: 12px; color: #15803d; font-weight: 600;">
           Score: {{ r_lit.highest.score if r_lit and r_lit.highest else 'N/A' }} / 5.0
+          {% if r_lit and r_lit.highest and r_lit.highest.filled_count is defined %}
+            <span style="font-size: 11px; opacity: 0.85; margin-left: 4px;">({{ r_lit.highest.filled_count }} filled)</span>
+          {% endif %}
         </div>
       </div>
 
@@ -460,6 +463,9 @@ body {
         </div>
         <div style="font-size: 12px; color: #b91c1c; font-weight: 600;">
           Score: {{ r_lit.lowest.score if r_lit and r_lit.lowest else 'N/A' }} / 5.0
+          {% if r_lit and r_lit.lowest and r_lit.lowest.filled_count is defined %}
+            <span style="font-size: 11px; opacity: 0.85; margin-left: 4px;">({{ r_lit.lowest.filled_count }} filled)</span>
+          {% endif %}
         </div>
       </div>
 
@@ -470,6 +476,9 @@ body {
         </div>
         <div style="font-size: 12px; color: #0f766e; font-weight: 600;">
           Score: {{ r_read.highest.score if r_read and r_read.highest else 'N/A' }} / 5.0
+          {% if r_read and r_read.highest and r_read.highest.filled_count is defined %}
+            <span style="font-size: 11px; opacity: 0.85; margin-left: 4px;">({{ r_read.highest.filled_count }} filled)</span>
+          {% endif %}
         </div>
       </div>
 
@@ -480,6 +489,9 @@ body {
         </div>
         <div style="font-size: 12px; color: #b45309; font-weight: 600;">
           Score: {{ r_read.lowest.score if r_read and r_read.lowest else 'N/A' }} / 5.0
+          {% if r_read and r_read.lowest and r_read.lowest.filled_count is defined %}
+            <span style="font-size: 11px; opacity: 0.85; margin-left: 4px;">({{ r_read.lowest.filled_count }} filled)</span>
+          {% endif %}
         </div>
       </div>
     </div>

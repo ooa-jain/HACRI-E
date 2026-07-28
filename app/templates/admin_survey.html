@@ -84,6 +84,9 @@
         <button class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-800/60 transition" onclick="show('p-dept-analysis', this)">
           <span class="text-base">🏢</span> <span>Department Analysis</span>
         </button>
+        <button class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-800/60 transition" onclick="show('p-date-analysis', this)">
+          <span class="text-base">📅</span> <span>Calendar &amp; Date Analysis</span>
+        </button>
         <button class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-800/60 transition" onclick="show('p-time-analysis', this)">
           <span class="text-base">⏱️</span> <span>Student Time Analysis</span>
         </button>
@@ -982,6 +985,134 @@
             </table>
           </div>
         </div>
+      <!-- 11. CALENDAR & DATE ANALYSIS PANEL -->
+      <div class="panel" id="p-date-analysis">
+        <div class="space-y-6">
+          <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                <span>📅</span> <span>Department Calendar &amp; Date-Wise Response Analysis</span>
+              </h2>
+              <p class="text-xs text-slate-500">Track when each department started survey filling, today's filling status, and peak (Max) &amp; lowest (Min) activity days.</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <button onclick="loadDateAnalysis()" class="bg-blue-50 text-blue-700 hover:bg-blue-100 text-xs font-bold px-3.5 py-2 rounded-lg transition flex items-center gap-1.5">
+                <span>🔄</span> <span>Refresh Calendar Data</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Overall Calendar Stat Cards -->
+          <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm border-l-4 border-l-blue-600">
+              <div id="cal-stat-start" class="text-base font-extrabold text-blue-600 truncate">Loading…</div>
+              <div class="text-[11px] font-medium text-slate-500 mt-1">Survey Start Date</div>
+            </div>
+            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm border-l-4 border-l-emerald-600">
+              <div id="cal-stat-today" class="text-xl font-extrabold text-emerald-600">0</div>
+              <div class="text-[11px] font-medium text-slate-500 mt-1">Submissions Filled Today</div>
+            </div>
+            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm border-l-4 border-l-amber-500">
+              <div id="cal-stat-max" class="text-base font-extrabold text-amber-600 truncate">—</div>
+              <div class="text-[11px] font-medium text-slate-500 mt-1">Peak Day Overall (Max)</div>
+            </div>
+            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm border-l-4 border-l-rose-500">
+              <div id="cal-stat-min" class="text-base font-extrabold text-rose-600 truncate">—</div>
+              <div class="text-[11px] font-medium text-slate-500 mt-1">Lowest Day Overall (Min)</div>
+            </div>
+            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm border-l-4 border-l-indigo-600">
+              <div id="cal-stat-active" class="text-xl font-extrabold text-indigo-600">0</div>
+              <div class="text-[11px] font-medium text-slate-500 mt-1">Total Active Filling Days</div>
+            </div>
+          </div>
+
+          <!-- Key Calendar Highlights Cards -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="bg-gradient-to-r from-teal-900 to-slate-900 text-white p-5 rounded-xl border border-teal-800 shadow-md">
+              <div class="text-[10px] font-extrabold text-teal-400 uppercase tracking-wider">🚀 Earliest Started Department</div>
+              <div id="cal-hl-start-dept" class="text-base font-extrabold text-white mt-1">Loading…</div>
+              <div id="cal-hl-start-date" class="text-xs text-teal-200 font-semibold mt-0.5">Started on: —</div>
+            </div>
+
+            <div class="bg-gradient-to-r from-emerald-900 to-slate-900 text-white p-5 rounded-xl border border-emerald-800 shadow-md">
+              <div class="text-[10px] font-extrabold text-emerald-400 uppercase tracking-wider">🏆 Highest Peak Filling Day</div>
+              <div id="cal-hl-max-dept" class="text-base font-extrabold text-white mt-1">Loading…</div>
+              <div id="cal-hl-max-details" class="text-xs text-emerald-200 font-semibold mt-0.5">Peak Date &amp; Count: —</div>
+            </div>
+
+            <div class="bg-gradient-to-r from-rose-900 to-slate-900 text-white p-5 rounded-xl border border-rose-800 shadow-md">
+              <div class="text-[10px] font-extrabold text-rose-400 uppercase tracking-wider">📉 Lowest Filling Day</div>
+              <div id="cal-hl-min-dept" class="text-base font-extrabold text-white mt-1">Loading…</div>
+              <div id="cal-hl-min-details" class="text-xs text-rose-200 font-semibold mt-0.5">Lowest Date &amp; Count: —</div>
+            </div>
+          </div>
+
+          <!-- Interactive Filterable Daily Submissions Chart -->
+          <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-3">
+              <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <span>📈</span> <span>Daily Survey Filling Timeline (Calendar View)</span>
+              </h3>
+
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-semibold text-slate-600">Filter Department:</span>
+                <select id="sel-cal-dept" onchange="renderCalendarChart()" class="px-3 py-1.5 border border-slate-200 rounded-lg text-xs bg-white font-medium focus:outline-none max-w-xs">
+                  <option value="Overall">Overall (All Departments Combined)</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="relative h-80 w-full">
+              <canvas id="calDailySubmissionsChart"></canvas>
+            </div>
+          </div>
+
+          <!-- Department Calendar Overview Table -->
+          <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
+            <h3 class="text-sm font-bold text-slate-900">🏢 Department-Wise Calendar Filling Summary</h3>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold">
+                    <th class="p-3">#</th>
+                    <th class="p-3">Department Name</th>
+                    <th class="p-3">Start Date</th>
+                    <th class="p-3">Today's Submissions</th>
+                    <th class="p-3">Peak (Max) Day &amp; Count</th>
+                    <th class="p-3">Lowest (Min) Day &amp; Count</th>
+                    <th class="p-3">Active Filling Days</th>
+                    <th class="p-3">Total Responses</th>
+                  </tr>
+                </thead>
+                <tbody id="cal-dept-tbody" class="divide-y divide-slate-100">
+                  <tr><td colspan="8" class="text-center p-6 text-slate-400">Loading department calendar data…</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Daily Breakdown Table -->
+          <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
+            <h3 class="text-sm font-bold text-slate-900">📅 Day-by-Day Calendar Submissions Log</h3>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold">
+                    <th class="p-3">#</th>
+                    <th class="p-3">Calendar Date</th>
+                    <th class="p-3">Baseline (Pre) Submissions</th>
+                    <th class="p-3">Post-Workshop Submissions</th>
+                    <th class="p-3">Total Submissions on Day</th>
+                    <th class="p-3">Activity Status</th>
+                  </tr>
+                </thead>
+                <tbody id="cal-daily-tbody" class="divide-y divide-slate-100">
+                  <tr><td colspan="6" class="text-center p-6 text-slate-400">Loading daily submissions log…</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
       </div>
 
     </main>
@@ -1043,6 +1174,7 @@ function show(panelId, btn) {
 
   if (panelId === 'p-email-notifications') loadEmailNotificationStats();
   if (panelId === 'p-dept-analysis') loadDeptStats();
+  if (panelId === 'p-date-analysis') loadDateAnalysis();
   if (panelId === 'p-bg-analysis') loadBgAnalysis();
   if (panelId === 'p-time-analysis') loadTimeAnalysis();
   if (panelId === 'p-timeline') { loadTimelineDepts(); loadTimeline(); }
@@ -1762,17 +1894,33 @@ function renderRankings(rankings, type) {
   const rLit = type === 'post' ? rankings.lit_post : rankings.lit_pre;
   const rRead = type === 'post' ? rankings.read_post : rankings.read_pre;
 
-  if (document.getElementById('rank-hi-lit-dept')) document.getElementById('rank-hi-lit-dept').textContent = (rLit && rLit.highest) ? rLit.highest.dept : 'N/A';
-  if (document.getElementById('rank-hi-lit-score')) document.getElementById('rank-hi-lit-score').textContent = (rLit && rLit.highest) ? `Score: ${rLit.highest.score} / 5.0` : 'Score: —';
+  function fmtRank(r) {
+    if (!r) return { dept: 'N/A', text: 'Score: —' };
+    const dept = r.dept || 'N/A';
+    const score = (r.score !== undefined && r.score !== null) ? r.score : '—';
+    const count = (r.filled_count !== undefined) ? r.filled_count : ((r.count !== undefined) ? r.count : 0);
+    return {
+      dept: dept,
+      text: `Score: ${score} / 5.0 (${count} filled)`
+    };
+  }
 
-  if (document.getElementById('rank-lo-lit-dept')) document.getElementById('rank-lo-lit-dept').textContent = (rLit && rLit.lowest) ? rLit.lowest.dept : 'N/A';
-  if (document.getElementById('rank-lo-lit-score')) document.getElementById('rank-lo-lit-score').textContent = (rLit && rLit.lowest) ? `Score: ${rLit.lowest.score} / 5.0` : 'Score: —';
+  const hLit = fmtRank(rLit ? rLit.highest : null);
+  const lLit = fmtRank(rLit ? rLit.lowest : null);
+  const hRead = fmtRank(rRead ? rRead.highest : null);
+  const lRead = fmtRank(rRead ? rRead.lowest : null);
 
-  if (document.getElementById('rank-hi-read-dept')) document.getElementById('rank-hi-read-dept').textContent = (rRead && rRead.highest) ? rRead.highest.dept : 'N/A';
-  if (document.getElementById('rank-hi-read-score')) document.getElementById('rank-hi-read-score').textContent = (rRead && rRead.highest) ? `Score: ${rRead.highest.score} / 5.0` : 'Score: —';
+  if (document.getElementById('rank-hi-lit-dept')) document.getElementById('rank-hi-lit-dept').textContent = hLit.dept;
+  if (document.getElementById('rank-hi-lit-score')) document.getElementById('rank-hi-lit-score').textContent = hLit.text;
 
-  if (document.getElementById('rank-lo-read-dept')) document.getElementById('rank-lo-read-dept').textContent = (rRead && rRead.lowest) ? rRead.lowest.dept : 'N/A';
-  if (document.getElementById('rank-lo-read-score')) document.getElementById('rank-lo-read-score').textContent = (rRead && rRead.lowest) ? `Score: ${rRead.lowest.score} / 5.0` : 'Score: —';
+  if (document.getElementById('rank-lo-lit-dept')) document.getElementById('rank-lo-lit-dept').textContent = lLit.dept;
+  if (document.getElementById('rank-lo-lit-score')) document.getElementById('rank-lo-lit-score').textContent = lLit.text;
+
+  if (document.getElementById('rank-hi-read-dept')) document.getElementById('rank-hi-read-dept').textContent = hRead.dept;
+  if (document.getElementById('rank-hi-read-score')) document.getElementById('rank-hi-read-score').textContent = hRead.text;
+
+  if (document.getElementById('rank-lo-read-dept')) document.getElementById('rank-lo-read-dept').textContent = lRead.dept;
+  if (document.getElementById('rank-lo-read-score')) document.getElementById('rank-lo-read-score').textContent = lRead.text;
 }
 
 function renderAdminDeptBarChart(depts, type) {
@@ -2043,6 +2191,180 @@ async function loadTimeline() {
       `;
     }).join('');
   } catch(err) { console.error(err); }
+}
+
+// CALENDAR & DATE ANALYSIS LOGIC
+let dateAnalysisData = null;
+let calChartInstance = null;
+
+async function loadDateAnalysis() {
+  const deptTbody = document.getElementById('cal-dept-tbody');
+  const dailyTbody = document.getElementById('cal-daily-tbody');
+  if (deptTbody) deptTbody.innerHTML = '<tr><td colspan="8" class="text-center p-6 text-slate-400">Loading department calendar data…</td></tr>';
+  if (dailyTbody) dailyTbody.innerHTML = '<tr><td colspan="6" class="text-center p-6 text-slate-400">Loading daily submissions log…</td></tr>';
+
+  try {
+    const r = await fetch('/admin/api/survey/date-analysis');
+    if (!r.ok) throw new Error('Failed to fetch calendar analysis');
+    dateAnalysisData = await r.json();
+    renderDateAnalysisUI(dateAnalysisData);
+  } catch (err) {
+    console.error('Error loading date analysis:', err);
+    if (deptTbody) deptTbody.innerHTML = `<tr><td colspan="8" class="text-center p-6 text-rose-500">Error loading data: ${e(err.message)}</td></tr>`;
+    if (dailyTbody) dailyTbody.innerHTML = `<tr><td colspan="6" class="text-center p-6 text-rose-500">Error loading data: ${e(err.message)}</td></tr>`;
+  }
+}
+
+function renderDateAnalysisUI(data) {
+  if (!data) return;
+  const ov = data.overall || {};
+  const depts = data.departments || [];
+  const hl = data.highlights || {};
+
+  // Overall Stat Cards
+  if (document.getElementById('cal-stat-start')) document.getElementById('cal-stat-start').textContent = ov.start_date || 'Not Started';
+  if (document.getElementById('cal-stat-today')) document.getElementById('cal-stat-today').textContent = `${ov.today_total || 0} (${ov.today_pre || 0} pre, ${ov.today_post || 0} post)`;
+  if (document.getElementById('cal-stat-max')) {
+    document.getElementById('cal-stat-max').textContent = ov.max_day ? `${ov.max_day.date} (${ov.max_day.total} filled)` : 'N/A';
+  }
+  if (document.getElementById('cal-stat-min')) {
+    document.getElementById('cal-stat-min').textContent = ov.min_day ? `${ov.min_day.date} (${ov.min_day.total} filled)` : 'N/A';
+  }
+  if (document.getElementById('cal-stat-active')) document.getElementById('cal-stat-active').textContent = ov.active_days || 0;
+
+  // Key Highlights Cards
+  if (document.getElementById('cal-hl-start-dept')) document.getElementById('cal-hl-start-dept').textContent = (hl.first_started_dept && hl.first_started_dept.dept) ? hl.first_started_dept.dept : 'None';
+  if (document.getElementById('cal-hl-start-date')) document.getElementById('cal-hl-start-date').textContent = (hl.first_started_dept && hl.first_started_dept.start_date) ? `Started on: ${hl.first_started_dept.start_date}` : 'Started on: N/A';
+
+  if (document.getElementById('cal-hl-max-dept')) document.getElementById('cal-hl-max-dept').textContent = (hl.highest_single_day && hl.highest_single_day.dept) ? hl.highest_single_day.dept : 'None';
+  if (document.getElementById('cal-hl-max-details')) document.getElementById('cal-hl-max-details').textContent = (hl.highest_single_day && hl.highest_single_day.date) ? `Peak Date: ${hl.highest_single_day.date} (${hl.highest_single_day.count} responses)` : 'Peak Date: N/A';
+
+  if (document.getElementById('cal-hl-min-dept')) document.getElementById('cal-hl-min-dept').textContent = (hl.lowest_single_day && hl.lowest_single_day.dept) ? hl.lowest_single_day.dept : 'None';
+  if (document.getElementById('cal-hl-min-details')) document.getElementById('cal-hl-min-details').textContent = (hl.lowest_single_day && hl.lowest_single_day.date) ? `Lowest Date: ${hl.lowest_single_day.date} (${hl.lowest_single_day.count} responses)` : 'Lowest Date: N/A';
+
+  // Populate Department Selector Dropdown
+  const select = document.getElementById('sel-cal-dept');
+  if (select) {
+    const cur = select.value;
+    select.innerHTML = '<option value="Overall">Overall (All Departments Combined)</option>' + depts.map(d => `<option value="${e(d.dept)}">${e(d.dept)}</option>`).join('');
+    if (cur && Array.from(select.options).some(o => o.value === cur)) select.value = cur;
+  }
+
+  // Render Department Table
+  renderDeptCalendarTable(depts);
+
+  // Render Daily Submissions Timeline Table
+  renderDailyTimelineTable(ov.daily_timeline || [], data.today_date);
+
+  // Render Chart
+  renderCalendarChart();
+}
+
+function renderDeptCalendarTable(depts) {
+  const tbody = document.getElementById('cal-dept-tbody');
+  if (!tbody) return;
+  if (!depts.length) {
+    tbody.innerHTML = '<tr><td colspan="8" class="text-center p-6 text-slate-400">No department calendar data found</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = depts.map((d, i) => `
+    <tr class="hover:bg-slate-50 transition">
+      <td class="p-3 text-slate-400">${i + 1}</td>
+      <td class="p-3 font-semibold text-slate-900">${e(d.dept)}</td>
+      <td class="p-3 text-slate-700 font-bold"><span class="badge bg-blue">${d.start_date || 'Not Started'}</span></td>
+      <td class="p-3 font-bold text-emerald-600">${d.today_total > 0 ? `<span class="badge bg-green">✨ ${d.today_total} today</span>` : '<span class="text-slate-400">0 today</span>'}</td>
+      <td class="p-3 text-amber-700 font-bold">${d.max_day ? `🏆 ${d.max_day.date} (${d.max_day.total})` : '—'}</td>
+      <td class="p-3 text-rose-700 font-bold">${d.min_day ? `📉 ${d.min_day.date} (${d.min_day.total})` : '—'}</td>
+      <td class="p-3"><span class="badge bg-gray">${d.active_days} days</span></td>
+      <td class="p-3 font-extrabold text-slate-900">${d.total_responses}</td>
+    </tr>
+  `).join('');
+}
+
+function renderDailyTimelineTable(timeline, todayStr) {
+  const tbody = document.getElementById('cal-daily-tbody');
+  if (!tbody) return;
+  if (!timeline.length) {
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center p-6 text-slate-400">No daily submissions logged yet</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = timeline.slice().reverse().map((t, i) => {
+    const isToday = t.date === todayStr;
+    return `
+      <tr class="hover:bg-slate-50 transition ${isToday ? 'bg-emerald-50/60 font-semibold' : ''}">
+        <td class="p-3 text-slate-400">${i + 1}</td>
+        <td class="p-3 font-bold text-slate-900">${e(t.date)} ${isToday ? '<span class="badge bg-green ml-1">Today</span>' : ''}</td>
+        <td class="p-3 text-teal-700 font-bold">${t.pre}</td>
+        <td class="p-3 text-emerald-700 font-bold">${t.post}</td>
+        <td class="p-3 text-slate-900 font-extrabold">${t.total}</td>
+        <td class="p-3">${t.total > 10 ? '<span class="badge bg-green">High Volume</span>' : t.total > 0 ? '<span class="badge bg-blue">Active</span>' : '<span class="badge bg-gray">Quiet</span>'}</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function renderCalendarChart() {
+  if (!dateAnalysisData || typeof Chart === 'undefined') return;
+  const select = document.getElementById('sel-cal-dept');
+  const deptName = select ? select.value : 'Overall';
+
+  let targetStats = null;
+  if (deptName === 'Overall') {
+    targetStats = dateAnalysisData.overall;
+  } else {
+    targetStats = (dateAnalysisData.departments || []).find(d => d.dept === deptName);
+  }
+
+  const canvas = document.getElementById('calDailySubmissionsChart');
+  if (!canvas || !targetStats) return;
+
+  const timeline = targetStats.daily_timeline || [];
+  const labels = timeline.map(t => t.date);
+  const preData = timeline.map(t => t.pre);
+  const postData = timeline.map(t => t.post);
+
+  if (calChartInstance) {
+    calChartInstance.data.labels = labels;
+    calChartInstance.data.datasets[0].data = preData;
+    calChartInstance.data.datasets[1].data = postData;
+    calChartInstance.update();
+  } else {
+    const ctx = canvas.getContext('2d');
+    calChartInstance = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: 'Baseline (Pre) Submissions',
+            data: preData,
+            backgroundColor: '#0d9488',
+            borderRadius: 4
+          },
+          {
+            label: 'Post-Workshop Submissions',
+            data: postData,
+            backgroundColor: '#10b981',
+            borderRadius: 4
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          x: { stacked: true },
+          y: { stacked: true, beginAtZero: true, ticks: { precision: 0 } }
+        },
+        plugins: {
+          legend: { position: 'top' },
+          tooltip: { mode: 'index', intersect: false }
+        }
+      }
+    });
+  }
 }
 
 (async()=>{ await loadFlags(); await loadUsers(); })();

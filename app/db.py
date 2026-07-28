@@ -545,9 +545,25 @@ async def get_dept_analysis_data() -> dict[str, Any]:
         if not valid:
             return {"highest": None, "lowest": None}
         sorted_depts = sorted(valid, key=lambda x: x[key], reverse=True)
+        count_key = "post_count" if "post" in key else "pre_count"
+        done_key = "post_done" if "post" in key else "pre_done"
+        
+        hi = sorted_depts[0]
+        lo = sorted_depts[-1]
+
         return {
-            "highest": {"dept": sorted_depts[0]["dept"], "score": sorted_depts[0][key]},
-            "lowest": {"dept": sorted_depts[-1]["dept"], "score": sorted_depts[-1][key]}
+            "highest": {
+                "dept": hi["dept"],
+                "score": hi[key],
+                "filled_count": hi.get(count_key, hi.get(done_key, 0)),
+                "registered": hi.get("registered", 0),
+            },
+            "lowest": {
+                "dept": lo["dept"],
+                "score": lo[key],
+                "filled_count": lo.get(count_key, lo.get(done_key, 0)),
+                "registered": lo.get("registered", 0),
+            }
         }
 
     rankings = {
@@ -691,3 +707,161 @@ async def verify_admin_otp(username: str, otp: str) -> bool:
         await db["admin_otps"].delete_one({"username": username})
         return True
     return False
+
+
+async def get_date_analysis_data() -> dict[str, Any]:
+    """
+    Calculate calendar and date-wise survey response metrics per department and overall.
+    Tracks start date, today's filling count, peak (Max) day, and lowest (Min) day per department.
+    """
+    db = get_db()
+    today_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
+    # Map email to program (department)
+    email_to_dept: dict[str, str] = {}
+    async for u in db[USERS].find({}):
+        email = u.get("email")
+        if email:
+            dept = u.get("program") or "Other"
+            email_to_dept[email] = dept.strip() or "Other"
+
+    # Structure: dept -> date_str -> {"pre": int, "post": int, "total": int}
+    dept_daily: dict[str, dict[str, dict[str, int]]] = {}
+    overall_daily: dict[str, dict[str, int]] = {}
+
+    def add_entry(dept_name: str, dt: Any, survey_kind: str):
+        if not isinstance(dt, datetime):
+            return
+        date_str = dt.strftime("%Y-%m-%d")
+
+        if dept_name not in dept_daily:
+            dept_daily[dept_name] = {}
+        if date_str not in dept_daily[dept_name]:
+            dept_daily[dept_name][date_str] = {"pre": 0, "post": 0, "total": 0}
+        dept_daily[dept_name][date_str][survey_kind] += 1
+        dept_daily[dept_name][date_str]["total"] += 1
+
+        if date_str not in overall_daily:
+            overall_daily[date_str] = {"pre": 0, "post": 0, "total": 0}
+        overall_daily[date_str][survey_kind] += 1
+        overall_daily[date_str]["total"] += 1
+
+    async for doc in db[PRE].find({}):
+        email = doc.get("email")
+        dept_name = email_to_dept.get(email, "Other")
+        sub_at = doc.get("submitted_at")
+        add_entry(dept_name, sub_at, "pre")
+
+    async for doc in db[POST].find({}):
+        email = doc.get("email")
+        dept_name = email_to_dept.get(email, "Other")
+        sub_at = doc.get("submitted_at")
+        add_entry(dept_name, sub_at, "post")
+
+    def compute_calendar_stats(daily_dict: dict[str, dict[str, int]], d_name: str):
+        if not daily_dict:
+            return {
+                "dept": d_name,
+                "start_date": "Not Started",
+                "latest_date": "No Data",
+                "active_days": 0,
+                "today_pre": 0,
+                "today_post": 0,
+                "today_total": 0,
+                "total_responses": 0,
+                "max_day": None,
+                "min_day": None,
+                "daily_timeline": [],
+            }
+
+        sorted_dates = sorted(daily_dict.keys())
+        start_date = sorted_dates[0]
+        latest_date = sorted_dates[-1]
+        active_days = len(sorted_dates)
+        total_responses = sum(daily_dict[d]["total"] for d in sorted_dates)
+
+        today_info = daily_dict.get(today_str, {"pre": 0, "post": 0, "total": 0})
+
+        max_date = max(sorted_dates, key=lambda d: (daily_dict[d]["total"], d))
+        max_day_info = {
+            "date": max_date,
+            "total": daily_dict[max_date]["total"],
+            "pre": daily_dict[max_date]["pre"],
+            "post": daily_dict[max_date]["post"],
+        }
+
+        min_date = min(sorted_dates, key=lambda d: (daily_dict[d]["total"], d))
+        min_day_info = {
+            "date": min_date,
+            "total": daily_dict[min_date]["total"],
+            "pre": daily_dict[min_date]["pre"],
+            "post": daily_dict[min_date]["post"],
+        }
+
+        timeline = []
+        for d_str in sorted_dates:
+            timeline.append({
+                "date": d_str,
+                "pre": daily_dict[d_str]["pre"],
+                "post": daily_dict[d_str]["post"],
+                "total": daily_dict[d_str]["total"],
+            })
+
+        return {
+            "dept": d_name,
+            "start_date": start_date,
+            "latest_date": latest_date,
+            "active_days": active_days,
+            "today_pre": today_info["pre"],
+            "today_post": today_info["post"],
+            "today_total": today_info["total"],
+            "total_responses": total_responses,
+            "max_day": max_day_info,
+            "min_day": min_day_info,
+            "daily_timeline": timeline,
+        }
+
+    overall_stats = compute_calendar_stats(overall_daily, "Overall")
+
+    dept_summaries = []
+    for dept_name in sorted(dept_daily.keys()):
+        dept_summaries.append(compute_calendar_stats(dept_daily[dept_name], dept_name))
+
+    highest_single_day_dept = None
+    lowest_single_day_dept = None
+    first_started_dept = None
+
+    if dept_summaries:
+        valid_summaries = [d for d in dept_summaries if d["max_day"] is not None]
+        if valid_summaries:
+            sorted_by_max = sorted(valid_summaries, key=lambda x: x["max_day"]["total"], reverse=True)
+            highest_single_day_dept = {
+                "dept": sorted_by_max[0]["dept"],
+                "date": sorted_by_max[0]["max_day"]["date"],
+                "count": sorted_by_max[0]["max_day"]["total"],
+            }
+            lowest_single_day_dept = {
+                "dept": sorted_by_max[-1]["dept"],
+                "date": sorted_by_max[-1]["min_day"]["date"],
+                "count": sorted_by_max[-1]["min_day"]["total"],
+            }
+            sorted_by_start = sorted(valid_summaries, key=lambda x: x["start_date"])
+            first_started_dept = {
+                "dept": sorted_by_start[0]["dept"],
+                "start_date": sorted_by_start[0]["start_date"],
+            }
+
+    all_dates = sorted(list(overall_daily.keys()))
+
+    return {
+        "overall": overall_stats,
+        "departments": dept_summaries,
+        "all_dates": all_dates,
+        "today_date": today_str,
+        "highlights": {
+            "highest_single_day": highest_single_day_dept,
+            "lowest_single_day": lowest_single_day_dept,
+            "first_started_dept": first_started_dept,
+        }
+    }
+
