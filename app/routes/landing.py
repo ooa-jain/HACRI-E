@@ -87,6 +87,7 @@ async def landing_post(
     email:      str = Form(...),
     confirm_email: str | None = Form(default=None),
     ug_or_pg:   str = Form(default="ug"),
+    location:   str = Form(default="Bangalore"),
     education_type: str = Form(default=""),
     program:    str = Form(default=""),
     csrf:       str = Form(...),
@@ -110,6 +111,7 @@ async def landing_post(
             name=name,
             email=email,
             ug_or_pg=ug_or_pg or "ug",
+            location=location or "Bangalore",
             education_type=education_type or None,
         )
     except ValidationError as e:
@@ -122,7 +124,7 @@ async def landing_post(
         )
 
     deps.verify_csrf(csrf, hacri_csrf)
-    user = await upsert_user(identity.email, identity.name, program, identity.ug_or_pg, identity.education_type)
+    user = await upsert_user(identity.email, identity.name, program, identity.ug_or_pg, identity.education_type, location=identity.location)
 
     status_v = user.get("status")
     orientation_enabled = await get_flag(FLAG_ORIENTATION, default=False)

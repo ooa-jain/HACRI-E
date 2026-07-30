@@ -39,6 +39,7 @@ PRE_BACKGROUND: list[tuple[str, str, str, list[str]]] = [
      "select", ["Yes", "No", "Don't know"]),
     ("A6", "How would you describe your access to technology (devices, internet) during school?",
      "select", ["Excellent", "Adequate", "Limited", "Very limited"]),
+    ("A7", "Location / Campus Location", "select", ["Bangalore", "Kochi"]),
 ]
 
 # ── Pre Section C — Prior AI Usage ───────────────────────────────────────────

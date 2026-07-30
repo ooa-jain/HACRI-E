@@ -129,6 +129,7 @@ def _build_post_fields(form: Any) -> dict[str, Any]:
     fields["mother_organization_name"] = coerce_str(form.get("mother_organization_name"))
     fields["mother_business_name"] = coerce_str(form.get("mother_business_name"))
     fields["mother_business_type"] = coerce_text(form.get("mother_business_type"), max_len=500)
+    fields["location"] = coerce_str(form.get("location"))
 
     # Identical B/D/E/F/G Likert items
     for section in ("B", "D", "E", "F", "G"):

@@ -91,6 +91,7 @@ def _make_post_payload(name: str, email: str) -> dict:
         "father_occupation": "Homemaker",
         "mother_name": "Mother Name",
         "mother_occupation": "Homemaker",
+        "location": "Kochi",
         **{k: "3" for k in SCHEMA if k[0] in "BDEFG"},
         "H1": POST_REFLECTION[0][3][0],   # first option of H1
         "H2": "3",

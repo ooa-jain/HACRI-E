@@ -330,6 +330,25 @@
             </div>
           </div>
         </div>
+
+        <!-- ── Location ── -->
+        <div style="margin-top: 28px; border-top: 2px solid var(--border); padding-top: 20px;">
+          <h4
+            style="font-size: 13px; font-weight: 700; color: var(--navy); margin-bottom: 12px; padding: 8px 12px; background: #eff6ff; border-radius: 6px;">
+            📍 Location / Campus Location</h4>
+
+          <div class="question">
+            <label class="q-label" style="display: block; font-weight: 600; margin-bottom: 8px;">Select Location:</label>
+            <div class="q-body">
+              <select name="location" id="location" required
+                style="width: 100%; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 14px; outline: none; background: #fff;">
+                <option value="">-- Select Location --</option>
+                <option value="Bangalore" {% if values.get('location') == 'Bangalore' or (not values.get('location') and user and user.get('location') == 'Bangalore') %}selected{% endif %}>Bangalore</option>
+                <option value="Kochi" {% if values.get('location') == 'Kochi' or (not values.get('location') and user and user.get('location') == 'Kochi') %}selected{% endif %}>Kochi</option>
+              </select>
+            </div>
+          </div>
+        </div>
       </div>
     </fieldset>
 

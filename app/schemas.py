@@ -16,6 +16,7 @@ class UserIdentity(BaseModel):
     name: Annotated[str, Field(min_length=1, max_length=200)]
     email: EmailStr
     ug_or_pg: Annotated[str, Field(min_length=1, max_length=20)] = "ug"
+    location: Annotated[str, Field(min_length=1, max_length=50)] = "Bangalore"
     education_type: Annotated[str | None, Field(max_length=100)] = None
 
     @field_validator("name")

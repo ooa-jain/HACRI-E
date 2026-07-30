@@ -202,6 +202,7 @@ async def upsert_user(
     program: str = "",
     ug_or_pg: str | None = None,
     education_type: str | None = None,
+    location: str | None = None,
 ) -> dict:
     now = _now()
     update: dict[str, Any] = {"name": name, "program": program.strip(), "updated_at": now}
@@ -209,6 +210,8 @@ async def upsert_user(
         update["ug_or_pg"] = ug_or_pg
     if education_type is not None:
         update["education_type"] = education_type
+    if location is not None:
+        update["location"] = location
     return await get_db()[USERS].find_one_and_update(
         {"email": email},
         {
@@ -232,11 +235,20 @@ async def save_pre_response(email: str, name: str, fields: dict) -> tuple[str, d
         {"email": email, "name": name, "submitted_at": now, "fields": fields}
     )
     pre_id = str(res.inserted_id)
+    set_dict: dict[str, Any] = {
+        "status": STATUS_PRE_DONE,
+        "pre_id": pre_id,
+        "pre_submitted_at": now,
+        "updated_at": now,
+        "education_type": fields.get("A4", "")
+    }
+    loc = fields.get("A7") or fields.get("location")
+    if loc:
+        set_dict["location"] = loc
+
     user = await db[USERS].find_one_and_update(
         {"email": email},
-        {"$set": {"status": STATUS_PRE_DONE, "pre_id": pre_id,
-                  "pre_submitted_at": now, "updated_at": now,
-                  "education_type": fields.get("A4", "")}},
+        {"$set": set_dict},
         upsert=True,
         return_document=ReturnDocument.AFTER,
     )
@@ -262,10 +274,19 @@ async def save_post_response(email: str, name: str, fields: dict) -> tuple[str, 
         {"email": email, "name": name, "submitted_at": now, "fields": fields}
     )
     post_id = str(res.inserted_id)
+    set_dict: dict[str, Any] = {
+        "status": STATUS_POST_DONE,
+        "post_id": post_id,
+        "post_submitted_at": now,
+        "updated_at": now
+    }
+    loc = fields.get("location")
+    if loc:
+        set_dict["location"] = loc
+
     user = await db[USERS].find_one_and_update(
         {"email": email},
-        {"$set": {"status": STATUS_POST_DONE, "post_id": post_id,
-                  "post_submitted_at": now, "updated_at": now}},
+        {"$set": set_dict},
         upsert=True,
         return_document=ReturnDocument.AFTER,
     )
@@ -335,6 +356,7 @@ async def list_survey_users(limit: int = 10_000, dept: str | None = None, ug_or_
             "name":                 u.get("name", ""),
             "program":              u.get("program", ""),
             "ug_or_pg":             u.get("ug_or_pg", "ug"),
+            "location":              u.get("location", "Bangalore"),
             "education_type":      u.get("education_type", ""),
             "status":              u.get("status") or "not_started",
             "orientation_submitted": u.get("orientation_submitted", False),
