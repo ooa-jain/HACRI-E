@@ -52,7 +52,7 @@ _OTP_TTL = 10 * 60  # 10 minutes
 async def survey_request_otp(request: Request, username: str = Form(...)):
     """Generate & email a 6-digit OTP to the admin email, then redirect back to login form."""
     username = username.strip()
-    if username == settings.survey_admin_username:
+    if username in (settings.survey_admin_username, settings.admin_username):
         email = settings.survey_admin_otp_email
         portal_name = "HACRI-E Survey Admin"
     elif username == settings.orientation_admin_username:
@@ -136,7 +136,7 @@ async def general_admin_login_get(request: Request):
 async def general_admin_login_post(
     request: Request,
     username: str = Form(...),
-    password: str = Form(...)  # This acts as the OTP
+    password: str = Form(...)  # This acts as the password or OTP
 ):
     username = username.strip()
     otp = password.strip()
@@ -146,7 +146,8 @@ async def general_admin_login_post(
         _set_cookie(r, _ORI_COOKIE, settings.cookie_secure, settings.cookie_samesite)
         return r
 
-    if username == settings.survey_admin_username and otp == settings.survey_admin_password:
+    if (username in (settings.survey_admin_username, settings.admin_username)) and \
+       (otp in (settings.survey_admin_password, settings.admin_password)):
         r = RedirectResponse(url="/admin/survey", status_code=303)
         _set_cookie(r, _SURVEY_COOKIE, settings.cookie_secure, settings.cookie_samesite)
         return r
@@ -154,7 +155,7 @@ async def general_admin_login_post(
     from app.db import verify_admin_otp
     is_valid = await verify_admin_otp(username, otp)
     if is_valid:
-        if username == settings.survey_admin_username:
+        if username in (settings.survey_admin_username, settings.admin_username):
             r = RedirectResponse(url="/admin/survey", status_code=303)
             _set_cookie(r, _SURVEY_COOKIE, settings.cookie_secure, settings.cookie_samesite)
             return r
@@ -163,14 +164,14 @@ async def general_admin_login_post(
             _set_cookie(r, _ORI_COOKIE, settings.cookie_secure, settings.cookie_samesite)
             return r
     else:
-        err_msg = "Invalid credentials or expired OTP. Please request a new one."
+        err_msg = "Invalid username or password / OTP."
 
     return request.app.state.templates.TemplateResponse(
         request, "admin_login.html",
         {
             "error": err_msg,
             "title": "Admin Login",
-            "otp_sent": True,
+            "otp_sent": False,
             "otp_username": username,
             "otp_email_hint": "registered admin email"
         },

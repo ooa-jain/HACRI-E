@@ -19,7 +19,9 @@ class Settings(BaseSettings):
     cookie_samesite: str = "lax"
     generated_root: Path = Path("generated")
 
-    # Two separate admin accounts
+    # Admin accounts
+    admin_username: str = "admin"
+    admin_password: str = "admin123"
     survey_admin_username: str = "survey"
     survey_admin_password: str = "survey2026"
     orientation_admin_username: str = "deeksha_admin"
