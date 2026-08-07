@@ -70,9 +70,18 @@
 
     <header class="sticky top-0 z-40 bg-white border-b border-slate-200 px-4 md:px-6 py-3 flex flex-wrap items-center gap-3">
       <button onclick="toggleSidebar()" class="md:hidden btn btn-soft">☰</button>
-      <div class="mr-auto">
+      <div>
         <h1 id="page-title" class="text-sm font-bold text-slate-900">Overview</h1>
         <p id="page-sub" class="text-xs text-slate-500">Cohort progress at a glance</p>
+      </div>
+
+      <!-- Global student lookup — searches everyone, ignoring the filters. -->
+      <div class="relative flex-1 min-w-[220px] max-w-md mx-auto" id="lookup-wrap">
+        <input id="lookup" class="field w-full" autocomplete="off"
+               placeholder="🔍 Find any student by name or email…"
+               oninput="lookupTyped()" onkeydown="lookupKey(event)" onfocus="lookupTyped()">
+        <div id="lookup-results"
+             class="hidden absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg z-50 overflow-hidden max-h-96 overflow-y-auto"></div>
       </div>
 
       <select id="level-filter" onchange="applyFilters()" class="field w-auto" title="Academic level">
@@ -480,6 +489,17 @@
   </div>
 </div>
 
+<!-- ══ STUDENT DETAIL MODAL ════════════════════════════════════════════ -->
+<div id="student-modal" class="hidden fixed inset-0 bg-slate-950/60 z-50 flex items-start justify-center p-4 overflow-y-auto">
+  <div class="bg-white rounded-2xl max-w-4xl w-full my-8">
+    <div class="sticky top-0 bg-white border-b border-slate-200 rounded-t-2xl px-5 py-4 flex items-start justify-between gap-4">
+      <div id="student-modal-head" class="min-w-0"></div>
+      <button onclick="closeStudent()" class="btn btn-soft shrink-0">✕</button>
+    </div>
+    <div id="student-modal-body" class="p-5 space-y-5"></div>
+  </div>
+</div>
+
 <!-- ══ EXPORT MODAL ════════════════════════════════════════════════════ -->
 <div id="export-modal" class="hidden fixed inset-0 bg-slate-950/60 z-50 flex items-center justify-center p-4">
   <div class="bg-white rounded-2xl max-w-md w-full p-5 space-y-4">
@@ -794,7 +814,10 @@ function renderStudents() {
     ['#', 'Student', 'Level', 'Department', 'Status', 'Orientation', 'Baseline at', 'Post at', 'Email activity', ''],
     rows, (u, i) => [
       i + 1,
-      `<div class="font-semibold text-slate-900">${e(u.name)}</div><div class="text-[11px] text-slate-500 link">${e(u.email)}</div>`,
+      `<button onclick="openStudent('${e(u.email)}')" class="text-left hover:text-blue-700">
+         <div class="font-semibold text-slate-900">${e(u.name)}</div>
+         <div class="text-[11px] text-slate-500 link">${e(u.email)}</div>
+       </button>`,
       LEVEL[u.ug_or_pg] || 'UG',
       `<div class="text-slate-700">${e(u.program || '—')}</div><div class="text-[11px] text-slate-400">${e(u.education_type || '')}</div>`,
       statusBadge(u.status),
@@ -931,6 +954,196 @@ async function sendResults(btn, email) {
     toast('Results email queued for ' + email);
   } catch (err) { toast('Could not send results email'); }
   finally { btn.disabled = false; btn.textContent = 'Mail'; }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  Global student lookup (header search bar)
+// ═══════════════════════════════════════════════════════════════════════
+let lookupTimer = null;
+let lookupHits = [];
+let lookupCursor = -1;
+
+function lookupTyped() {
+  clearTimeout(lookupTimer);
+  const q = $('lookup').value.trim();
+  if (q.length < 2) return hideLookup();
+  lookupTimer = setTimeout(() => runLookup(q), 200);
+}
+
+async function runLookup(q) {
+  const box = $('lookup-results');
+  box.classList.remove('hidden');
+  box.innerHTML = '<div class="p-3 text-xs text-slate-400">Searching…</div>';
+  try {
+    const d = await api('/admin/api/survey/search?q=' + encodeURIComponent(q));
+    lookupHits = d.results;
+    lookupCursor = -1;
+    if (!lookupHits.length) {
+      box.innerHTML = `<div class="p-3 text-xs text-slate-500">No student matches “${e(q)}”</div>`;
+      return;
+    }
+    const more = d.total > lookupHits.length
+      ? `<div class="px-3 py-2 text-[11px] text-slate-400 border-t border-slate-100">${d.total - lookupHits.length} more match — keep typing to narrow it down</div>`
+      : '';
+    box.innerHTML = lookupHits.map((u, i) => `
+      <button data-i="${i}" onclick="openStudent('${e(u.email)}')"
+        class="lookup-hit w-full text-left px-3 py-2.5 hover:bg-slate-50 border-b border-slate-100 last:border-0 flex items-center gap-3">
+        <div class="min-w-0 flex-1">
+          <div class="text-xs font-semibold text-slate-900 truncate">${e(u.name) || '(no name)'}</div>
+          <div class="text-[11px] text-slate-500 link truncate">${e(u.email)}</div>
+        </div>
+        <div class="text-right shrink-0">
+          <div class="text-[11px] text-slate-600 truncate max-w-[160px]">${e(u.program || '—')}</div>
+          <div class="mt-0.5">${statusBadge(u.status)}</div>
+        </div>
+      </button>`).join('') + more;
+  } catch (err) {
+    box.innerHTML = '<div class="p-3 text-xs text-rose-600">Search failed</div>';
+  }
+}
+
+function hideLookup() {
+  $('lookup-results').classList.add('hidden');
+  lookupCursor = -1;
+}
+
+function lookupKey(ev) {
+  if (ev.key === 'Escape') { hideLookup(); $('lookup').blur(); return; }
+  if (!lookupHits.length) return;
+  if (ev.key === 'Enter') {
+    ev.preventDefault();
+    openStudent(lookupHits[Math.max(0, lookupCursor)].email);
+    return;
+  }
+  if (ev.key !== 'ArrowDown' && ev.key !== 'ArrowUp') return;
+  ev.preventDefault();
+  lookupCursor += ev.key === 'ArrowDown' ? 1 : -1;
+  if (lookupCursor < 0) lookupCursor = lookupHits.length - 1;
+  if (lookupCursor >= lookupHits.length) lookupCursor = 0;
+  document.querySelectorAll('.lookup-hit').forEach((el, i) =>
+    el.classList.toggle('bg-slate-100', i === lookupCursor));
+}
+
+document.addEventListener('click', ev => {
+  if (!$('lookup-wrap').contains(ev.target)) hideLookup();
+});
+
+async function openStudent(email) {
+  hideLookup();
+  const modal = $('student-modal');
+  $('student-modal-head').innerHTML = '<div class="h-card">Loading…</div>';
+  $('student-modal-body').innerHTML = '';
+  modal.classList.remove('hidden');
+  try {
+    renderStudent(await api('/admin/api/survey/student/' + encodeURIComponent(email)));
+  } catch (err) {
+    $('student-modal-body').innerHTML = `<div class="note note-err">Could not load this student: ${e(err.message)}</div>`;
+  }
+}
+
+function closeStudent() { $('student-modal').classList.add('hidden'); }
+
+function renderStudent(s) {
+  $('student-modal-head').innerHTML = `
+    <div class="text-base font-extrabold text-slate-900 truncate">${e(s.name) || '(no name)'}</div>
+    <div class="text-xs text-slate-500 link truncate">${e(s.email)}</div>
+    <div class="flex flex-wrap items-center gap-1.5 mt-1.5">
+      ${statusBadge(s.status)}
+      <span class="badge b-gray">${LEVEL[s.ug_or_pg] || 'UG'}</span>
+      <span class="badge b-blue">${e(s.program)}</span>
+      ${s.education_type ? `<span class="badge b-gray">${e(s.education_type)}</span>` : ''}
+      ${s.location ? `<span class="badge b-gray">${e(s.location)}</span>` : ''}
+    </div>`;
+
+  const a = s.email_activity;
+  const sc = s.scores || {};
+  const scoreCell = (label, v) => `<div class="stat border-l-slate-300"><b>${score(v)}</b><s>${label}</s></div>`;
+  const signed = v => (v === null || v === undefined) ? '—' : (v > 0 ? '+' : '') + v;
+
+  const timeline = [
+    ['Registered', s.created_at], ['Baseline submitted', s.pre_at],
+    ['Orientation submitted', s.orientation_at], ['Post submitted', s.post_at],
+  ].map(([k, v]) => `
+    <div class="flex justify-between gap-3 py-1.5 border-b border-slate-100 last:border-0">
+      <span class="text-slate-500">${k}</span><span class="font-semibold text-slate-800">${e(v || '—')}</span>
+    </div>`).join('');
+
+  const mail = [
+    ['Baseline reminder', a.pre_reminder_at ? `${e(a.pre_reminder_at)}${a.pre_reminder_count > 1 ? ` ×${a.pre_reminder_count}` : ''}` : '—'],
+    ['Post reminder', a.post_reminder_at ? `${e(a.post_reminder_at)}${a.post_reminder_count > 1 ? ` ×${a.post_reminder_count}` : ''}` : '—'],
+    ['Clicked a link', a.clicked_at || '—'],
+    ['Used department link', a.post_link_at || '—'],
+    ['Last send error', a.last_error || '—'],
+    ['Unfinished draft', [s.has_pre_draft ? 'baseline' : '', s.has_post_draft ? 'post' : ''].filter(Boolean).join(', ') || '—'],
+  ].map(([k, v]) => `
+    <div class="flex justify-between gap-3 py-1.5 border-b border-slate-100 last:border-0">
+      <span class="text-slate-500">${k}</span><span class="font-semibold text-slate-800 text-right">${e(v)}</span>
+    </div>`).join('');
+
+  const answers = (title, sections) => !sections.length ? '' : `
+    <div class="card space-y-2">
+      <div class="h-card">${title}</div>
+      ${sections.map(sec => `
+        <details class="border border-slate-200 rounded-lg">
+          <summary class="cursor-pointer px-3 py-2 text-xs font-bold text-slate-700 bg-slate-50 rounded-lg">${e(sec.title)}</summary>
+          <div class="p-3 space-y-1 text-xs">
+            ${sec.rows.map(r => `
+              <div class="flex gap-3 py-1 border-b border-slate-50 last:border-0">
+                <span class="text-slate-500 w-1/2 shrink-0">${e(r.label)}</span>
+                <span class="font-semibold text-slate-800">${e(r.value)}</span>
+              </div>`).join('')}
+          </div>
+        </details>`).join('')}
+    </div>`;
+
+  const ori = Object.entries(s.orientation || {}).filter(([, v]) => v !== '' && v !== null);
+
+  $('student-modal-body').innerHTML = `
+    <div class="flex flex-wrap gap-2">
+      ${s.status === 'post_done' ? `<a href="/results/${s.email_slug}" target="_blank" class="btn btn-primary">👁️ View results</a>
+        <button class="btn btn-green" onclick="sendResults(this,'${e(s.email)}')">📧 Email results</button>` : ''}
+      <button class="btn btn-soft" onclick="jumpToStudent('${e(s.email)}')">🔎 Show in students table</button>
+      <button class="btn btn-rose ml-auto" onclick="deleteUser(this,'${e(s.email)}'); closeStudent();">🗑️ Delete</button>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+      ${scoreCell('Baseline literacy', sc.pre && sc.pre.lit)}
+      ${scoreCell('Baseline readiness', sc.pre && sc.pre.read)}
+      ${scoreCell('Post literacy', sc.post && sc.post.lit)}
+      ${scoreCell('Post readiness', sc.post && sc.post.read)}
+      <div class="stat border-l-emerald-500"><b class="text-emerald-600">${signed(sc.delta_lit)}</b><s>Δ literacy</s></div>
+      <div class="stat border-l-teal-500"><b class="text-teal-600">${signed(sc.delta_read)}</b><s>Δ readiness</s></div>
+    </div>
+    ${sc.movement ? `<div class="note note-info">Movement: <b>${e(sc.movement)}</b>${sc.post && sc.post.quadrant ? ` · Post quadrant: <b>${e(sc.post.quadrant)}</b>` : ''}${sc.post && sc.post.band ? ` · Band: <b>${e(sc.post.band)}</b>` : ''}</div>` : ''}
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="card"><div class="h-card mb-2">Progress</div><div class="text-xs">${timeline}</div></div>
+      <div class="card"><div class="h-card mb-2">Email activity</div><div class="text-xs">${mail}</div></div>
+    </div>
+
+    ${answers('📝 Outcome Survey 1 — Baseline answers', s.pre_sections)}
+    ${answers('📊 Impact — Post survey answers', s.post_sections)}
+    ${ori.length ? `<div class="card space-y-2"><div class="h-card">🎓 Orientation answers</div>
+      <div class="text-xs space-y-1">${ori.map(([k, v]) => `
+        <div class="flex gap-3 py-1 border-b border-slate-50 last:border-0">
+          <span class="text-slate-500 w-1/2 shrink-0">${e(k)}</span>
+          <span class="font-semibold text-slate-800">${e(Array.isArray(v) ? v.join(', ') : v)}</span>
+        </div>`).join('')}</div></div>` : ''}
+
+    ${(!s.pre_sections.length && !s.post_sections.length)
+      ? '<div class="note note-info">This student has not submitted any survey yet.</div>' : ''}
+  `;
+}
+
+/** Close the modal and show this student in the Students table. */
+function jumpToStudent(email) {
+  closeStudent();
+  $('dept-filter').value = '';
+  $('status-filter').value = '';
+  setStudentView('status');
+  $('student-search').value = email;
+  show('p-students');
+  renderStudents();
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -1534,8 +1747,15 @@ function closeExportModal() { $('export-modal').classList.add('hidden'); }
 //  Boot
 // ═══════════════════════════════════════════════════════════════════════
 document.addEventListener('keydown', ev => {
+  // Ctrl/Cmd+K focuses the student lookup from anywhere.
+  if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === 'k') {
+    ev.preventDefault();
+    $('lookup').focus();
+    $('lookup').select();
+    return;
+  }
   if (ev.key !== 'Escape') return;
-  closeExportModal(); closeDateModal();
+  closeExportModal(); closeDateModal(); closeStudent(); hideLookup();
 });
 
 buildNav();

@@ -344,6 +344,188 @@ async def api_survey_users(
     ))
 
 
+@router.get("/admin/api/survey/search")
+async def api_survey_search(
+    request: Request,
+    q: str = Query(default=""),
+    limit: int = Query(default=10),
+):
+    """Find students by name, email or department, for the admin search bar.
+
+    Deliberately unfiltered by the dashboard's department/level selectors — the
+    point of the search bar is to reach any student from anywhere.
+    """
+    if not _is_survey_admin(request):
+        raise HTTPException(status_code=403)
+
+    q = (q or "").strip().lower()
+    if len(q) < 2:
+        return JSONResponse({"query": q, "results": [], "total": 0})
+
+    db = get_db()
+    matches = []
+    async for u in db["users"].find({}):
+        haystacks = (u.get("name", ""), u.get("email", ""), u.get("program", ""))
+        if any(q in (h or "").lower() for h in haystacks):
+            matches.append(u)
+
+    # Whoever matches on email first is almost always who the admin meant.
+    def rank(u: dict) -> tuple:
+        email = (u.get("email") or "").lower()
+        name = (u.get("name") or "").lower()
+        return (
+            0 if email == q else 1 if email.startswith(q) else 2 if name.startswith(q) else 3,
+            name,
+        )
+
+    matches.sort(key=rank)
+    results = [{
+        "email": u.get("email", ""),
+        "name": u.get("name", ""),
+        "program": u.get("program", ""),
+        "ug_or_pg": u.get("ug_or_pg", "ug"),
+        "status": u.get("status") or "not_started",
+    } for u in matches[:max(1, min(limit, 50))]]
+
+    return JSONResponse({"query": q, "results": results, "total": len(matches)})
+
+
+def _answer_sections(fields: dict, *, kind: str) -> list[dict]:
+    """Group one survey's answers into readable sections.
+
+    Non-Likert questions carry their real wording (it lives in app/sections.py);
+    Likert items are listed by their code, which is how the instrument and the
+    exports refer to them anyway.
+    """
+    from app.hacri_e2_compat import SCHEMA
+    from app.sections import (
+        POST_REFLECTION, PRE_BACKGROUND, PRE_FUTURE, PRE_USAGE, SECTION_TITLES,
+    )
+
+    def fmt(value):
+        if value is None or value == "":
+            return "—"
+        if isinstance(value, list):
+            return ", ".join(str(v) for v in value) or "—"
+        return str(value)
+
+    def rows(spec):
+        return [{"key": key, "label": label, "value": fmt(fields.get(key))}
+                for key, label, *_ in spec]
+
+    sections: list[dict] = []
+    if kind == "pre":
+        sections.append({"title": f"A — {SECTION_TITLES['A']}", "rows": rows(PRE_BACKGROUND)})
+    else:
+        sections.append({"title": "A — Family Background", "rows": [
+            {"key": key, "label": label, "value": fmt(fields.get(key))}
+            for key, label in [
+                ("father_name", "Father's name"),
+                ("father_occupation", "Father's occupation"),
+                ("organization_name", "Father's organisation"),
+                ("business_name", "Father's business"),
+                ("business_type", "Father's business type"),
+                ("mother_name", "Mother's name"),
+                ("mother_occupation", "Mother's occupation"),
+                ("mother_organization_name", "Mother's organisation"),
+                ("mother_business_name", "Mother's business"),
+                ("mother_business_type", "Mother's business type"),
+                ("location", "Campus"),
+            ]
+        ]})
+
+    # Likert blocks, in instrument order.
+    for letter in ("B", "D", "E", "F", "G"):
+        keys = [k for k in SCHEMA if k.startswith(letter)]
+        if not keys:
+            continue
+        extra = []
+        if kind == "pre" and letter == "B":
+            extra = [("B11", "Anything else about AI awareness")]
+        if kind == "pre" and letter == "E":
+            extra = [("E11", "Scenario answer"), ("E11_reason", "Reason")]
+        sections.append({
+            "title": f"{letter} — {SECTION_TITLES.get(letter, letter)}",
+            "rows": [{"key": k, "label": k, "value": fmt(fields.get(k))} for k in keys]
+                    + [{"key": k, "label": lbl, "value": fmt(fields.get(k))} for k, lbl in extra],
+        })
+
+    if kind == "pre":
+        sections.append({"title": f"C — {SECTION_TITLES['C']}", "rows": rows(PRE_USAGE)})
+        sections.append({"title": f"H — {SECTION_TITLES['H']}", "rows": rows(PRE_FUTURE)})
+    else:
+        post_rows = rows(POST_REFLECTION)
+        post_rows.append({"key": "praise_initiative", "label": "PRaiSE pillar chosen",
+                          "value": fmt(fields.get("praise_initiative"))})
+        sections.append({"title": f"H — {SECTION_TITLES['H_POST']}", "rows": post_rows})
+
+    return [s for s in sections if any(r["value"] != "—" for r in s["rows"])]
+
+
+@router.get("/admin/api/survey/student/{email}")
+async def api_student_detail(request: Request, email: str):
+    """Everything held about one student, for the admin search results panel."""
+    if not _is_survey_admin(request):
+        raise HTTPException(status_code=403)
+
+    from app.db import _fmt
+    from app.routes.landing import email_to_slug
+    from app.scoring import delta, score_for_user
+
+    db = get_db()
+    email = (email or "").strip().lower()
+    user = await db["users"].find_one({"email": email})
+    if not user:
+        raise HTTPException(status_code=404, detail="Student not found")
+
+    pre_doc = await db["pre_responses"].find_one({"email": email}, sort=[("submitted_at", -1)])
+    post_doc = await db["post_responses"].find_one({"email": email}, sort=[("submitted_at", -1)])
+    ori_doc = await db["orientation_responses"].find_one({"email": email}, sort=[("submitted_at", -1)])
+
+    pre_fields = (pre_doc or {}).get("fields", {})
+    post_fields = (post_doc or {}).get("fields", {})
+
+    scores = {"pre": score_for_user(pre_fields) if pre_doc else None,
+              "post": score_for_user(post_fields) if post_doc else None,
+              "delta_lit": None, "delta_read": None, "movement": None}
+    if pre_doc and post_doc:
+        d = delta(pre_fields, post_fields)
+        scores.update({"delta_lit": d["delta_lit"], "delta_read": d["delta_read"],
+                       "movement": d["movement"]})
+
+    return JSONResponse({
+        "email": email,
+        "email_slug": email_to_slug(email),
+        "name": user.get("name", ""),
+        "program": user.get("program", "") or "—",
+        "ug_or_pg": user.get("ug_or_pg", "ug"),
+        "education_type": user.get("education_type", ""),
+        "location": user.get("location", ""),
+        "status": user.get("status") or "not_started",
+        "created_at": _fmt(user.get("created_at")),
+        # Fall back to the response document for records imported before the
+        # timestamp was mirrored onto the user.
+        "pre_at": _fmt(user.get("pre_submitted_at") or (pre_doc or {}).get("submitted_at")),
+        "post_at": _fmt(user.get("post_submitted_at") or (post_doc or {}).get("submitted_at")),
+        "orientation_at": _fmt((ori_doc or {}).get("submitted_at")),
+        "email_activity": {
+            "pre_reminder_at": _fmt(user.get("pre_reminder_sent_at")),
+            "post_reminder_at": _fmt(user.get("post_reminder_sent_at")),
+            "pre_reminder_count": int(user.get("pre_reminder_count", 0) or 0),
+            "post_reminder_count": int(user.get("post_reminder_count", 0) or 0),
+            "clicked_at": _fmt(user.get("reminder_clicked_at")),
+            "post_link_at": _fmt(user.get("post_link_at")),
+            "last_error": user.get("last_email_error", ""),
+        },
+        "has_pre_draft": bool(user.get("pre_draft")),
+        "has_post_draft": bool(user.get("post_draft")),
+        "scores": scores,
+        "pre_sections": _answer_sections(pre_fields, kind="pre") if pre_doc else [],
+        "post_sections": _answer_sections(post_fields, kind="post") if post_doc else [],
+        "orientation": (ori_doc or {}).get("data", {}),
+    })
+
+
 @router.get("/admin/api/survey/dept-analysis")
 async def api_survey_dept_analysis(request: Request):
     if not _is_survey_admin(request):

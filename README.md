@@ -58,6 +58,25 @@ The department and level selectors in the top bar scope every page below them.
 Cohort data exports (CSV or Excel) come from the **Export** button, which
 follows the current filters and lets you pick which columns to include.
 
+### Student lookup
+
+The search bar in the top bar finds **any** student by name, email or
+department — it ignores the department/level filters, so you can reach anyone
+from any page. Type two or more characters (or press **Ctrl/Cmd+K**), pick a
+result with the arrow keys or the mouse, and a panel opens with everything held
+about that student:
+
+- profile, status and the full progress timeline (registered → baseline →
+  orientation → post)
+- email activity: reminders sent, clicks, department-link entries, send errors
+  and unfinished drafts
+- baseline and post scores with the change between them, quadrant and band
+- every answer they gave, grouped by survey section
+- shortcuts to view or re-send their results, show them in the students table,
+  or delete them
+
+Clicking a name in the students table opens the same panel.
+
 ### Department-wise survey links
 
 The **Links** page lists every department with two links to hand out:
