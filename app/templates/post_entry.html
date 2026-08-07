@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Post-Workshop Survey — {{ dept_label }}</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{--navy:#1B2A4A;--navy2:#2A3E68;--gold:#C9A84C;--muted:#64748b;--border:#e2e8f0}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Outfit',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+       background:radial-gradient(circle at 15% 15%,var(--navy2) 0%,#0b1329 90%);
+       min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;color:#1e293b}
+  .card{background:#fff;border-radius:20px;padding:36px 32px;width:100%;max-width:460px;
+        box-shadow:0 24px 50px rgba(0,0,0,.35)}
+  .logo{height:42px;margin-bottom:18px}
+  h1{font-size:20px;font-weight:800;color:var(--navy);line-height:1.3}
+  .dept{display:inline-block;margin-top:10px;background:#f1f5f9;border:1px solid var(--border);
+        color:var(--navy);font-size:12px;font-weight:700;padding:6px 12px;border-radius:999px}
+  p.lead{font-size:14px;color:var(--muted);margin-top:14px;line-height:1.6}
+  label{display:block;font-size:12px;font-weight:700;color:var(--navy);margin:22px 0 6px}
+  input[type=email]{width:100%;padding:13px 14px;border:1.5px solid var(--border);border-radius:11px;
+        font-size:15px;font-family:inherit;outline:none;transition:border-color .2s}
+  input[type=email]:focus{border-color:var(--navy2);box-shadow:0 0 0 3px rgba(42,62,104,.1)}
+  button{width:100%;margin-top:20px;padding:14px;border:none;border-radius:11px;background:var(--navy);
+        color:#fff;font-family:inherit;font-size:15px;font-weight:700;cursor:pointer;transition:background .2s}
+  button:hover{background:var(--navy2)}
+  .error{margin-top:18px;background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;
+        font-size:13px;font-weight:600;padding:12px 14px;border-radius:11px;line-height:1.5}
+  .hint{margin-top:18px;font-size:12px;color:var(--muted);line-height:1.6;border-top:1px solid var(--border);padding-top:16px}
+  .hint a{color:var(--navy2);font-weight:700}
+</style>
+</head>
+<body>
+<div class="card">
+  <img src="/static/logo.png" alt="JAIN University" class="logo"
+       onerror="this.src='/static/logosmall.png'" />
+
+  <h1>Post-Workshop Survey</h1>
+  <div class="dept">🏛️ {{ dept_label }}</div>
+
+  <p class="lead">
+    Enter the email address you used for the <strong>baseline survey</strong>.
+    We will open your post-workshop survey right away.
+  </p>
+
+  {% if error %}
+  <div class="error">{{ error }}</div>
+  {% endif %}
+
+  <form method="post" action="/post/{{ slug }}">
+    <label for="email">Registered Email Address</label>
+    <input type="email" id="email" name="email" required autofocus
+           autocomplete="email" placeholder="you@example.com"
+           value="{{ email or '' }}" />
+    <button type="submit">Open My Post Survey →</button>
+  </form>
+
+  <div class="hint">
+    Haven't done the baseline survey yet? Start at <a href="/">the survey home page</a>.
+    Already finished both surveys? This page takes you straight to your results.
+  </div>
+</div>
+</body>
+</html>

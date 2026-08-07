@@ -60,6 +60,21 @@ def _likert_field_keys(section: str) -> list[str]:
     return [k for k in SCHEMA if k.startswith(section)]
 
 
+def _has_post_access(user: dict) -> bool:
+    """Has this student been personally invited to the post survey?
+
+    True when a reminder email was sent to (or clicked by) them, or when they
+    came in through a department post-survey link. Such students keep access
+    even while the post survey is closed to the general public.
+    """
+    return bool(
+        user.get("reminder_clicked_at")
+        or user.get("post_reminder_sent_at")
+        or (user.get("post_reminder_count", 0) > 0)
+        or user.get("post_link_at")
+    )
+
+
 def _build_pre_fields(form: Any) -> dict[str, Any]:
     """Coerce raw form data into the canonical fields dict.
 
@@ -314,11 +329,7 @@ async def post_get(
         from app.routes.landing import email_to_slug
         return RedirectResponse(url=f"/results/{email_to_slug(session['email'])}", status_code=303)
 
-    is_reminder = bool(
-        user.get("reminder_clicked_at")
-        or user.get("post_reminder_sent_at")
-        or (user.get("post_reminder_count", 0) > 0)
-    )
+    is_reminder = _has_post_access(user)
 
     if not is_reminder and not await get_flag(FLAG_SURVEY, default=True):
         return RedirectResponse(url="/locked", status_code=303)
@@ -411,11 +422,7 @@ async def post_post(
     if not user:
         return RedirectResponse(url="/", status_code=303)
 
-    is_reminder = bool(
-        user.get("reminder_clicked_at")
-        or user.get("post_reminder_sent_at")
-        or (user.get("post_reminder_count", 0) > 0)
-    )
+    is_reminder = _has_post_access(user)
 
     if not is_reminder and not await get_flag(FLAG_SURVEY, default=True):
         return RedirectResponse(url="/locked", status_code=303)

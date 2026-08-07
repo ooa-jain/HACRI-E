@@ -1,314 +1,156 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="h-full bg-slate-50">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Deeksharambh Admin</title>
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<title>Deeksharambh Admin — JAIN University</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
 <style>
-:root{
-  --navy: #1B2A4A;
-  --navy2: #2A3E68;
-  --gold: #C9A84C;
-  --bg: #F4F6FA;
-  --card: #ffffff;
-  --border: #e2e8f0;
-  --text: #1e293b;
-  --muted: #64748b;
-  --green: #10b981;
-  --teal: #06b6d4;
-  --shadow: 0 4px 20px rgba(27, 42, 74, 0.06);
-}
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Outfit',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
-
-/* Topbar */
-.topbar{
-  background: var(--navy);
-  color: #fff;
-  padding: 0 24px;
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  min-height: 64px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-}
-.topbar-brand {
-  font-weight: 800;
-  font-size: 18px;
-  flex: 1;
-  letter-spacing: 0.5px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.topbar-brand span{color:var(--gold)}
-
-/* Buttons */
-.btn-sm{
-  padding: 8px 16px;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-  border: none;
-  font-family: inherit;
-  transition: all 0.2s ease;
-}
-.btn-red{background:#ef4444;color:#fff}
-.btn-red:hover{background:#dc2626;transform:translateY(-1px)}
-
-.content{padding:28px 24px;max-width:1200px;margin:0 auto}
-
-/* Tabs */
-.tabs{
-  display: flex;
-  gap: 8px;
-  margin-bottom: 24px;
-  border-bottom: 2px solid var(--border);
-  padding-bottom: 0;
-}
-.tab{
-  padding: 12px 20px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  color: var(--muted);
-  background: none;
-  border: none;
-  border-bottom: 3px solid transparent;
-  margin-bottom: -2px;
-  font-family: inherit;
-  transition: all 0.2s ease;
-}
-.tab:hover{color: var(--navy)}
-.tab.on{
-  color: var(--navy);
-  border-bottom-color: var(--gold);
-  font-weight: 700;
-}
-
-.panel{display:none}.panel.on{display:block;animation:up .3s ease-out}
-@keyframes up{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-
-/* Cards */
-.card{
-  background: var(--card);
-  border-radius: 16px;
-  padding: 24px;
-  border: 1px solid var(--border);
-  margin-bottom: 20px;
-  box-shadow: var(--shadow);
-}
-.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:20px}
-.stat{
-  background: var(--card);
-  border-radius: 12px;
-  padding: 20px;
-  border: 1px solid var(--border);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.02);
-}
-.stat-n{font-size:36px;font-weight:800;color:var(--teal)}
-.stat-l{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-top:4px}
-
-.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:16px 0}
-.toggle-switch{
-  position: relative;
-  display: inline-block;
-  width: 50px;
-  height: 26px;
-}
-.toggle-switch input{opacity:0;width:0;height:0}
-.slider{
-  position: absolute;
-  cursor: pointer;
-  inset: 0;
-  background: #cbd5e1;
-  border-radius: 24px;
-  transition: .25s;
-}
-.slider:before{
-  content: '';
-  position: absolute;
-  width: 20px;
-  height: 20px;
-  left: 3px;
-  bottom: 3px;
-  background: #fff;
-  border-radius: 50%;
-  transition: .25s;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.15);
-}
-input:checked+.slider{background:var(--green)}
-input:checked+.slider:before{transform:translateX(24px)}
-
-.mtable{width:100%;border-collapse:collapse;font-size:13px}
-.mtable th{
-  padding: 12px 14px;
-  text-align: left;
-  font-weight: 700;
-  color: var(--muted);
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.8px;
-  border-bottom: 2px solid var(--border);
-}
-.mtable td{padding:14px 14px;border-bottom:1px solid var(--border);vertical-align:middle}
-.mtable tr:hover td{background:rgba(27, 42, 74, 0.015)}
-.mtable tr:last-child td{border:none}
-
-.search{
-  width: 100%;
-  max-width: 360px;
-  padding: 10px 14px;
-  border: 1.5px solid var(--border);
-  border-radius: 10px;
-  font-size: 14px;
-  margin-bottom: 16px;
-  outline: none;
-  font-family: inherit;
-  transition: all 0.2s ease;
-}
-.search:focus{border-color:var(--teal);box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.08)}
-
-@media (max-width: 680px) {
-  .topbar {
-    flex-direction: column;
-    align-items: stretch;
-    padding: 16px 20px;
-    gap: 12px;
-  }
-  .topbar-brand {
-    font-size: 16px;
-    text-align: center;
-  }
-  .content {
-    padding: 16px;
-  }
-  .card {
-    padding: 16px;
-  }
-  .tab {
-    padding: 10px 14px;
-    font-size: 13px;
-  }
-}
+  body { font-family: 'Inter', system-ui, sans-serif; }
+  .card   { background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:20px; box-shadow:0 1px 2px rgba(15,23,42,.04) }
+  .h-card { font-size:15px; font-weight:700; color:#0f172a }
+  .sub    { font-size:12px; color:#64748b; margin-top:2px }
+  .stat   { background:#fff; border:1px solid #e2e8f0; border-left-width:4px; border-radius:12px; padding:14px }
+  .stat b { display:block; font-size:22px; font-weight:800 }
+  .stat s { display:block; font-size:11px; color:#64748b; margin-top:4px; text-decoration:none }
+  .badge  { display:inline-flex; padding:2px 8px; border-radius:999px; font-size:11px; font-weight:600 }
+  .b-blue { background:#dbeafe; color:#1e40af } .b-gray { background:#f1f5f9; color:#475569 }
+  .btn    { font-size:12px; font-weight:700; border-radius:8px; padding:7px 12px; cursor:pointer; border:none; transition:.15s }
+  .btn-soft { background:#f1f5f9; color:#334155 } .btn-soft:hover { background:#e2e8f0 }
+  .btn-primary { background:#2563eb; color:#fff } .btn-primary:hover { background:#1d4ed8 }
+  .btn-rose { background:#e11d48; color:#fff } .btn-rose:hover { background:#be123c }
+  .field  { width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:8px; font-size:12px; background:#fff; outline:none }
+  .link   { font-family:ui-monospace,Menlo,monospace; font-size:11px }
+  th { padding:10px 12px; text-align:left; white-space:nowrap } td { padding:10px 12px; vertical-align:top }
 </style>
 </head>
-<body>
-<div class="topbar">
-  <div class="topbar-brand"><span>JAIN UNIVERSITY</span> · Deeksharambh Admin</div>
-  <a href="/admin/orientation/logout" class="btn-sm btn-red">Sign out</a>
-</div>
-<div class="content">
-  <div class="tabs">
-    <button class="tab on" onclick="show('p-overview',this)">📊 Overview</button>
-    <button class="tab" onclick="show('p-settings',this)">⚙️ Settings</button>
-    <button class="tab" onclick="show('p-responses',this)">📋 Responses</button>
+<body class="h-full text-slate-800 antialiased">
+
+<header class="bg-slate-900 text-white px-5 py-3 flex items-center gap-3">
+  <div class="bg-white p-1.5 rounded-lg"><img src="/static/logo.png" alt="JAIN" class="h-7 w-auto" onerror="this.src='/static/logosmall.png'"></div>
+  <div class="mr-auto">
+    <div class="font-extrabold text-sm">JAIN <span class="text-amber-400">UNIVERSITY</span></div>
+    <div class="text-[10px] text-slate-400">Deeksharambh Orientation Admin</div>
+  </div>
+  <a href="/admin/orientation/logout" class="btn btn-rose">Sign out</a>
+</header>
+
+<main class="max-w-5xl mx-auto p-5 space-y-5">
+
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+    <div class="stat border-l-teal-600"><b id="st-count" class="text-teal-600">—</b><s>Responses</s></div>
+    <div class="stat border-l-blue-600"><b id="st-depts" class="text-blue-600">—</b><s>Departments</s></div>
+    <div class="stat border-l-slate-400"><b id="st-flag" class="text-sm pt-1.5">…</b><s>Form status</s></div>
   </div>
 
-  <!-- Overview -->
-  <div class="panel on" id="p-overview">
-    <div class="stat-grid">
-      <div class="stat"><div class="stat-n" id="ov-count">—</div><div class="stat-l">Submissions</div></div>
-    </div>
-    <div class="card">
-      <div style="font-size:13px;color:var(--muted);margin-bottom:6px">Orientation Status</div>
-      <div id="ov-flag" style="font-size:14px">Loading…</div>
-    </div>
-    <div class="card" style="font-size:13px;color:var(--muted)">
-      <strong style="color:var(--text)">Student URLs</strong>
-      <p style="margin-top:8px">Share this link with students for Deeksharambh:</p>
-      <code id="ori-url" style="background:#f1f5f9;padding:6px 10px;border-radius:6px;display:inline-block;margin-top:6px;color:var(--navy)"></code>
-    </div>
-  </div>
-
-  <!-- Settings -->
-  <div class="panel" id="p-settings">
-    <div class="card" style="max-width:500px">
-      <div class="toggle-row">
-        <div>
-          <div style="font-size:14px;font-weight:600">🎓 Deeksharambh Orientation</div>
-          <div style="font-size:12px;color:var(--muted);margin-top:3px">
-            Enable the orientation form at <code>/deeksharambh</code>
-          </div>
-        </div>
-        <label class="toggle-switch">
-          <input type="checkbox" id="tog-ori" onchange="toggleFlag('orientation_enabled',this.checked)" />
-          <span class="slider"></span>
-        </label>
+  <div class="card space-y-4">
+    <div class="flex items-center justify-between gap-4">
+      <div>
+        <div class="h-card">🎓 Deeksharambh orientation form</div>
+        <div class="sub">When off, students who open the form see a "not available" message.</div>
       </div>
+      <input type="checkbox" id="tog-ori" onchange="toggleFlag(this.checked)" class="w-5 h-5 rounded accent-emerald-600 cursor-pointer">
     </div>
-    <p style="font-size:12px;color:var(--muted)">When ON: students can access the Deeksharambh form. When OFF: the form shows a "not available" message.</p>
+    <div class="flex items-center gap-2 border-t border-slate-100 pt-4">
+      <span class="text-xs font-semibold text-slate-700 shrink-0">Student link</span>
+      <input id="ori-url" readonly class="field link flex-1">
+      <button class="btn btn-soft" onclick="copyUrl()">Copy</button>
+      <a id="ori-open" href="/deeksharambh" target="_blank" class="btn btn-primary">Open</a>
+    </div>
   </div>
 
-  <!-- Responses -->
-  <div class="panel" id="p-responses">
-    <input class="search" type="text" placeholder="Search name or email…" oninput="filterResp()" id="resp-search" />
-    <div class="card" style="padding:0;overflow-x:auto;">
-      <table class="mtable" id="resp-table" style="min-width:600px;">
-        <thead>
-          <tr><th>#</th><th>Name</th><th>Email</th><th>Submitted At</th></tr>
-        </thead>
-        <tbody id="resp-tbody"><tr><td colspan="4" style="text-align:center;padding:20px;color:var(--muted)">Loading…</td></tr></tbody>
-      </table>
+  <div class="card space-y-4">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div><div class="h-card">📋 Responses</div><div class="sub">Everything students submitted in the orientation form.</div></div>
+      <input id="search" oninput="render()" class="field sm:w-64" placeholder="🔍 Search name, email, department…">
     </div>
+    <div id="table"></div>
   </div>
-</div>
+
+</main>
 
 <script>
+const $ = id => document.getElementById(id);
+const e = s => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 let responses = [];
 
-function show(id, btn){
-  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
-  document.getElementById(id).classList.add('on');
-  if(btn) btn.classList.add('on');
-  if(id==='p-responses' && responses.length===0) loadResponses();
+async function api(path, opts) {
+  const r = await fetch(path, opts);
+  if (!r.ok) throw new Error('Request failed (' + r.status + ')');
+  return r.json();
 }
 
-async function loadFlags(){
-  const r = await fetch('/admin/api/flags');
-  const d = await r.json();
-  document.getElementById('tog-ori').checked = !!d.orientation_enabled;
-  document.getElementById('ov-flag').innerHTML =
-    d.orientation_enabled ? '🟢 <b>Open</b> — students can access the orientation form'
-                          : '🔴 <b>Closed</b> — orientation form is hidden';
+async function loadFlags() {
+  try {
+    const f = await api('/admin/api/flags');
+    $('tog-ori').checked = !!f.orientation_enabled;
+    $('st-flag').innerHTML = f.orientation_enabled
+      ? '<span class="text-emerald-600 font-bold text-sm">🟢 Open</span>'
+      : '<span class="text-rose-600 font-bold text-sm">🔴 Closed</span>';
+  } catch (err) { console.error(err); }
 }
 
-async function toggleFlag(key, val){
-  await fetch('/admin/api/flags',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({[key]:val})});
+async function toggleFlag(value) {
+  try {
+    await api('/admin/api/flags', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ orientation_enabled: value }),
+    });
+  } catch (err) { alert('Could not update the setting.'); }
   loadFlags();
 }
 
-async function loadResponses(){
-  const r = await fetch('/admin/api/orientation/responses');
-  responses = await r.json();
-  document.getElementById('ov-count').textContent = responses.length;
-  renderResp(responses);
+async function loadResponses() {
+  $('table').innerHTML = '<div class="text-center p-8 text-slate-400 text-xs">Loading responses…</div>';
+  try {
+    responses = await api('/admin/api/orientation/responses');
+    $('st-count').textContent = responses.length;
+    $('st-depts').textContent = new Set(responses.map(r => r.program || '—')).size;
+    render();
+  } catch (err) {
+    $('table').innerHTML = '<div class="text-center p-8 text-rose-500 text-xs">Could not load responses</div>';
+  }
 }
 
-function renderResp(data){
-  const tbody = document.getElementById('resp-tbody');
-  if(!data.length){ tbody.innerHTML='<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--muted)">No submissions yet</td></tr>'; return; }
-  tbody.innerHTML = data.map((d,i)=>`
-    <tr>
-      <td style="color:var(--muted)">${i+1}</td>
-      <td style="font-weight:600">${e(d.name)}</td>
-      <td style="font-size:11px;color:var(--muted)">${e(d.email)}</td>
-      <td style="font-size:11px;color:var(--muted)">${e(d.submitted_at||'—')}</td>
-    </tr>`).join('');
+function answers(data) {
+  const entries = Object.entries(data || {}).filter(([, v]) => v !== '' && v !== null && v !== undefined);
+  if (!entries.length) return '<span class="text-slate-400">—</span>';
+  return `<details><summary class="cursor-pointer text-blue-600 font-semibold">${entries.length} answers</summary>
+    <div class="mt-2 space-y-1 text-[11px] max-w-lg">${entries.map(([k, v]) =>
+      `<div><b class="text-slate-600">${e(k)}:</b> ${e(Array.isArray(v) ? v.join(', ') : v)}</div>`).join('')}</div></details>`;
 }
 
-function filterResp(){
-  const q = document.getElementById('resp-search').value.toLowerCase();
-  renderResp(responses.filter(d=>(d.name||'').toLowerCase().includes(q)||(d.email||'').toLowerCase().includes(q)));
+function render() {
+  const q = ($('search').value || '').toLowerCase();
+  const rows = responses.filter(r =>
+    [r.name, r.email, r.program].some(v => (v || '').toLowerCase().includes(q)));
+
+  const head = ['#', 'Student', 'Level', 'Department', 'Submitted', 'Answers']
+    .map(c => `<th>${c}</th>`).join('');
+  const body = rows.length ? rows.map((r, i) => `
+    <tr class="hover:bg-slate-50">
+      <td>${i + 1}</td>
+      <td><div class="font-semibold text-slate-900">${e(r.name)}</div><div class="text-[11px] text-slate-500 link">${e(r.email)}</div></td>
+      <td><span class="badge b-gray">${(r.ug_or_pg || 'ug').toUpperCase()}</span></td>
+      <td>${e(r.program || '—')}</td>
+      <td><span class="text-slate-500 text-[11px]">${e(r.submitted_at || '—')}</span></td>
+      <td>${answers(r.data)}</td>
+    </tr>`).join('')
+    : '<tr><td colspan="6" class="text-center p-8 text-slate-400">No responses yet</td></tr>';
+
+  $('table').innerHTML =
+    `<div class="overflow-x-auto"><table class="w-full text-xs border-collapse">
+       <thead><tr class="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold">${head}</tr></thead>
+       <tbody class="divide-y divide-slate-100">${body}</tbody></table></div>`;
 }
 
-function e(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function copyUrl() {
+  navigator.clipboard.writeText($('ori-url').value);
+}
 
-document.getElementById('ori-url').textContent = location.origin + '/deeksharambh';
-
-(async()=>{ await loadFlags(); await loadResponses(); })();
+$('ori-url').value = location.origin + '/deeksharambh';
+loadFlags();
+loadResponses();
 </script>
 </body>
 </html>

@@ -361,6 +361,41 @@ async def api_survey_date_analysis(request: Request):
 
 
 
+@router.get("/admin/api/survey/post-links")
+async def api_survey_post_links(request: Request):
+    """Department-wise post-survey entry links + how many students each serves."""
+    if not _is_survey_admin(request):
+        raise HTTPException(status_code=403)
+
+    from app.db import get_department_summary
+    from app.routes.post_link import ALL_SLUG, dept_post_url, dept_slug
+
+    base_url = str(request.base_url).rstrip("/")
+    summary = await get_department_summary()
+
+    totals = {"registered": 0, "pre_done": 0, "post_done": 0, "pending_post": 0}
+    links = []
+    for row in summary:
+        for key in totals:
+            totals[key] += row[key]
+        links.append({
+            "dept": row["dept"],
+            "slug": dept_slug(row["dept"]),
+            "url": dept_post_url(base_url, row["dept"]),
+            "registered": row["registered"],
+            "pre_done": row["pre_done"],
+            "post_done": row["post_done"],
+            "pending_post": row["pending_post"],
+        })
+
+    return JSONResponse({
+        "base_url": base_url,
+        "all_url": f"{base_url}/post/{ALL_SLUG}",
+        "totals": totals,
+        "links": links,
+    })
+
+
 @router.get("/admin/api/survey/dept-stats")
 async def api_survey_dept_stats(request: Request):
     if not _is_survey_admin(request):
