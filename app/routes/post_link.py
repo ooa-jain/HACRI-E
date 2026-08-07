@@ -1,12 +1,14 @@
 """
-post_link.py — Department-wise post-survey entry links.
+post_link.py — Department-wise survey entry links.
 
-The admin generates one link per department in the admin portal:
+The admin generates two links per department in the admin portal:
 
-    GET  /post/<dept-slug>   → page asking the student for their email
+    GET  /pre/<dept-slug>    → Outcome Survey 1 (Baseline): the normal
+                               registration page with the department locked
+    GET  /post/<dept-slug>   → Impact Post Survey: page asking for the email
     POST /post/<dept-slug>   → check the email, then open the post survey
 
-A student who opens the link types the email they registered with. If that
+A student who opens a post link types the email they registered with. If that
 email belongs to the link's department AND already has a completed baseline
 (pre) survey, a session is issued and the post survey opens straight away —
 no landing page, no re-registration. Everything else (wrong department, no
@@ -19,9 +21,10 @@ from __future__ import annotations
 import re
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Form, Request
+from fastapi import APIRouter, Cookie, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
+from app.departments import DEPARTMENTS
 from app.db import (
     FLAG_PRE_SURVEY,
     NO_DEPARTMENT,
@@ -50,18 +53,26 @@ def dept_post_url(base_url: str, dept: str | None) -> str:
     return f"{base_url.rstrip('/')}/post/{dept_slug(dept)}"
 
 
+def dept_pre_url(base_url: str, dept: str | None) -> str:
+    return f"{base_url.rstrip('/')}/pre/{dept_slug(dept)}"
+
+
 async def resolve_dept(slug: str) -> str:
     """Name the department a slug refers to.
 
     Returns "" for the all-departments link. Otherwise the department name as
-    it is spelled on the student records, falling back to a readable form of
-    the slug when no student carries that department (yet).
+    it is officially spelled — first from the canonical department list, then
+    from the student records, and only as a last resort from the slug itself.
+    Spelling matters here: this is the name new registrations are stored under.
     """
     slug = (slug or "").strip().lower()
     if slug == ALL_SLUG:
         return ""
     if slug == NO_DEPT_SLUG:
         return NO_DEPARTMENT
+    for dept in DEPARTMENTS:
+        if dept_slug(dept) == slug:
+            return dept
     for dept in await list_departments():
         if dept_slug(dept) == slug:
             return dept
@@ -96,6 +107,26 @@ def _render(request: Request, slug: str, dept: str, *, error: str = "",
         },
         status_code=status_code,
     )
+
+
+@router.get("/pre/{slug}", response_class=HTMLResponse)
+async def pre_entry_get(
+    request: Request,
+    slug: str,
+    hacri_session: str | None = Cookie(default=None),
+    hacri_csrf: str | None = Cookie(default=None),
+):
+    """Outcome Survey 1 (Baseline) for one department.
+
+    The ordinary registration page with the department pre-filled and locked,
+    so everyone arriving through a department's link is filed under it.
+    """
+    from app.routes.landing import render_landing
+
+    dept = await resolve_dept(slug)
+    if not dept:  # /pre/all — nothing to lock, just the normal page
+        return await render_landing(request, hacri_session, hacri_csrf)
+    return await render_landing(request, hacri_session, hacri_csrf, locked_program=dept)
 
 
 @router.get("/post/{slug}", response_class=HTMLResponse)

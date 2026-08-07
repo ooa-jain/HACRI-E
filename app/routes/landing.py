@@ -49,6 +49,20 @@ async def landing_get(
     hacri_session: str | None = Cookie(default=None),
     hacri_csrf:    str | None = Cookie(default=None),
 ):
+    return await render_landing(request, hacri_session, hacri_csrf)
+
+
+async def render_landing(
+    request: Request,
+    hacri_session: str | None,
+    hacri_csrf: str | None,
+    locked_program: str = "",
+):
+    """Render the registration page.
+
+    `locked_program` fixes the department (used by the department-wise baseline
+    links, where the student must not be able to pick a different one).
+    """
     survey_enabled = await get_flag(FLAG_SURVEY, default=True)
     user = None
     if hacri_session:
@@ -73,6 +87,7 @@ async def landing_get(
             "pre_survey_enabled": pre_enabled,
             "orientation_enabled": orientation_enabled,
             "post_survey_enabled": post_enabled,
+            "locked_program": locked_program,
         },
     )
     if not hacri_csrf:

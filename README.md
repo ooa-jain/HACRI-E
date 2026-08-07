@@ -9,6 +9,7 @@ FastAPI app combining the AI Literacy Survey (HACRI-E) and Deeksharambh 2026 Ori
 /survey/pre          → HACRI-E Baseline Assessment (65 Likert items)
 /orientation         → Deeksharambh 2026 survey (if flag enabled)
 /survey/post         → HACRI-E Post-Workshop Survey
+/pre/<dept-slug>     → Department baseline link (registration, department locked)
 /post/<dept-slug>    → Department post-survey link (email → post survey)
 /results/<slug>      → Personal results + JAIN Star charts
 /admin               → Admin dashboard
@@ -57,22 +58,33 @@ The department and level selectors in the top bar scope every page below them.
 Cohort data exports (CSV or Excel) come from the **Export** button, which
 follows the current filters and lets you pick which columns to include.
 
-### Department-wise post-survey links
+### Department-wise survey links
 
-The **Links** page generates one link per department, e.g.
-`/post/department-of-law` (plus `/post/all` for any department).
+The **Links** page lists every department with two links to hand out:
 
-1. Share the link with that department's students.
-2. A student opens it and enters the email they registered with.
-3. If that email has a **completed baseline survey in that department**, the
-   post survey opens immediately — no landing page, no re-registration.
-4. Otherwise the page says why: unknown email, wrong department, baseline not
-   done yet, or post survey still time-locked. A student who already finished
-   both surveys is sent to their results.
+| Link | Path | What the student sees |
+|------|------|------------------------|
+| **Outcome Survey 1 — Baseline** | `/pre/<dept-slug>` | The normal registration page with their department filled in and locked, so everyone signing up through it is filed under that department |
+| **Impact — Post Survey** | `/post/<dept-slug>` | An email box — enter the address used for the baseline, and the post survey opens |
 
-Entering through a department link counts as a personal invitation, so it works
-even while `post_survey_enabled` is off for everyone else (the same way a
-reminder email does).
+e.g. `/pre/department-of-law` and `/post/department-of-law`. `/post/all`
+accepts any department; the plain `/` is the open-to-anyone baseline link.
+
+The post link checks, in order: is the email registered, is it in **this**
+department, is the baseline done, and is the post survey past its start delay.
+Each failure gets a plain message on the same page instead of a redirect —
+unknown email, wrong department (naming the one they *are* registered under),
+baseline not done yet, or the date the survey opens. A student who already
+finished both surveys is sent to their results.
+
+Entering through a post link counts as a personal invitation, so it works even
+while `post_survey_enabled` is off for everyone else (the same way a reminder
+email does).
+
+Department names live in `app/departments.py` — the registration dropdown, the
+link slugs and the admin table all read from that one list, so a link always
+files students under the exact official spelling. Add a department there and it
+appears everywhere.
 
 ### Feature Flags
 | Flag                | Effect when OFF                                         |

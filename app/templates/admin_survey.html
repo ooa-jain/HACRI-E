@@ -200,22 +200,39 @@
       <div class="panel" id="p-links">
         <div class="space-y-5">
           <div class="card space-y-4">
-            <div><div class="h-card">🔗 Department post-survey links</div>
+            <div><div class="h-card">🔗 Department survey links</div>
               <div class="sub">
-                Share a department's link with its students. The student enters the email they registered with —
-                if that email has a completed baseline survey in that department, the post survey opens straight away.
+                Every department gets two links to hand out.
+                <b class="text-blue-700">Outcome Survey 1 — Baseline</b> opens the registration page with that
+                department already filled in, so everyone who signs up through it is filed correctly.
+                <b class="text-emerald-700">Impact — Post Survey</b> asks only for the email the student registered
+                with: if it has a completed baseline in that department, the post survey opens straight away.
                 Wrong department or no baseline yet, and the page tells them what to do.
               </div></div>
 
-            <div class="bg-slate-900 text-white rounded-xl p-4 space-y-2">
-              <div class="text-xs font-bold text-amber-400">🌐 All departments (any registered student)</div>
-              <div class="flex items-center gap-2">
-                <input id="all-post-link" readonly class="field link flex-1 bg-slate-800 border-slate-700 text-slate-100">
-                <button class="btn btn-soft" onclick="copy(document.getElementById('all-post-link').value)">Copy</button>
-                <a id="all-post-open" href="#" target="_blank" class="btn btn-primary">Open</a>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
+              <div class="bg-slate-900 text-white rounded-xl p-4 space-y-2">
+                <div class="text-xs font-bold text-sky-400">📝 Outcome Survey 1 — any department</div>
+                <div class="flex items-center gap-2">
+                  <input id="all-pre-link" readonly class="field link flex-1 bg-slate-800 border-slate-700 text-slate-100">
+                  <button class="btn btn-soft" onclick="copy(document.getElementById('all-pre-link').value)">Copy</button>
+                  <a id="all-pre-open" href="#" target="_blank" class="btn btn-primary">Open</a>
+                </div>
+                <div class="text-[11px] text-slate-400">The normal registration page — the student picks their own department.</div>
+              </div>
+              <div class="bg-slate-900 text-white rounded-xl p-4 space-y-2">
+                <div class="text-xs font-bold text-amber-400">📊 Impact Post Survey — any department</div>
+                <div class="flex items-center gap-2">
+                  <input id="all-post-link" readonly class="field link flex-1 bg-slate-800 border-slate-700 text-slate-100">
+                  <button class="btn btn-soft" onclick="copy(document.getElementById('all-post-link').value)">Copy</button>
+                  <a id="all-post-open" href="#" target="_blank" class="btn btn-primary">Open</a>
+                </div>
+                <div class="text-[11px] text-slate-400">Accepts any registered student with a completed baseline.</div>
               </div>
             </div>
 
+            <input id="link-search" oninput="renderPostLinks()" class="field"
+                   placeholder="🔍 Filter departments…">
             <div id="post-links-table"></div>
           </div>
 
@@ -596,7 +613,7 @@ const PAGES = [
   { id: 'p-overview', icon: '📊', label: 'Overview',    title: 'Overview',            sub: 'Cohort progress at a glance' },
   { id: 'p-students', icon: '👥', label: 'Students',    title: 'Students',            sub: 'Status, time taken, timeline and orientation replies', load: () => renderStudents() },
   { id: 'p-emails',   icon: '📧', label: 'Emails',      title: 'Emails',              sub: 'Send reminders and track delivery', load: () => { updateTargetCount(); loadEmailStats(); } },
-  { id: 'p-links',    icon: '🔗', label: 'Links',       title: 'Links',               sub: 'Department post-survey links and shareable reports', load: () => loadLinks() },
+  { id: 'p-links',    icon: '🔗', label: 'Links',       title: 'Links',               sub: 'Department links for both surveys, plus shareable reports', load: () => loadLinks() },
   { id: 'p-depts',    icon: '🏢', label: 'Departments', title: 'Departments',         sub: 'Literacy and readiness averages per department', load: () => loadDepts() },
   { id: 'p-parents',  icon: '👨‍👩‍👦', label: 'Parents',  title: 'Parental background', sub: 'Occupations reported in the post survey', load: () => loadParents() },
   { id: 'p-calendar', icon: '📅', label: 'Calendar',    title: 'Calendar',            sub: 'When students filled the surveys', load: () => loadCalendar() },
@@ -1023,8 +1040,10 @@ async function resendDept(btn, dept, type) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════
-//  Links — department post-survey entry links
+//  Links — department survey entry links
 // ═══════════════════════════════════════════════════════════════════════
+let linkData = null;
+
 async function loadLinks() {
   $('entry-links').innerHTML = [
     ['🏠 Survey home (registration)', location.origin + '/'],
@@ -1040,29 +1059,44 @@ async function loadLinks() {
 
   tableBusy('post-links-table', 'Loading department links…');
   try {
-    const d = await api('/admin/api/survey/post-links');
-    $('all-post-link').value = d.all_url;
-    $('all-post-open').href = d.all_url;
-
-    table('post-links-table',
-      ['#', 'Department', 'Registered', 'Baseline done', 'Post done', 'Post pending', 'Link', 'Actions'],
-      d.links, (row, i) => [
-        i + 1,
-        `<span class="font-semibold text-slate-900">${e(row.dept)}</span>`,
-        row.registered,
-        `<span class="font-bold text-blue-700">${row.pre_done}</span>`,
-        `<span class="font-bold text-emerald-700">${row.post_done}</span>`,
-        row.pending_post > 0 ? `<span class="badge b-amber">${row.pending_post} waiting</span>` : '<span class="badge b-gray">0</span>',
-        `<input readonly class="field link w-64" value="${e(row.url)}">`,
-        `<div class="flex gap-1.5">
-           <button class="btn-xs btn-soft" onclick="copy('${e(row.url)}')">Copy</button>
-           <a href="${e(row.url)}" target="_blank" class="btn-xs btn-primary">Open</a>
-           <button class="btn-xs btn-green" onclick="mailDept(this,'${e(row.dept)}')">Mail dept</button>
-         </div>`,
-      ], 'No departments yet — links appear once students register');
+    linkData = await api('/admin/api/survey/post-links');
+    $('all-post-link').value = linkData.all_url;
+    $('all-post-open').href  = linkData.all_url;
+    $('all-pre-link').value  = linkData.pre_all_url;
+    $('all-pre-open').href   = linkData.pre_all_url;
+    renderPostLinks();
   } catch (err) { tableBusy('post-links-table', 'Could not load department links'); }
 
   loadDepts();  // fills the overall report links below
+}
+
+/** One row per department, carrying both survey links. */
+function renderPostLinks() {
+  if (!linkData) return;
+  const q = ($('link-search').value || '').toLowerCase();
+  const rows = linkData.links.filter(r => r.dept.toLowerCase().includes(q));
+
+  const linkCell = (url, tone) => `
+    <div class="flex items-center gap-1.5">
+      <input readonly class="field link w-56" value="${e(url)}">
+      <button class="btn-xs btn-soft" onclick="copy('${e(url)}')">Copy</button>
+      <a href="${e(url)}" target="_blank" class="btn-xs ${tone}">Open</a>
+    </div>`;
+
+  table('post-links-table',
+    ['#', 'Department', 'Registered', 'Baseline done', 'Post done', 'Post pending',
+     '📝 Outcome Survey 1 — Baseline', '📊 Impact — Post Survey', ''],
+    rows, (row, i) => [
+      i + 1,
+      `<span class="font-semibold text-slate-900">${e(row.dept)}</span>`,
+      row.registered,
+      `<span class="font-bold text-blue-700">${row.pre_done}</span>`,
+      `<span class="font-bold text-emerald-700">${row.post_done}</span>`,
+      row.pending_post > 0 ? `<span class="badge b-amber">${row.pending_post} waiting</span>` : '<span class="badge b-gray">0</span>',
+      linkCell(row.pre_url, 'btn-primary'),
+      linkCell(row.post_url, 'btn-green'),
+      `<button class="btn-xs btn-green" onclick="mailDept(this,'${e(row.dept)}')">Mail dept</button>`,
+    ], 'No departments match this filter');
 }
 
 async function mailDept(btn, dept) {

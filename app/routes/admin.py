@@ -363,25 +363,38 @@ async def api_survey_date_analysis(request: Request):
 
 @router.get("/admin/api/survey/post-links")
 async def api_survey_post_links(request: Request):
-    """Department-wise post-survey entry links + how many students each serves."""
+    """Department-wise survey links + how many students each one serves.
+
+    Every department gets two links: Outcome Survey 1 (baseline registration
+    with the department locked) and the Impact post survey.
+    """
     if not _is_survey_admin(request):
         raise HTTPException(status_code=403)
 
     from app.db import get_department_summary
-    from app.routes.post_link import ALL_SLUG, dept_post_url, dept_slug
+    from app.departments import DEPARTMENTS
+    from app.routes.post_link import ALL_SLUG, dept_post_url, dept_pre_url, dept_slug
 
     base_url = str(request.base_url).rstrip("/")
-    summary = await get_department_summary()
+    summary = {row["dept"]: row for row in await get_department_summary()}
+
+    # Every official department gets links, even before anyone registers under
+    # it — that is exactly when an admin needs the baseline link to hand out.
+    empty = {"registered": 0, "pre_done": 0, "post_done": 0, "pending_pre": 0, "pending_post": 0}
+    names = sorted(set(DEPARTMENTS) | set(summary), key=str.lower)
 
     totals = {"registered": 0, "pre_done": 0, "post_done": 0, "pending_post": 0}
     links = []
-    for row in summary:
+    for dept in names:
+        row = summary.get(dept, empty)
         for key in totals:
             totals[key] += row[key]
         links.append({
-            "dept": row["dept"],
-            "slug": dept_slug(row["dept"]),
-            "url": dept_post_url(base_url, row["dept"]),
+            "dept": dept,
+            "slug": dept_slug(dept),
+            "pre_url": dept_pre_url(base_url, dept),
+            "url": dept_post_url(base_url, dept),      # kept: the post link
+            "post_url": dept_post_url(base_url, dept),
             "registered": row["registered"],
             "pre_done": row["pre_done"],
             "post_done": row["post_done"],
@@ -391,6 +404,7 @@ async def api_survey_post_links(request: Request):
     return JSONResponse({
         "base_url": base_url,
         "all_url": f"{base_url}/post/{ALL_SLUG}",
+        "pre_all_url": f"{base_url}/",
         "totals": totals,
         "links": links,
     })
