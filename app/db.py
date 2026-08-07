@@ -30,6 +30,9 @@ FLAG_POST_SURVEY = "post_survey_enabled"
 FLAG_POST_DELAY  = "post_delay_days"
 FLAG_TEST_MODE   = "test_mode_enabled"
 
+# Label used wherever a student has no department recorded.
+NO_DEPARTMENT    = "No Department"
+
 _client = None
 _db     = None
 
@@ -646,6 +649,41 @@ async def get_student_detail(email: str) -> dict | None:
         "pre_fields":  pre_doc.get("fields",  {}) if pre_doc  else {},
         "post_fields": post_doc.get("fields", {}) if post_doc else {},
     }
+
+
+async def get_department_summary() -> list[dict]:
+    """Per-department registration / completion counts.
+
+    Used by the admin "department post links" panel so each generated link can
+    show how many students it is actually meant to serve.
+    """
+    counts: dict[str, dict] = {}
+    async for u in get_db()[USERS].find({}):
+        dept = (u.get("program") or "").strip() or NO_DEPARTMENT
+        entry = counts.setdefault(
+            dept, {"dept": dept, "registered": 0, "pre_done": 0, "post_done": 0}
+        )
+        entry["registered"] += 1
+        st = u.get("status")
+        if st in (STATUS_PRE_DONE, STATUS_POST_DONE):
+            entry["pre_done"] += 1
+        if st == STATUS_POST_DONE:
+            entry["post_done"] += 1
+
+    for entry in counts.values():
+        entry["pending_pre"] = entry["registered"] - entry["pre_done"]
+        entry["pending_post"] = entry["pre_done"] - entry["post_done"]
+    return sorted(counts.values(), key=lambda d: d["dept"].lower())
+
+
+async def list_departments() -> list[str]:
+    """Every distinct department name currently present on a user record."""
+    seen: set[str] = set()
+    async for u in get_db()[USERS].find({}):
+        dept = (u.get("program") or "").strip()
+        if dept:
+            seen.add(dept)
+    return sorted(seen, key=str.lower)
 
 
 async def delete_user_and_responses(email: str) -> None:

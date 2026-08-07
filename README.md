@@ -9,8 +9,9 @@ FastAPI app combining the AI Literacy Survey (HACRI-E) and Deeksharambh 2026 Ori
 /survey/pre          → HACRI-E Baseline Assessment (65 Likert items)
 /orientation         → Deeksharambh 2026 survey (if flag enabled)
 /survey/post         → HACRI-E Post-Workshop Survey
+/post/<dept-slug>    → Department post-survey link (email → post survey)
 /results/<slug>      → Personal results + JAIN Star charts
-/admin               → Admin dashboard (tabbed)
+/admin               → Admin dashboard
 ```
 
 ## MongoDB Collections
@@ -36,12 +37,42 @@ FastAPI app combining the AI Literacy Survey (HACRI-E) and Deeksharambh 2026 Ori
 
 ## Admin Dashboard (`/admin`)
 
-### Tabs
-- **Overview** — counts: registered / pre done / post done / orientation done + feature status
-- **Settings** — toggle `AI Survey` and `Orientation` on/off in real-time
-- **AI Survey** — table of all users with status, programme, timestamps; search by name/email/programme
-- **Orientation** — table of Deeksharambh submissions; search by name/email
-- **Alerts** — one-click "Send Reminder" to all pre_done (post-pending) students
+Two portals share one login page (`/admin/login`): the survey admin lands on
+`/admin/survey`, the orientation admin on `/admin/orientation`.
+
+### Survey admin pages (`/admin/survey`)
+The department and level selectors in the top bar scope every page below them.
+
+| Page | What it does |
+|--------------|--------------|
+| **Overview** | Registration / completion / reminder counts, completion split, cohort charts |
+| **Students** | One table, four views — status, time taken, timeline, orientation replies — with search and status filter |
+| **Emails** | Send reminders to a chosen cohort, then track delivery, clicks and completions per department |
+| **Links** | Department post-survey links, shareable analysis reports, student entry points |
+| **Departments** | Literacy / readiness averages, rankings, bar chart, per-department report links |
+| **Parents** | Parental occupation breakdown from the post survey |
+| **Calendar** | Month grid, daily submission chart, day-by-day log (click a date for the department breakdown) |
+| **Settings** | Feature toggles, post-survey delay, automatic reminder schedule |
+
+Cohort data exports (CSV or Excel) come from the **Export** button, which
+follows the current filters and lets you pick which columns to include.
+
+### Department-wise post-survey links
+
+The **Links** page generates one link per department, e.g.
+`/post/department-of-law` (plus `/post/all` for any department).
+
+1. Share the link with that department's students.
+2. A student opens it and enters the email they registered with.
+3. If that email has a **completed baseline survey in that department**, the
+   post survey opens immediately — no landing page, no re-registration.
+4. Otherwise the page says why: unknown email, wrong department, baseline not
+   done yet, or post survey still time-locked. A student who already finished
+   both surveys is sent to their results.
+
+Entering through a department link counts as a personal invitation, so it works
+even while `post_survey_enabled` is off for everyone else (the same way a
+reminder email does).
 
 ### Feature Flags
 | Flag                | Effect when OFF                                         |

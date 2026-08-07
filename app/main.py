@@ -27,7 +27,10 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from app import db
-from app.routes import admin, landing, orientation, orientation_landing, results, surveys, shared_analysis
+from app.routes import (
+    admin, landing, orientation, orientation_landing, post_link,
+    results, shared_analysis, surveys,
+)
 from app.settings import settings
 
 logging.basicConfig(level=logging.INFO,
@@ -77,6 +80,7 @@ app.mount("/generated", StaticFiles(directory=str(_gen.resolve())),             
 app.include_router(landing.router,             tags=["landing"])
 app.include_router(orientation_landing.router, tags=["orientation-landing"])
 app.include_router(surveys.router,             tags=["surveys"])
+app.include_router(post_link.router,           tags=["post-link"])
 app.include_router(results.router,             tags=["results"])
 app.include_router(orientation.router,         tags=["orientation"])
 app.include_router(admin.router,               tags=["admin"])
