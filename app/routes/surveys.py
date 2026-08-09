@@ -40,6 +40,7 @@ from app.schemas import coerce_checkbox_list, coerce_int, coerce_str, coerce_tex
 from app.scoring import is_complete_post, is_complete_pre
 from app.sections import (
     POST_REFLECTION,
+    POST_USAGE,
     PRE_BACKGROUND,
     PRE_E11_OPTIONS,
     PRE_FUTURE,
@@ -151,6 +152,14 @@ def _build_post_fields(form: Any) -> dict[str, Any]:
         for k in _likert_field_keys(section):
             fields[k] = coerce_int(form.get(k))
 
+    # Section C — AI usage at university. Same keys as the baseline's Section C
+    # so each answer sits directly against its "before university" counterpart.
+    for key, _label, kind, _opts in POST_USAGE:
+        if kind == "checkbox":
+            fields[key] = coerce_checkbox_list(form.getlist(key))
+        else:
+            fields[key] = coerce_str(form.get(key))
+
     # E11 sub-question is not repeated in the post survey per the PDF
     # (post only re-uses identical Likert wording for B/D/E/F/G)
 
@@ -186,6 +195,7 @@ async def _render_form(
         "pre_future": PRE_FUTURE,
         "pre_e11_options": PRE_E11_OPTIONS,
         "post_reflection": POST_REFLECTION,
+        "post_usage": POST_USAGE,
         "test_mode_enabled": test_mode,
         "likert_choices": [(1, "Strongly Disagree"), (2, "Disagree"),
                            (3, "Neutral"), (4, "Agree"), (5, "Strongly Agree")],

@@ -399,7 +399,8 @@ def _answer_sections(fields: dict, *, kind: str) -> list[dict]:
     """
     from app.hacri_e2_compat import SCHEMA
     from app.sections import (
-        POST_REFLECTION, PRE_BACKGROUND, PRE_FUTURE, PRE_USAGE, SECTION_TITLES,
+        POST_REFLECTION, POST_USAGE, PRE_BACKGROUND, PRE_FUTURE, PRE_USAGE,
+        SECTION_TITLES,
     )
 
     def fmt(value):
@@ -454,6 +455,7 @@ def _answer_sections(fields: dict, *, kind: str) -> list[dict]:
         sections.append({"title": f"C — {SECTION_TITLES['C']}", "rows": rows(PRE_USAGE)})
         sections.append({"title": f"H — {SECTION_TITLES['H']}", "rows": rows(PRE_FUTURE)})
     else:
+        sections.append({"title": f"C — {SECTION_TITLES['C_POST']}", "rows": rows(POST_USAGE)})
         post_rows = rows(POST_REFLECTION)
         post_rows.append({"key": "praise_initiative", "label": "PRaiSE pillar chosen",
                           "value": fmt(fields.get("praise_initiative"))})

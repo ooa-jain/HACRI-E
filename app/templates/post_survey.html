@@ -77,22 +77,26 @@
       <span class="wizard-step-label">Literacy</span>
     </button>
     <button type="button" class="wizard-step" data-step="{{ 3 if has_ori_step else 2 }}">
+      <div class="wizard-step-circle">C</div>
+      <span class="wizard-step-label">Experience</span>
+    </button>
+    <button type="button" class="wizard-step" data-step="{{ 4 if has_ori_step else 3 }}">
       <div class="wizard-step-circle">D</div>
       <span class="wizard-step-label">Attitudes</span>
     </button>
-    <button type="button" class="wizard-step" data-step="{{ 4 if has_ori_step else 3 }}">
+    <button type="button" class="wizard-step" data-step="{{ 5 if has_ori_step else 4 }}">
       <div class="wizard-step-circle">E</div>
       <span class="wizard-step-label">Ethics</span>
     </button>
-    <button type="button" class="wizard-step" data-step="{{ 5 if has_ori_step else 4 }}">
+    <button type="button" class="wizard-step" data-step="{{ 6 if has_ori_step else 5 }}">
       <div class="wizard-step-circle">F</div>
       <span class="wizard-step-label">Readiness</span>
     </button>
-    <button type="button" class="wizard-step" data-step="{{ 6 if has_ori_step else 5 }}">
+    <button type="button" class="wizard-step" data-step="{{ 7 if has_ori_step else 6 }}">
       <div class="wizard-step-circle">G</div>
       <span class="wizard-step-label">Application</span>
     </button>
-    <button type="button" class="wizard-step" data-step="{{ 7 if has_ori_step else 6 }}">
+    <button type="button" class="wizard-step" data-step="{{ 8 if has_ori_step else 7 }}">
       <div class="wizard-step-circle">H</div>
       <span class="wizard-step-label">Reflection</span>
     </button>
@@ -354,7 +358,8 @@
     </fieldset>
 
     <!-- ── SECTION B — AI Awareness & Literacy (Likert) ──────────────────── -->
-    <fieldset class="section wizard-section" data-step-section="1">
+    <fieldset class="section wizard-section"
+      data-step-section="{{ 2 if has_ori_step else 1 }}">
       <legend>Section B · {{ section_titles["B"] }}</legend>
       <p class="muted">Rate your agreement. 1 = Strongly Disagree · 5 = Strongly Agree</p>
 
@@ -395,8 +400,42 @@
       </div>
     </fieldset>
 
+    <!-- ── SECTION C — AI Usage at University ─────────────────────────────── -->
+    <fieldset class="section wizard-section"
+      data-step-section="{{ 3 if has_ori_step else 2 }}">
+      <legend>Section C · {{ section_titles["C_POST"] }}</legend>
+      <p class="muted" style="margin-bottom: 20px;">Now tell us how you use AI <strong>at university</strong>. These
+        mirror the questions you answered about school, so we can see what has changed.</p>
+      <div class="sub-section-card">
+        {% for key, label, kind, opts in post_usage %}
+        <div class="question">
+          <p class="q-label"><strong>{{ key }}.</strong> {{ label }}</p>
+          <div class="q-body {% if kind == 'checkbox' %}check-grid{% endif %}">
+            {% if kind == "checkbox" %}
+            {% set chosen = values.get(key) or [] %}
+            {% for o in opts %}
+            <label class="check-opt">
+              <input type="checkbox" name="{{ key }}" value="{{ o }}" {% if o in chosen %}checked{% endif %} />
+              <span>{{ o }}</span>
+            </label>
+            {% endfor %}
+            {% else %}
+            <select name="{{ key }}" required>
+              <option value="">-- Select --</option>
+              {% for o in opts %}
+              <option value="{{ o }}" {% if values.get(key)==o %}selected{% endif %}>{{ o }}</option>
+              {% endfor %}
+            </select>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </fieldset>
+
     <!-- ── SECTION D — Attitudes & Perceptions ────────────────────────────── -->
-    <fieldset class="section wizard-section" data-step-section="2">
+    <fieldset class="section wizard-section"
+      data-step-section="{{ 4 if has_ori_step else 3 }}">
       <legend>Section D · {{ section_titles["D"] }}</legend>
       <p class="muted">Rate your agreement. 1 = Strongly Disagree · 5 = Strongly Agree.</p>
 
@@ -508,7 +547,8 @@
     </fieldset>
 
     <!-- ── SECTION E — Ethics & Academic Integrity ───────────────────────── -->
-    <fieldset class="section wizard-section" data-step-section="3">
+    <fieldset class="section wizard-section"
+      data-step-section="{{ 5 if has_ori_step else 4 }}">
       <legend>Section E · {{ section_titles["E"] }}</legend>
       <p class="muted">Rate your agreement. 1 = Strongly Disagree · 5 = Strongly Agree.</p>
       <div class="sub-section-card">
@@ -543,7 +583,8 @@
     </fieldset>
 
     <!-- ── SECTION F — HACRI Core ─────────────────────────────────────────── -->
-    <fieldset class="section wizard-section" data-step-section="4">
+    <fieldset class="section wizard-section"
+      data-step-section="{{ 6 if has_ori_step else 5 }}">
       <legend>Section F · {{ section_titles["F"] }}</legend>
       <p class="muted">Core instrument. 1 = Strongly Disagree · 5 = Strongly Agree.</p>
 
@@ -655,7 +696,8 @@
     </fieldset>
 
     <!-- ── SECTION G — Entrepreneurial AI Application ────────────────────── -->
-    <fieldset class="section wizard-section" data-step-section="5">
+    <fieldset class="section wizard-section"
+      data-step-section="{{ 7 if has_ori_step else 6 }}">
       <legend>Section G · {{ section_titles["G"] }}</legend>
       <p class="muted">If you identify yourself as an entrepreneur or aspire to be one, please answer the following
         questions. Your responses will assess your willingness to use AI in your entrepreneurship.</p>
@@ -770,7 +812,8 @@
     </fieldset>
 
     <!-- ── SECTION H — Post-Induction Reflection ─────────────────────────── -->
-    <fieldset class="section wizard-section" data-step-section="6">
+    <fieldset class="section wizard-section"
+      data-step-section="{{ 8 if has_ori_step else 7 }}">
       <legend>Section H · {{ section_titles["H_POST"] }}</legend>
       <p class="muted">Complete after the induction session — same day.</p>
       <div class="sub-section-card">
@@ -1055,7 +1098,7 @@
 <script>
   document.addEventListener('DOMContentLoaded', () => {
     let currentStep = {{ draft_step or 0 }};
-    const totalSteps = 7;
+    const totalSteps = {{ 9 if has_ori_step else 8 }};
 
   const form = document.getElementById('survey-form');
   const steps = document.querySelectorAll('.wizard-step');

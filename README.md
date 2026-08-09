@@ -45,6 +45,21 @@ them on: to the Deeksharambh orientation when they still owe it, otherwise
 straight to the post survey. The orientation redirects to the post survey when
 it is submitted, so the sequence is always orientation → post survey.
 
+### Survey sections
+
+| | Survey 1 (Baseline) | Survey 2 (Impact) |
+|---|---|---|
+| **A** | Your Background | Your Background (family details) |
+| **B, D, E, F, G** | Scored Likert items | The same items, same wording |
+| **C** | Prior AI Usage — *at school* | AI Usage — *at university* |
+| **H** | Future Expectations | Post-Induction Reflection |
+
+Section C asks the same five questions on both sides with identical answer
+options; only the time frame changes ("during your school years" →
+"now, as a university student"), so each answer reads directly against its
+baseline counterpart. C carries no scored items — literacy and readiness come
+from B, D, E, F and G alone, which is what keeps the pre/post delta valid.
+
 ### Details are asked once
 
 Name, department and level are collected at registration and never asked again.

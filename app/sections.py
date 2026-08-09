@@ -74,6 +74,41 @@ PRE_USAGE: list[tuple[str, str, str, list[str]]] = [
      "select", ["Always", "Often", "Sometimes", "Rarely", "Never"]),
 ]
 
+# ── Post Section C — AI Usage at university ─────────────────────────────────
+# Deliberately mirrors PRE_USAGE question for question, with the same option
+# lists, so each answer can be read against its baseline counterpart. Only the
+# time frame changes: PRE asks about school, POST asks about university.
+POST_USAGE: list[tuple[str, str, str, list[str]]] = [
+    ("C1", "Which AI tools have you used since joining JAIN? (select all that apply)",
+     "checkbox", [
+        "ChatGPT or similar chatbots",
+        "Google Gemini / Microsoft Copilot",
+        "AI image generators (Midjourney, DALL-E)",
+        "Grammar / writing assistants (e.g. Grammarly)",
+        "AI-powered search (e.g. Perplexity)",
+        "Recommendation systems (Netflix, YouTube, Spotify)",
+        "Voice assistants (Siri, Alexa, Google Assistant)",
+        "AI tools in video games",
+        "None of the above",
+     ]),
+    ("C2", "How frequently do you use AI tools now, as a university student?",
+     "select", ["Daily", "Weekly", "Monthly", "Rarely", "Never"]),
+    ("C3", "For what purposes do you use AI tools in your university work? (select all that apply)",
+     "checkbox", [
+        "Writing or editing assignments",
+        "Researching topics",
+        "Solving math or science problems",
+        "Generating images or creative content",
+        "Language learning or translation",
+        "Entertainment / personal use",
+        "I have not used AI tools at university",
+     ]),
+    ("C4", "Do your university faculty encourage the use of AI tools for learning?",
+     "select", ["Always", "Often", "Sometimes", "Rarely", "Never", "N/A"]),
+    ("C5", "Since joining, have you been uncertain whether using AI on a university assignment was allowed?",
+     "select", ["Always", "Often", "Sometimes", "Rarely", "Never"]),
+]
+
 # ── Pre Section H — Future Expectations & Institutional Needs ───────────────
 PRE_FUTURE: list[tuple] = [
     ("H1", "How important is it that your university prepares you to work with AI?",
@@ -122,4 +157,5 @@ SECTION_TITLES: dict[str, str] = {
     "G": "AI Application as an entrepreneur",
     "H": "Future Expectations & Institutional Needs",
     "H_POST": "Post-Induction Reflection",
+    "C_POST": "AI Usage at University",
 }
