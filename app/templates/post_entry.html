@@ -52,6 +52,75 @@
   </div>
 
   <div class="landing-card">
+    {% if welcome %}
+    {# ── Recognised: greet them, then hand over to the survey journey ── #}
+    <h2>Hey {{ welcome.first_name }}, welcome back! 👋</h2>
+
+    <div class="profile-section">
+      <div class="profile-avatar">{{ welcome.name[0] | upper }}</div>
+      <div class="profile-details">
+        <strong>{{ welcome.name }}</strong>
+        <span>{{ welcome.program }}</span>
+      </div>
+    </div>
+
+    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">
+      We found your baseline survey{% if welcome.pre_at %}, submitted on
+      <strong>{{ welcome.pre_at }}</strong>{% endif %}. Here's what's left:
+    </p>
+
+    <div class="journey-timeline" style="margin-top: 0;">
+      <div class="journey-item">
+        <div class="journey-num">✓</div>
+        <div class="journey-text">
+          <strong>Outcome Survey 1 — Baseline</strong>
+          <span>Already done. Thank you!</span>
+        </div>
+      </div>
+      {% if welcome.orientation_pending %}
+      <div class="journey-item active">
+        <div class="journey-num">1</div>
+        <div class="journey-text">
+          <strong>Deeksharambh 2026 Orientation</strong>
+          <span>Tell us how your orientation went — about 5 minutes.</span>
+        </div>
+      </div>
+      <div class="journey-item">
+        <div class="journey-num">2</div>
+        <div class="journey-text">
+          <strong>Impact — Post-Workshop Survey</strong>
+          <span>Opens right after the orientation form.</span>
+        </div>
+      </div>
+      {% else %}
+      <div class="journey-item">
+        <div class="journey-num">✓</div>
+        <div class="journey-text">
+          <strong>Deeksharambh 2026 Orientation</strong>
+          <span>Already done.</span>
+        </div>
+      </div>
+      <div class="journey-item active">
+        <div class="journey-num">1</div>
+        <div class="journey-text">
+          <strong>Impact — Post-Workshop Survey</strong>
+          <span>The last step — then your scorecard is ready.</span>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="actions" style="margin-top: 24px;">
+      <a class="btn primary" href="{{ welcome.next_url }}">
+        {% if welcome.orientation_pending %}Continue to Orientation →{% else %}Continue to Post Survey →{% endif %}
+      </a>
+    </div>
+
+    <p style="margin-top: 16px; font-size: 12.5px; color: var(--text-muted); line-height: 1.6;">
+      Not you? <a href="/post/{{ slug }}">Use a different email</a>.
+    </p>
+
+    {% else %}
     <h2>Open Your Survey</h2>
     <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">
       Enter the email address you used for the <strong>baseline survey</strong>.
@@ -86,6 +155,7 @@
       Haven't done the baseline survey yet? Start at <a href="/">the survey home page</a>.<br />
       Already finished both surveys? This page takes you straight to your results.
     </p>
+    {% endif %}
   </div>
 </div>
 

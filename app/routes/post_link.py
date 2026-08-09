@@ -79,6 +79,10 @@ async def resolve_dept(slug: str) -> str:
     return slug.replace("-", " ").title()
 
 
+def _fmt_when(value) -> str:
+    return value.strftime("%d %b %Y") if isinstance(value, datetime) else ""
+
+
 def _matches_dept(user_dept: str, slug: str) -> bool:
     """Is this student covered by this link?
 
@@ -94,7 +98,7 @@ def _matches_dept(user_dept: str, slug: str) -> bool:
 
 
 def _render(request: Request, slug: str, dept: str, *, error: str = "",
-            email: str = "", status_code: int = 200):
+            email: str = "", status_code: int = 200, welcome: dict | None = None):
     return request.app.state.templates.TemplateResponse(
         request,
         "post_entry.html",
@@ -104,6 +108,7 @@ def _render(request: Request, slug: str, dept: str, *, error: str = "",
             "slug": slug,
             "error": error,
             "email": email,
+            "welcome": welcome,
         },
         status_code=status_code,
     )
@@ -205,7 +210,21 @@ async def post_entry_post(request: Request, slug: str, email: str = Form(...)):
         {"$set": {"post_link_at": datetime.now(timezone.utc), "post_link_dept": dept}},
     )
 
-    response = RedirectResponse(url="/survey/post", status_code=303)
+    # Greet them by name and show what is coming before handing over. The
+    # Deeksharambh orientation comes first when they still owe it; the post
+    # survey follows straight after it.
+    orientation_pending = not bool(user.get("orientation_submitted"))
+    name = (user.get("name") or "").strip()
+    welcome = {
+        "name": name or "there",
+        "first_name": name.split(" ")[0] if name else "there",
+        "program": (user.get("program") or "").strip() or dept or NO_DEPARTMENT,
+        "next_url": "/orientation" if orientation_pending else "/survey/post",
+        "orientation_pending": orientation_pending,
+        "pre_at": _fmt_when(user.get("pre_submitted_at")),
+    }
+
+    response = _render(request, slug, dept, email=email, welcome=welcome)
     issue_session(response, email, user.get("name", ""))
     issue_csrf(response, make_csrf_token())
     return response

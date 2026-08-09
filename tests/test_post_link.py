@@ -83,14 +83,20 @@ async def test_entry_page_renders_for_known_department(client: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_pre_done_student_reaches_post_survey(client: AsyncClient):
+async def test_pre_done_student_is_greeted_by_name(client: AsyncClient):
+    """The student sees who we think they are before the survey opens."""
     email = "ready@example.com"
     await _add_user(email, program=DEPT, status=db.STATUS_PRE_DONE)
 
     resp = await client.post(f"/post/{DEPT_SLUG}", data={"email": email},
                              follow_redirects=False)
-    assert resp.status_code == 303
-    assert resp.headers["location"] == "/survey/post"
+    assert resp.status_code == 200
+    assert "welcome back" in resp.text.lower()
+    assert "ready" in resp.text          # their name
+    assert DEPT in resp.text             # and their department
+
+    # Orientation is still outstanding, so that is what comes next.
+    assert 'href="/orientation"' in resp.text
 
     # Access was recorded, so the post survey stays open for them.
     user = await db.get_db()["users"].find_one({"email": email})
@@ -107,8 +113,8 @@ async def test_email_is_matched_case_insensitively(client: AsyncClient):
 
     resp = await client.post(f"/post/{DEPT_SLUG}", data={"email": "  Mixed@Example.com "},
                              follow_redirects=False)
-    assert resp.status_code == 303
-    assert resp.headers["location"] == "/survey/post"
+    assert resp.status_code == 200
+    assert "welcome back" in resp.text.lower()
 
 
 @pytest.mark.asyncio
@@ -138,8 +144,8 @@ async def test_student_from_another_department_is_refused(client: AsyncClient):
 
     # …but the all-departments link accepts them.
     resp_all = await client.post("/post/all", data={"email": email}, follow_redirects=False)
-    assert resp_all.status_code == 303
-    assert resp_all.headers["location"] == "/survey/post"
+    assert resp_all.status_code == 200
+    assert "welcome back" in resp_all.text.lower()
 
 
 @pytest.mark.asyncio
@@ -172,7 +178,7 @@ async def test_link_opens_post_survey_while_it_is_closed_to_everyone_else(client
 
     resp = await client.post(f"/post/{DEPT_SLUG}", data={"email": email},
                              follow_redirects=False)
-    assert resp.status_code == 303
+    assert resp.status_code == 200
 
     page = await client.get("/survey/post", follow_redirects=False)
     assert page.status_code == 200
@@ -209,8 +215,8 @@ async def test_link_works_when_the_baseline_survey_is_switched_off(client: Async
 
     resp = await client.post(f"/post/{DEPT_SLUG}", data={"email": email},
                              follow_redirects=False)
-    assert resp.status_code == 303
-    assert resp.headers["location"] == "/survey/post"
+    assert resp.status_code == 200
+    assert "welcome back" in resp.text.lower()
 
 
 # ── Outcome Survey 1 (baseline) department links ────────────────────────────
@@ -250,8 +256,8 @@ async def test_baseline_link_registers_the_student_under_that_department(client:
         {"email": "riya@example.com"}, {"$set": {"status": db.STATUS_PRE_DONE}})
     opened = await client.post("/post/department-of-law",
                                data={"email": "riya@example.com"}, follow_redirects=False)
-    assert opened.status_code == 303
-    assert opened.headers["location"] == "/survey/post"
+    assert opened.status_code == 200
+    assert "Riya" in opened.text
 
 
 @pytest.mark.asyncio
@@ -277,3 +283,37 @@ async def test_admin_links_cover_every_official_department(client: AsyncClient):
     assert law["post_url"].endswith("/post/department-of-law")
     assert law["registered"] == 0
     assert data["pre_all_url"].endswith("/")
+
+
+@pytest.mark.asyncio
+async def test_welcome_skips_orientation_when_it_is_already_done(client: AsyncClient):
+    email = "orid@example.com"
+    await _add_user(email, program=DEPT, status=db.STATUS_PRE_DONE)
+    await db.get_db()["users"].update_one(
+        {"email": email}, {"$set": {"orientation_submitted": True}})
+
+    resp = await client.post(f"/post/{DEPT_SLUG}", data={"email": email},
+                             follow_redirects=False)
+    assert resp.status_code == 200
+    assert 'href="/survey/post"' in resp.text
+    assert 'href="/orientation"' not in resp.text
+
+
+@pytest.mark.asyncio
+async def test_department_link_student_can_open_the_orientation(client: AsyncClient):
+    """Orientation is closed to the public but open to an invited student."""
+    email = "invitedori@example.com"
+    await _add_user(email, program=DEPT, status=db.STATUS_PRE_DONE)
+    await db.set_flag(db.FLAG_ORIENTATION, False)
+
+    await client.post(f"/post/{DEPT_SLUG}", data={"email": email}, follow_redirects=False)
+
+    page = await client.get("/orientation", follow_redirects=False)
+    assert page.status_code == 200
+    assert "not available" not in page.text.lower()
+    # The department and level are shown back, not asked again.
+    assert DEPT in page.text
+    assert 'id="school"' not in page.text
+    assert 'id="program"' not in page.text
+    # …and the campus question is there instead.
+    assert 'id="location"' in page.text

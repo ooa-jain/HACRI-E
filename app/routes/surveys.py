@@ -399,7 +399,10 @@ async def post_get(
         "orientation_submitted": has_ori,
         "prefill_email": session["email"],
         "prefill_name": display_name,
+        # Already on the registration record — shown back, never re-asked.
         "prefill_dept": dept,
+        "prefill_ugpg": (user.get("ug_or_pg", "") or "").upper(),
+        "prefill_location": user.get("location", ""),
         "saved_responses": saved_responses,
     }
     return await _render_form(request, "post_survey.html", values=draft_fields, extra_ctx=extra)

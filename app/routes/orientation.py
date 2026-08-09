@@ -34,13 +34,10 @@ async def orientation_get(
         return RedirectResponse(url=f"/results/{email_to_slug(email)}", status_code=303)
 
     orientation_enabled = await get_flag(FLAG_ORIENTATION, default=False)
-    from_reminder = bool(
-        user and (
-            user.get("reminder_clicked_at")
-            or user.get("post_reminder_sent_at")
-            or (user.get("post_reminder_count", 0) > 0)
-        )
-    )
+    # Personally invited students (reminder email or department post link) keep
+    # access to the orientation even when it is closed to everyone else.
+    from app.routes.surveys import _has_post_access
+    from_reminder = bool(user and _has_post_access(user))
     if not orientation_enabled and not from_reminder:
         return request.app.state.templates.TemplateResponse(
             request, "orientation_disabled.html", {}, status_code=200
@@ -63,7 +60,6 @@ async def orientation_get(
     pre_name = await get_pre_name(email)
     display_name = pre_name or name
 
-    dept = user.get("program", "") if user else ""
     from app.db import FLAG_TEST_MODE
     test_mode = await get_flag(FLAG_TEST_MODE, default=False)
 
@@ -72,7 +68,11 @@ async def orientation_get(
         {
             "prefill_email": email,
             "prefill_name": display_name,
-            "prefill_dept": dept,
+            # Everything below is already on the student's registration — the
+            # orientation form shows it back instead of asking again.
+            "prefill_dept": (user or {}).get("program", ""),
+            "prefill_ugpg": ((user or {}).get("ug_or_pg", "") or "").upper(),
+            "prefill_location": (user or {}).get("location", ""),
             "already_done": already_done,
             "saved_responses": saved_responses,
             "test_mode_enabled": test_mode,

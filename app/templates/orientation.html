@@ -182,6 +182,7 @@
 .chip:hover{border-color:var(--navy);background:rgba(13,33,71,0.06)}
 .chip.on{border-color:var(--navy);background:var(--navy);color:#fff;font-weight:600}
 
+
 /* ── AGREE ── */
 .agrees{display:flex;flex-wrap:wrap;gap:7px}
 .ag{display:inline-flex;align-items:center;gap:6px;padding:8px 15px;border:1.5px solid var(--border);border-radius:20px;font-size:13px;cursor:pointer;transition:all .15s;color:var(--text);background:var(--bg);user-select:none}
@@ -558,29 +559,31 @@ footer{text-align:center;padding-top:1.75rem;font-size:11px;color:var(--muted);o
   </div>
 </div>
 
-<!-- SEC 0: IDENTITY (no name) -->
+<!-- SEC 0: CONFIRM DETAILS — nothing here is re-asked, it comes from registration -->
 <div class="section active cols-2" id="sec0">
   <div class="sec-eye">Before we begin</div>
   <div class="sec-title">Quick Intro</div>
-  <div class="sec-sub">We don't need your name — you're completely anonymous here. Just help us understand your academic context.</div>
+  <div class="sec-sub">We already have your details from registration — no need to type them again. Just confirm your campus and you're off.</div>
 
-  <div class="q">
-    <div class="ql">Your School</div>
-    <div class="qt">Which School are you part of?</div>
-    <select id="school" onchange="loadPrograms()">
-      <option value="">— Select your School —</option>
-    </select>
+  <div class="q full-col">
+    <div class="ql">Your details</div>
+    <div class="qt">Registered with JAIN as</div>
+    <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:6px">
+      {% if prefill_name %}<div class="known-pill">👤 {{ prefill_name }}</div>{% endif %}
+      {% if prefill_dept %}<div class="known-pill">🏛️ {{ prefill_dept }}</div>{% endif %}
+      {% if prefill_ugpg %}<div class="known-pill">🎓 {{ prefill_ugpg }}</div>{% endif %}
+    </div>
+    <div style="font-size:11.5px;color:var(--muted,#64748b);margin-top:8px">
+      Something wrong here? Mention it in the last section and we'll fix it.
+    </div>
   </div>
-  <div class="q">
-    <div class="ql">Your Programme</div>
-    <div class="qt">Which Programme are you enrolled in?</div>
-    <input type="text" id="program" placeholder="e.g. B.Com, B.Tech (AI &amp; ML), MBA, LL.B..." style="width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:10px;background:#ffffff !important;color:#000000 !important;font-size:14px;font-family:inherit;outline:none;transition:border-color .15s" onfocus="this.style.borderColor='var(--navy)'" onblur="this.style.borderColor='var(--border)'" oninput="state.program=this.value">
+
+  <div class="q full-col">
+    <div class="ql">Your campus</div>
+    <div class="qt">Which campus are you at?</div>
+    <div class="chips" id="location"></div>
   </div>
-  <div class="q">
-    <div class="ql">Level</div>
-    <div class="qt">Are you a UG or PG student?</div>
-    <div class="chips" id="ugpg"></div>
-  </div>
+
   <div class="nav"><div></div><button class="bnx" onclick="goTo(1)">Let&apos;s Go →</button></div>
 </div>
 
@@ -960,6 +963,9 @@ footer{text-align:center;padding-top:1.75rem;font-size:11px;color:var(--muted);o
 // Injected by Flask/FastAPI template engine
 window._PREFILL_EMAIL = {{ prefill_email | tojson }};
 window._PREFILL_NAME  = {{ prefill_name  | tojson }};
+window._PREFILL_DEPT     = {{ prefill_dept     | tojson }};
+window._PREFILL_UGPG     = {{ prefill_ugpg     | tojson }};
+window._PREFILL_LOCATION = {{ prefill_location | tojson }};
 window._ALREADY_DONE  = {{ already_done | tojson }};
 window._SAVED_RESPONSES = {{ saved_responses | tojson }};
 </script>
@@ -969,21 +975,6 @@ window._SAVED_RESPONSES = {{ saved_responses | tojson }};
 // show the inline thank-you section instead of the form. No /result navigation.
 // Server manages submission state via session
 
-const SCHOOLS=[
-  "CMS Business School",
-  "School of Commerce",
-  "School of Engineering and Technology",
-  "School of Aerospace Engineering",
-  "School of Computer Science and Engineering",
-  "School of Sciences",
-  "School of Computer Science and IT",
-  "School of Allied Healthcare and Sciences",
-  "School of Humanities and Social Sciences",
-  "School of Design, Media and Creative Arts",
-  "School of Aviation and Aerospace Management (SAAM)",
-  "School of Sports Education and Research",
-  "School of Law"
-];
 
 const STORAGE_KEY="deeksharambh_2026_responses";
 const state={};
@@ -991,6 +982,10 @@ const state={};
 // Pre-fill state with email/name from pre-survey
 if (window._PREFILL_EMAIL) state.email = window._PREFILL_EMAIL;
 if (window._PREFILL_NAME)  state.name  = window._PREFILL_NAME;
+// Department, level and campus come from registration — never re-typed here.
+if (window._PREFILL_DEPT)     state.department = window._PREFILL_DEPT;
+if (window._PREFILL_UGPG)     state.ugpg       = window._PREFILL_UGPG;
+if (window._PREFILL_LOCATION) state.location   = window._PREFILL_LOCATION;
 
 // Pre-fill state with saved responses if already done
 if (window._ALREADY_DONE && window._SAVED_RESPONSES) {
@@ -1015,20 +1010,11 @@ function upd(n){
   if(pb) pb.style.width = (n / (steps.length - 1)) * 100 + '%';
 }
 function goTo(n){
-  if(n===1){const prog=document.getElementById("program")?.value?.trim();if(!state.school||!prog||!state.ugpg){alert("Please complete all fields before continuing.");return;}state.program=prog;}
+  if(n===1 && !state.location){alert("Please pick your campus before continuing.");return;}
   document.getElementById("sec"+cur)?.classList.remove("active");
   document.getElementById("sec"+n)?.classList.add("active");
   cur=n;upd(n);
   window.scrollTo({top:0,behavior:"smooth"});
-}
-
-(function initSchools(){
-  const sel=document.getElementById("school");
-  SCHOOLS.forEach(s=>{const o=document.createElement("option");o.value=s;o.textContent=s;sel.appendChild(o);});
-})();
-
-function loadPrograms(){
-  state.school=document.getElementById("school").value;
 }
 
 function mkChips(cid,items,key,multi){
@@ -1170,9 +1156,7 @@ function mkChipsQ7(){
 }
 
 function autoFillOrientation() {
-  state.school = "FET";
-  state.program = "B.Tech AI & ML";
-  state.ugpg = "UG";
+  state.location = state.location || "📍 Bangalore";
   state.q2 = 8;
   state.q16 = 4;
   state.q29 = 9;
@@ -1361,9 +1345,9 @@ function buildAllAnswersHTML(){
 
   // Profile
   h += _section('📋 Your Profile');
-  h += _row('', 'School',          _esc(s.school || '—'));
-  h += _row('', 'Programme',       _esc(s.program || '—'));
+  h += _row('', 'Department',      _esc(s.department || s.program || s.school || '—'));
   h += _row('', 'Level (UG / PG)', _esc(s.ugpg || '—'));
+  h += _row('', 'Campus',          _esc(s.location || '—'));
 
   // Section 1
   h += _section('🔥 Section 1 · The Vibe Check');
@@ -1515,9 +1499,9 @@ function buildFullAnswerSummary(){
   // ── Identity
   sections.push(`
     <div class="pd-section-title">Your Profile</div>
-    ${_qRow('', 'School',          _escHtml(s.school || '—'))}
-    ${_qRow('', 'Programme',       _escHtml(s.program || '—'))}
+    ${_qRow('', 'Department',      _escHtml(s.department || s.program || s.school || '—'))}
     ${_qRow('', 'Level (UG / PG)', _escHtml(s.ugpg || '—'))}
+    ${_qRow('', 'Campus',          _escHtml(s.location || '—'))}
   `);
 
   // ── Scorecard
@@ -1639,7 +1623,19 @@ function retake(){
 }
 
 // ── INIT ALL QUESTIONS ──
-mkChips("ugpg",["🎒 UG (Under Graduate)","🎓 PG (Post Graduate)"],"ugpg",false);
+mkChips("location",["📍 Bangalore","📍 Kochi"],"location",false);
+// Pre-select the campus we already have on file.
+(function(){
+  const known = state.location || window._PREFILL_LOCATION;
+  if (!known) return;
+  const wanted = String(known).replace("📍","").trim().toLowerCase();
+  document.querySelectorAll("#location .chip").forEach(chip => {
+    if (chip.textContent.replace("📍","").trim().toLowerCase() === wanted) {
+      chip.classList.add("on");
+      state.location = chip.textContent;
+    }
+  });
+})();
 // Q1 — hard mutual exclusion between highs and not-so-great
 (function(){
   const pos=["🔥 Inspiring","🚀 Exciting","😊 Welcoming","💡 Eye-opening","❤️ Memorable","🎯 Productive","🤝 Community-driven","⚡ Energising","🧠 Thought-provoking"];

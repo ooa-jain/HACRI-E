@@ -31,10 +31,27 @@ FastAPI app combining the AI Literacy Survey (HACRI-E) and Deeksharambh 2026 Ori
 2. Fills HACRI-E Baseline → submits
    - If **orientation flag ON** → redirected to `/orientation`
    - If **orientation flag OFF** → `/survey/pre/done` → manual link to `/survey/post`
-3. `/orientation` → Deeksharambh form (email pre-filled from session)
+3. `/orientation` → Deeksharambh form (identity taken from the session)
    - On submit → server stores data → redirect to `/survey/post`
 4. `/survey/post` → HACRI-E Post-Workshop → submits → `/results/<slug>`
 5. Results page shows 2×2 JAIN Star quadrant + histograms
+
+### Returning through a department post link
+
+A student opening `/post/<dept-slug>` types their email and is then **greeted by
+name** — "Hey \<first name\>, welcome back!" — with their department, the date
+of their baseline submission, and what is still outstanding. One button carries
+them on: to the Deeksharambh orientation when they still owe it, otherwise
+straight to the post survey. The orientation redirects to the post survey when
+it is submitted, so the sequence is always orientation → post survey.
+
+### Details are asked once
+
+Name, department and level are collected at registration and never asked again.
+The orientation form (both the standalone `/orientation` wizard and the Part 1
+step embedded in the post survey) shows them back as read-only pills and asks
+only for the **campus — Bangalore or Kochi** — pre-selected from the
+registration record when it is known.
 
 ## Admin Dashboard (`/admin`)
 
