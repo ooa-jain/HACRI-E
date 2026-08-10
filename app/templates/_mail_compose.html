@@ -142,7 +142,7 @@
       </div>
 
       <div class="mc-field">
-        <label>Links added below your message</label>
+        <label>Added below your message</label>
         <div class="mc-links" id="mc-links"></div>
         <p class="mc-hint" style="margin-top:8px" id="mc-format-hint"></p>
       </div>
@@ -317,6 +317,17 @@
       + '</head><body style="margin:0">' + htmlBody() + '</body></html>';
   }
 
+  /** Show exactly what will be appended: the figures, then the links. */
+  function renderAppendix() {
+    const stats = statRows();
+    const figures = stats.length
+      ? `${ctx.kind === 'post' ? 'POST-WORKSHOP' : 'BASELINE'} FIGURES\n`
+        + stats.map(r => `  ${r.label}: ${r.value}`).join('\n') + '\n\n'
+      : '';
+    $mc('mc-links').textContent =
+      figures + linkList().map(l => `${l.short}\n${l.url}`).join('\n\n');
+  }
+
   function refresh() {
     const su = encodeURIComponent($mc('mc-subject').value);
     // A compose link only ever carries plain text — HTML is pasted in.
@@ -334,6 +345,7 @@
       prev.dataset.url = url;
       prev.href = url;
     }
+    renderAppendix();
     saveDraft();
   }
 
@@ -369,7 +381,7 @@
     $mc('mc-subject').value = `HACRI-E ${label} — ${ctx.dept}`;
     $mc('mc-message').value = '';
     $mc('mc-to').value = '';
-    $mc('mc-links').textContent = linkList().map(l => `${l.label}:\n${l.url}`).join('\n\n');
+    renderAppendix();
 
     // Offer the message written for another department.
     const reuse = $mc('mc-reuse');
