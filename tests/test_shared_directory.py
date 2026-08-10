@@ -163,10 +163,43 @@ async def test_overall_excel_covers_every_department(client: AsyncClient):
     import io
     from openpyxl import load_workbook
     wb = load_workbook(io.BytesIO(resp.content))
-    rows = list(wb[wb.sheetnames[0]].iter_rows(values_only=True))
+
+    # Sheet 1: every department, side by side.
+    assert wb.sheetnames[0] == "Department Breakdown"
+    breakdown = list(wb["Department Breakdown"].iter_rows(values_only=True))
+    flat = [[c for c in row] for row in breakdown]
+    depts = {row[0] for row in flat if row and isinstance(row[0], str)}
+    assert LAW in depts and COM in depts
+    assert "ALL DEPARTMENTS" in depts          # totals line
+
+    law_row = next(r for r in flat if r and r[0] == LAW)
+    assert law_row[1:4] == [3, 2, 1]           # registered / baseline / post
+    totals_row = next(r for r in flat if r and r[0] == "ALL DEPARTMENTS")
+    assert totals_row[1] == 4                  # every registered student
+
+    # Sheet 2: the students themselves, from both departments, each tagged
+    # with the department they belong to.
+    rows = list(wb["Department Analysis"].iter_rows(values_only=True))
     emails = {c for row in rows for c in row if isinstance(c, str) and "@example.com" in c}
-    # Everyone with a baseline, across both departments.
     assert emails == {"a@example.com", "b@example.com", "d@example.com"}
+    named_depts = {c for row in rows for c in row if c in (LAW, COM)}
+    assert named_depts == {LAW, COM}
+
+
+@pytest.mark.asyncio
+async def test_single_department_excel_has_no_breakdown_sheet(client: AsyncClient):
+    """The breakdown only makes sense on the all-departments export."""
+    await _seed()
+    from app.routes.shared_analysis import get_dept_token
+
+    token = get_dept_token(LAW, "pre")
+    resp = await client.get(f"/shared/analysis/export-excel?dept={LAW}&token={token}&type=pre")
+    assert resp.status_code == 200
+
+    import io
+    from openpyxl import load_workbook
+    wb = load_workbook(io.BytesIO(resp.content))
+    assert wb.sheetnames == ["Department Analysis"]
 
 
 @pytest.mark.asyncio

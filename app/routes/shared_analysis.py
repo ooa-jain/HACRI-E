@@ -51,6 +51,46 @@ def directory_url(base_url: str) -> str:
 def _is_overall(dept: str) -> bool:
     return (dept or "").strip().lower() in ("overall", "all", "all departments")
 
+
+async def _department_breakdown_rows() -> list[dict]:
+    """One row per department: counts, reminder-mail figures, average scores.
+
+    Shared by the directory page and the all-departments Excel export so the
+    two can never show different numbers.
+    """
+    from app.db import get_dept_analysis_data, get_email_notification_stats
+
+    analysis = await get_dept_analysis_data()
+    mail_stats = {row["dept"]: row for row in await get_email_notification_stats()}
+
+    rows = []
+    for item in analysis["departments"]:
+        dept = item.get("dept")
+        if not dept:
+            continue
+        mail = mail_stats.get(dept, {})
+        registered = item.get("registered", 0)
+        pre_done = item.get("pre_done", 0)
+        post_done = item.get("post_done", 0)
+        rows.append({
+            "dept": dept,
+            "registered": registered,
+            "pre_done": pre_done,
+            "post_done": post_done,
+            "pre_pending": max(0, registered - pre_done),
+            "post_pending": max(0, pre_done - post_done),
+            "reminders_sent": mail.get("pre_sent", 0) + mail.get("post_sent", 0),
+            "clicked": mail.get("clicked", 0),
+            "completed_after": mail.get("completed_after", 0),
+            "avg_lit_pre": item.get("avg_lit_pre"),
+            "avg_read_pre": item.get("avg_read_pre"),
+            "avg_lit_post": item.get("avg_lit_post"),
+            "avg_read_post": item.get("avg_read_post"),
+            "token_pre": item.get("token_pre"),
+            "token_post": item.get("token_post"),
+        })
+    return rows
+
 @router.get("/shared/analysis", response_class=HTMLResponse)
 async def shared_analysis_get(
     request: Request,
@@ -145,10 +185,15 @@ async def shared_export_excel(
         async for doc in db["post_responses"].find({"email": {"$in": list(emails)}}):
             post_docs.append(doc)
 
+    # The all-departments export gets a per-department breakdown sheet — a flat
+    # student list across 30-odd departments says nothing on its own.
+    dept_rows = await _department_breakdown_rows() if _is_overall(dept) else None
+
     excel_bytes = generate_cohort_excel(
         dept, users_list,
         pre_docs if survey_type == "pre" else [],
         post_docs if survey_type == "post" else [],
+        dept_rows=dept_rows,
     )
     
     filename = f"HACRI_E2_{survey_type.upper()}_Export_{dept}.xlsx"
@@ -301,50 +346,37 @@ async def shared_departments_list(request: Request, token: str = Query(...)):
     if not hmac.compare_digest(get_directory_token(), token):
         raise HTTPException(status_code=403, detail="Access denied: Invalid or expired sharing link.")
 
-    from app.db import get_dept_analysis_data, get_email_notification_stats
-    analysis_data = await get_dept_analysis_data()
-    mail_stats = {row["dept"]: row for row in await get_email_notification_stats()}
+    from app.db import get_dept_analysis_data
 
-    def row(item: dict, *, name: str, key: str) -> dict:
-        mail = mail_stats.get(key, {})
-        registered = item.get("registered", 0)
-        pre_done = item.get("pre_done", 0)
-        post_done = item.get("post_done", 0)
-        sent = mail.get("pre_sent", 0) + mail.get("post_sent", 0)
-        return {
-            "name": name,
-            "dept_key": key,
-            "registered": registered,
-            "pre_done": pre_done,
-            "post_done": post_done,
-            "pre_pending": max(0, registered - pre_done),
-            "post_pending": max(0, pre_done - post_done),
-            "reminders_sent": sent,
-            "clicked": mail.get("clicked", 0),
-            "completed_after": mail.get("completed_after", 0),
-            "avg_lit_pre": item.get("avg_lit_pre"),
-            "avg_read_pre": item.get("avg_read_pre"),
-            "avg_lit_post": item.get("avg_lit_post"),
-            "avg_read_post": item.get("avg_read_post"),
-            "token_pre": item.get("token_pre"),
-            "token_post": item.get("token_post"),
-        }
+    analysis_data = await get_dept_analysis_data()
+    rows = await _department_breakdown_rows()
 
     ov = analysis_data["overall"]
-    overall_mail = {
-        "reminders_sent": sum(m.get("pre_sent", 0) + m.get("post_sent", 0) for m in mail_stats.values()),
-        "clicked": sum(m.get("clicked", 0) for m in mail_stats.values()),
-        "completed_after": sum(m.get("completed_after", 0) for m in mail_stats.values()),
+    registered = ov.get("registered", 0)
+    pre_done = ov.get("pre_done", 0)
+    post_done = ov.get("post_done", 0)
+    overall_row = {
+        "name": "Overall (All Departments)",
+        "dept_key": OVERALL,
+        "registered": registered,
+        "pre_done": pre_done,
+        "post_done": post_done,
+        "pre_pending": max(0, registered - pre_done),
+        "post_pending": max(0, pre_done - post_done),
+        "reminders_sent": sum(r["reminders_sent"] for r in rows),
+        "clicked": sum(r["clicked"] for r in rows),
+        "completed_after": sum(r["completed_after"] for r in rows),
+        "avg_lit_pre": ov.get("avg_lit_pre"),
+        "avg_read_pre": ov.get("avg_read_pre"),
+        "avg_lit_post": ov.get("avg_lit_post"),
+        "avg_read_post": ov.get("avg_read_post"),
+        "token_pre": ov.get("token_pre"),
+        "token_post": ov.get("token_post"),
     }
-    overall_row = row(ov, name="Overall (All Departments)", key=OVERALL)
-    overall_row.update(overall_mail)
 
-    dept_list = [overall_row]
-    for item in analysis_data["departments"]:
-        dept = item["dept"]
-        if not dept:
-            continue
-        dept_list.append(row(item, name=dept, key=dept))
+    dept_list = [overall_row] + [
+        {**r, "name": r["dept"], "dept_key": r["dept"]} for r in rows
+    ]
 
     return request.app.state.templates.TemplateResponse(
         request,

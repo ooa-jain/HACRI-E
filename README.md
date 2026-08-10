@@ -129,6 +129,12 @@ The top row is **Overall (All Departments)** with the same links, so the
 combined report and a full-cohort Excel are one click away. Figures are
 recalculated every time the page is opened.
 
+The Overall Excel opens on a **Department Breakdown** sheet — one line per
+department (registered, baseline filled, post filled, both pendings, reminders
+sent, clicked, filled after mail, average pre and post scores) closing with an
+ALL DEPARTMENTS total. The second sheet holds every student, each tagged with
+their department. Single-department exports carry the student sheet only.
+
 Each department's analysis link is independently shareable — hand a single
 department its own link without exposing the rest.
 
