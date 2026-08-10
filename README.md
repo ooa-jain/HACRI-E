@@ -169,7 +169,7 @@ Two formats:
 | | What you get | How it goes out |
 |---|---|---|
 | **📄 Normal mail** | Plain text with the URLs listed | **Open in Gmail** fills the compose window directly; **Mail app** does the same via `mailto:` |
-| **🎨 HTML mail** | A JAIN-branded page — the university logo, department name, your message, and a card per link with an **Open →** button *and* the full URL underneath for anyone whose client strips buttons | **Copy styled mail**, then paste into the compose window (Ctrl+V). **Preview** opens it in a tab first |
+| **🎨 HTML mail** | A quiet, letter-like page — JAIN logo on white, the department as the heading, your message, then each link named with its full URL printed in view | **Copy styled mail**, then paste into the compose window (Ctrl+V). **Preview** opens it in a tab first |
 
 Addresses typed into **To** are carried into the compose window and recorded.
 
