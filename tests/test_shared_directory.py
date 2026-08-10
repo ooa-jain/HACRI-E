@@ -269,3 +269,71 @@ async def test_overall_analysis_page_links_the_all_departments_survey(client: As
     page = (await client.get(
         f"/shared/analysis?dept=Overall&token={get_dept_token('Overall', 'post')}&type=post")).text
     assert '"/post/all"' in page
+
+
+@pytest.mark.asyncio
+async def test_mail_exports_are_recorded_against_the_department(client: AsyncClient):
+    """Drafting a mail records who it was addressed to, and how many times."""
+    await _seed()
+    from app.routes.shared_analysis import get_dept_token
+
+    token = get_dept_token(LAW, "post")
+    payload = {"dept": LAW, "token": token, "type": "post", "format": "html",
+               "via": "gmail", "subject": "Report",
+               "to": ["HOD@jainuniversity.ac.in", "dean@jainuniversity.ac.in"]}
+
+    first = await client.post("/shared/analysis/mail-log", json=payload)
+    assert first.status_code == 200
+    history = first.json()["history"]
+    assert history["total"] == 1
+    # Addresses are normalised, so the same person is not counted twice.
+    assert {r["email"] for r in history["recipients"]} == {
+        "hod@jainuniversity.ac.in", "dean@jainuniversity.ac.in"}
+
+    # Mailing the same person again increments their count.
+    payload["to"] = ["hod@jainuniversity.ac.in"]
+    second = await client.post("/shared/analysis/mail-log", json=payload)
+    counts = {r["email"]: r["count"] for r in second.json()["history"]["recipients"]}
+    assert counts["hod@jainuniversity.ac.in"] == 2
+    assert counts["dean@jainuniversity.ac.in"] == 1
+    assert second.json()["history"]["total"] == 2
+
+    # …and it shows on that department's analysis page.
+    page = (await client.get(
+        f"/shared/analysis?dept={LAW}&token={token}&type=post")).text
+    assert "Mail history" in page
+    assert "hod@jainuniversity.ac.in" in page
+
+
+@pytest.mark.asyncio
+async def test_mail_log_needs_a_valid_department_token(client: AsyncClient):
+    await _seed()
+    from app.routes.shared_analysis import get_dept_token
+
+    bad = await client.post("/shared/analysis/mail-log", json={
+        "dept": LAW, "token": "nonsense", "type": "post", "to": ["x@y.com"]})
+    assert bad.status_code == 403
+
+    # A token for one department cannot log against another.
+    crossed = await client.post("/shared/analysis/mail-log", json={
+        "dept": COM, "token": get_dept_token(LAW, "post"), "type": "post",
+        "to": ["x@y.com"]})
+    assert crossed.status_code == 403
+
+    # Nothing was written.
+    page = (await client.get(
+        f"/shared/analysis?dept={COM}&token={get_dept_token(COM, 'post')}&type=post")).text
+    assert "has not been mailed yet" in page
+
+
+@pytest.mark.asyncio
+async def test_a_draft_with_no_recipients_still_counts_as_an_export(client: AsyncClient):
+    await _seed()
+    from app.routes.shared_analysis import get_dept_token
+
+    resp = await client.post("/shared/analysis/mail-log", json={
+        "dept": LAW, "token": get_dept_token(LAW, "pre"), "type": "pre",
+        "format": "plain", "via": "copy-plain", "subject": "S", "to": []})
+    history = resp.json()["history"]
+    assert history["total"] == 1
+    assert history["recipients"] == []

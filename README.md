@@ -169,7 +169,9 @@ Two formats:
 | | What you get | How it goes out |
 |---|---|---|
 | **📄 Normal mail** | Plain text with the URLs listed | **Open in Gmail** fills the compose window directly; **Mail app** does the same via `mailto:` |
-| **🎨 HTML mail** | A JAIN-branded page — department name, your message, a **Click here** button per link | **Copy styled mail**, then paste into the compose window (Ctrl+V). **Preview** opens it in a tab first |
+| **🎨 HTML mail** | A JAIN-branded page — the university logo, department name, your message, and a card per link with an **Open →** button *and* the full URL underneath for anyone whose client strips buttons | **Copy styled mail**, then paste into the compose window (Ctrl+V). **Preview** opens it in a tab first |
+
+Addresses typed into **To** are carried into the compose window and recorded.
 
 HTML has to be pasted because a compose link can only carry plain text — the
 copy puts both a rich and a plain flavour on the clipboard, so pasting into
@@ -182,6 +184,14 @@ accepting keeps your text and retargets the subject to the new department.
 Nothing is sent from the page; the draft is always yours to finish. A mail link
 cannot carry a file attachment either, so the Excel goes in as a one-click
 download — download it first if you would rather attach the file by hand.
+
+**Mail history.** Each department's analysis page ends with a panel listing
+every draft opened from that report: who it was addressed to, how many times
+each person has been mailed, and when they were last mailed. Records are kept
+per department (`mail_exports`) and written when the draft is handed to Gmail,
+the mail app, or the clipboard. It records what was *drafted*, not what was
+delivered — the sending happens in your own mailbox, which the portal cannot
+see.
 
 ### Department-wise survey links
 

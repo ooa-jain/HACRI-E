@@ -689,9 +689,22 @@ body {
 </script>
 
 
+<div class="container" style="margin-top:24px">
+  <div style="background:#fff;border:1px solid var(--border);border-radius:16px;padding:22px 24px">
+    <h2 style="font-size:17px;font-weight:800;color:var(--navy);margin:0 0 4px">📤 Mail history</h2>
+    <p style="font-size:13px;color:var(--muted);margin:0 0 16px">
+      Every draft opened from this report, and who it was addressed to. The mail is sent from
+      your own mailbox, so this records what was drafted — not delivery.
+    </p>
+    <div id="mail-history"></div>
+  </div>
+</div>
+
 {% include "_mail_compose.html" %}
 
 <script>
+renderMailHistory({{ mail_history | tojson }});
+
 // "Mail this report" — asks for the subject and message, then hands the draft
 // (with this department's links appended) to Gmail.
 document.getElementById('btn-mail-report').addEventListener('click', () => {

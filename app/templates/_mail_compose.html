@@ -127,6 +127,11 @@
       </div>
 
       <div class="mc-field">
+        <label for="mc-to">To <span style="text-transform:none;font-weight:500;color:#64748b">— comma separated, recorded on the analysis page</span></label>
+        <input type="text" id="mc-to" placeholder="hod@jainuniversity.ac.in, coordinator@jainuniversity.ac.in">
+      </div>
+
+      <div class="mc-field">
         <label for="mc-subject">Subject</label>
         <input type="text" id="mc-subject" placeholder="Subject line">
       </div>
@@ -200,40 +205,62 @@
   function plainBody() {
     const written = $mc('mc-message').value.trim();
     const rule = '-'.repeat(64);
-    const blocks = linkList().map(l => `${l.label}:\n${l.url}${l.note ? `\n${l.note}` : ''}`);
-    return `${written}\n\n${rule}\n${blocks.join('\n\n')}\n${rule}`;
+    const blocks = linkList().map(l => `${l.label}${l.note ? `\n${l.note}` : ''}\n${l.url}`);
+    return `${written}\n\n${rule}\n\n${blocks.join('\n\n')}\n\n${rule}\nJAIN (Deemed-to-be University) · Office of Academics`;
+  }
+
+  function recipients() {
+    return $mc('mc-to').value.split(/[,;\s]+/)
+      .map(a => a.trim().toLowerCase())
+      .filter(a => a.includes('@'));
   }
 
   function htmlBody() {
+    const origin = location.origin;
     const written = $mc('mc-message').value.trim();
     const paragraphs = written
-      ? written.split(/\n{2,}/).map(p => `<p style="margin:0 0 14px;font-size:15px;line-height:1.65;color:#1e293b">${esc(p).replace(/\n/g, '<br>')}</p>`).join('')
+      ? written.split(/\n{2,}/).map(p =>
+          `<p style="margin:0 0 16px;font-size:15px;line-height:1.7;color:#1e293b">${esc(p).replace(/\n/g, '<br>')}</p>`).join('')
       : '';
+
     const cards = linkList().map(l => `
-      <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin:0 0 14px">
-        <tr><td style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:16px 18px">
-          <div style="font-size:14px;font-weight:700;color:#0d2147;margin-bottom:4px">${esc(l.label)}</div>
-          ${l.note ? `<div style="font-size:12.5px;color:#64748b;line-height:1.5;margin-bottom:12px">${esc(l.note)}</div>` : ''}
-          <a href="${esc(l.url)}" style="display:inline-block;background:#0d2147;color:#ffffff;text-decoration:none;font-size:13px;font-weight:700;padding:10px 20px;border-radius:8px">Click here &rarr;</a>
+      <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin:0 0 16px">
+        <tr><td style="background:#ffffff;border:1px solid #e2e8f0;border-left:4px solid #0d2147;border-radius:10px;padding:18px 20px">
+          <div style="font-size:15px;font-weight:700;color:#0d2147;margin-bottom:5px">${esc(l.label)}</div>
+          ${l.note ? `<div style="font-size:13px;color:#64748b;line-height:1.55;margin-bottom:14px">${esc(l.note)}</div>` : ''}
+          <a href="${esc(l.url)}" style="display:inline-block;background:#0d2147;color:#ffffff;text-decoration:none;font-size:13.5px;font-weight:700;padding:11px 22px;border-radius:8px">Open &rarr;</a>
+          <div style="margin-top:12px;font-size:12px;line-height:1.6;color:#475569">
+            Or paste this link into your browser:<br>
+            <a href="${esc(l.url)}" style="color:#1a3a7a;word-break:break-all;text-decoration:underline">${esc(l.url)}</a>
+          </div>
         </td></tr>
       </table>`).join('');
 
-    return `<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background:#f4f6f9;padding:24px 0;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif">
+    return `<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background:#eef2f7;padding:28px 12px;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif">
   <tr><td align="center">
-    <table role="presentation" cellpadding="0" cellspacing="0" width="620" style="max-width:620px;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e2e8f0">
-      <tr><td style="background:#0d2147;padding:22px 26px">
-        <div style="font-size:18px;font-weight:800;color:#ffffff;letter-spacing:.3px">JAIN <span style="color:#e6b324">(Deemed-to-be University)</span></div>
-        <div style="font-size:12.5px;color:#c7d2e5;margin-top:3px">HACRI-E · AI Literacy Assessment</div>
+    <table role="presentation" cellpadding="0" cellspacing="0" width="640" style="max-width:640px;background:#ffffff;border-radius:14px;overflow:hidden;border:1px solid #dbe3ee">
+      <tr><td style="background:#0d2147;padding:24px 28px">
+        <table role="presentation" cellpadding="0" cellspacing="0"><tr>
+          <td style="padding-right:14px;vertical-align:middle">
+            <img src="${origin}/static/logo.png" alt="JAIN (Deemed-to-be University)" width="52" height="52"
+                 style="display:block;width:52px;height:52px;border:0;background:#ffffff;border-radius:8px;padding:5px">
+          </td>
+          <td style="vertical-align:middle">
+            <div style="font-size:17px;font-weight:700;color:#ffffff;line-height:1.3">JAIN <span style="color:#e6b324">(Deemed-to-be University)</span></div>
+            <div style="font-size:12.5px;color:#b9c6dc;margin-top:3px">HACRI-E &middot; AI Literacy Assessment &middot; Office of Academics</div>
+          </td>
+        </tr></table>
       </td></tr>
-      <tr><td style="padding:24px 26px 6px">
-        <div style="display:inline-block;background:#eef2f7;color:#0d2147;font-size:12px;font-weight:700;padding:6px 14px;border-radius:999px;margin-bottom:16px">🏛️ ${esc(ctx ? ctx.dept : '')}</div>
+      <tr><td style="height:4px;background:#e6b324;font-size:0;line-height:0">&nbsp;</td></tr>
+      <tr><td style="padding:26px 28px 4px">
+        <div style="display:inline-block;background:#eef2f7;color:#0d2147;font-size:12.5px;font-weight:700;padding:7px 16px;border-radius:999px;margin-bottom:18px">${esc(ctx ? ctx.dept : '')}</div>
         ${paragraphs}
       </td></tr>
-      <tr><td style="padding:6px 26px 20px">${cards}</td></tr>
-      <tr><td style="background:#f8fafc;border-top:1px solid #e2e8f0;padding:16px 26px">
-        <div style="font-size:11.5px;color:#64748b;line-height:1.6">
-          JAIN (Deemed-to-be University) · Office of Academics<br>
-          Confidential — for programme evaluation and research use only.
+      <tr><td style="padding:8px 28px 22px">${cards}</td></tr>
+      <tr><td style="background:#f8fafc;border-top:1px solid #e2e8f0;padding:18px 28px">
+        <div style="font-size:11.5px;color:#64748b;line-height:1.7">
+          JAIN (Deemed-to-be University) &middot; Office of Academics<br>
+          Confidential &mdash; for programme evaluation and research use only.
         </div>
       </td></tr>
     </table>
@@ -251,8 +278,10 @@
     const su = encodeURIComponent($mc('mc-subject').value);
     // A compose link only ever carries plain text — HTML is pasted in.
     const body = encodeURIComponent(plainBody());
-    $mc('mc-gmail').href = `https://mail.google.com/mail/?view=cm&fs=1&su=${su}&body=${body}`;
-    $mc('mc-mailto').href = `mailto:?subject=${su}&body=${body}`;
+    const to = encodeURIComponent(recipients().join(','));
+    const toPart = to ? `&to=${to}` : '';
+    $mc('mc-gmail').href = `https://mail.google.com/mail/?view=cm&fs=1${toPart}&su=${su}&body=${body}`;
+    $mc('mc-mailto').href = `mailto:${to}?subject=${su}&body=${body}`;
 
     if (mode === 'html') {
       const blob = new Blob([previewDocument()], { type: 'text/html;charset=utf-8' });
@@ -296,6 +325,7 @@
     $mc('mc-title').textContent = `✉️ Mail — ${ctx.dept}`;
     $mc('mc-subject').value = `HACRI-E ${label} — ${ctx.dept}`;
     $mc('mc-message').value = '';
+    $mc('mc-to').value = '';
     $mc('mc-links').textContent = linkList().map(l => `${l.label}:\n${l.url}`).join('\n\n');
 
     // Offer the message written for another department.
@@ -332,6 +362,54 @@
     $mc('mc-reuse').classList.remove('on');
   };
 
+  /** Record that this draft was handed to a mail client. */
+  function logExport(via) {
+    if (!ctx) return;
+    const payload = {
+      dept: ctx.dept, token: ctx.token, type: ctx.kind,
+      format: mode, via: via,
+      subject: $mc('mc-subject').value,
+      to: recipients(),
+    };
+    const body = JSON.stringify(payload);
+    // keepalive so the record survives the tab handing over to Gmail.
+    fetch('/shared/analysis/mail-log', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: body, keepalive: true,
+    }).then(r => r.ok ? r.json() : null)
+      .then(d => { if (d && d.history) renderMailHistory(d.history); })
+      .catch(() => {});
+  }
+
+  /** Refresh the "who it went to" panel if this page shows one. */
+  function renderMailHistory(history) {
+    const host = document.getElementById('mail-history');
+    if (!host) return;
+    const rows = (history.recipients || []).map((r, i) => `
+      <tr>
+        <td style="color:#94a3b8">${i + 1}</td>
+        <td style="font-weight:600">${esc(r.email)}</td>
+        <td style="text-align:center;font-weight:700">${r.count}</td>
+        <td style="color:#64748b">${esc(r.last)}</td>
+      </tr>`).join('');
+    host.innerHTML = history.total
+      ? `<p style="font-size:13px;color:#475569;margin-bottom:12px">
+           <b>${history.total}</b> mail${history.total === 1 ? '' : 's'} drafted from this report${history.last ? ` · last on ${esc(history.last)}` : ''}.
+         </p>`
+        + (rows
+            ? `<table style="width:100%;border-collapse:collapse;font-size:13px">
+                 <thead><tr style="text-align:left;color:#64748b;font-size:11.5px;text-transform:uppercase;letter-spacing:.5px">
+                   <th style="padding:8px 10px">#</th><th style="padding:8px 10px">Recipient</th>
+                   <th style="padding:8px 10px;text-align:center">Times</th><th style="padding:8px 10px">Last sent</th>
+                 </tr></thead><tbody>${rows}</tbody></table>`
+            : '<p style="font-size:13px;color:#64748b">No recipients were recorded on those drafts.</p>')
+      : '<p style="font-size:13px;color:#64748b">This report has not been mailed yet.</p>';
+  }
+  window.renderMailHistory = renderMailHistory;
+
+  document.getElementById('mc-gmail').addEventListener('click', () => logExport('gmail'));
+  document.getElementById('mc-mailto').addEventListener('click', () => logExport('mailto'));
+
   window.closeMailDraft = function () {
     saved = null;
     try { saved = JSON.parse(localStorage.getItem(SAVED_KEY) || 'null'); } catch (e) {}
@@ -354,9 +432,11 @@
         await navigator.clipboard.writeText(mode === 'html' ? htmlBody() : plainBody());
       }
       done(true);
+      logExport(mode === 'html' ? 'copy-html' : 'copy-plain');
     } catch (e) { done(false); }
   };
 
+  $mc('mc-to').addEventListener('input', refresh);
   $mc('mc-subject').addEventListener('input', refresh);
   $mc('mc-message').addEventListener('input', refresh);
   $mc('mc-overlay').addEventListener('click', ev => {

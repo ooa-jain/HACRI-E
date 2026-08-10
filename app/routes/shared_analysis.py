@@ -10,9 +10,9 @@ import hashlib
 import io
 from pathlib import Path
 from typing import Any
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException, Query, Request
-from fastapi.responses import HTMLResponse, StreamingResponse, FileResponse
+from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse, FileResponse
 from app import deps
 from app.db import get_db, list_survey_users, list_matched_users
 from app.settings import settings
@@ -165,8 +165,77 @@ async def shared_analysis_get(
             # The student-facing survey link, for the "Mail this report" draft.
             "student_post_path": "/post/all" if _is_overall(dept)
                                  else f"/post/{dept_slug(dept)}",
+            "mail_history": await _mail_history(dept),
         }
     )
+
+
+MAIL_EXPORTS = "mail_exports"
+
+
+async def _mail_history(dept: str) -> dict:
+    """Who this department's report has been mailed to, and how often."""
+    db = get_db()
+    people: dict[str, dict] = {}
+    total = 0
+    last_at = None
+
+    async for doc in db[MAIL_EXPORTS].find({"dept": dept}).sort("created_at", -1):
+        total += 1
+        when = doc.get("created_at")
+        if last_at is None and isinstance(when, datetime):
+            last_at = when
+        for address in doc.get("recipients", []) or []:
+            entry = people.setdefault(address, {"email": address, "count": 0, "last_at": None})
+            entry["count"] += 1
+            if entry["last_at"] is None and isinstance(when, datetime):
+                entry["last_at"] = when
+
+    rows = sorted(people.values(), key=lambda r: (-r["count"], r["email"]))
+    for row in rows:
+        row["last"] = row["last_at"].strftime("%d %b %Y, %H:%M") if row["last_at"] else "—"
+        row.pop("last_at", None)
+
+    return {
+        "total": total,
+        "recipients": rows,
+        "last": last_at.strftime("%d %b %Y, %H:%M") if last_at else "",
+    }
+
+
+@router.post("/shared/analysis/mail-log")
+async def shared_mail_log(request: Request):
+    """Record that this department's report was handed to a mail client.
+
+    The mail itself is sent from someone's own mailbox, so this is a record of
+    what was drafted and for whom — not proof of delivery.
+    """
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid payload")
+
+    dept = (body.get("dept") or "").strip()
+    survey_type = body.get("type") if body.get("type") in ("pre", "post") else "pre"
+    if not dept or not verify_token(dept, body.get("token") or "", survey_type):
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    seen: list[str] = []
+    for address in (body.get("to") or [])[:200]:
+        address = str(address).strip().lower()
+        if address and "@" in address and address not in seen:
+            seen.append(address)
+
+    await get_db()[MAIL_EXPORTS].insert_one({
+        "dept": dept,
+        "survey_type": survey_type,
+        "format": "html" if body.get("format") == "html" else "plain",
+        "via": str(body.get("via") or "")[:40],
+        "subject": str(body.get("subject") or "")[:300],
+        "recipients": seen,
+        "created_at": datetime.now(timezone.utc),
+    })
+    return JSONResponse({"ok": True, "history": await _mail_history(dept)})
 
 
 @router.get("/shared/analysis/export-excel")
