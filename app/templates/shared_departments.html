@@ -301,7 +301,7 @@
                      href="/shared/analysis/download-ppt?dept={{ enc }}&token={{ d.token_pre }}&type=pre">📊 PPT</a>
                   <button type="button" class="btn btn-mail btn-sm" data-mail="pre"
                      data-dept="{{ d.name }}" data-enc="{{ enc }}"
-                     data-token="{{ d.token_pre }}">✉️ Mail</button>
+                     data-token="{{ d.token_pre }}" data-registered="{{ d.registered }}" data-pre-done="{{ d.pre_done }}" data-post-done="{{ d.post_done }}" data-post-pending="{{ d.post_pending }}" data-lit-pre="{{ d.avg_lit_pre if d.avg_lit_pre is not none else '' }}" data-read-pre="{{ d.avg_read_pre if d.avg_read_pre is not none else '' }}" data-lit-post="{{ d.avg_lit_post if d.avg_lit_post is not none else '' }}" data-read-post="{{ d.avg_read_post if d.avg_read_post is not none else '' }}">✉️ Mail</button>
                 </div>
                 <div class="link-row">
                   <b>Post</b>
@@ -314,7 +314,7 @@
                   <button type="button" class="btn btn-mail btn-sm" data-mail="post"
                      data-dept="{{ d.name }}" data-enc="{{ enc }}"
                      data-token="{{ d.token_post }}"
-                     data-student-path="{{ d.student_post_path }}">✉️ Mail</button>
+                     data-student-path="{{ d.student_post_path }}" data-registered="{{ d.registered }}" data-pre-done="{{ d.pre_done }}" data-post-done="{{ d.post_done }}" data-post-pending="{{ d.post_pending }}" data-lit-pre="{{ d.avg_lit_pre if d.avg_lit_pre is not none else '' }}" data-read-pre="{{ d.avg_read_pre if d.avg_read_pre is not none else '' }}" data-lit-post="{{ d.avg_lit_post if d.avg_lit_post is not none else '' }}" data-read-post="{{ d.avg_read_post if d.avg_read_post is not none else '' }}">✉️ Mail</button>
                 </div>
               </div>
             </td>
@@ -342,12 +342,19 @@
 document.addEventListener('click', ev => {
   const btn = ev.target.closest('.btn-mail');
   if (!btn) return;
+  const d = btn.dataset;
   openMailDraft({
-    kind: btn.dataset.mail,
-    dept: btn.dataset.dept,
-    enc: btn.dataset.enc,
-    token: btn.dataset.token,
-    studentPath: btn.dataset.studentPath || '',
+    kind: d.mail,
+    dept: d.dept,
+    enc: d.enc,
+    token: d.token,
+    studentPath: d.studentPath || '',
+    stats: {
+      registered: d.registered, pre_done: d.preDone,
+      post_done: d.postDone, post_pending: d.postPending,
+      avg_lit_pre: d.litPre, avg_read_pre: d.readPre,
+      avg_lit_post: d.litPost, avg_read_post: d.readPost,
+    },
   });
 });
 </script>

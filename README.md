@@ -173,6 +173,11 @@ Two formats:
 
 Addresses typed into **To** are carried into the compose window and recorded.
 
+Both formats carry that department's **figures** in the body — registered,
+baseline filled, post filled, post pending, and the average AI literacy and
+readiness for whichever survey the mail is about. The reader sees the numbers
+without having to open a link.
+
 HTML has to be pasted because a compose link can only carry plain text — the
 copy puts both a rich and a plain flavour on the clipboard, so pasting into
 Gmail keeps the layout and buttons.

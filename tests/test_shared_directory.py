@@ -337,3 +337,22 @@ async def test_a_draft_with_no_recipients_still_counts_as_an_export(client: Asyn
     history = resp.json()["history"]
     assert history["total"] == 1
     assert history["recipients"] == []
+
+
+@pytest.mark.asyncio
+async def test_mail_drafts_carry_the_department_figures(client: AsyncClient):
+    """The mail should show the numbers, not only link to them."""
+    await _seed()
+    from app.routes.shared_analysis import get_dept_token
+
+    page = (await client.get(f"/shared/departments?token={_token()}")).text
+    # Every Mail button hands its row's figures to the compose dialog.
+    assert 'data-registered=' in page and 'data-post-pending=' in page
+    assert 'data-lit-pre=' in page and 'data-read-post=' in page
+
+    analysis = (await client.get(
+        f"/shared/analysis?dept={LAW}&token={get_dept_token(LAW, 'post')}&type=post")).text
+    # Law: 3 registered, 2 baseline done, 1 post done, 1 still pending.
+    assert '"registered": 3' in analysis or "registered: 3" in analysis
+    assert "pre_done: 2" in analysis
+    assert "post_done: 1" in analysis

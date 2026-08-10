@@ -714,6 +714,16 @@ document.getElementById('btn-mail-report').addEventListener('click', () => {
     enc: encodeURIComponent({{ dept | tojson }}),
     token: {{ token | tojson }},
     studentPath: {{ student_post_path | tojson }},
+    stats: {
+      registered: {{ total | tojson }},
+      pre_done: {{ pre_done | tojson }},
+      post_done: {{ post_done | tojson }},
+      post_pending: {{ pending | tojson }},
+      avg_lit_pre: {{ (dept_info.avg_lit_pre if dept_info.avg_lit_pre is not none else '') | tojson }},
+      avg_read_pre: {{ (dept_info.avg_read_pre if dept_info.avg_read_pre is not none else '') | tojson }},
+      avg_lit_post: {{ (dept_info.avg_lit_post if dept_info.avg_lit_post is not none else '') | tojson }},
+      avg_read_post: {{ (dept_info.avg_read_post if dept_info.avg_read_post is not none else '') | tojson }},
+    },
   });
 });
 </script>
