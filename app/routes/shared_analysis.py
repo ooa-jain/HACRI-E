@@ -20,6 +20,11 @@ from app.ppt_export import generate_dept_ppt
 
 router = APIRouter()
 
+OVERALL = "Overall"
+# Key the directory token off a name no real department can take.
+DIRECTORY_KEY = "__all_departments__"
+
+
 def get_dept_token(dept: str, survey_type: str = "pre") -> str:
     """Generate a secure cryptographic token for a department name + type."""
     key = f"{dept}:{survey_type}"
@@ -32,6 +37,19 @@ def get_dept_token(dept: str, survey_type: str = "pre") -> str:
 def verify_token(dept: str, token: str, survey_type: str = "pre") -> bool:
     """Verify that the token matches the department and type."""
     return hmac.compare_digest(get_dept_token(dept, survey_type), token)
+
+
+def get_directory_token() -> str:
+    """Token for the one link that opens the whole department directory."""
+    return get_dept_token(DIRECTORY_KEY, "directory")
+
+
+def directory_url(base_url: str) -> str:
+    return f"{base_url.rstrip('/')}/shared/departments?token={get_directory_token()}"
+
+
+def _is_overall(dept: str) -> bool:
+    return (dept or "").strip().lower() in ("overall", "all", "all departments")
 
 @router.get("/shared/analysis", response_class=HTMLResponse)
 async def shared_analysis_get(
@@ -101,10 +119,13 @@ async def shared_export_excel(
         raise HTTPException(status_code=403, detail="Access denied")
 
     db = get_db()
-    
+
+    # "Overall" is every department, not a department literally named that.
+    query = {} if _is_overall(dept) else {"program": dept}
+
     # Query users based on type
     users_list = []
-    async for u in db["users"].find({"program": dept}).sort("created_at", -1):
+    async for u in db["users"].find(query).sort("created_at", -1):
         # For pre: include everyone who at least completed pre
         # For post: include only those who completed post
         status = u.get("status", "")
@@ -269,43 +290,69 @@ async def shared_chart_h1(
 
 
 @router.get("/shared/departments", response_class=HTMLResponse)
-async def shared_departments_list(request: Request):
-    from app.db import get_dept_analysis_data
-    analysis_data = await get_dept_analysis_data()
-    
-    dept_list = []
-    # 1. Add Overall entry at top
-    ov = analysis_data["overall"]
-    dept_list.append({
-        "name": "Overall (All Departments)",
-        "dept_key": "Overall",
-        "registered": ov["registered"],
-        "pre_done": ov["pre_done"],
-        "post_done": ov["post_done"],
-        "token_pre": ov["token_pre"],
-        "token_post": ov["token_post"]
-    })
+async def shared_departments_list(request: Request, token: str = Query(...)):
+    """One shareable page covering every department.
 
-    # 2. Add individual departments
+    Shows, per department: how many registered, how many finished the baseline
+    and the post survey, how many are still pending, and how the reminder mails
+    landed — with links through to that department's own analysis page and
+    Excel exports. Reachable only with the directory token.
+    """
+    if not hmac.compare_digest(get_directory_token(), token):
+        raise HTTPException(status_code=403, detail="Access denied: Invalid or expired sharing link.")
+
+    from app.db import get_dept_analysis_data, get_email_notification_stats
+    analysis_data = await get_dept_analysis_data()
+    mail_stats = {row["dept"]: row for row in await get_email_notification_stats()}
+
+    def row(item: dict, *, name: str, key: str) -> dict:
+        mail = mail_stats.get(key, {})
+        registered = item.get("registered", 0)
+        pre_done = item.get("pre_done", 0)
+        post_done = item.get("post_done", 0)
+        sent = mail.get("pre_sent", 0) + mail.get("post_sent", 0)
+        return {
+            "name": name,
+            "dept_key": key,
+            "registered": registered,
+            "pre_done": pre_done,
+            "post_done": post_done,
+            "pre_pending": max(0, registered - pre_done),
+            "post_pending": max(0, pre_done - post_done),
+            "reminders_sent": sent,
+            "clicked": mail.get("clicked", 0),
+            "completed_after": mail.get("completed_after", 0),
+            "avg_lit_pre": item.get("avg_lit_pre"),
+            "avg_read_pre": item.get("avg_read_pre"),
+            "avg_lit_post": item.get("avg_lit_post"),
+            "avg_read_post": item.get("avg_read_post"),
+            "token_pre": item.get("token_pre"),
+            "token_post": item.get("token_post"),
+        }
+
+    ov = analysis_data["overall"]
+    overall_mail = {
+        "reminders_sent": sum(m.get("pre_sent", 0) + m.get("post_sent", 0) for m in mail_stats.values()),
+        "clicked": sum(m.get("clicked", 0) for m in mail_stats.values()),
+        "completed_after": sum(m.get("completed_after", 0) for m in mail_stats.values()),
+    }
+    overall_row = row(ov, name="Overall (All Departments)", key=OVERALL)
+    overall_row.update(overall_mail)
+
+    dept_list = [overall_row]
     for item in analysis_data["departments"]:
         dept = item["dept"]
         if not dept:
             continue
-        dept_list.append({
-            "name": dept,
-            "dept_key": dept,
-            "registered": item["registered"],
-            "pre_done": item["pre_done"],
-            "post_done": item["post_done"],
-            "token_pre": item["token_pre"],
-            "token_post": item["token_post"]
-        })
-        
+        dept_list.append(row(item, name=dept, key=dept))
+
     return request.app.state.templates.TemplateResponse(
         request,
         "shared_departments.html",
         {
             "dept_list": dept_list,
+            "overall": overall_row,
+            "generated_at": datetime.now().strftime("%d %b %Y, %H:%M"),
         }
     )
 

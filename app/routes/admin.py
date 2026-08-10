@@ -585,10 +585,14 @@ async def api_survey_post_links(request: Request):
             "pending_post": row["pending_post"],
         })
 
+    from app.routes.shared_analysis import directory_url
+
     return JSONResponse({
         "base_url": base_url,
         "all_url": f"{base_url}/post/{ALL_SLUG}",
         "pre_all_url": f"{base_url}/",
+        # One shareable page covering every department at once.
+        "directory_url": directory_url(base_url),
         "totals": totals,
         "links": links,
     })

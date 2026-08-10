@@ -109,6 +109,29 @@ about that student:
 
 Clicking a name in the students table opens the same panel.
 
+### Overall department directory (one shareable link)
+
+The **Links** page generates a single tokenised link —
+`/shared/departments?token=…` — that opens a read-only page covering every
+department at once. No admin login needed; anyone with the link can open it.
+
+Each row shows: registered · baseline filled · post filled · post pending ·
+reminders sent · clicked the mail · filled after the mail · average pre and
+post scores. And each row carries its own links:
+
+| | Opens |
+|---|---|
+| **Analysis** | that department's own shareable analysis page (pre and post separately) |
+| **Excel** | `.xlsx` export of that department's responses |
+| **PPT** | generated slide deck for that department |
+
+The top row is **Overall (All Departments)** with the same links, so the
+combined report and a full-cohort Excel are one click away. Figures are
+recalculated every time the page is opened.
+
+Each department's analysis link is independently shareable — hand a single
+department its own link without exposing the rest.
+
 ### Department-wise survey links
 
 The **Links** page lists every department with two links to hand out:

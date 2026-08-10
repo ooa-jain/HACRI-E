@@ -28,7 +28,7 @@
       padding: 40px 20px;
     }
     .container {
-      max-width: 1200px;
+      max-width: 1560px;
       margin: 0 auto;
     }
     .header {
@@ -58,7 +58,9 @@
       width: 100%;
       border-collapse: collapse;
       text-align: left;
-      min-width: 800px;
+      /* Wide enough that the export buttons never clip; the card scrolls
+         horizontally on narrower screens. */
+      min-width: 1320px;
     }
     th {
       padding: 16px;
@@ -81,6 +83,7 @@
     .dept-name {
       font-weight: 600;
       color: var(--navy);
+      min-width: 210px;
     }
     .badge {
       display: inline-block;
@@ -136,6 +139,77 @@
       background: #0f622d;
       transform: translateY(-1px);
     }
+    .btn-excel {
+      background: #047857;
+      color: #ffffff;
+    }
+    .btn-excel:hover { background: #036049; }
+    .btn-ppt {
+      background: #b45309;
+      color: #ffffff;
+    }
+    .btn-ppt:hover { background: #92400e; }
+    .btn-sm {
+      padding: 5px 9px;
+      font-size: 11.5px;
+      border-radius: 6px;
+    }
+    .badge-amber { background: #FEF3C7; color: #92400e; }
+    .badge-rose  { background: #FFE4E6; color: #9f1239; }
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+    .summary div {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--navy);
+      border-radius: 12px;
+      padding: 16px 18px;
+    }
+    .summary b {
+      display: block;
+      font-size: 24px;
+      font-weight: 800;
+      line-height: 1.1;
+    }
+    .summary span {
+      display: block;
+      font-size: 11.5px;
+      color: var(--gray);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      margin-top: 4px;
+    }
+    .links-cell {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+    .link-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+    }
+    .link-row > b {
+      font-size: 10.5px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--gray);
+      width: 34px;
+      flex-shrink: 0;
+    }
+    .foot {
+      text-align: center;
+      color: var(--gray);
+      font-size: 12.5px;
+      margin-top: 24px;
+      line-height: 1.7;
+    }
   </style>
 </head>
 <body>
@@ -144,22 +218,39 @@
       <h1>🏢 Department Analysis Directory</h1>
       <p>JAIN (Deemed-to-be University) · Shared Public Reports Directory</p>
     </div>
-    
+
+    <div class="summary">
+      <div style="border-left-color:#1B2A4A"><b>{{ overall.registered }}</b><span>Registered</span></div>
+      <div style="border-left-color:#0369a1"><b>{{ overall.pre_done }}</b><span>Baseline filled</span></div>
+      <div style="border-left-color:#15803d"><b>{{ overall.post_done }}</b><span>Post filled</span></div>
+      <div style="border-left-color:#b45309"><b>{{ overall.post_pending }}</b><span>Post pending</span></div>
+      <div style="border-left-color:#4338ca"><b>{{ overall.reminders_sent }}</b><span>Reminders sent</span></div>
+      <div style="border-left-color:#0d9488"><b>{{ overall.clicked }}</b><span>Clicked the mail</span></div>
+      <div style="border-left-color:#7c3aed"><b>{{ overall.completed_after }}</b><span>Filled after mail</span></div>
+    </div>
+
     <div class="card">
       <table>
         <thead>
           <tr>
-            <th style="width: 50px;">#</th>
-            <th>Department Name</th>
-            <th style="text-align: center; width: 120px;">Registered</th>
-            <th style="text-align: center; width: 120px;">Pre Done</th>
-            <th style="text-align: center; width: 120px;">Post Done</th>
-            <th style="width: 280px; text-align: center;">Analysis Reports</th>
+            <th style="width: 40px;">#</th>
+            <th>Department</th>
+            <th style="text-align:center">Registered</th>
+            <th style="text-align:center">Baseline<br>filled</th>
+            <th style="text-align:center">Post<br>filled</th>
+            <th style="text-align:center">Post<br>pending</th>
+            <th style="text-align:center">Reminders<br>sent</th>
+            <th style="text-align:center">Clicked</th>
+            <th style="text-align:center">Filled<br>after mail</th>
+            <th style="text-align:center">Avg pre<br>lit / read</th>
+            <th style="text-align:center">Avg post<br>lit / read</th>
+            <th style="width: 340px; min-width: 340px;">Reports &amp; exports</th>
           </tr>
         </thead>
         <tbody>
           {% for d in dept_list %}
-          <tr {% if d.dept_key == 'Overall' %}style="background: #f0fdf4; font-weight: bold;"{% endif %}>
+          {% set enc = (d.dept_key or d.name) | urlencode %}
+          <tr {% if d.dept_key == 'Overall' %}style="background: #f0fdf4; font-weight: 600;"{% endif %}>
             <td style="color: var(--gray);">{{ loop.index }}</td>
             <td class="dept-name">
               {% if d.dept_key == 'Overall' %}
@@ -168,36 +259,66 @@
                 {{ d.name }}
               {% endif %}
             </td>
-            <td style="text-align: center;">
-              <span class="badge badge-gray">{{ d.registered }}</span>
+            <td style="text-align:center"><span class="badge badge-gray">{{ d.registered }}</span></td>
+            <td style="text-align:center"><span class="badge badge-blue">{{ d.pre_done }}</span></td>
+            <td style="text-align:center"><span class="badge badge-green">{{ d.post_done }}</span></td>
+            <td style="text-align:center">
+              {% if d.post_pending %}<span class="badge badge-amber">{{ d.post_pending }}</span>
+              {% else %}<span class="badge badge-gray">0</span>{% endif %}
             </td>
-            <td style="text-align: center;">
-              <span class="badge badge-blue">{{ d.pre_done }}</span>
+            <td style="text-align:center"><span class="badge badge-gray">{{ d.reminders_sent }}</span></td>
+            <td style="text-align:center">
+              {% if d.clicked %}<span class="badge badge-amber">{{ d.clicked }}</span>
+              {% else %}<span class="badge badge-gray">0</span>{% endif %}
             </td>
-            <td style="text-align: center;">
-              <span class="badge badge-green">{{ d.post_done }}</span>
+            <td style="text-align:center">
+              {% if d.completed_after %}<span class="badge badge-green">{{ d.completed_after }}</span>
+              {% else %}<span class="badge badge-gray">0</span>{% endif %}
+            </td>
+            <td style="text-align:center; font-size:13px;">
+              {{ d.avg_lit_pre if d.avg_lit_pre is not none else '—' }} /
+              {{ d.avg_read_pre if d.avg_read_pre is not none else '—' }}
+            </td>
+            <td style="text-align:center; font-size:13px;">
+              {{ d.avg_lit_post if d.avg_lit_post is not none else '—' }} /
+              {{ d.avg_read_post if d.avg_read_post is not none else '—' }}
             </td>
             <td>
-              <div class="actions" style="justify-content: center;">
-                <a href="/shared/analysis?dept={{ (d.dept_key or d.name) | urlencode }}&token={{ d.token_pre }}&type=pre" target="_blank" class="btn btn-pre">
-                  📈 Pre Survey
-                </a>
-                <a href="/shared/analysis?dept={{ (d.dept_key or d.name) | urlencode }}&token={{ d.token_post }}&type=post" target="_blank" class="btn btn-post">
-                  📊 Post Survey
-                </a>
+              <div class="links-cell">
+                <div class="link-row">
+                  <b>Pre</b>
+                  <a class="btn btn-pre btn-sm" target="_blank"
+                     href="/shared/analysis?dept={{ enc }}&token={{ d.token_pre }}&type=pre">📈 Analysis</a>
+                  <a class="btn btn-excel btn-sm"
+                     href="/shared/analysis/export-excel?dept={{ enc }}&token={{ d.token_pre }}&type=pre">📥 Excel</a>
+                  <a class="btn btn-ppt btn-sm"
+                     href="/shared/analysis/download-ppt?dept={{ enc }}&token={{ d.token_pre }}&type=pre">📊 PPT</a>
+                </div>
+                <div class="link-row">
+                  <b>Post</b>
+                  <a class="btn btn-post btn-sm" target="_blank"
+                     href="/shared/analysis?dept={{ enc }}&token={{ d.token_post }}&type=post">📊 Analysis</a>
+                  <a class="btn btn-excel btn-sm"
+                     href="/shared/analysis/export-excel?dept={{ enc }}&token={{ d.token_post }}&type=post">📥 Excel</a>
+                  <a class="btn btn-ppt btn-sm"
+                     href="/shared/analysis/download-ppt?dept={{ enc }}&token={{ d.token_post }}&type=post">📊 PPT</a>
+                </div>
               </div>
             </td>
           </tr>
           {% else %}
-          <tr>
-            <td colspan="6" style="text-align: center; color: var(--gray); padding: 40px;">
-              No departments found.
-            </td>
-          </tr>
+          <tr><td colspan="12" style="text-align:center; color: var(--gray); padding: 40px;">
+            No departments found.
+          </td></tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
+
+    <p class="foot">
+      Generated {{ generated_at }} · figures update every time this page is opened.<br>
+      Each department's own analysis link opens from the row above and can be shared on its own.
+    </p>
   </div>
 </body>
 </html>

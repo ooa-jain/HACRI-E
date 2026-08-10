@@ -246,11 +246,26 @@
           </div>
 
           <div class="card space-y-4">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div><div class="h-card">📈 Public analysis links (all departments combined)</div>
-                <div class="sub">Read-only report pages that can be shared outside the admin portal.</div></div>
-              <a href="/shared/departments" target="_blank" class="btn btn-dark">🌐 Public directory</a>
+            <div><div class="h-card">🏢 Overall department directory — one link for everything</div>
+              <div class="sub">
+                A single shareable page listing every department with registered, baseline filled, post filled and
+                post pending counts, how the reminder mails landed (sent / clicked / filled after), and average
+                scores — plus each department's own analysis link, Excel and PPT export. Anyone with the link can
+                open it; no admin login needed.
+              </div></div>
+            <div class="bg-slate-900 text-white rounded-xl p-4 space-y-2">
+              <div class="flex items-center gap-2">
+                <input id="directory-link" readonly class="field link flex-1 bg-slate-800 border-slate-700 text-slate-100">
+                <button class="btn btn-soft" onclick="copy(document.getElementById('directory-link').value)">Copy</button>
+                <a id="directory-open" href="#" target="_blank" class="btn btn-primary">Open</a>
+              </div>
+              <div class="text-[11px] text-slate-400">Figures refresh every time the page is opened.</div>
             </div>
+          </div>
+
+          <div class="card space-y-4">
+            <div><div class="h-card">📈 Public analysis links (all departments combined)</div>
+              <div class="sub">Read-only report pages that can be shared outside the admin portal.</div></div>
 
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <div class="border border-slate-200 rounded-xl p-4 space-y-2">
@@ -1258,10 +1273,28 @@ async function resendDept(btn, dept, type) {
 let linkData = null;
 
 async function loadLinks() {
+  tableBusy('post-links-table', 'Loading department links…');
+  try {
+    linkData = await api('/admin/api/survey/post-links');
+    $('all-post-link').value  = linkData.all_url;
+    $('all-post-open').href   = linkData.all_url;
+    $('all-pre-link').value   = linkData.pre_all_url;
+    $('all-pre-open').href    = linkData.pre_all_url;
+    $('directory-link').value = linkData.directory_url;
+    $('directory-open').href  = linkData.directory_url;
+    renderPostLinks();
+  } catch (err) { tableBusy('post-links-table', 'Could not load department links'); }
+
+  renderEntryLinks();
+  loadDepts();  // fills the overall report links below
+}
+
+/** The handful of links students and staff start from. */
+function renderEntryLinks() {
   $('entry-links').innerHTML = [
     ['🏠 Survey home (registration)', location.origin + '/'],
     ['🎓 Deeksharambh orientation', {{ (orientation_share_url or '') | tojson }}],
-    ['🌐 Public department directory', location.origin + '/shared/departments'],
+    ['🌐 Overall department directory', (linkData && linkData.directory_url) || ''],
   ].filter(([, url]) => !!url).map(([label, url]) => `
     <div class="flex items-center gap-2">
       <span class="text-xs font-semibold text-slate-700 w-56 shrink-0">${label}</span>
@@ -1269,18 +1302,6 @@ async function loadLinks() {
       <button class="btn btn-soft" onclick="copy('${e(url)}')">Copy</button>
       <a href="${e(url)}" target="_blank" class="btn btn-primary">Open</a>
     </div>`).join('');
-
-  tableBusy('post-links-table', 'Loading department links…');
-  try {
-    linkData = await api('/admin/api/survey/post-links');
-    $('all-post-link').value = linkData.all_url;
-    $('all-post-open').href  = linkData.all_url;
-    $('all-pre-link').value  = linkData.pre_all_url;
-    $('all-pre-open').href   = linkData.pre_all_url;
-    renderPostLinks();
-  } catch (err) { tableBusy('post-links-table', 'Could not load department links'); }
-
-  loadDepts();  // fills the overall report links below
 }
 
 /** One row per department, carrying both survey links. */

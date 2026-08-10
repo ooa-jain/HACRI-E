@@ -1,0 +1,182 @@
+"""
+The overall department directory — one shareable page covering every
+department, with each department's own analysis and export links inside it.
+"""
+
+from __future__ import annotations
+
+from datetime import datetime, timezone
+from typing import AsyncIterator
+
+import pytest
+import pytest_asyncio
+from httpx import ASGITransport, AsyncClient
+from mongomock_motor import AsyncMongoMockClient
+
+from app import db
+
+LAW = "Department of Law"
+COM = "Department of Commerce"
+
+
+@pytest_asyncio.fixture
+async def app_with_mock():
+    db._set_client_for_tests(AsyncMongoMockClient())
+    try:
+        from app.main import app
+        await db.init_indexes(allow_duplicate_email=True)
+        yield app
+    finally:
+        db._reset_clients_for_tests()
+
+
+@pytest_asyncio.fixture
+async def client(app_with_mock) -> AsyncIterator[AsyncClient]:
+    transport = ASGITransport(app=app_with_mock)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        yield ac
+
+
+async def _seed() -> None:
+    from app.hacri_e2_compat import SCHEMA
+
+    now = datetime.now(timezone.utc)
+    people = [
+        ("a@example.com", LAW, db.STATUS_POST_DONE, True, True),   # mailed + clicked
+        ("b@example.com", LAW, db.STATUS_PRE_DONE, True, False),   # mailed, no click
+        ("c@example.com", LAW, None, False, False),
+        ("d@example.com", COM, db.STATUS_PRE_DONE, False, False),
+    ]
+    for email, program, status, mailed, clicked in people:
+        doc = {
+            "email": email, "name": email[0].upper(), "program": program,
+            "ug_or_pg": "ug", "status": status, "created_at": now,
+            "pre_submitted_at": now if status else None,
+            "post_submitted_at": now if status == db.STATUS_POST_DONE else None,
+        }
+        if mailed:
+            doc["post_reminder_sent_at"] = now
+        if clicked:
+            # Clicked before submitting, so it counts as "filled after mail".
+            doc["reminder_clicked_at"] = now.replace(year=now.year - 1)
+        await db.get_db()["users"].insert_one(doc)
+
+        if status:
+            await db.get_db()["pre_responses"].insert_one(
+                {"email": email, "submitted_at": now, "fields": {k: 3 for k in SCHEMA}})
+        if status == db.STATUS_POST_DONE:
+            await db.get_db()["post_responses"].insert_one(
+                {"email": email, "submitted_at": now, "fields": {k: 4 for k in SCHEMA}})
+
+
+def _token() -> str:
+    from app.routes.shared_analysis import get_directory_token
+    return get_directory_token()
+
+
+@pytest.mark.asyncio
+async def test_directory_needs_the_token(client: AsyncClient):
+    await _seed()
+
+    assert (await client.get("/shared/departments")).status_code == 422   # token missing
+    assert (await client.get("/shared/departments?token=nope")).status_code == 403
+    assert (await client.get(f"/shared/departments?token={_token()}")).status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_directory_shows_counts_for_every_department(client: AsyncClient):
+    await _seed()
+
+    page = (await client.get(f"/shared/departments?token={_token()}")).text
+
+    assert LAW in page and COM in page
+    assert "Overall (All Departments)" in page
+    # Column headings the admin asked for.
+    for heading in ("Registered", "Baseline", "Post", "pending", "Reminders", "Clicked"):
+        assert heading in page
+
+
+@pytest.mark.asyncio
+async def test_directory_counts_are_right(client: AsyncClient):
+    """Check the numbers through the route's own context, not the markup."""
+    from app.db import get_dept_analysis_data, get_email_notification_stats
+
+    await _seed()
+    analysis = await get_dept_analysis_data()
+    mail = {row["dept"]: row for row in await get_email_notification_stats()}
+
+    law = next(d for d in analysis["departments"] if d["dept"] == LAW)
+    assert law["registered"] == 3
+    assert law["pre_done"] == 2          # one post_done counts as pre done too
+    assert law["post_done"] == 1
+    assert mail[LAW]["post_sent"] == 2
+    assert mail[LAW]["clicked"] == 1
+    assert mail[LAW]["completed_after"] == 1
+
+    assert analysis["overall"]["registered"] == 4
+
+
+@pytest.mark.asyncio
+async def test_every_row_carries_analysis_and_excel_links(client: AsyncClient):
+    await _seed()
+    page = (await client.get(f"/shared/departments?token={_token()}")).text
+
+    from app.routes.shared_analysis import get_dept_token
+    for dept in (LAW, COM, "Overall"):
+        for kind in ("pre", "post"):
+            token = get_dept_token(dept, kind)
+            assert f"token={token}&type={kind}" in page, f"{dept}/{kind} analysis link"
+        assert "export-excel" in page
+        assert "download-ppt" in page
+
+
+@pytest.mark.asyncio
+async def test_department_links_from_the_directory_actually_open(client: AsyncClient):
+    await _seed()
+    from app.routes.shared_analysis import get_dept_token
+
+    token = get_dept_token(LAW, "pre")
+    page = await client.get(f"/shared/analysis?dept={LAW}&token={token}&type=pre")
+    assert page.status_code == 200
+
+    excel = await client.get(f"/shared/analysis/export-excel?dept={LAW}&token={token}&type=pre")
+    assert excel.status_code == 200
+    assert excel.headers["content-type"].startswith(
+        "application/vnd.openxmlformats-officedocument.spreadsheetml")
+    assert len(excel.content) > 0
+
+    # A token for one department must not open another.
+    other = await client.get(f"/shared/analysis?dept={COM}&token={token}&type=pre")
+    assert other.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_overall_excel_covers_every_department(client: AsyncClient):
+    """'Overall' is not a department name — it must not export an empty file."""
+    await _seed()
+    from app.routes.shared_analysis import get_dept_token
+
+    token = get_dept_token("Overall", "pre")
+    resp = await client.get(f"/shared/analysis/export-excel?dept=Overall&token={token}&type=pre")
+    assert resp.status_code == 200
+
+    import io
+    from openpyxl import load_workbook
+    wb = load_workbook(io.BytesIO(resp.content))
+    rows = list(wb[wb.sheetnames[0]].iter_rows(values_only=True))
+    emails = {c for row in rows for c in row if isinstance(c, str) and "@example.com" in c}
+    # Everyone with a baseline, across both departments.
+    assert emails == {"a@example.com", "b@example.com", "d@example.com"}
+
+
+@pytest.mark.asyncio
+async def test_admin_links_api_serves_the_directory_url(client: AsyncClient):
+    await _seed()
+    client.cookies.set("survey_admin_session", "1")
+
+    data = (await client.get("/admin/api/survey/post-links")).json()
+    assert "/shared/departments?token=" in data["directory_url"]
+
+    # The link the admin hands out must be the one that opens.
+    path = data["directory_url"].split("http://test", 1)[-1]
+    assert (await client.get(path)).status_code == 200
