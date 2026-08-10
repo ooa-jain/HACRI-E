@@ -209,6 +209,24 @@
       <div class="panel" id="p-links">
         <div class="space-y-5">
           <div class="card space-y-4">
+            <div><div class="h-card">🏢 Overall department directory — one link for everything</div>
+              <div class="sub">
+                A single shareable page listing every department with registered, baseline filled, post filled and
+                post pending counts, how the reminder mails landed (sent / clicked / filled after), and average
+                scores — plus each department's own analysis link, Excel and PPT export. Anyone with the link can
+                open it; no admin login needed.
+              </div></div>
+            <div class="bg-slate-900 text-white rounded-xl p-4 space-y-2">
+              <div class="flex items-center gap-2">
+                <input id="directory-link" readonly class="field link flex-1 bg-slate-800 border-slate-700 text-slate-100">
+                <button class="btn btn-soft" onclick="copy(document.getElementById('directory-link').value)">Copy</button>
+                <a id="directory-open" href="#" target="_blank" class="btn btn-primary">Open</a>
+              </div>
+              <div class="text-[11px] text-slate-400">Figures refresh every time the page is opened.</div>
+            </div>
+          </div>
+
+          <div class="card space-y-4">
             <div><div class="h-card">🔗 Department survey links</div>
               <div class="sub">
                 Every department gets two links to hand out.
@@ -243,24 +261,6 @@
             <input id="link-search" oninput="renderPostLinks()" class="field"
                    placeholder="🔍 Filter departments…">
             <div id="post-links-table"></div>
-          </div>
-
-          <div class="card space-y-4">
-            <div><div class="h-card">🏢 Overall department directory — one link for everything</div>
-              <div class="sub">
-                A single shareable page listing every department with registered, baseline filled, post filled and
-                post pending counts, how the reminder mails landed (sent / clicked / filled after), and average
-                scores — plus each department's own analysis link, Excel and PPT export. Anyone with the link can
-                open it; no admin login needed.
-              </div></div>
-            <div class="bg-slate-900 text-white rounded-xl p-4 space-y-2">
-              <div class="flex items-center gap-2">
-                <input id="directory-link" readonly class="field link flex-1 bg-slate-800 border-slate-700 text-slate-100">
-                <button class="btn btn-soft" onclick="copy(document.getElementById('directory-link').value)">Copy</button>
-                <a id="directory-open" href="#" target="_blank" class="btn btn-primary">Open</a>
-              </div>
-              <div class="text-[11px] text-slate-400">Figures refresh every time the page is opened.</div>
-            </div>
           </div>
 
           <div class="card space-y-4">
