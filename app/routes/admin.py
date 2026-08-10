@@ -1133,7 +1133,9 @@ async def admin_export_cohort(
         post_docs.append(doc)
 
     from app.csv_export import custom_cohort_export
-    file_data, media_type, ext = custom_cohort_export(
+    from app.routes.shared_analysis import _in_thread
+    file_data, media_type, ext = await _in_thread(
+        custom_cohort_export,
         users_list,
         pre_docs,
         post_docs,

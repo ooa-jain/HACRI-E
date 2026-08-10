@@ -4,6 +4,7 @@ Exposes endpoints for viewing statistics, charts, downloading PPT, and exporting
 Uses cryptographic token validation.
 """
 from __future__ import annotations
+import asyncio
 import hmac
 import hashlib
 import io
@@ -46,6 +47,16 @@ def get_directory_token() -> str:
 
 def directory_url(base_url: str) -> str:
     return f"{base_url.rstrip('/')}/shared/departments?token={get_directory_token()}"
+
+
+async def _in_thread(fn, *args, **kwargs):
+    """Run a slow, CPU-bound builder off the event loop.
+
+    Building a full-cohort workbook is seconds of solid CPU; left inline it
+    blocks every other request on the worker for that whole time.
+    """
+    loop = asyncio.get_running_loop()
+    return await loop.run_in_executor(None, lambda: fn(*args, **kwargs))
 
 
 def _is_overall(dept: str) -> bool:
@@ -189,7 +200,8 @@ async def shared_export_excel(
     # student list across 30-odd departments says nothing on its own.
     dept_rows = await _department_breakdown_rows() if _is_overall(dept) else None
 
-    excel_bytes = generate_cohort_excel(
+    excel_bytes = await _in_thread(
+        generate_cohort_excel,
         dept, users_list,
         pre_docs if survey_type == "pre" else [],
         post_docs if survey_type == "post" else [],
@@ -227,7 +239,7 @@ async def shared_download_ppt(
     # Fetch matched pre/post records
     matched_data = await list_matched_users(program=dept)
     
-    ppt_bytes = generate_dept_ppt(dept, users_list, matched_data)
+    ppt_bytes = await _in_thread(generate_dept_ppt, dept, users_list, matched_data)
     
     filename = f"HACRI_E2_{survey_type.upper()}_Analysis_{dept}.pptx"
     filename = "".join(c for c in filename if c.isalnum() or c in "._-")

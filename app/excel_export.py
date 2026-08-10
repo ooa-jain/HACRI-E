@@ -10,6 +10,22 @@ from openpyxl.utils import get_column_letter
 from app.hacri_e2_compat import SCHEMA
 from app.scoring import score_for_user
 
+_LEFT_COLUMNS = {"Name", "Email", "Department", "Education Type"}
+_CENTRE_COLUMNS = {"Level", "PRE Quadrant", "PRE Band", "POST Quadrant",
+                   "POST Band", "Movement"}
+_ALIGN_LEFT = Alignment(horizontal="left")
+_ALIGN_CENTRE = Alignment(horizontal="center")
+_ALIGN_RIGHT = Alignment(horizontal="right")
+
+
+def _alignment_for(header: str) -> Alignment:
+    if header in _LEFT_COLUMNS:
+        return _ALIGN_LEFT
+    if header in _CENTRE_COLUMNS:
+        return _ALIGN_CENTRE
+    return _ALIGN_RIGHT
+
+
 def generate_cohort_excel(
     dept_name: str,
     users_list: list[dict],
@@ -102,6 +118,8 @@ def generate_cohort_excel(
         item_headers += [f"PRE {key}", f"POST {key}", f"Δ {key}"]
         
     headers = base_headers + item_headers
+    _ALIGNMENTS = {h: _alignment_for(h) for h in base_headers}
+
     
     for col_idx, h_text in enumerate(headers, start=1):
         cell = ws.cell(row=start_row, column=col_idx, value=h_text)
@@ -173,35 +191,24 @@ def generate_cohort_excel(
                 pv_n, ov_n, d = "", "", ""
             row_vals += [pv_n, ov_n, d]
             
-        left = {"Name", "Email", "Department", "Education Type"}
-        centre = {"Level", "PRE Quadrant", "PRE Band", "POST Quadrant",
-                  "POST Band", "Movement"}
         for col_idx, val in enumerate(row_vals, start=1):
             cell = ws.cell(row=current_row, column=col_idx, value=val)
-            cell.font = normal_font
-            cell.border = thin_border
-
-            header = headers[col_idx - 1] if col_idx <= len(headers) else ""
-            if header in left:
-                cell.alignment = Alignment(horizontal="left")
-            elif header in centre:
-                cell.alignment = Alignment(horizontal="center")
-            else:
-                cell.alignment = Alignment(horizontal="right")
+            # Only the summary block is styled — the per-item columns beyond it
+            # are plain numbers, and styling each one costs ~10s on a
+            # full-cohort export while looking no different.
+            if col_idx <= len(base_headers):
+                cell.font = normal_font
+                cell.border = thin_border
+                cell.alignment = _ALIGNMENTS[base_headers[col_idx - 1]]
 
         current_row += 1
 
-    # Auto-adjust column widths
-    for col in ws.columns:
-        max_len = 0
-        col_letter = get_column_letter(col[0].column)
-        
-        # Calculate max length based on rows from start_row onwards
-        for cell in col[start_row-1:]:
-            if cell.value:
-                max_len = max(max_len, len(str(cell.value)))
-        ws.column_dimensions[col_letter].width = max(max_len + 3, 10)
-        
+    # Column widths from the header text. Measuring every cell instead means a
+    # second full pass over ~400k cells, which is minutes on a large cohort.
+    for col_idx, h_text in enumerate(headers, start=1):
+        ws.column_dimensions[get_column_letter(col_idx)].width = max(len(h_text) + 3, 10)
+
+
     ws.column_dimensions["A"].width = 24
     ws.column_dimensions["B"].width = 28
     ws.column_dimensions["C"].width = 34

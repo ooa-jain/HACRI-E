@@ -188,6 +188,60 @@
           </div>
 
           <div class="card space-y-4">
+            <div><div class="h-card">✍️ Write a mail yourself</div>
+              <div class="sub">
+                Pick a department and we'll draft the subject and body around that department's post-survey link.
+                Edit it, then open it straight in Gmail — the sending is yours, so nothing goes out until you press
+                send.
+              </div></div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label class="lbl">Department</label>
+                <select id="draft-dept" onchange="buildDraft()" class="field">
+                  <option value="">Loading…</option>
+                </select>
+              </div>
+              <div>
+                <label class="lbl">Which link to include</label>
+                <select id="draft-kind" onchange="buildDraft()" class="field">
+                  <option value="post">📊 Impact — post survey</option>
+                  <option value="pre">📝 Outcome Survey 1 — baseline</option>
+                </select>
+              </div>
+              <div>
+                <label class="lbl">Who it's for</label>
+                <select id="draft-audience" onchange="buildDraft()" class="field">
+                  <option value="post-pending">Students yet to do the post survey</option>
+                  <option value="pre-pending">Students yet to do the baseline</option>
+                  <option value="none">Nobody — I'll add recipients myself</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label class="lbl">Subject</label>
+              <input id="draft-subject" class="field" oninput="updateDraftLinks()">
+            </div>
+            <div>
+              <label class="lbl">Body</label>
+              <textarea id="draft-body" rows="12" class="field font-mono text-[12px] leading-relaxed"
+                        oninput="updateDraftLinks()"></textarea>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2">
+              <a id="draft-gmail" href="#" target="_blank" rel="noopener" class="btn btn-primary">✉️ Open in Gmail</a>
+              <a id="draft-mailto" href="#" class="btn btn-soft">📮 Open in mail app</a>
+              <button class="btn btn-soft" onclick="copy($('draft-body').value)">Copy body</button>
+              <button id="draft-copy-recipients" class="btn btn-green" onclick="copyRecipients()">
+                Copy recipients
+              </button>
+              <span id="draft-note" class="text-xs text-slate-500"></span>
+            </div>
+            <div id="draft-warn" class="hidden"></div>
+          </div>
+
+          <div class="card space-y-4">
             <div><div class="h-card">📧 Delivery tracking</div>
               <div class="sub">Department-wise reminder delivery, clicks, completions and unfinished drafts.</div></div>
 
@@ -647,7 +701,7 @@ function durationBetween(a, b) {
 const PAGES = [
   { id: 'p-overview', icon: '📊', label: 'Overview',    title: 'Overview',            sub: 'Cohort progress at a glance' },
   { id: 'p-students', icon: '👥', label: 'Students',    title: 'Students',            sub: 'Status, time taken, timeline and orientation replies', load: () => renderStudents() },
-  { id: 'p-emails',   icon: '📧', label: 'Emails',      title: 'Emails',              sub: 'Send reminders and track delivery', load: () => { updateTargetCount(); loadEmailStats(); } },
+  { id: 'p-emails',   icon: '📧', label: 'Emails',      title: 'Emails',              sub: 'Send reminders, write your own mail, track delivery', load: () => { updateTargetCount(); initComposer(); loadEmailStats(); } },
   { id: 'p-links',    icon: '🔗', label: 'Links',       title: 'Links',               sub: 'Department links for both surveys, plus shareable reports', load: () => loadLinks() },
   { id: 'p-depts',    icon: '🏢', label: 'Departments', title: 'Departments',         sub: 'Literacy and readiness averages per department', load: () => loadDepts() },
   { id: 'p-parents',  icon: '👨‍👩‍👦', label: 'Parents',  title: 'Parental background', sub: 'Occupations reported in the post survey', load: () => loadParents() },
@@ -1221,6 +1275,138 @@ function pollTask(taskId, box, done) {
       } catch (err) { /* keep polling */ }
     }, 2000);
   });
+}
+
+// ── Mail composer ──────────────────────────────────────────────────────
+// Drafts the message; Gmail does the sending. Nothing leaves the server here.
+let draftRecipients = [];
+
+async function initComposer() {
+  const sel = $('draft-dept');
+  if (!linkData) {
+    try { linkData = await api('/admin/api/survey/post-links'); }
+    catch (err) { sel.innerHTML = '<option value="">Could not load departments</option>'; return; }
+  }
+  const current = sel.value;
+  sel.innerHTML = '<option value="">— All departments —</option>' +
+    linkData.links.map(l => `<option value="${e(l.dept)}">${e(l.dept)}</option>`).join('');
+  if (current) sel.value = current;
+  buildDraft();
+}
+
+function draftLink() {
+  const dept = $('draft-dept').value;
+  const kind = $('draft-kind').value;
+  if (!linkData) return '';
+  if (!dept) return kind === 'pre' ? linkData.pre_all_url : linkData.all_url;
+  const row = linkData.links.find(l => l.dept === dept);
+  if (!row) return '';
+  return kind === 'pre' ? row.pre_url : row.post_url;
+}
+
+function buildDraft() {
+  const dept = $('draft-dept').value || 'your department';
+  const kind = $('draft-kind').value;
+  const link = draftLink();
+
+  if (kind === 'pre') {
+    $('draft-subject').value = 'Action needed: complete your HACRI-E AI Literacy baseline survey';
+    $('draft-body').value =
+`Dear Student,
+
+As part of the AI Literacy initiative at JAIN (Deemed-to-be University), you are asked to complete the Outcome Survey 1 — Baseline. It takes about 10-15 minutes.
+
+Open your survey here:
+${link}
+
+Your department (${dept}) is already filled in — just add your name and email to begin.
+
+Please complete it at your earliest convenience.
+
+Regards,
+Office of Academics
+JAIN (Deemed-to-be University)`;
+  } else {
+    $('draft-subject').value = 'Reminder: complete your HACRI-E post-workshop survey';
+    $('draft-body').value =
+`Dear Student,
+
+You have already completed the baseline survey — thank you. The final step is the Impact Post-Workshop Survey, which takes about 10-15 minutes.
+
+Open your survey here:
+${link}
+
+Enter the same email address you used for the baseline survey and the survey will open straight away. Once you submit, your personal AI Literacy and Readiness scorecard is generated for you.
+
+Please complete it at your earliest convenience.
+
+Regards,
+Office of Academics
+JAIN (Deemed-to-be University)`;
+  }
+  updateDraftLinks();
+  loadDraftRecipients();
+}
+
+function updateDraftLinks() {
+  const su = encodeURIComponent($('draft-subject').value);
+  const body = encodeURIComponent($('draft-body').value);
+  const bcc = encodeURIComponent(draftRecipients.join(','));
+
+  // Gmail chokes on very long URLs, so only inline the recipient list while it
+  // is short; otherwise the Copy recipients button carries them.
+  const gmail = `https://mail.google.com/mail/?view=cm&fs=1&su=${su}&body=${body}`;
+  const withBcc = bcc ? `${gmail}&bcc=${bcc}` : gmail;
+  const tooLong = withBcc.length > 8000;
+
+  $('draft-gmail').href = tooLong ? gmail : withBcc;
+  $('draft-mailto').href = `mailto:?subject=${su}&body=${body}`;
+
+  const warn = $('draft-warn');
+  if (draftRecipients.length && tooLong) {
+    note(warn, 'info',
+      `<b>${draftRecipients.length} recipients</b> is too many to put in the link — press
+       <b>Copy recipients</b> and paste them into Gmail's Bcc field.`);
+  } else {
+    warn.className = 'hidden';
+  }
+}
+
+async function loadDraftRecipients() {
+  const audience = $('draft-audience').value;
+  const btn = $('draft-copy-recipients');
+  const note_ = $('draft-note');
+
+  if (audience === 'none') {
+    draftRecipients = [];
+    btn.style.display = 'none';
+    note_.textContent = 'No recipients attached — add them in Gmail.';
+    return updateDraftLinks();
+  }
+
+  btn.style.display = '';
+  note_.textContent = 'Counting recipients…';
+  try {
+    const params = new URLSearchParams({ dept: $('draft-dept').value, ug_or_pg: levelFilter() });
+    const users = await api('/admin/api/survey/users?' + params);
+    const match = audience === 'pre-pending'
+      ? (u => u.status === 'not_started' || !u.status)
+      : (u => u.status === 'pre_done');
+    draftRecipients = users.filter(match).map(u => u.email);
+    btn.textContent = `Copy recipients (${draftRecipients.length})`;
+    note_.textContent = draftRecipients.length
+      ? `${draftRecipients.length} students match — paste them into Bcc.`
+      : 'Nobody matches this selection.';
+  } catch (err) {
+    draftRecipients = [];
+    note_.textContent = 'Could not load recipients.';
+  }
+  updateDraftLinks();
+}
+
+function copyRecipients() {
+  if (!draftRecipients.length) return toast('No recipients to copy');
+  copy(draftRecipients.join(', '));
 }
 
 async function loadEmailStats() {

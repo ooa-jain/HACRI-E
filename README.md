@@ -80,7 +80,7 @@ The department and level selectors in the top bar scope every page below them.
 |--------------|--------------|
 | **Overview** | Registration / completion / reminder counts, completion split, cohort charts |
 | **Students** | One table, four views — status, time taken, timeline, orientation replies — with search and status filter |
-| **Emails** | Send reminders to a chosen cohort, then track delivery, clicks and completions per department |
+| **Emails** | Send reminders to a chosen cohort, draft a mail to open in Gmail, then track delivery, clicks and completions per department |
 | **Links** | Department post-survey links, shareable analysis reports, student entry points |
 | **Departments** | Literacy / readiness averages, rankings, bar chart, per-department report links |
 | **Parents** | Parental occupation breakdown from the post survey |
@@ -89,6 +89,21 @@ The department and level selectors in the top bar scope every page below them.
 
 Cohort data exports (CSV or Excel) come from the **Export** button, which
 follows the current filters and lets you pick which columns to include.
+
+### Writing a mail yourself
+
+The **Emails** page has a composer for when you'd rather send from your own
+mailbox than through the portal. Pick a department and whether to link the
+baseline or the post survey, and it drafts a subject and body around that
+department's link. Edit either, then:
+
+- **Open in Gmail** — opens Gmail's compose window with the subject and body
+  already filled in. Nothing sends until you press send.
+- **Open in mail app** — the same via `mailto:`, for Outlook and friends.
+- **Copy recipients (N)** — copies the matching students' addresses so you can
+  paste them into Bcc. Short recipient lists go into the Gmail link directly;
+  longer ones don't, because Gmail rejects over-long URLs, so the page tells
+  you to paste instead.
 
 ### Student lookup
 
