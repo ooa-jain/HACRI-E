@@ -153,6 +153,19 @@ their department. Single-department exports carry the student sheet only.
 Each department's analysis link is independently shareable — hand a single
 department its own link without exposing the rest.
 
+Every row also has an **✉️ Mail** button on each of its two lines, which opens
+Gmail's compose window with the links already in the body and the top left
+blank for your own message:
+
+- **Pre** — the baseline analysis link and its Excel download link
+- **Post** — the same for the post survey, plus the student survey link
+  (`/post/<dept-slug>`) for that department
+
+Nothing is sent from the page; the draft is yours to finish. Note that a Gmail
+compose link cannot carry a file attachment — that is a browser limitation — so
+the Excel goes in as a one-click download link. Use the row's **📥 Excel**
+button first if you would rather attach the file by hand.
+
 ### Department-wise survey links
 
 The **Links** page lists every department with two links to hand out:

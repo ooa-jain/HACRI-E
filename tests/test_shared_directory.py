@@ -213,3 +213,27 @@ async def test_admin_links_api_serves_the_directory_url(client: AsyncClient):
     # The link the admin hands out must be the one that opens.
     path = data["directory_url"].split("http://test", 1)[-1]
     assert (await client.get(path)).status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_each_row_can_draft_a_mail(client: AsyncClient):
+    """Pre drafts carry the analysis + Excel; post drafts also carry the
+    student survey link."""
+    await _seed()
+    page = (await client.get(f"/shared/departments?token={_token()}")).text
+
+    # Two mail buttons per row — one for the baseline, one for the post survey.
+    assert page.count('data-mail="pre"') == 3      # Overall + two departments
+    assert page.count('data-mail="post"') == 3
+
+    # The post draft needs the student-facing link; the baseline one does not.
+    assert 'data-student-path="/post/department-of-law"' in page
+    assert 'data-student-path="/post/all"' in page
+
+    from app.routes.shared_analysis import get_dept_token
+    assert f'data-token="{get_dept_token(LAW, "pre")}"' in page
+    assert f'data-token="{get_dept_token(LAW, "post")}"' in page
+
+    # Department names travel as data attributes, so a quote or bracket in a
+    # name can never break the markup the way an inline onclick would.
+    assert 'onclick="draftMail' not in page

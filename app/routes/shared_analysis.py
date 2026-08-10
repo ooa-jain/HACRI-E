@@ -74,6 +74,8 @@ async def _department_breakdown_rows() -> list[dict]:
     analysis = await get_dept_analysis_data()
     mail_stats = {row["dept"]: row for row in await get_email_notification_stats()}
 
+    from app.routes.post_link import dept_slug
+
     rows = []
     for item in analysis["departments"]:
         dept = item.get("dept")
@@ -99,6 +101,9 @@ async def _department_breakdown_rows() -> list[dict]:
             "avg_read_post": item.get("avg_read_post"),
             "token_pre": item.get("token_pre"),
             "token_post": item.get("token_post"),
+            # The student-facing survey link, for drafting mails from the
+            # directory page.
+            "student_post_path": f"/post/{dept_slug(dept)}",
         })
     return rows
 
@@ -384,6 +389,7 @@ async def shared_departments_list(request: Request, token: str = Query(...)):
         "avg_read_post": ov.get("avg_read_post"),
         "token_pre": ov.get("token_pre"),
         "token_post": ov.get("token_post"),
+        "student_post_path": "/post/all",
     }
 
     dept_list = [overall_row] + [
