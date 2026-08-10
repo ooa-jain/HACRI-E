@@ -237,3 +237,35 @@ async def test_each_row_can_draft_a_mail(client: AsyncClient):
     # Department names travel as data attributes, so a quote or bracket in a
     # name can never break the markup the way an inline onclick would.
     assert 'onclick="draftMail' not in page
+
+
+@pytest.mark.asyncio
+async def test_compose_dialog_is_available_on_both_shared_pages(client: AsyncClient):
+    """The mail dialog asks for a subject and message before anything opens."""
+    await _seed()
+    from app.routes.shared_analysis import get_dept_token
+
+    directory = (await client.get(f"/shared/departments?token={_token()}")).text
+    analysis = (await client.get(
+        f"/shared/analysis?dept={LAW}&token={get_dept_token(LAW, 'post')}&type=post")).text
+
+    for page, where in ((directory, "directory"), (analysis, "analysis page")):
+        assert 'id="mc-overlay"' in page, f"compose dialog missing from the {where}"
+        assert 'id="mc-subject"' in page, f"subject field missing from the {where}"
+        assert 'id="mc-message"' in page, f"message field missing from the {where}"
+        # Both flavours on offer.
+        assert 'data-mode="plain"' in page and 'data-mode="html"' in page
+
+    # The analysis page carries its own button and its department's links.
+    assert 'id="btn-mail-report"' in analysis
+    assert '"/post/department-of-law"' in analysis
+
+
+@pytest.mark.asyncio
+async def test_overall_analysis_page_links_the_all_departments_survey(client: AsyncClient):
+    await _seed()
+    from app.routes.shared_analysis import get_dept_token
+
+    page = (await client.get(
+        f"/shared/analysis?dept=Overall&token={get_dept_token('Overall', 'post')}&type=post")).text
+    assert '"/post/all"' in page

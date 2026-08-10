@@ -119,6 +119,8 @@ async def shared_analysis_get(
         raise HTTPException(status_code=403, detail="Access denied: Invalid or expired sharing link.")
 
     from app.db import get_dept_analysis_data
+    from app.routes.post_link import dept_slug
+
     analysis_data = await get_dept_analysis_data()
 
     # Fetch users for this department
@@ -160,6 +162,9 @@ async def shared_analysis_get(
             "overall_info": analysis_data["overall"],
             "dept_list": analysis_data["departments"],
             "rankings": analysis_data["rankings"],
+            # The student-facing survey link, for the "Mail this report" draft.
+            "student_post_path": "/post/all" if _is_overall(dept)
+                                 else f"/post/{dept_slug(dept)}",
         }
     )
 

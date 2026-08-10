@@ -153,18 +153,35 @@ their department. Single-department exports carry the student sheet only.
 Each department's analysis link is independently shareable — hand a single
 department its own link without exposing the rest.
 
-Every row also has an **✉️ Mail** button on each of its two lines, which opens
-Gmail's compose window with the links already in the body and the top left
-blank for your own message:
+### Mailing a report
 
-- **Pre** — the baseline analysis link and its Excel download link
+Every directory row has an **✉️ Mail** button on each of its two lines, and each
+department's analysis page has **✉️ Mail this report**. Both open a compose
+dialog that asks for the subject and your message first, then adds that
+department's links below it:
+
+- **Pre** — baseline analysis, Excel, PPT
 - **Post** — the same for the post survey, plus the student survey link
   (`/post/<dept-slug>`) for that department
 
-Nothing is sent from the page; the draft is yours to finish. Note that a Gmail
-compose link cannot carry a file attachment — that is a browser limitation — so
-the Excel goes in as a one-click download link. Use the row's **📥 Excel**
-button first if you would rather attach the file by hand.
+Two formats:
+
+| | What you get | How it goes out |
+|---|---|---|
+| **📄 Normal mail** | Plain text with the URLs listed | **Open in Gmail** fills the compose window directly; **Mail app** does the same via `mailto:` |
+| **🎨 HTML mail** | A JAIN-branded page — department name, your message, a **Click here** button per link | **Copy styled mail**, then paste into the compose window (Ctrl+V). **Preview** opens it in a tab first |
+
+HTML has to be pasted because a compose link can only carry plain text — the
+copy puts both a rich and a plain flavour on the clipboard, so pasting into
+Gmail keeps the layout and buttons.
+
+Whatever you write is remembered. Open the dialog for the next department and it
+offers **"You wrote a message for &lt;dept&gt;. Use the same wording here?"** —
+accepting keeps your text and retargets the subject to the new department.
+
+Nothing is sent from the page; the draft is always yours to finish. A mail link
+cannot carry a file attachment either, so the Excel goes in as a one-click
+download — download it first if you would rather attach the file by hand.
 
 ### Department-wise survey links
 

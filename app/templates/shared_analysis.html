@@ -317,6 +317,15 @@ body {
     grid-template-columns: 1fr;
   }
 }
+
+.btn-mail {
+  background: var(--navy);
+  color: #fff;
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+}
+.btn-mail:hover { background: var(--navy2); }
 </style>
 </head>
 <body>
@@ -335,7 +344,7 @@ body {
   <div class="action-banner">
     <div class="action-info">
       <h2>{% if survey_type == 'post' %}Post-Workshop{% else %}Pre-Survey (Baseline){% endif %} Report & Exports</h2>
-      <p>Download the PowerPoint deck or export detailed response sheets for this department.</p>
+      <p>Download the PowerPoint deck, export detailed response sheets, or mail this report on.</p>
     </div>
     <div class="btn-group">
       <a href="/shared/analysis/export-excel?dept={{ dept|urlencode }}&token={{ token }}&type={{ survey_type }}" class="btn btn-green">
@@ -344,6 +353,9 @@ body {
       <a href="/shared/analysis/download-ppt?dept={{ dept|urlencode }}&token={{ token }}&type={{ survey_type }}" class="btn btn-gold">
         📊 Download PPT (.pptx)
       </a>
+      <button type="button" class="btn btn-mail" id="btn-mail-report">
+        ✉️ Mail this report
+      </button>
     </div>
   </div>
 
@@ -676,5 +688,21 @@ body {
   });
 </script>
 
+
+{% include "_mail_compose.html" %}
+
+<script>
+// "Mail this report" — asks for the subject and message, then hands the draft
+// (with this department's links appended) to Gmail.
+document.getElementById('btn-mail-report').addEventListener('click', () => {
+  openMailDraft({
+    kind: {{ survey_type | tojson }},
+    dept: {{ dept | tojson }},
+    enc: encodeURIComponent({{ dept | tojson }}),
+    token: {{ token | tojson }},
+    studentPath: {{ student_post_path | tojson }},
+  });
+});
+</script>
 </body>
 </html>

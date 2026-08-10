@@ -1,0 +1,369 @@
+{# ── Mail compose dialog ─────────────────────────────────────────────────────
+   Shared by the department directory and the per-department analysis page.
+   Ask for the subject and the message first, add this department's links, then
+   hand the finished draft over. Nothing is sent from the browser.
+
+   Two flavours:
+     Plain — links go in as plain URLs; Gmail's compose window takes it directly.
+     HTML  — a styled mail with "Click here" buttons, copied as rich text and
+             pasted into the compose window (a compose link cannot carry HTML).
+
+   What you write is remembered, so the next department can reuse it.
+
+   Open it with:
+     openMailDraft({kind: 'pre'|'post', dept, enc, token, studentPath})
+#}
+<style>
+  .mc-overlay {
+    position: fixed; inset: 0; z-index: 100;
+    background: rgba(15, 23, 42, .6);
+    display: none; align-items: flex-start; justify-content: center;
+    padding: 24px; overflow-y: auto;
+  }
+  .mc-overlay.on { display: flex; }
+  .mc-box {
+    background: #fff; border-radius: 16px; width: 100%; max-width: 700px;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, .3); margin: auto;
+    font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+  .mc-head {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    gap: 16px; padding: 20px 22px; border-bottom: 1px solid #e2e8f0;
+  }
+  .mc-head h3 { font-size: 17px; font-weight: 800; color: #0d2147; margin: 0; }
+  .mc-head p  { font-size: 12.5px; color: #64748b; margin: 4px 0 0; line-height: 1.5; }
+  .mc-x {
+    border: none; background: #f1f5f9; color: #334155; cursor: pointer;
+    border-radius: 8px; width: 32px; height: 32px; font-size: 16px; flex-shrink: 0;
+  }
+  .mc-x:hover { background: #e2e8f0; }
+  .mc-body { padding: 20px 22px; display: flex; flex-direction: column; gap: 16px; }
+  .mc-field label {
+    display: block; font-size: 11.5px; font-weight: 700; color: #334155;
+    text-transform: uppercase; letter-spacing: .5px; margin-bottom: 6px;
+  }
+  .mc-field input, .mc-field textarea {
+    width: 100%; padding: 11px 13px; border: 1.5px solid #cbd5e1; border-radius: 10px;
+    font-size: 14px; font-family: inherit; color: #0f172a; outline: none; resize: vertical;
+  }
+  .mc-field input:focus, .mc-field textarea:focus {
+    border-color: #1a3a7a; box-shadow: 0 0 0 3px rgba(26, 58, 122, .1);
+  }
+  .mc-modes { display: flex; gap: 8px; }
+  .mc-mode {
+    flex: 1; border: 1.5px solid #cbd5e1; background: #fff; border-radius: 10px;
+    padding: 10px 12px; cursor: pointer; text-align: left; font-family: inherit;
+  }
+  .mc-mode.on { border-color: #0d2147; background: #f0f4fb; }
+  .mc-mode b { display: block; font-size: 13px; font-weight: 700; color: #0d2147; }
+  .mc-mode span { display: block; font-size: 11px; color: #64748b; margin-top: 2px; line-height: 1.4; }
+  .mc-links {
+    background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px;
+    padding: 12px 14px; font-size: 11.5px; color: #475569; line-height: 1.7;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    max-height: 150px; overflow: auto; white-space: pre-wrap; word-break: break-all;
+  }
+  .mc-hint { font-size: 11.5px; color: #64748b; line-height: 1.6; }
+  .mc-reuse {
+    display: none; align-items: center; gap: 10px; flex-wrap: wrap;
+    background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px;
+    padding: 11px 14px; font-size: 12.5px; color: #1e40af; line-height: 1.5;
+  }
+  .mc-reuse.on { display: flex; }
+  .mc-reuse button {
+    border: none; border-radius: 8px; padding: 6px 12px; font-size: 12px;
+    font-weight: 700; cursor: pointer; font-family: inherit;
+  }
+  .mc-reuse .yes { background: #1d4ed8; color: #fff; }
+  .mc-reuse .no  { background: #dbeafe; color: #1e40af; }
+  .mc-foot {
+    display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-end;
+    padding: 16px 22px; border-top: 1px solid #e2e8f0; background: #f8fafc;
+    border-radius: 0 0 16px 16px;
+  }
+  .mc-btn {
+    border: none; border-radius: 10px; padding: 10px 16px; font-size: 13px;
+    font-weight: 700; cursor: pointer; font-family: inherit; text-decoration: none;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .mc-btn.grey  { background: #f1f5f9; color: #334155; } .mc-btn.grey:hover  { background: #e2e8f0; }
+  .mc-btn.navy  { background: #0d2147; color: #fff; }    .mc-btn.navy:hover  { background: #1a3a7a; }
+  .mc-btn.green { background: #047857; color: #fff; }    .mc-btn.green:hover { background: #036049; }
+  .mc-foot .mc-btn:first-child { margin-right: auto; }
+  .mc-html-only { display: none; }
+  .mc-box.html-mode .mc-html-only { display: inline-flex; }
+  .mc-box.html-mode .mc-plain-only { display: none; }
+</style>
+
+<div class="mc-overlay" id="mc-overlay">
+  <div class="mc-box" id="mc-box" role="dialog" aria-modal="true" aria-labelledby="mc-title">
+    <div class="mc-head">
+      <div>
+        <h3 id="mc-title">✉️ Compose mail</h3>
+        <p id="mc-sub">Write your subject and message. This department's links are added below it.</p>
+      </div>
+      <button type="button" class="mc-x" onclick="closeMailDraft()" aria-label="Close">&times;</button>
+    </div>
+
+    <div class="mc-body">
+      <div class="mc-reuse" id="mc-reuse">
+        <span id="mc-reuse-text"></span>
+        <button type="button" class="yes" onclick="reuseLastDraft()">Use it</button>
+        <button type="button" class="no" onclick="dismissReuse()">Start fresh</button>
+      </div>
+
+      <div class="mc-field">
+        <label>Mail format</label>
+        <div class="mc-modes">
+          <button type="button" class="mc-mode on" data-mode="plain" onclick="setMailMode('plain')">
+            <b>📄 Normal mail</b>
+            <span>Plain text. Goes straight into Gmail's compose window.</span>
+          </button>
+          <button type="button" class="mc-mode" data-mode="html" onclick="setMailMode('html')">
+            <b>🎨 HTML mail</b>
+            <span>Styled page with "Click here" buttons. Copy, then paste into the mail.</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="mc-field">
+        <label for="mc-subject">Subject</label>
+        <input type="text" id="mc-subject" placeholder="Subject line">
+      </div>
+
+      <div class="mc-field">
+        <label for="mc-message">Your message</label>
+        <textarea id="mc-message" rows="7" placeholder="Write what you want to say…"></textarea>
+      </div>
+
+      <div class="mc-field">
+        <label>Links added below your message</label>
+        <div class="mc-links" id="mc-links"></div>
+        <p class="mc-hint" style="margin-top:8px" id="mc-format-hint"></p>
+      </div>
+    </div>
+
+    <div class="mc-foot">
+      <button type="button" class="mc-btn grey" onclick="closeMailDraft()">Cancel</button>
+      <a class="mc-btn grey mc-html-only" id="mc-preview" href="#" target="_blank" rel="noopener">👁️ Preview</a>
+      <button type="button" class="mc-btn green" id="mc-copy" onclick="copyMailDraft(this)">Copy message</button>
+      <a class="mc-btn grey mc-plain-only" id="mc-mailto" href="#">📮 Mail app</a>
+      <a class="mc-btn navy" id="mc-gmail" href="#" target="_blank" rel="noopener">✉️ Open in Gmail</a>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  const SAVED_KEY = 'hacri_mail_draft';
+  let ctx = null;
+  let mode = 'plain';
+  let saved = null;
+
+  try { saved = JSON.parse(localStorage.getItem(SAVED_KEY) || 'null'); } catch (e) { saved = null; }
+
+  const $mc = id => document.getElementById(id);
+  const esc = s => String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+  // ── The links this department's mail carries ─────────────────────────────
+  function linkList() {
+    if (!ctx) return [];
+    const origin = location.origin;
+    const q = `dept=${ctx.enc}&token=${ctx.token}&type=${ctx.kind}`;
+    const out = [];
+    if (ctx.kind === 'post' && ctx.studentPath) {
+      out.push({
+        label: `${ctx.dept} — Post-Workshop Survey`,
+        note: 'Students enter the email they registered with, and the survey opens straight away.',
+        url: `${origin}${ctx.studentPath}`,
+      });
+    }
+    out.push({
+      label: `${ctx.dept} — ${ctx.kind === 'post' ? 'Post-Workshop' : 'Baseline'} Analysis`,
+      note: 'Full report: completion figures, scores and charts.',
+      url: `${origin}/shared/analysis?${q}`,
+    });
+    out.push({
+      label: `${ctx.dept} — Excel export`,
+      note: 'Detailed response sheet (.xlsx).',
+      url: `${origin}/shared/analysis/export-excel?${q}`,
+    });
+    out.push({
+      label: `${ctx.dept} — PowerPoint deck`,
+      note: 'Presentation-ready summary (.pptx).',
+      url: `${origin}/shared/analysis/download-ppt?${q}`,
+    });
+    return out;
+  }
+
+  function plainBody() {
+    const written = $mc('mc-message').value.trim();
+    const rule = '-'.repeat(64);
+    const blocks = linkList().map(l => `${l.label}:\n${l.url}${l.note ? `\n${l.note}` : ''}`);
+    return `${written}\n\n${rule}\n${blocks.join('\n\n')}\n${rule}`;
+  }
+
+  function htmlBody() {
+    const written = $mc('mc-message').value.trim();
+    const paragraphs = written
+      ? written.split(/\n{2,}/).map(p => `<p style="margin:0 0 14px;font-size:15px;line-height:1.65;color:#1e293b">${esc(p).replace(/\n/g, '<br>')}</p>`).join('')
+      : '';
+    const cards = linkList().map(l => `
+      <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin:0 0 14px">
+        <tr><td style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:16px 18px">
+          <div style="font-size:14px;font-weight:700;color:#0d2147;margin-bottom:4px">${esc(l.label)}</div>
+          ${l.note ? `<div style="font-size:12.5px;color:#64748b;line-height:1.5;margin-bottom:12px">${esc(l.note)}</div>` : ''}
+          <a href="${esc(l.url)}" style="display:inline-block;background:#0d2147;color:#ffffff;text-decoration:none;font-size:13px;font-weight:700;padding:10px 20px;border-radius:8px">Click here &rarr;</a>
+        </td></tr>
+      </table>`).join('');
+
+    return `<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background:#f4f6f9;padding:24px 0;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif">
+  <tr><td align="center">
+    <table role="presentation" cellpadding="0" cellspacing="0" width="620" style="max-width:620px;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e2e8f0">
+      <tr><td style="background:#0d2147;padding:22px 26px">
+        <div style="font-size:18px;font-weight:800;color:#ffffff;letter-spacing:.3px">JAIN <span style="color:#e6b324">(Deemed-to-be University)</span></div>
+        <div style="font-size:12.5px;color:#c7d2e5;margin-top:3px">HACRI-E · AI Literacy Assessment</div>
+      </td></tr>
+      <tr><td style="padding:24px 26px 6px">
+        <div style="display:inline-block;background:#eef2f7;color:#0d2147;font-size:12px;font-weight:700;padding:6px 14px;border-radius:999px;margin-bottom:16px">🏛️ ${esc(ctx ? ctx.dept : '')}</div>
+        ${paragraphs}
+      </td></tr>
+      <tr><td style="padding:6px 26px 20px">${cards}</td></tr>
+      <tr><td style="background:#f8fafc;border-top:1px solid #e2e8f0;padding:16px 26px">
+        <div style="font-size:11.5px;color:#64748b;line-height:1.6">
+          JAIN (Deemed-to-be University) · Office of Academics<br>
+          Confidential — for programme evaluation and research use only.
+        </div>
+      </td></tr>
+    </table>
+  </td></tr>
+</table>`;
+  }
+
+  function previewDocument() {
+    return '<!doctype html><html><head><meta charset="utf-8">'
+      + `<title>${esc($mc('mc-subject').value)}</title>`
+      + '</head><body style="margin:0">' + htmlBody() + '</body></html>';
+  }
+
+  function refresh() {
+    const su = encodeURIComponent($mc('mc-subject').value);
+    // A compose link only ever carries plain text — HTML is pasted in.
+    const body = encodeURIComponent(plainBody());
+    $mc('mc-gmail').href = `https://mail.google.com/mail/?view=cm&fs=1&su=${su}&body=${body}`;
+    $mc('mc-mailto').href = `mailto:?subject=${su}&body=${body}`;
+
+    if (mode === 'html') {
+      const blob = new Blob([previewDocument()], { type: 'text/html;charset=utf-8' });
+      const prev = $mc('mc-preview');
+      if (prev.dataset.url) URL.revokeObjectURL(prev.dataset.url);
+      const url = URL.createObjectURL(blob);
+      prev.dataset.url = url;
+      prev.href = url;
+    }
+    saveDraft();
+  }
+
+  function saveDraft() {
+    try {
+      localStorage.setItem(SAVED_KEY, JSON.stringify({
+        subject: $mc('mc-subject').value,
+        message: $mc('mc-message').value,
+        mode: mode,
+        dept: ctx ? ctx.dept : '',
+        kind: ctx ? ctx.kind : '',
+      }));
+    } catch (e) { /* private browsing — drafts just aren't remembered */ }
+  }
+
+  window.setMailMode = function (next) {
+    mode = next;
+    document.querySelectorAll('.mc-mode').forEach(b => b.classList.toggle('on', b.dataset.mode === next));
+    $mc('mc-box').classList.toggle('html-mode', next === 'html');
+    $mc('mc-copy').textContent = next === 'html' ? 'Copy styled mail' : 'Copy message';
+    $mc('mc-format-hint').innerHTML = next === 'html'
+      ? 'Press <b>Copy styled mail</b>, open Gmail and paste (Ctrl+V) — the buttons and layout come across. '
+        + 'A compose link cannot carry HTML, which is why it is pasted rather than pre-filled.'
+      : 'A mail link cannot carry a file attachment, so the Excel goes in as a one-click download. '
+        + 'Download it first if you would rather attach the file yourself.';
+    refresh();
+  };
+
+  window.openMailDraft = function (options) {
+    ctx = options;
+    const label = ctx.kind === 'post' ? 'Post-Workshop Survey' : 'Baseline Analysis';
+    $mc('mc-title').textContent = `✉️ Mail — ${ctx.dept}`;
+    $mc('mc-subject').value = `HACRI-E ${label} — ${ctx.dept}`;
+    $mc('mc-message').value = '';
+    $mc('mc-links').textContent = linkList().map(l => `${l.label}:\n${l.url}`).join('\n\n');
+
+    // Offer the message written for another department.
+    const reuse = $mc('mc-reuse');
+    if (saved && (saved.message || '').trim() && saved.dept !== ctx.dept) {
+      $mc('mc-reuse-text').textContent =
+        `You wrote a message for ${saved.dept}. Use the same wording here?`;
+      reuse.classList.add('on');
+    } else {
+      reuse.classList.remove('on');
+      if (saved && saved.dept === ctx.dept && (saved.message || '').trim()) {
+        $mc('mc-message').value = saved.message;
+        if (saved.subject) $mc('mc-subject').value = saved.subject;
+      }
+    }
+
+    setMailMode(saved && saved.mode === 'html' ? 'html' : 'plain');
+    $mc('mc-overlay').classList.add('on');
+    $mc('mc-message').focus();
+  };
+
+  window.reuseLastDraft = function () {
+    if (!saved) return;
+    $mc('mc-message').value = saved.message || '';
+    // Keep the subject's department name correct while reusing the wording.
+    if (saved.subject && saved.dept) {
+      $mc('mc-subject').value = saved.subject.split(saved.dept).join(ctx.dept);
+    }
+    setMailMode(saved.mode === 'html' ? 'html' : 'plain');
+    dismissReuse();
+  };
+
+  window.dismissReuse = function () {
+    $mc('mc-reuse').classList.remove('on');
+  };
+
+  window.closeMailDraft = function () {
+    saved = null;
+    try { saved = JSON.parse(localStorage.getItem(SAVED_KEY) || 'null'); } catch (e) {}
+    $mc('mc-overlay').classList.remove('on');
+  };
+
+  window.copyMailDraft = async function (btn) {
+    const original = btn.textContent;
+    const done = ok => {
+      btn.textContent = ok ? 'Copied ✓' : 'Copy failed';
+      setTimeout(() => { btn.textContent = original; }, 1800);
+    };
+    try {
+      if (mode === 'html' && window.ClipboardItem && navigator.clipboard.write) {
+        await navigator.clipboard.write([new ClipboardItem({
+          'text/html': new Blob([htmlBody()], { type: 'text/html;charset=utf-8' }),
+          'text/plain': new Blob([plainBody()], { type: 'text/plain;charset=utf-8' }),
+        })]);
+      } else {
+        await navigator.clipboard.writeText(mode === 'html' ? htmlBody() : plainBody());
+      }
+      done(true);
+    } catch (e) { done(false); }
+  };
+
+  $mc('mc-subject').addEventListener('input', refresh);
+  $mc('mc-message').addEventListener('input', refresh);
+  $mc('mc-overlay').addEventListener('click', ev => {
+    if (ev.target.id === 'mc-overlay') closeMailDraft();
+  });
+  document.addEventListener('keydown', ev => {
+    if (ev.key === 'Escape') closeMailDraft();
+  });
+})();
+</script>

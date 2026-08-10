@@ -334,64 +334,22 @@
     </p>
   </div>
 
+{% include "_mail_compose.html" %}
+
 <script>
-// ── Draft a mail from a row ─────────────────────────────────────────────────
-// Opens Gmail's compose window with the links already in place. Nothing is
-// sent from here — the message is yours to finish and send.
-//
-// Note: neither a Gmail compose link nor mailto: can carry a file attachment,
-// so the Excel goes in as a download link. Use the row's 📥 Excel button first
-// if you would rather attach the file by hand.
+// Each row's Mail button opens the compose dialog, where the subject and the
+// message are written before anything is handed to Gmail.
 document.addEventListener('click', ev => {
   const btn = ev.target.closest('.btn-mail');
   if (!btn) return;
-  draftMail(btn.dataset.mail, btn.dataset.dept, btn.dataset.enc,
-            btn.dataset.token, btn.dataset.studentPath || '');
+  openMailDraft({
+    kind: btn.dataset.mail,
+    dept: btn.dataset.dept,
+    enc: btn.dataset.enc,
+    token: btn.dataset.token,
+    studentPath: btn.dataset.studentPath || '',
+  });
 });
-
-function draftMail(kind, deptName, deptEnc, token, studentPath) {
-  const origin = location.origin;
-  const analysis = `${origin}/shared/analysis?dept=${deptEnc}&token=${token}&type=${kind}`;
-  const excel = `${origin}/shared/analysis/export-excel?dept=${deptEnc}&token=${token}&type=${kind}`;
-
-  let subject, body;
-  if (kind === 'post') {
-    subject = `HACRI-E Post-Workshop Survey — ${deptName}`;
-    body =
-`
-
---------------------------------------------------------------------
-Post-workshop survey link for ${deptName}:
-${origin}${studentPath}
-
-Students enter the email address they registered with, and the survey
-opens straight away.
-
-Post-workshop analysis for ${deptName}:
-${analysis}
-
-Excel export (click to download):
-${excel}
---------------------------------------------------------------------`;
-  } else {
-    subject = `HACRI-E Baseline Analysis — ${deptName}`;
-    body =
-`
-
---------------------------------------------------------------------
-Baseline (Outcome Survey 1) analysis for ${deptName}:
-${analysis}
-
-Excel export (click to download):
-${excel}
---------------------------------------------------------------------`;
-  }
-
-  const url = 'https://mail.google.com/mail/?view=cm&fs=1'
-    + '&su=' + encodeURIComponent(subject)
-    + '&body=' + encodeURIComponent(body);
-  window.open(url, '_blank', 'noopener');
-}
 </script>
 </body>
 </html>
