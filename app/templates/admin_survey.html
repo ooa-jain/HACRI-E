@@ -70,9 +70,18 @@
 
     <header class="sticky top-0 z-40 bg-white border-b border-slate-200 px-4 md:px-6 py-3 flex flex-wrap items-center gap-3">
       <button onclick="toggleSidebar()" class="md:hidden btn btn-soft">☰</button>
-      <div class="mr-auto">
+      <div>
         <h1 id="page-title" class="text-sm font-bold text-slate-900">Overview</h1>
         <p id="page-sub" class="text-xs text-slate-500">Cohort progress at a glance</p>
+      </div>
+
+      <!-- Global student lookup — searches everyone, ignoring the filters. -->
+      <div class="relative flex-1 min-w-[220px] max-w-md mx-auto" id="lookup-wrap">
+        <input id="lookup" class="field w-full" autocomplete="off"
+               placeholder="🔍 Find any student by name or email…"
+               oninput="lookupTyped()" onkeydown="lookupKey(event)" onfocus="lookupTyped()">
+        <div id="lookup-results"
+             class="hidden absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg z-50 overflow-hidden max-h-96 overflow-y-auto"></div>
       </div>
 
       <select id="level-filter" onchange="applyFilters()" class="field w-auto" title="Academic level">
@@ -179,6 +188,60 @@
           </div>
 
           <div class="card space-y-4">
+            <div><div class="h-card">✍️ Write a mail yourself</div>
+              <div class="sub">
+                Pick a department and we'll draft the subject and body around that department's post-survey link.
+                Edit it, then open it straight in Gmail — the sending is yours, so nothing goes out until you press
+                send.
+              </div></div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label class="lbl">Department</label>
+                <select id="draft-dept" onchange="buildDraft()" class="field">
+                  <option value="">Loading…</option>
+                </select>
+              </div>
+              <div>
+                <label class="lbl">Which link to include</label>
+                <select id="draft-kind" onchange="buildDraft()" class="field">
+                  <option value="post">📊 Impact — post survey</option>
+                  <option value="pre">📝 Outcome Survey 1 — baseline</option>
+                </select>
+              </div>
+              <div>
+                <label class="lbl">Who it's for</label>
+                <select id="draft-audience" onchange="buildDraft()" class="field">
+                  <option value="post-pending">Students yet to do the post survey</option>
+                  <option value="pre-pending">Students yet to do the baseline</option>
+                  <option value="none">Nobody — I'll add recipients myself</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label class="lbl">Subject</label>
+              <input id="draft-subject" class="field" oninput="updateDraftLinks()">
+            </div>
+            <div>
+              <label class="lbl">Body</label>
+              <textarea id="draft-body" rows="12" class="field font-mono text-[12px] leading-relaxed"
+                        oninput="updateDraftLinks()"></textarea>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2">
+              <a id="draft-gmail" href="#" target="_blank" rel="noopener" class="btn btn-primary">✉️ Open in Gmail</a>
+              <a id="draft-mailto" href="#" class="btn btn-soft">📮 Open in mail app</a>
+              <button class="btn btn-soft" onclick="copy($('draft-body').value)">Copy body</button>
+              <button id="draft-copy-recipients" class="btn btn-green" onclick="copyRecipients()">
+                Copy recipients
+              </button>
+              <span id="draft-note" class="text-xs text-slate-500"></span>
+            </div>
+            <div id="draft-warn" class="hidden"></div>
+          </div>
+
+          <div class="card space-y-4">
             <div><div class="h-card">📧 Delivery tracking</div>
               <div class="sub">Department-wise reminder delivery, clicks, completions and unfinished drafts.</div></div>
 
@@ -200,31 +263,63 @@
       <div class="panel" id="p-links">
         <div class="space-y-5">
           <div class="card space-y-4">
-            <div><div class="h-card">🔗 Department post-survey links</div>
+            <div><div class="h-card">🏢 Overall department directory — one link for everything</div>
               <div class="sub">
-                Share a department's link with its students. The student enters the email they registered with —
-                if that email has a completed baseline survey in that department, the post survey opens straight away.
+                A single shareable page listing every department with registered, baseline filled, post filled and
+                post pending counts, how the reminder mails landed (sent / clicked / filled after), and average
+                scores — plus each department's own analysis link, Excel and PPT export. Anyone with the link can
+                open it; no admin login needed.
+              </div></div>
+            <div class="bg-slate-900 text-white rounded-xl p-4 space-y-2">
+              <div class="flex items-center gap-2">
+                <input id="directory-link" readonly class="field link flex-1 bg-slate-800 border-slate-700 text-slate-100">
+                <button class="btn btn-soft" onclick="copy(document.getElementById('directory-link').value)">Copy</button>
+                <a id="directory-open" href="#" target="_blank" class="btn btn-primary">Open</a>
+              </div>
+              <div class="text-[11px] text-slate-400">Figures refresh every time the page is opened.</div>
+            </div>
+          </div>
+
+          <div class="card space-y-4">
+            <div><div class="h-card">🔗 Department survey links</div>
+              <div class="sub">
+                Every department gets two links to hand out.
+                <b class="text-blue-700">Outcome Survey 1 — Baseline</b> opens the registration page with that
+                department already filled in, so everyone who signs up through it is filed correctly.
+                <b class="text-emerald-700">Impact — Post Survey</b> asks only for the email the student registered
+                with: if it has a completed baseline in that department, the post survey opens straight away.
                 Wrong department or no baseline yet, and the page tells them what to do.
               </div></div>
 
-            <div class="bg-slate-900 text-white rounded-xl p-4 space-y-2">
-              <div class="text-xs font-bold text-amber-400">🌐 All departments (any registered student)</div>
-              <div class="flex items-center gap-2">
-                <input id="all-post-link" readonly class="field link flex-1 bg-slate-800 border-slate-700 text-slate-100">
-                <button class="btn btn-soft" onclick="copy(document.getElementById('all-post-link').value)">Copy</button>
-                <a id="all-post-open" href="#" target="_blank" class="btn btn-primary">Open</a>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
+              <div class="bg-slate-900 text-white rounded-xl p-4 space-y-2">
+                <div class="text-xs font-bold text-sky-400">📝 Outcome Survey 1 — any department</div>
+                <div class="flex items-center gap-2">
+                  <input id="all-pre-link" readonly class="field link flex-1 bg-slate-800 border-slate-700 text-slate-100">
+                  <button class="btn btn-soft" onclick="copy(document.getElementById('all-pre-link').value)">Copy</button>
+                  <a id="all-pre-open" href="#" target="_blank" class="btn btn-primary">Open</a>
+                </div>
+                <div class="text-[11px] text-slate-400">The normal registration page — the student picks their own department.</div>
+              </div>
+              <div class="bg-slate-900 text-white rounded-xl p-4 space-y-2">
+                <div class="text-xs font-bold text-amber-400">📊 Impact Post Survey — any department</div>
+                <div class="flex items-center gap-2">
+                  <input id="all-post-link" readonly class="field link flex-1 bg-slate-800 border-slate-700 text-slate-100">
+                  <button class="btn btn-soft" onclick="copy(document.getElementById('all-post-link').value)">Copy</button>
+                  <a id="all-post-open" href="#" target="_blank" class="btn btn-primary">Open</a>
+                </div>
+                <div class="text-[11px] text-slate-400">Accepts any registered student with a completed baseline.</div>
               </div>
             </div>
 
+            <input id="link-search" oninput="renderPostLinks()" class="field"
+                   placeholder="🔍 Filter departments…">
             <div id="post-links-table"></div>
           </div>
 
           <div class="card space-y-4">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div><div class="h-card">📈 Public analysis links (all departments combined)</div>
-                <div class="sub">Read-only report pages that can be shared outside the admin portal.</div></div>
-              <a href="/shared/departments" target="_blank" class="btn btn-dark">🌐 Public directory</a>
-            </div>
+            <div><div class="h-card">📈 Public analysis links (all departments combined)</div>
+              <div class="sub">Read-only report pages that can be shared outside the admin portal.</div></div>
 
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <div class="border border-slate-200 rounded-xl p-4 space-y-2">
@@ -463,6 +558,17 @@
   </div>
 </div>
 
+<!-- ══ STUDENT DETAIL MODAL ════════════════════════════════════════════ -->
+<div id="student-modal" class="hidden fixed inset-0 bg-slate-950/60 z-50 flex items-start justify-center p-4 overflow-y-auto">
+  <div class="bg-white rounded-2xl max-w-4xl w-full my-8">
+    <div class="sticky top-0 bg-white border-b border-slate-200 rounded-t-2xl px-5 py-4 flex items-start justify-between gap-4">
+      <div id="student-modal-head" class="min-w-0"></div>
+      <button onclick="closeStudent()" class="btn btn-soft shrink-0">✕</button>
+    </div>
+    <div id="student-modal-body" class="p-5 space-y-5"></div>
+  </div>
+</div>
+
 <!-- ══ EXPORT MODAL ════════════════════════════════════════════════════ -->
 <div id="export-modal" class="hidden fixed inset-0 bg-slate-950/60 z-50 flex items-center justify-center p-4">
   <div class="bg-white rounded-2xl max-w-md w-full p-5 space-y-4">
@@ -595,8 +701,8 @@ function durationBetween(a, b) {
 const PAGES = [
   { id: 'p-overview', icon: '📊', label: 'Overview',    title: 'Overview',            sub: 'Cohort progress at a glance' },
   { id: 'p-students', icon: '👥', label: 'Students',    title: 'Students',            sub: 'Status, time taken, timeline and orientation replies', load: () => renderStudents() },
-  { id: 'p-emails',   icon: '📧', label: 'Emails',      title: 'Emails',              sub: 'Send reminders and track delivery', load: () => { updateTargetCount(); loadEmailStats(); } },
-  { id: 'p-links',    icon: '🔗', label: 'Links',       title: 'Links',               sub: 'Department post-survey links and shareable reports', load: () => loadLinks() },
+  { id: 'p-emails',   icon: '📧', label: 'Emails',      title: 'Emails',              sub: 'Send reminders, write your own mail, track delivery', load: () => { updateTargetCount(); initComposer(); loadEmailStats(); } },
+  { id: 'p-links',    icon: '🔗', label: 'Links',       title: 'Links',               sub: 'Department links for both surveys, plus shareable reports', load: () => loadLinks() },
   { id: 'p-depts',    icon: '🏢', label: 'Departments', title: 'Departments',         sub: 'Literacy and readiness averages per department', load: () => loadDepts() },
   { id: 'p-parents',  icon: '👨‍👩‍👦', label: 'Parents',  title: 'Parental background', sub: 'Occupations reported in the post survey', load: () => loadParents() },
   { id: 'p-calendar', icon: '📅', label: 'Calendar',    title: 'Calendar',            sub: 'When students filled the surveys', load: () => loadCalendar() },
@@ -777,7 +883,10 @@ function renderStudents() {
     ['#', 'Student', 'Level', 'Department', 'Status', 'Orientation', 'Baseline at', 'Post at', 'Email activity', ''],
     rows, (u, i) => [
       i + 1,
-      `<div class="font-semibold text-slate-900">${e(u.name)}</div><div class="text-[11px] text-slate-500 link">${e(u.email)}</div>`,
+      `<button onclick="openStudent('${e(u.email)}')" class="text-left hover:text-blue-700">
+         <div class="font-semibold text-slate-900">${e(u.name)}</div>
+         <div class="text-[11px] text-slate-500 link">${e(u.email)}</div>
+       </button>`,
       LEVEL[u.ug_or_pg] || 'UG',
       `<div class="text-slate-700">${e(u.program || '—')}</div><div class="text-[11px] text-slate-400">${e(u.education_type || '')}</div>`,
       statusBadge(u.status),
@@ -917,6 +1026,196 @@ async function sendResults(btn, email) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════
+//  Global student lookup (header search bar)
+// ═══════════════════════════════════════════════════════════════════════
+let lookupTimer = null;
+let lookupHits = [];
+let lookupCursor = -1;
+
+function lookupTyped() {
+  clearTimeout(lookupTimer);
+  const q = $('lookup').value.trim();
+  if (q.length < 2) return hideLookup();
+  lookupTimer = setTimeout(() => runLookup(q), 200);
+}
+
+async function runLookup(q) {
+  const box = $('lookup-results');
+  box.classList.remove('hidden');
+  box.innerHTML = '<div class="p-3 text-xs text-slate-400">Searching…</div>';
+  try {
+    const d = await api('/admin/api/survey/search?q=' + encodeURIComponent(q));
+    lookupHits = d.results;
+    lookupCursor = -1;
+    if (!lookupHits.length) {
+      box.innerHTML = `<div class="p-3 text-xs text-slate-500">No student matches “${e(q)}”</div>`;
+      return;
+    }
+    const more = d.total > lookupHits.length
+      ? `<div class="px-3 py-2 text-[11px] text-slate-400 border-t border-slate-100">${d.total - lookupHits.length} more match — keep typing to narrow it down</div>`
+      : '';
+    box.innerHTML = lookupHits.map((u, i) => `
+      <button data-i="${i}" onclick="openStudent('${e(u.email)}')"
+        class="lookup-hit w-full text-left px-3 py-2.5 hover:bg-slate-50 border-b border-slate-100 last:border-0 flex items-center gap-3">
+        <div class="min-w-0 flex-1">
+          <div class="text-xs font-semibold text-slate-900 truncate">${e(u.name) || '(no name)'}</div>
+          <div class="text-[11px] text-slate-500 link truncate">${e(u.email)}</div>
+        </div>
+        <div class="text-right shrink-0">
+          <div class="text-[11px] text-slate-600 truncate max-w-[160px]">${e(u.program || '—')}</div>
+          <div class="mt-0.5">${statusBadge(u.status)}</div>
+        </div>
+      </button>`).join('') + more;
+  } catch (err) {
+    box.innerHTML = '<div class="p-3 text-xs text-rose-600">Search failed</div>';
+  }
+}
+
+function hideLookup() {
+  $('lookup-results').classList.add('hidden');
+  lookupCursor = -1;
+}
+
+function lookupKey(ev) {
+  if (ev.key === 'Escape') { hideLookup(); $('lookup').blur(); return; }
+  if (!lookupHits.length) return;
+  if (ev.key === 'Enter') {
+    ev.preventDefault();
+    openStudent(lookupHits[Math.max(0, lookupCursor)].email);
+    return;
+  }
+  if (ev.key !== 'ArrowDown' && ev.key !== 'ArrowUp') return;
+  ev.preventDefault();
+  lookupCursor += ev.key === 'ArrowDown' ? 1 : -1;
+  if (lookupCursor < 0) lookupCursor = lookupHits.length - 1;
+  if (lookupCursor >= lookupHits.length) lookupCursor = 0;
+  document.querySelectorAll('.lookup-hit').forEach((el, i) =>
+    el.classList.toggle('bg-slate-100', i === lookupCursor));
+}
+
+document.addEventListener('click', ev => {
+  if (!$('lookup-wrap').contains(ev.target)) hideLookup();
+});
+
+async function openStudent(email) {
+  hideLookup();
+  const modal = $('student-modal');
+  $('student-modal-head').innerHTML = '<div class="h-card">Loading…</div>';
+  $('student-modal-body').innerHTML = '';
+  modal.classList.remove('hidden');
+  try {
+    renderStudent(await api('/admin/api/survey/student/' + encodeURIComponent(email)));
+  } catch (err) {
+    $('student-modal-body').innerHTML = `<div class="note note-err">Could not load this student: ${e(err.message)}</div>`;
+  }
+}
+
+function closeStudent() { $('student-modal').classList.add('hidden'); }
+
+function renderStudent(s) {
+  $('student-modal-head').innerHTML = `
+    <div class="text-base font-extrabold text-slate-900 truncate">${e(s.name) || '(no name)'}</div>
+    <div class="text-xs text-slate-500 link truncate">${e(s.email)}</div>
+    <div class="flex flex-wrap items-center gap-1.5 mt-1.5">
+      ${statusBadge(s.status)}
+      <span class="badge b-gray">${LEVEL[s.ug_or_pg] || 'UG'}</span>
+      <span class="badge b-blue">${e(s.program)}</span>
+      ${s.education_type ? `<span class="badge b-gray">${e(s.education_type)}</span>` : ''}
+      ${s.location ? `<span class="badge b-gray">${e(s.location)}</span>` : ''}
+    </div>`;
+
+  const a = s.email_activity;
+  const sc = s.scores || {};
+  const scoreCell = (label, v) => `<div class="stat border-l-slate-300"><b>${score(v)}</b><s>${label}</s></div>`;
+  const signed = v => (v === null || v === undefined) ? '—' : (v > 0 ? '+' : '') + v;
+
+  const timeline = [
+    ['Registered', s.created_at], ['Baseline submitted', s.pre_at],
+    ['Orientation submitted', s.orientation_at], ['Post submitted', s.post_at],
+  ].map(([k, v]) => `
+    <div class="flex justify-between gap-3 py-1.5 border-b border-slate-100 last:border-0">
+      <span class="text-slate-500">${k}</span><span class="font-semibold text-slate-800">${e(v || '—')}</span>
+    </div>`).join('');
+
+  const mail = [
+    ['Baseline reminder', a.pre_reminder_at ? `${e(a.pre_reminder_at)}${a.pre_reminder_count > 1 ? ` ×${a.pre_reminder_count}` : ''}` : '—'],
+    ['Post reminder', a.post_reminder_at ? `${e(a.post_reminder_at)}${a.post_reminder_count > 1 ? ` ×${a.post_reminder_count}` : ''}` : '—'],
+    ['Clicked a link', a.clicked_at || '—'],
+    ['Used department link', a.post_link_at || '—'],
+    ['Last send error', a.last_error || '—'],
+    ['Unfinished draft', [s.has_pre_draft ? 'baseline' : '', s.has_post_draft ? 'post' : ''].filter(Boolean).join(', ') || '—'],
+  ].map(([k, v]) => `
+    <div class="flex justify-between gap-3 py-1.5 border-b border-slate-100 last:border-0">
+      <span class="text-slate-500">${k}</span><span class="font-semibold text-slate-800 text-right">${e(v)}</span>
+    </div>`).join('');
+
+  const answers = (title, sections) => !sections.length ? '' : `
+    <div class="card space-y-2">
+      <div class="h-card">${title}</div>
+      ${sections.map(sec => `
+        <details class="border border-slate-200 rounded-lg">
+          <summary class="cursor-pointer px-3 py-2 text-xs font-bold text-slate-700 bg-slate-50 rounded-lg">${e(sec.title)}</summary>
+          <div class="p-3 space-y-1 text-xs">
+            ${sec.rows.map(r => `
+              <div class="flex gap-3 py-1 border-b border-slate-50 last:border-0">
+                <span class="text-slate-500 w-1/2 shrink-0">${e(r.label)}</span>
+                <span class="font-semibold text-slate-800">${e(r.value)}</span>
+              </div>`).join('')}
+          </div>
+        </details>`).join('')}
+    </div>`;
+
+  const ori = Object.entries(s.orientation || {}).filter(([, v]) => v !== '' && v !== null);
+
+  $('student-modal-body').innerHTML = `
+    <div class="flex flex-wrap gap-2">
+      ${s.status === 'post_done' ? `<a href="/results/${s.email_slug}" target="_blank" class="btn btn-primary">👁️ View results</a>
+        <button class="btn btn-green" onclick="sendResults(this,'${e(s.email)}')">📧 Email results</button>` : ''}
+      <button class="btn btn-soft" onclick="jumpToStudent('${e(s.email)}')">🔎 Show in students table</button>
+      <button class="btn btn-rose ml-auto" onclick="deleteUser(this,'${e(s.email)}'); closeStudent();">🗑️ Delete</button>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+      ${scoreCell('Baseline literacy', sc.pre && sc.pre.lit)}
+      ${scoreCell('Baseline readiness', sc.pre && sc.pre.read)}
+      ${scoreCell('Post literacy', sc.post && sc.post.lit)}
+      ${scoreCell('Post readiness', sc.post && sc.post.read)}
+      <div class="stat border-l-emerald-500"><b class="text-emerald-600">${signed(sc.delta_lit)}</b><s>Δ literacy</s></div>
+      <div class="stat border-l-teal-500"><b class="text-teal-600">${signed(sc.delta_read)}</b><s>Δ readiness</s></div>
+    </div>
+    ${sc.movement ? `<div class="note note-info">Movement: <b>${e(sc.movement)}</b>${sc.post && sc.post.quadrant ? ` · Post quadrant: <b>${e(sc.post.quadrant)}</b>` : ''}${sc.post && sc.post.band ? ` · Band: <b>${e(sc.post.band)}</b>` : ''}</div>` : ''}
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="card"><div class="h-card mb-2">Progress</div><div class="text-xs">${timeline}</div></div>
+      <div class="card"><div class="h-card mb-2">Email activity</div><div class="text-xs">${mail}</div></div>
+    </div>
+
+    ${answers('📝 Outcome Survey 1 — Baseline answers', s.pre_sections)}
+    ${answers('📊 Impact — Post survey answers', s.post_sections)}
+    ${ori.length ? `<div class="card space-y-2"><div class="h-card">🎓 Orientation answers</div>
+      <div class="text-xs space-y-1">${ori.map(([k, v]) => `
+        <div class="flex gap-3 py-1 border-b border-slate-50 last:border-0">
+          <span class="text-slate-500 w-1/2 shrink-0">${e(k)}</span>
+          <span class="font-semibold text-slate-800">${e(Array.isArray(v) ? v.join(', ') : v)}</span>
+        </div>`).join('')}</div></div>` : ''}
+
+    ${(!s.pre_sections.length && !s.post_sections.length)
+      ? '<div class="note note-info">This student has not submitted any survey yet.</div>' : ''}
+  `;
+}
+
+/** Close the modal and show this student in the Students table. */
+function jumpToStudent(email) {
+  closeStudent();
+  $('dept-filter').value = '';
+  $('status-filter').value = '';
+  setStudentView('status');
+  $('student-search').value = email;
+  show('p-students');
+  renderStudents();
+}
+
+// ═══════════════════════════════════════════════════════════════════════
 //  Emails
 // ═══════════════════════════════════════════════════════════════════════
 let cohort = 'post-pending';
@@ -978,6 +1277,138 @@ function pollTask(taskId, box, done) {
   });
 }
 
+// ── Mail composer ──────────────────────────────────────────────────────
+// Drafts the message; Gmail does the sending. Nothing leaves the server here.
+let draftRecipients = [];
+
+async function initComposer() {
+  const sel = $('draft-dept');
+  if (!linkData) {
+    try { linkData = await api('/admin/api/survey/post-links'); }
+    catch (err) { sel.innerHTML = '<option value="">Could not load departments</option>'; return; }
+  }
+  const current = sel.value;
+  sel.innerHTML = '<option value="">— All departments —</option>' +
+    linkData.links.map(l => `<option value="${e(l.dept)}">${e(l.dept)}</option>`).join('');
+  if (current) sel.value = current;
+  buildDraft();
+}
+
+function draftLink() {
+  const dept = $('draft-dept').value;
+  const kind = $('draft-kind').value;
+  if (!linkData) return '';
+  if (!dept) return kind === 'pre' ? linkData.pre_all_url : linkData.all_url;
+  const row = linkData.links.find(l => l.dept === dept);
+  if (!row) return '';
+  return kind === 'pre' ? row.pre_url : row.post_url;
+}
+
+function buildDraft() {
+  const dept = $('draft-dept').value || 'your department';
+  const kind = $('draft-kind').value;
+  const link = draftLink();
+
+  if (kind === 'pre') {
+    $('draft-subject').value = 'Action needed: complete your HACRI-E AI Literacy baseline survey';
+    $('draft-body').value =
+`Dear Student,
+
+As part of the AI Literacy initiative at JAIN (Deemed-to-be University), you are asked to complete the Outcome Survey 1 — Baseline. It takes about 10-15 minutes.
+
+Open your survey here:
+${link}
+
+Your department (${dept}) is already filled in — just add your name and email to begin.
+
+Please complete it at your earliest convenience.
+
+Regards,
+Office of Academics
+JAIN (Deemed-to-be University)`;
+  } else {
+    $('draft-subject').value = 'Reminder: complete your HACRI-E post-workshop survey';
+    $('draft-body').value =
+`Dear Student,
+
+You have already completed the baseline survey — thank you. The final step is the Impact Post-Workshop Survey, which takes about 10-15 minutes.
+
+Open your survey here:
+${link}
+
+Enter the same email address you used for the baseline survey and the survey will open straight away. Once you submit, your personal AI Literacy and Readiness scorecard is generated for you.
+
+Please complete it at your earliest convenience.
+
+Regards,
+Office of Academics
+JAIN (Deemed-to-be University)`;
+  }
+  updateDraftLinks();
+  loadDraftRecipients();
+}
+
+function updateDraftLinks() {
+  const su = encodeURIComponent($('draft-subject').value);
+  const body = encodeURIComponent($('draft-body').value);
+  const bcc = encodeURIComponent(draftRecipients.join(','));
+
+  // Gmail chokes on very long URLs, so only inline the recipient list while it
+  // is short; otherwise the Copy recipients button carries them.
+  const gmail = `https://mail.google.com/mail/?view=cm&fs=1&su=${su}&body=${body}`;
+  const withBcc = bcc ? `${gmail}&bcc=${bcc}` : gmail;
+  const tooLong = withBcc.length > 8000;
+
+  $('draft-gmail').href = tooLong ? gmail : withBcc;
+  $('draft-mailto').href = `mailto:?subject=${su}&body=${body}`;
+
+  const warn = $('draft-warn');
+  if (draftRecipients.length && tooLong) {
+    note(warn, 'info',
+      `<b>${draftRecipients.length} recipients</b> is too many to put in the link — press
+       <b>Copy recipients</b> and paste them into Gmail's Bcc field.`);
+  } else {
+    warn.className = 'hidden';
+  }
+}
+
+async function loadDraftRecipients() {
+  const audience = $('draft-audience').value;
+  const btn = $('draft-copy-recipients');
+  const note_ = $('draft-note');
+
+  if (audience === 'none') {
+    draftRecipients = [];
+    btn.style.display = 'none';
+    note_.textContent = 'No recipients attached — add them in Gmail.';
+    return updateDraftLinks();
+  }
+
+  btn.style.display = '';
+  note_.textContent = 'Counting recipients…';
+  try {
+    const params = new URLSearchParams({ dept: $('draft-dept').value, ug_or_pg: levelFilter() });
+    const users = await api('/admin/api/survey/users?' + params);
+    const match = audience === 'pre-pending'
+      ? (u => u.status === 'not_started' || !u.status)
+      : (u => u.status === 'pre_done');
+    draftRecipients = users.filter(match).map(u => u.email);
+    btn.textContent = `Copy recipients (${draftRecipients.length})`;
+    note_.textContent = draftRecipients.length
+      ? `${draftRecipients.length} students match — paste them into Bcc.`
+      : 'Nobody matches this selection.';
+  } catch (err) {
+    draftRecipients = [];
+    note_.textContent = 'Could not load recipients.';
+  }
+  updateDraftLinks();
+}
+
+function copyRecipients() {
+  if (!draftRecipients.length) return toast('No recipients to copy');
+  copy(draftRecipients.join(', '));
+}
+
 async function loadEmailStats() {
   tableBusy('email-table', 'Loading delivery tracking…');
   try {
@@ -1023,13 +1454,33 @@ async function resendDept(btn, dept, type) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════
-//  Links — department post-survey entry links
+//  Links — department survey entry links
 // ═══════════════════════════════════════════════════════════════════════
+let linkData = null;
+
 async function loadLinks() {
+  tableBusy('post-links-table', 'Loading department links…');
+  try {
+    linkData = await api('/admin/api/survey/post-links');
+    $('all-post-link').value  = linkData.all_url;
+    $('all-post-open').href   = linkData.all_url;
+    $('all-pre-link').value   = linkData.pre_all_url;
+    $('all-pre-open').href    = linkData.pre_all_url;
+    $('directory-link').value = linkData.directory_url;
+    $('directory-open').href  = linkData.directory_url;
+    renderPostLinks();
+  } catch (err) { tableBusy('post-links-table', 'Could not load department links'); }
+
+  renderEntryLinks();
+  loadDepts();  // fills the overall report links below
+}
+
+/** The handful of links students and staff start from. */
+function renderEntryLinks() {
   $('entry-links').innerHTML = [
     ['🏠 Survey home (registration)', location.origin + '/'],
     ['🎓 Deeksharambh orientation', {{ (orientation_share_url or '') | tojson }}],
-    ['🌐 Public department directory', location.origin + '/shared/departments'],
+    ['🌐 Overall department directory', (linkData && linkData.directory_url) || ''],
   ].filter(([, url]) => !!url).map(([label, url]) => `
     <div class="flex items-center gap-2">
       <span class="text-xs font-semibold text-slate-700 w-56 shrink-0">${label}</span>
@@ -1037,32 +1488,35 @@ async function loadLinks() {
       <button class="btn btn-soft" onclick="copy('${e(url)}')">Copy</button>
       <a href="${e(url)}" target="_blank" class="btn btn-primary">Open</a>
     </div>`).join('');
+}
 
-  tableBusy('post-links-table', 'Loading department links…');
-  try {
-    const d = await api('/admin/api/survey/post-links');
-    $('all-post-link').value = d.all_url;
-    $('all-post-open').href = d.all_url;
+/** One row per department, carrying both survey links. */
+function renderPostLinks() {
+  if (!linkData) return;
+  const q = ($('link-search').value || '').toLowerCase();
+  const rows = linkData.links.filter(r => r.dept.toLowerCase().includes(q));
 
-    table('post-links-table',
-      ['#', 'Department', 'Registered', 'Baseline done', 'Post done', 'Post pending', 'Link', 'Actions'],
-      d.links, (row, i) => [
-        i + 1,
-        `<span class="font-semibold text-slate-900">${e(row.dept)}</span>`,
-        row.registered,
-        `<span class="font-bold text-blue-700">${row.pre_done}</span>`,
-        `<span class="font-bold text-emerald-700">${row.post_done}</span>`,
-        row.pending_post > 0 ? `<span class="badge b-amber">${row.pending_post} waiting</span>` : '<span class="badge b-gray">0</span>',
-        `<input readonly class="field link w-64" value="${e(row.url)}">`,
-        `<div class="flex gap-1.5">
-           <button class="btn-xs btn-soft" onclick="copy('${e(row.url)}')">Copy</button>
-           <a href="${e(row.url)}" target="_blank" class="btn-xs btn-primary">Open</a>
-           <button class="btn-xs btn-green" onclick="mailDept(this,'${e(row.dept)}')">Mail dept</button>
-         </div>`,
-      ], 'No departments yet — links appear once students register');
-  } catch (err) { tableBusy('post-links-table', 'Could not load department links'); }
+  const linkCell = (url, tone) => `
+    <div class="flex items-center gap-1.5">
+      <input readonly class="field link w-56" value="${e(url)}">
+      <button class="btn-xs btn-soft" onclick="copy('${e(url)}')">Copy</button>
+      <a href="${e(url)}" target="_blank" class="btn-xs ${tone}">Open</a>
+    </div>`;
 
-  loadDepts();  // fills the overall report links below
+  table('post-links-table',
+    ['#', 'Department', 'Registered', 'Baseline done', 'Post done', 'Post pending',
+     '📝 Outcome Survey 1 — Baseline', '📊 Impact — Post Survey', ''],
+    rows, (row, i) => [
+      i + 1,
+      `<span class="font-semibold text-slate-900">${e(row.dept)}</span>`,
+      row.registered,
+      `<span class="font-bold text-blue-700">${row.pre_done}</span>`,
+      `<span class="font-bold text-emerald-700">${row.post_done}</span>`,
+      row.pending_post > 0 ? `<span class="badge b-amber">${row.pending_post} waiting</span>` : '<span class="badge b-gray">0</span>',
+      linkCell(row.pre_url, 'btn-primary'),
+      linkCell(row.post_url, 'btn-green'),
+      `<button class="btn-xs btn-green" onclick="mailDept(this,'${e(row.dept)}')">Mail dept</button>`,
+    ], 'No departments match this filter');
 }
 
 async function mailDept(btn, dept) {
@@ -1500,8 +1954,15 @@ function closeExportModal() { $('export-modal').classList.add('hidden'); }
 //  Boot
 // ═══════════════════════════════════════════════════════════════════════
 document.addEventListener('keydown', ev => {
+  // Ctrl/Cmd+K focuses the student lookup from anywhere.
+  if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === 'k') {
+    ev.preventDefault();
+    $('lookup').focus();
+    $('lookup').select();
+    return;
+  }
   if (ev.key !== 'Escape') return;
-  closeExportModal(); closeDateModal();
+  closeExportModal(); closeDateModal(); closeStudent(); hideLookup();
 });
 
 buildNav();

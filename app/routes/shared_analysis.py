@@ -4,6 +4,7 @@ Exposes endpoints for viewing statistics, charts, downloading PPT, and exporting
 Uses cryptographic token validation.
 """
 from __future__ import annotations
+import asyncio
 import hmac
 import hashlib
 import io
@@ -20,6 +21,11 @@ from app.ppt_export import generate_dept_ppt
 
 router = APIRouter()
 
+OVERALL = "Overall"
+# Key the directory token off a name no real department can take.
+DIRECTORY_KEY = "__all_departments__"
+
+
 def get_dept_token(dept: str, survey_type: str = "pre") -> str:
     """Generate a secure cryptographic token for a department name + type."""
     key = f"{dept}:{survey_type}"
@@ -32,6 +38,74 @@ def get_dept_token(dept: str, survey_type: str = "pre") -> str:
 def verify_token(dept: str, token: str, survey_type: str = "pre") -> bool:
     """Verify that the token matches the department and type."""
     return hmac.compare_digest(get_dept_token(dept, survey_type), token)
+
+
+def get_directory_token() -> str:
+    """Token for the one link that opens the whole department directory."""
+    return get_dept_token(DIRECTORY_KEY, "directory")
+
+
+def directory_url(base_url: str) -> str:
+    return f"{base_url.rstrip('/')}/shared/departments?token={get_directory_token()}"
+
+
+async def _in_thread(fn, *args, **kwargs):
+    """Run a slow, CPU-bound builder off the event loop.
+
+    Building a full-cohort workbook is seconds of solid CPU; left inline it
+    blocks every other request on the worker for that whole time.
+    """
+    loop = asyncio.get_running_loop()
+    return await loop.run_in_executor(None, lambda: fn(*args, **kwargs))
+
+
+def _is_overall(dept: str) -> bool:
+    return (dept or "").strip().lower() in ("overall", "all", "all departments")
+
+
+async def _department_breakdown_rows() -> list[dict]:
+    """One row per department: counts, reminder-mail figures, average scores.
+
+    Shared by the directory page and the all-departments Excel export so the
+    two can never show different numbers.
+    """
+    from app.db import get_dept_analysis_data, get_email_notification_stats
+
+    analysis = await get_dept_analysis_data()
+    mail_stats = {row["dept"]: row for row in await get_email_notification_stats()}
+
+    from app.routes.post_link import dept_slug
+
+    rows = []
+    for item in analysis["departments"]:
+        dept = item.get("dept")
+        if not dept:
+            continue
+        mail = mail_stats.get(dept, {})
+        registered = item.get("registered", 0)
+        pre_done = item.get("pre_done", 0)
+        post_done = item.get("post_done", 0)
+        rows.append({
+            "dept": dept,
+            "registered": registered,
+            "pre_done": pre_done,
+            "post_done": post_done,
+            "pre_pending": max(0, registered - pre_done),
+            "post_pending": max(0, pre_done - post_done),
+            "reminders_sent": mail.get("pre_sent", 0) + mail.get("post_sent", 0),
+            "clicked": mail.get("clicked", 0),
+            "completed_after": mail.get("completed_after", 0),
+            "avg_lit_pre": item.get("avg_lit_pre"),
+            "avg_read_pre": item.get("avg_read_pre"),
+            "avg_lit_post": item.get("avg_lit_post"),
+            "avg_read_post": item.get("avg_read_post"),
+            "token_pre": item.get("token_pre"),
+            "token_post": item.get("token_post"),
+            # The student-facing survey link, for drafting mails from the
+            # directory page.
+            "student_post_path": f"/post/{dept_slug(dept)}",
+        })
+    return rows
 
 @router.get("/shared/analysis", response_class=HTMLResponse)
 async def shared_analysis_get(
@@ -101,10 +175,13 @@ async def shared_export_excel(
         raise HTTPException(status_code=403, detail="Access denied")
 
     db = get_db()
-    
+
+    # "Overall" is every department, not a department literally named that.
+    query = {} if _is_overall(dept) else {"program": dept}
+
     # Query users based on type
     users_list = []
-    async for u in db["users"].find({"program": dept}).sort("created_at", -1):
+    async for u in db["users"].find(query).sort("created_at", -1):
         # For pre: include everyone who at least completed pre
         # For post: include only those who completed post
         status = u.get("status", "")
@@ -124,10 +201,16 @@ async def shared_export_excel(
         async for doc in db["post_responses"].find({"email": {"$in": list(emails)}}):
             post_docs.append(doc)
 
-    excel_bytes = generate_cohort_excel(
+    # The all-departments export gets a per-department breakdown sheet — a flat
+    # student list across 30-odd departments says nothing on its own.
+    dept_rows = await _department_breakdown_rows() if _is_overall(dept) else None
+
+    excel_bytes = await _in_thread(
+        generate_cohort_excel,
         dept, users_list,
         pre_docs if survey_type == "pre" else [],
         post_docs if survey_type == "post" else [],
+        dept_rows=dept_rows,
     )
     
     filename = f"HACRI_E2_{survey_type.upper()}_Export_{dept}.xlsx"
@@ -161,7 +244,7 @@ async def shared_download_ppt(
     # Fetch matched pre/post records
     matched_data = await list_matched_users(program=dept)
     
-    ppt_bytes = generate_dept_ppt(dept, users_list, matched_data)
+    ppt_bytes = await _in_thread(generate_dept_ppt, dept, users_list, matched_data)
     
     filename = f"HACRI_E2_{survey_type.upper()}_Analysis_{dept}.pptx"
     filename = "".join(c for c in filename if c.isalnum() or c in "._-")
@@ -269,43 +352,57 @@ async def shared_chart_h1(
 
 
 @router.get("/shared/departments", response_class=HTMLResponse)
-async def shared_departments_list(request: Request):
-    from app.db import get_dept_analysis_data
-    analysis_data = await get_dept_analysis_data()
-    
-    dept_list = []
-    # 1. Add Overall entry at top
-    ov = analysis_data["overall"]
-    dept_list.append({
-        "name": "Overall (All Departments)",
-        "dept_key": "Overall",
-        "registered": ov["registered"],
-        "pre_done": ov["pre_done"],
-        "post_done": ov["post_done"],
-        "token_pre": ov["token_pre"],
-        "token_post": ov["token_post"]
-    })
+async def shared_departments_list(request: Request, token: str = Query(...)):
+    """One shareable page covering every department.
 
-    # 2. Add individual departments
-    for item in analysis_data["departments"]:
-        dept = item["dept"]
-        if not dept:
-            continue
-        dept_list.append({
-            "name": dept,
-            "dept_key": dept,
-            "registered": item["registered"],
-            "pre_done": item["pre_done"],
-            "post_done": item["post_done"],
-            "token_pre": item["token_pre"],
-            "token_post": item["token_post"]
-        })
-        
+    Shows, per department: how many registered, how many finished the baseline
+    and the post survey, how many are still pending, and how the reminder mails
+    landed — with links through to that department's own analysis page and
+    Excel exports. Reachable only with the directory token.
+    """
+    if not hmac.compare_digest(get_directory_token(), token):
+        raise HTTPException(status_code=403, detail="Access denied: Invalid or expired sharing link.")
+
+    from app.db import get_dept_analysis_data
+
+    analysis_data = await get_dept_analysis_data()
+    rows = await _department_breakdown_rows()
+
+    ov = analysis_data["overall"]
+    registered = ov.get("registered", 0)
+    pre_done = ov.get("pre_done", 0)
+    post_done = ov.get("post_done", 0)
+    overall_row = {
+        "name": "Overall (All Departments)",
+        "dept_key": OVERALL,
+        "registered": registered,
+        "pre_done": pre_done,
+        "post_done": post_done,
+        "pre_pending": max(0, registered - pre_done),
+        "post_pending": max(0, pre_done - post_done),
+        "reminders_sent": sum(r["reminders_sent"] for r in rows),
+        "clicked": sum(r["clicked"] for r in rows),
+        "completed_after": sum(r["completed_after"] for r in rows),
+        "avg_lit_pre": ov.get("avg_lit_pre"),
+        "avg_read_pre": ov.get("avg_read_pre"),
+        "avg_lit_post": ov.get("avg_lit_post"),
+        "avg_read_post": ov.get("avg_read_post"),
+        "token_pre": ov.get("token_pre"),
+        "token_post": ov.get("token_post"),
+        "student_post_path": "/post/all",
+    }
+
+    dept_list = [overall_row] + [
+        {**r, "name": r["dept"], "dept_key": r["dept"]} for r in rows
+    ]
+
     return request.app.state.templates.TemplateResponse(
         request,
         "shared_departments.html",
         {
             "dept_list": dept_list,
+            "overall": overall_row,
+            "generated_at": datetime.now().strftime("%d %b %Y, %H:%M"),
         }
     )
 

@@ -99,8 +99,11 @@ async def test_shared_departments_directory(client: AsyncClient):
         "status": STATUS_POST_DONE,
     })
     
-    # Fetch the public directory page
-    resp = await client.get("/shared/departments")
+    # The directory is a generated link now — the bare URL is refused.
+    assert (await client.get("/shared/departments")).status_code == 422
+
+    from app.routes.shared_analysis import get_directory_token
+    resp = await client.get(f"/shared/departments?token={get_directory_token()}")
     assert resp.status_code == 200
     assert "Department of Chemistry" in resp.text
     

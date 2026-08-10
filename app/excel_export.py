@@ -10,12 +10,36 @@ from openpyxl.utils import get_column_letter
 from app.hacri_e2_compat import SCHEMA
 from app.scoring import score_for_user
 
+_LEFT_COLUMNS = {"Name", "Email", "Department", "Education Type"}
+_CENTRE_COLUMNS = {"Level", "PRE Quadrant", "PRE Band", "POST Quadrant",
+                   "POST Band", "Movement"}
+_ALIGN_LEFT = Alignment(horizontal="left")
+_ALIGN_CENTRE = Alignment(horizontal="center")
+_ALIGN_RIGHT = Alignment(horizontal="right")
+
+
+def _alignment_for(header: str) -> Alignment:
+    if header in _LEFT_COLUMNS:
+        return _ALIGN_LEFT
+    if header in _CENTRE_COLUMNS:
+        return _ALIGN_CENTRE
+    return _ALIGN_RIGHT
+
+
 def generate_cohort_excel(
     dept_name: str,
     users_list: list[dict],
     pre_docs: list[dict],
-    post_docs: list[dict]
+    post_docs: list[dict],
+    dept_rows: list[dict] | None = None,
 ) -> bytes:
+    """Cohort workbook for one department — or for all of them.
+
+    `dept_rows` adds a "Department Breakdown" sheet: one line per department
+    with its counts, reminder-mail figures and average scores. Pass it for the
+    all-departments export, where a flat student list alone says nothing about
+    how each department is doing.
+    """
     wb = Workbook()
     ws = wb.active
     ws.title = "Department Analysis"
@@ -83,7 +107,7 @@ def generate_cohort_excel(
     
     # Build column headers
     base_headers = [
-        "Name", "Email", "Level", "Education Type",
+        "Name", "Email", "Department", "Level", "Education Type",
         "PRE Literacy", "PRE Readiness", "PRE Quadrant", "PRE Band",
         "POST Literacy", "POST Readiness", "POST Quadrant", "POST Band",
         "Δ Literacy", "Δ Readiness", "Movement"
@@ -94,6 +118,8 @@ def generate_cohort_excel(
         item_headers += [f"PRE {key}", f"POST {key}", f"Δ {key}"]
         
     headers = base_headers + item_headers
+    _ALIGNMENTS = {h: _alignment_for(h) for h in base_headers}
+
     
     for col_idx, h_text in enumerate(headers, start=1):
         cell = ws.cell(row=start_row, column=col_idx, value=h_text)
@@ -147,7 +173,7 @@ def generate_cohort_excel(
             movement = "Insufficient data"
             
         row_vals = [
-            name, email, level, edu,
+            name, email, u.get("program", "") or "—", level, edu,
             pre_s["lit"], pre_s["read"], pre_s["quadrant"], pre_s["band"],
             post_s["lit"], post_s["read"], post_s["quadrant"], post_s["band"],
             d_lit, d_read, movement
@@ -167,33 +193,104 @@ def generate_cohort_excel(
             
         for col_idx, val in enumerate(row_vals, start=1):
             cell = ws.cell(row=current_row, column=col_idx, value=val)
-            cell.font = normal_font
-            cell.border = thin_border
-            
-            # Alignments
-            if col_idx in (1, 2, 4):
-                cell.alignment = Alignment(horizontal="left")
-            elif col_idx in (3, 7, 8, 11, 12, 15):
-                cell.alignment = Alignment(horizontal="center")
-            else:
-                cell.alignment = Alignment(horizontal="right")
-                
+            # Only the summary block is styled — the per-item columns beyond it
+            # are plain numbers, and styling each one costs ~10s on a
+            # full-cohort export while looking no different.
+            if col_idx <= len(base_headers):
+                cell.font = normal_font
+                cell.border = thin_border
+                cell.alignment = _ALIGNMENTS[base_headers[col_idx - 1]]
+
         current_row += 1
 
-    # Auto-adjust column widths
-    for col in ws.columns:
-        max_len = 0
-        col_letter = get_column_letter(col[0].column)
-        
-        # Calculate max length based on rows from start_row onwards
-        for cell in col[start_row-1:]:
-            if cell.value:
-                max_len = max(max_len, len(str(cell.value)))
-        ws.column_dimensions[col_letter].width = max(max_len + 3, 10)
-        
+    # Column widths from the header text. Measuring every cell instead means a
+    # second full pass over ~400k cells, which is minutes on a large cohort.
+    for col_idx, h_text in enumerate(headers, start=1):
+        ws.column_dimensions[get_column_letter(col_idx)].width = max(len(h_text) + 3, 10)
+
+
     ws.column_dimensions["A"].width = 24
     ws.column_dimensions["B"].width = 28
-    
+    ws.column_dimensions["C"].width = 34
+
+    if dept_rows:
+        _write_dept_breakdown(wb, dept_rows, navy_fill, gold_fill, gray_fill,
+                              white_font, title_font, bold_font, normal_font,
+                              thin_border)
+
     out_buf = io.BytesIO()
     wb.save(out_buf)
     return out_buf.getvalue()
+
+
+def _write_dept_breakdown(wb, dept_rows, navy_fill, gold_fill, gray_fill,
+                          white_font, title_font, bold_font, normal_font,
+                          thin_border) -> None:
+    """Second sheet: one line per department, plus a totals line.
+
+    Mirrors the shared department directory, so the numbers on the page and
+    the numbers in the workbook always agree.
+    """
+    ws = wb.create_sheet("Department Breakdown", 0)
+    ws.views.sheetView[0].showGridLines = True
+
+    ws["A1"] = "HACRI-E2 Department Breakdown"
+    ws["A1"].font = title_font
+    ws["A2"] = "Every department, side by side"
+    ws["A2"].font = bold_font
+
+    headers = [
+        "Department", "Registered", "Baseline Filled", "Post Filled",
+        "Baseline Pending", "Post Pending", "Reminders Sent", "Clicked Mail",
+        "Filled After Mail", "Avg PRE Literacy", "Avg PRE Readiness",
+        "Avg POST Literacy", "Avg POST Readiness",
+    ]
+    header_row = 4
+    for col_idx, text in enumerate(headers, start=1):
+        cell = ws.cell(row=header_row, column=col_idx, value=text)
+        cell.font = white_font
+        cell.fill = gold_fill if text.startswith(("Post", "Avg POST")) else navy_fill
+        cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+        cell.border = thin_border
+    ws.row_dimensions[header_row].height = 30
+
+    totals = {k: 0 for k in ("registered", "pre_done", "post_done", "pre_pending",
+                             "post_pending", "reminders_sent", "clicked", "completed_after")}
+    row_idx = header_row
+    for row_idx, d in enumerate(dept_rows, start=header_row + 1):
+        for key in totals:
+            totals[key] += d.get(key, 0) or 0
+        values = [
+            d.get("dept", ""),
+            d.get("registered", 0), d.get("pre_done", 0), d.get("post_done", 0),
+            d.get("pre_pending", 0), d.get("post_pending", 0),
+            d.get("reminders_sent", 0), d.get("clicked", 0), d.get("completed_after", 0),
+            d.get("avg_lit_pre"), d.get("avg_read_pre"),
+            d.get("avg_lit_post"), d.get("avg_read_post"),
+        ]
+        for col_idx, val in enumerate(values, start=1):
+            cell = ws.cell(row=row_idx, column=col_idx,
+                           value="—" if val is None else val)
+            cell.font = normal_font
+            cell.border = thin_border
+            cell.alignment = Alignment(horizontal="left" if col_idx == 1 else "center")
+
+    total_row = row_idx + 1
+    total_values = [
+        "ALL DEPARTMENTS",
+        totals["registered"], totals["pre_done"], totals["post_done"],
+        totals["pre_pending"], totals["post_pending"],
+        totals["reminders_sent"], totals["clicked"], totals["completed_after"],
+        "", "", "", "",
+    ]
+    for col_idx, val in enumerate(total_values, start=1):
+        cell = ws.cell(row=total_row, column=col_idx, value=val)
+        cell.font = bold_font
+        cell.fill = gray_fill
+        cell.border = thin_border
+        cell.alignment = Alignment(horizontal="left" if col_idx == 1 else "center")
+
+    ws.column_dimensions["A"].width = 44
+    for col_idx in range(2, len(headers) + 1):
+        ws.column_dimensions[get_column_letter(col_idx)].width = 15
+    ws.freeze_panes = ws.cell(row=header_row + 1, column=1)

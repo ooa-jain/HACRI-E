@@ -1,65 +1,165 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Post-Workshop Survey — {{ dept_label }}</title>
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<style>
-  :root{--navy:#1B2A4A;--navy2:#2A3E68;--gold:#C9A84C;--muted:#64748b;--border:#e2e8f0}
-  *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:'Outfit',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
-       background:radial-gradient(circle at 15% 15%,var(--navy2) 0%,#0b1329 90%);
-       min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;color:#1e293b}
-  .card{background:#fff;border-radius:20px;padding:36px 32px;width:100%;max-width:460px;
-        box-shadow:0 24px 50px rgba(0,0,0,.35)}
-  .logo{height:42px;margin-bottom:18px}
-  h1{font-size:20px;font-weight:800;color:var(--navy);line-height:1.3}
-  .dept{display:inline-block;margin-top:10px;background:#f1f5f9;border:1px solid var(--border);
-        color:var(--navy);font-size:12px;font-weight:700;padding:6px 12px;border-radius:999px}
-  p.lead{font-size:14px;color:var(--muted);margin-top:14px;line-height:1.6}
-  label{display:block;font-size:12px;font-weight:700;color:var(--navy);margin:22px 0 6px}
-  input[type=email]{width:100%;padding:13px 14px;border:1.5px solid var(--border);border-radius:11px;
-        font-size:15px;font-family:inherit;outline:none;transition:border-color .2s}
-  input[type=email]:focus{border-color:var(--navy2);box-shadow:0 0 0 3px rgba(42,62,104,.1)}
-  button{width:100%;margin-top:20px;padding:14px;border:none;border-radius:11px;background:var(--navy);
-        color:#fff;font-family:inherit;font-size:15px;font-weight:700;cursor:pointer;transition:background .2s}
-  button:hover{background:var(--navy2)}
-  .error{margin-top:18px;background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;
-        font-size:13px;font-weight:600;padding:12px 14px;border-radius:11px;line-height:1.5}
-  .hint{margin-top:18px;font-size:12px;color:var(--muted);line-height:1.6;border-top:1px solid var(--border);padding-top:16px}
-  .hint a{color:var(--navy2);font-weight:700}
-</style>
-</head>
-<body>
-<div class="card">
-  <img src="/static/logo.png" alt="JAIN University" class="logo"
-       onerror="this.src='/static/logosmall.png'" />
+{% extends "base.html" %}
+{% block title %}HACRI-E — Impact Post Survey{% endblock %}
+{% block content %}
+{% include "_entry_styles.html" %}
 
-  <h1>Post-Workshop Survey</h1>
-  <div class="dept">🏛️ {{ dept_label }}</div>
+<div class="hero-split">
+  <div class="hero-info">
+    <div class="dept-pill">🏛️ {{ dept_label }}</div>
+    <h1>Impact <span class="highlight">Post-Workshop</span> Survey</h1>
+    <p>
+      This is the second half of the HACRI-E assessment. Enter the email you used for the
+      baseline survey and we will open your post-workshop survey right away.
+    </p>
 
-  <p class="lead">
-    Enter the email address you used for the <strong>baseline survey</strong>.
-    We will open your post-workshop survey right away.
-  </p>
+    <div style="margin-top: 32px; display: flex; flex-direction: column; gap: 20px;">
+      <div
+        style="background: rgba(255, 255, 255, 0.65); border: 1px solid var(--border); padding: 18px 22px; border-radius: var(--radius-md); box-shadow: var(--shadow-sm);">
+        <h3
+          style="font-family: 'Outfit', sans-serif; font-size: 15.5px; color: var(--navy); margin: 0 0 6px 0; display: flex; align-items: center; gap: 8px;">
+          <span style="color: var(--teal); font-size: 20px;">🔗</span> No password needed
+        </h3>
+        <p style="margin: 0; font-size: 12.5px; color: var(--text-muted); line-height: 1.5;">
+          Your email is the key. Use the same address you registered with — that is how we match
+          your baseline and post responses.
+        </p>
+      </div>
 
-  {% if error %}
-  <div class="error">{{ error }}</div>
-  {% endif %}
+      <div
+        style="background: rgba(255, 255, 255, 0.65); border: 1px solid var(--border); padding: 18px 22px; border-radius: var(--radius-md); box-shadow: var(--shadow-sm);">
+        <h3
+          style="font-family: 'Outfit', sans-serif; font-size: 15.5px; color: var(--navy); margin: 0 0 6px 0; display: flex; align-items: center; gap: 8px;">
+          <span style="color: var(--gold); font-size: 20px;">📊</span> Your scorecard follows
+        </h3>
+        <p style="margin: 0; font-size: 12.5px; color: var(--text-muted); line-height: 1.5;">
+          Once you submit, your personal AI Literacy and Readiness scorecard is generated and
+          emailed to you.
+        </p>
+      </div>
 
-  <form method="post" action="/post/{{ slug }}">
-    <label for="email">Registered Email Address</label>
-    <input type="email" id="email" name="email" required autofocus
-           autocomplete="email" placeholder="you@example.com"
-           value="{{ email or '' }}" />
-    <button type="submit">Open My Post Survey →</button>
-  </form>
+      <div
+        style="background: rgba(255, 255, 255, 0.65); border: 1px solid var(--border); padding: 18px 22px; border-radius: var(--radius-md); box-shadow: var(--shadow-sm);">
+        <h3
+          style="font-family: 'Outfit', sans-serif; font-size: 15.5px; color: var(--navy); margin: 0 0 6px 0; display: flex; align-items: center; gap: 8px;">
+          <span style="color: var(--teal); font-size: 20px;">🔒</span> Secure &amp; Private
+        </h3>
+        <p style="margin: 0; font-size: 12.5px; color: var(--text-muted); line-height: 1.5;">
+          All data is strictly confidential and used solely for university evaluation and
+          educational research purposes.
+        </p>
+      </div>
+    </div>
+  </div>
 
-  <div class="hint">
-    Haven't done the baseline survey yet? Start at <a href="/">the survey home page</a>.
-    Already finished both surveys? This page takes you straight to your results.
+  <div class="landing-card">
+    {% if welcome %}
+    {# ── Recognised: greet them, then hand over to the survey journey ── #}
+    <h2>Hey {{ welcome.first_name }}, welcome back! 👋</h2>
+
+    <div class="profile-section">
+      <div class="profile-avatar">{{ welcome.name[0] | upper }}</div>
+      <div class="profile-details">
+        <strong>{{ welcome.name }}</strong>
+        <span>{{ welcome.program }}</span>
+      </div>
+    </div>
+
+    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">
+      We found your baseline survey{% if welcome.pre_at %}, submitted on
+      <strong>{{ welcome.pre_at }}</strong>{% endif %}. Here's what's left:
+    </p>
+
+    <div class="journey-timeline" style="margin-top: 0;">
+      <div class="journey-item">
+        <div class="journey-num">✓</div>
+        <div class="journey-text">
+          <strong>Outcome Survey 1 — Baseline</strong>
+          <span>Already done. Thank you!</span>
+        </div>
+      </div>
+      {% if welcome.orientation_pending %}
+      <div class="journey-item active">
+        <div class="journey-num">1</div>
+        <div class="journey-text">
+          <strong>Deeksharambh 2026 Orientation</strong>
+          <span>Tell us how your orientation went — about 5 minutes.</span>
+        </div>
+      </div>
+      <div class="journey-item">
+        <div class="journey-num">2</div>
+        <div class="journey-text">
+          <strong>Impact — Post-Workshop Survey</strong>
+          <span>Opens right after the orientation form.</span>
+        </div>
+      </div>
+      {% else %}
+      <div class="journey-item">
+        <div class="journey-num">✓</div>
+        <div class="journey-text">
+          <strong>Deeksharambh 2026 Orientation</strong>
+          <span>Already done.</span>
+        </div>
+      </div>
+      <div class="journey-item active">
+        <div class="journey-num">1</div>
+        <div class="journey-text">
+          <strong>Impact — Post-Workshop Survey</strong>
+          <span>The last step — then your scorecard is ready.</span>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="actions" style="margin-top: 24px;">
+      <a class="btn primary" href="{{ welcome.next_url }}">
+        {% if welcome.orientation_pending %}Continue to Orientation →{% else %}Continue to Post Survey →{% endif %}
+      </a>
+    </div>
+
+    <p style="margin-top: 16px; font-size: 12.5px; color: var(--text-muted); line-height: 1.6;">
+      Not you? <a href="/post/{{ slug }}">Use a different email</a>.
+    </p>
+
+    {% else %}
+    <h2>Open Your Survey</h2>
+    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">
+      Enter the email address you used for the <strong>baseline survey</strong>.
+    </p>
+
+    {% if error %}
+    <div class="callout err" style="margin-bottom: 16px; font-size: 13px;">{{ error }}</div>
+    {% endif %}
+
+    <form method="post" action="/post/{{ slug }}" class="form-grid">
+      <label class="field">
+        <span>Programme / Department</span>
+        <div class="locked-field">
+          <span>🏛️ {{ dept_label }}</span>
+          <small>Set by your department's link</small>
+        </div>
+      </label>
+
+      <label class="field">
+        <span>Registered Email Address</span>
+        <input type="email" name="email" required autofocus maxlength="200"
+               autocomplete="email" placeholder="you@jainuniversity.ac.in"
+               value="{{ email or '' }}" />
+      </label>
+
+      <div class="actions" style="margin-top: 12px;">
+        <button type="submit" class="btn primary">Open My Post Survey →</button>
+      </div>
+    </form>
+
+    <p style="margin-top: 20px; font-size: 12.5px; color: var(--text-muted); line-height: 1.6;">
+      Haven't done the baseline survey yet? Start at <a href="/">the survey home page</a>.<br />
+      Already finished both surveys? This page takes you straight to your results.
+    </p>
+    {% endif %}
   </div>
 </div>
-</body>
-</html>
+
+<p class="footnote" style="margin-top: 48px;">
+  Data is used only for programme evaluation and research. No information is shared externally.
+</p>
+{% endblock %}

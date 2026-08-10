@@ -1117,3 +1117,19 @@ textarea {
   font-weight: bold;
   margin-left: 2px;
 }
+/* ── Known-detail pill ────────────────────────────────────────────────────
+   A value we already hold from registration (name, department, level).
+   Shown back to the student as confirmation — never re-asked. */
+.known-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: 1.5px solid rgba(13, 33, 71, 0.15);
+  border-radius: 20px;
+  background: rgba(13, 33, 71, 0.05);
+  color: var(--navy, #0d2147);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
+}

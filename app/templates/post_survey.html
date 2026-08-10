@@ -3,6 +3,10 @@
 {% block content %}
 <script>
   window._TEST_MODE = {{ "true" if test_mode_enabled else "false" }};
+  // From the registration record — the orientation step reports these back
+  // instead of asking the student to type them a second time.
+  window._PREFILL_DEPT = {{ (prefill_dept or "") | tojson }};
+  window._PREFILL_UGPG = {{ (prefill_ugpg or "") | tojson }};
 </script>
 
 {% set has_ori_step = orientation_enabled and not orientation_submitted %}
@@ -73,22 +77,26 @@
       <span class="wizard-step-label">Literacy</span>
     </button>
     <button type="button" class="wizard-step" data-step="{{ 3 if has_ori_step else 2 }}">
+      <div class="wizard-step-circle">C</div>
+      <span class="wizard-step-label">Experience</span>
+    </button>
+    <button type="button" class="wizard-step" data-step="{{ 4 if has_ori_step else 3 }}">
       <div class="wizard-step-circle">D</div>
       <span class="wizard-step-label">Attitudes</span>
     </button>
-    <button type="button" class="wizard-step" data-step="{{ 4 if has_ori_step else 3 }}">
+    <button type="button" class="wizard-step" data-step="{{ 5 if has_ori_step else 4 }}">
       <div class="wizard-step-circle">E</div>
       <span class="wizard-step-label">Ethics</span>
     </button>
-    <button type="button" class="wizard-step" data-step="{{ 5 if has_ori_step else 4 }}">
+    <button type="button" class="wizard-step" data-step="{{ 6 if has_ori_step else 5 }}">
       <div class="wizard-step-circle">F</div>
       <span class="wizard-step-label">Readiness</span>
     </button>
-    <button type="button" class="wizard-step" data-step="{{ 6 if has_ori_step else 5 }}">
+    <button type="button" class="wizard-step" data-step="{{ 7 if has_ori_step else 6 }}">
       <div class="wizard-step-circle">G</div>
       <span class="wizard-step-label">Application</span>
     </button>
-    <button type="button" class="wizard-step" data-step="{{ 7 if has_ori_step else 6 }}">
+    <button type="button" class="wizard-step" data-step="{{ 8 if has_ori_step else 7 }}">
       <div class="wizard-step-circle">H</div>
       <span class="wizard-step-label">Reflection</span>
     </button>
@@ -122,33 +130,30 @@
           style="font-size: 14px; font-weight: 700; color: var(--navy); margin-bottom: 16px; border-bottom: 1px solid var(--border); padding-bottom: 8px;">
           Academic Context & Vibe Check</h3>
 
+        <!-- Registration details, shown back rather than asked again. -->
         <div class="question">
-          <label class="q-label" style="display: block; font-weight: 600; margin-bottom: 8px;">Which School are you part
-            of?</label>
-          <div class="q-body">
-            <select id="ori_school"
-              style="width: 100%; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 14px; outline: none; background: #fff;">
-              <option value="">-- Select your School --</option>
-              <option value="FET" {% if saved_responses.get('school')=='FET' %}selected{% endif %}>FET — Faculty of
-                Engineering & Technology</option>
-              <option value="CMS" {% if saved_responses.get('school')=='CMS' %}selected{% endif %}>CMS — Center for
-                Management Studies</option>
-              <option value="FCS" {% if saved_responses.get('school')=='FCS' %}selected{% endif %}>FCS — Faculty of
-                Commerce & Sciences</option>
-              <option value="SAHS" {% if saved_responses.get('school')=='SAHS' %}selected{% endif %}>SAHS — School of
-                Allied Health Sciences</option>
-              <option value="Other" {% if saved_responses.get('school')=='Other' %}selected{% endif %}>Other School
-              </option>
-            </select>
+          <label class="q-label" style="display: block; font-weight: 600; margin-bottom: 8px;">Registered with JAIN
+            as:</label>
+          <div class="q-body" style="display: flex; flex-wrap: wrap; gap: 10px;">
+            {% if prefill_name %}<span class="known-pill">👤 {{ prefill_name }}</span>{% endif %}
+            {% if prefill_dept %}<span class="known-pill">🏛️ {{ prefill_dept }}</span>{% endif %}
+            {% if prefill_ugpg %}<span class="known-pill">🎓 {{ prefill_ugpg }}</span>{% endif %}
           </div>
         </div>
 
         <div class="question" style="margin-top: 20px;">
-          <label class="q-label" style="display: block; font-weight: 600; margin-bottom: 8px;">Programme Name:</label>
-          <div class="q-body">
-            <input type="text" id="ori_program" placeholder="e.g. B.Tech (AI & ML), B.Com, MBA..."
-              value="{{ saved_responses.get('program', prefill_dept) }}"
-              style="width: 100%; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 14px; outline: none;" />
+          <label class="q-label" style="display: block; font-weight: 600; margin-bottom: 8px;">Which campus are you
+            at?</label>
+          <div class="q-body" style="display: flex; gap: 22px;">
+            {% set chosen = saved_responses.get('location', prefill_location) or 'Bangalore' %}
+            <label style="display: flex; align-items: center; gap: 7px; font-weight: 500; cursor: pointer;">
+              <input type="radio" name="ori_location" value="Bangalore"
+                {% if 'Bangalore' in chosen %}checked{% endif %} /> 📍 Bangalore
+            </label>
+            <label style="display: flex; align-items: center; gap: 7px; font-weight: 500; cursor: pointer;">
+              <input type="radio" name="ori_location" value="Kochi"
+                {% if 'Kochi' in chosen %}checked{% endif %} /> 📍 Kochi
+            </label>
           </div>
         </div>
 
@@ -353,7 +358,8 @@
     </fieldset>
 
     <!-- ── SECTION B — AI Awareness & Literacy (Likert) ──────────────────── -->
-    <fieldset class="section wizard-section" data-step-section="1">
+    <fieldset class="section wizard-section"
+      data-step-section="{{ 2 if has_ori_step else 1 }}">
       <legend>Section B · {{ section_titles["B"] }}</legend>
       <p class="muted">Rate your agreement. 1 = Strongly Disagree · 5 = Strongly Agree</p>
 
@@ -394,8 +400,42 @@
       </div>
     </fieldset>
 
+    <!-- ── SECTION C — AI Usage at University ─────────────────────────────── -->
+    <fieldset class="section wizard-section"
+      data-step-section="{{ 3 if has_ori_step else 2 }}">
+      <legend>Section C · {{ section_titles["C_POST"] }}</legend>
+      <p class="muted" style="margin-bottom: 20px;">Now tell us how you use AI <strong>at university</strong>. These
+        mirror the questions you answered about school, so we can see what has changed.</p>
+      <div class="sub-section-card">
+        {% for key, label, kind, opts in post_usage %}
+        <div class="question">
+          <p class="q-label"><strong>{{ key }}.</strong> {{ label }}</p>
+          <div class="q-body {% if kind == 'checkbox' %}check-grid{% endif %}">
+            {% if kind == "checkbox" %}
+            {% set chosen = values.get(key) or [] %}
+            {% for o in opts %}
+            <label class="check-opt">
+              <input type="checkbox" name="{{ key }}" value="{{ o }}" {% if o in chosen %}checked{% endif %} />
+              <span>{{ o }}</span>
+            </label>
+            {% endfor %}
+            {% else %}
+            <select name="{{ key }}" required>
+              <option value="">-- Select --</option>
+              {% for o in opts %}
+              <option value="{{ o }}" {% if values.get(key)==o %}selected{% endif %}>{{ o }}</option>
+              {% endfor %}
+            </select>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </fieldset>
+
     <!-- ── SECTION D — Attitudes & Perceptions ────────────────────────────── -->
-    <fieldset class="section wizard-section" data-step-section="2">
+    <fieldset class="section wizard-section"
+      data-step-section="{{ 4 if has_ori_step else 3 }}">
       <legend>Section D · {{ section_titles["D"] }}</legend>
       <p class="muted">Rate your agreement. 1 = Strongly Disagree · 5 = Strongly Agree.</p>
 
@@ -507,7 +547,8 @@
     </fieldset>
 
     <!-- ── SECTION E — Ethics & Academic Integrity ───────────────────────── -->
-    <fieldset class="section wizard-section" data-step-section="3">
+    <fieldset class="section wizard-section"
+      data-step-section="{{ 5 if has_ori_step else 4 }}">
       <legend>Section E · {{ section_titles["E"] }}</legend>
       <p class="muted">Rate your agreement. 1 = Strongly Disagree · 5 = Strongly Agree.</p>
       <div class="sub-section-card">
@@ -542,7 +583,8 @@
     </fieldset>
 
     <!-- ── SECTION F — HACRI Core ─────────────────────────────────────────── -->
-    <fieldset class="section wizard-section" data-step-section="4">
+    <fieldset class="section wizard-section"
+      data-step-section="{{ 6 if has_ori_step else 5 }}">
       <legend>Section F · {{ section_titles["F"] }}</legend>
       <p class="muted">Core instrument. 1 = Strongly Disagree · 5 = Strongly Agree.</p>
 
@@ -654,7 +696,8 @@
     </fieldset>
 
     <!-- ── SECTION G — Entrepreneurial AI Application ────────────────────── -->
-    <fieldset class="section wizard-section" data-step-section="5">
+    <fieldset class="section wizard-section"
+      data-step-section="{{ 7 if has_ori_step else 6 }}">
       <legend>Section G · {{ section_titles["G"] }}</legend>
       <p class="muted">If you identify yourself as an entrepreneur or aspire to be one, please answer the following
         questions. Your responses will assess your willingness to use AI in your entrepreneurship.</p>
@@ -769,7 +812,8 @@
     </fieldset>
 
     <!-- ── SECTION H — Post-Induction Reflection ─────────────────────────── -->
-    <fieldset class="section wizard-section" data-step-section="6">
+    <fieldset class="section wizard-section"
+      data-step-section="{{ 8 if has_ori_step else 7 }}">
       <legend>Section H · {{ section_titles["H_POST"] }}</legend>
       <p class="muted">Complete after the induction session — same day.</p>
       <div class="sub-section-card">
@@ -1054,7 +1098,7 @@
 <script>
   document.addEventListener('DOMContentLoaded', () => {
     let currentStep = {{ draft_step or 0 }};
-    const totalSteps = 7;
+    const totalSteps = {{ 9 if has_ori_step else 8 }};
 
   const form = document.getElementById('survey-form');
   const steps = document.querySelectorAll('.wizard-step');
@@ -1210,15 +1254,16 @@
       btn.textContent = "Saving Orientation... ⏳";
     }
 
-    const schoolEl = document.getElementById("ori_school");
-    const progEl = document.getElementById("ori_program");
+    const locEl = document.querySelector('input[name="ori_location"]:checked');
     const q2El = document.getElementById("ori_q2");
     const q29El = document.getElementById("ori_q29");
     const helpfulEl = document.getElementById("ori_helpful");
 
     const oriPayload = {
-      school: schoolEl ? schoolEl.value : "",
-      program: progEl ? progEl.value : "",
+      // Department and level come from the registration record, not the form.
+      department: window._PREFILL_DEPT || "",
+      ugpg: window._PREFILL_UGPG || "",
+      location: locEl ? locEl.value : "",
       q2: q2El ? parseInt(q2El.value) : 8,
       q29: q29El ? parseInt(q29El.value) : 9,
       helpful_aspects: helpfulEl ? helpfulEl.value : "",
@@ -1358,11 +1403,6 @@
   });
 
   function autoFillOrientation() {
-    const schoolEl = document.getElementById("ori_school");
-    if (schoolEl && schoolEl.options.length > 1) schoolEl.selectedIndex = 1;
-    const progEl = document.getElementById("ori_program");
-    if (progEl) progEl.value = "B.Tech (AI & ML)";
-
     const oriSection = document.querySelector('[data-step-section="0"]');
     if (oriSection) {
       oriSection.querySelectorAll('input[type="radio"]').forEach((r, idx) => {

@@ -72,6 +72,10 @@ app = FastAPI(
 
 BASE_DIR  = Path(__file__).parent
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
+# The department list is the same everywhere it is offered, so expose it to
+# every template instead of threading it through each route's context.
+from app.departments import DEPARTMENTS  # noqa: E402
+templates.env.globals["departments"] = DEPARTMENTS
 app.state.templates = templates
 
 app.mount("/static",    StaticFiles(directory=str(BASE_DIR / "static")),         name="static")
