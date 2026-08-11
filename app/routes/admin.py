@@ -746,6 +746,405 @@ async def api_orientation_responses(request: Request):
     return JSONResponse(await list_orientation_responses())
 
 
+# ══════════════════════════════════════════════════════════════════════════════
+# ORIENTATION REPORT (survey admin) — campus report, who filled, and mailing
+# ══════════════════════════════════════════════════════════════════════════════
+ORI_FILLED = "filled"
+ORI_PENDING = "pending"
+UNSPECIFIED_CAMPUS = "Unspecified"
+
+
+def _fmt_ori_date(doc) -> str:
+    from app.db import _fmt
+    return _fmt((doc or {}).get("submitted_at")) if doc else ""
+
+
+def _ori_date_iso(doc) -> str:
+    """Sortable stamp — the display format ("07 Aug 2026 14:03") is not."""
+    when = (doc or {}).get("submitted_at")
+    return when.isoformat() if isinstance(when, datetime) else ""
+
+
+async def _orientation_dataset(
+    *, campus: str = "", dept: str = "", ug_or_pg: str = ""
+) -> dict:
+    """Everyone in scope, split by whether they filled the orientation form.
+
+    Scope is the department / level chosen in the dashboard, narrowed to one
+    campus when asked. A student's campus comes from the orientation answer
+    first (that is where they confirmed it) and from their registration record
+    otherwise.
+    """
+    from app.db import STATUS_POST_DONE as _POST_DONE
+    from app.orientation_analysis import normalize_campus
+
+    wanted = normalize_campus(campus) if campus else ""
+    unspecified_only = bool(campus) and not wanted and campus.strip().lower() in (
+        "unspecified", "unknown", "other",
+    )
+
+    db = get_db()
+    users = await list_survey_users(dept=dept or None, ug_or_pg=ug_or_pg or None)
+
+    responses: dict[str, dict] = {}
+    async for doc in db[ORI].find({}).sort("submitted_at", 1):
+        key = (doc.get("email") or "").strip().lower()
+        if key:
+            responses[key] = doc  # latest submission wins
+
+    filled: list[dict] = []
+    pending: list[dict] = []
+    seen: set[str] = set()
+
+    for u in users:
+        key = (u.get("email") or "").strip().lower()
+        seen.add(key)
+        doc = responses.get(key)
+        data = (doc or {}).get("data", {}) or {}
+        student_campus = normalize_campus(data.get("location")) or normalize_campus(u.get("location"))
+
+        if wanted and student_campus != wanted:
+            continue
+        if unspecified_only and student_campus:
+            continue
+
+        row = {
+            "email": u.get("email", ""),
+            "email_slug": u.get("email_slug", ""),
+            "name": u.get("name", "") or (doc or {}).get("name", ""),
+            "program": u.get("program", "") or "—",
+            "ug_or_pg": u.get("ug_or_pg", "ug"),
+            "campus": student_campus or UNSPECIFIED_CAMPUS,
+            "status": u.get("status") or "not_started",
+            "pre_at": u.get("pre_at", ""),
+            "post_at": u.get("post_at", ""),
+            "orientation_at": _fmt_ori_date(doc),
+            "orientation_at_iso": _ori_date_iso(doc),
+            "baseline_done": (u.get("status") in (STATUS_PRE_DONE, _POST_DONE)),
+        }
+        if doc:
+            row["data"] = data
+            filled.append(row)
+        elif row["baseline_done"]:
+            pending.append(row)
+
+    # Orientation replies with no matching user record still belong in the
+    # report — but only when no department/level filter is narrowing the view,
+    # since we have nothing to filter them by.
+    if not dept and not ug_or_pg:
+        for key, doc in responses.items():
+            if key in seen:
+                continue
+            data = doc.get("data", {}) or {}
+            student_campus = normalize_campus(data.get("location"))
+            if wanted and student_campus != wanted:
+                continue
+            if unspecified_only and student_campus:
+                continue
+            filled.append({
+                "email": doc.get("email", ""),
+                "email_slug": "",
+                "name": doc.get("name", ""),
+                "program": "—",
+                "ug_or_pg": "ug",
+                "campus": student_campus or UNSPECIFIED_CAMPUS,
+                "status": "not_started",
+                "pre_at": "", "post_at": "",
+                "orientation_at": _fmt_ori_date(doc),
+                "orientation_at_iso": _ori_date_iso(doc),
+                "baseline_done": False,
+                "data": data,
+            })
+
+    filled.sort(key=lambda r: r["orientation_at_iso"], reverse=True)
+    pending.sort(key=lambda r: r["name"].lower())
+    return {"filled": filled, "pending": pending}
+
+
+@router.get("/admin/api/orientation/campuses")
+async def api_orientation_campuses(
+    request: Request,
+    dept: str = Query(default=""),
+    ug_or_pg: str = Query(default=""),
+):
+    """The landing page of the orientation report: one card per campus."""
+    if not _is_survey_admin(request):
+        raise HTTPException(status_code=403)
+
+    from app.orientation_analysis import CAMPUSES, summarize_orientation
+
+    data = await _orientation_dataset(dept=dept, ug_or_pg=ug_or_pg)
+    filled, pending = data["filled"], data["pending"]
+
+    def card(name: str, rows: list[dict], waiting: list[dict]) -> dict:
+        headline = summarize_orientation([r["data"] for r in rows])["headline"]
+        return {
+            "campus": name,
+            "filled": len(rows),
+            "pending": len(waiting),
+            "eligible": len(rows) + len(waiting),
+            "departments": len({r["program"] for r in rows if r["program"] != "—"}),
+            "vibe": headline["vibe"],
+            "nps": headline["nps"],
+            "belonging": headline["belonging"],
+            "last_at": rows[0]["orientation_at"] if rows else "",
+        }
+
+    campuses = [
+        card(name,
+             [r for r in filled if r["campus"] == name],
+             [p for p in pending if p["campus"] == name])
+        for name in CAMPUSES
+    ]
+    stray_filled = [r for r in filled if r["campus"] == UNSPECIFIED_CAMPUS]
+    stray_pending = [p for p in pending if p["campus"] == UNSPECIFIED_CAMPUS]
+    if stray_filled or stray_pending:
+        campuses.append(card(UNSPECIFIED_CAMPUS, stray_filled, stray_pending))
+
+    return JSONResponse({
+        "campuses": campuses,
+        "all": card("All campuses", filled, pending),
+    })
+
+
+@router.get("/admin/api/orientation/report")
+async def api_orientation_report(
+    request: Request,
+    campus: str = Query(default=""),
+    dept: str = Query(default=""),
+    ug_or_pg: str = Query(default=""),
+):
+    """Question-by-question analysis of the orientation replies for one campus."""
+    if not _is_survey_admin(request):
+        raise HTTPException(status_code=403)
+
+    from app.orientation_analysis import summarize_orientation
+
+    data = await _orientation_dataset(campus=campus, dept=dept, ug_or_pg=ug_or_pg)
+    filled, pending = data["filled"], data["pending"]
+
+    dept_counts: dict[str, int] = {}
+    for row in filled:
+        dept_counts[row["program"]] = dept_counts.get(row["program"], 0) + 1
+    level_counts: dict[str, int] = {}
+    for row in filled:
+        level = (row["ug_or_pg"] or "ug").upper()
+        level_counts[level] = level_counts.get(level, 0) + 1
+
+    report = summarize_orientation([r["data"] for r in filled])
+    report.update({
+        "campus": campus or "All campuses",
+        "coverage": {
+            "filled": len(filled),
+            "pending": len(pending),
+            "eligible": len(filled) + len(pending),
+            "pct": round(100.0 * len(filled) / (len(filled) + len(pending)), 1)
+                   if (filled or pending) else 0.0,
+        },
+        "departments": sorted(
+            ({"dept": name, "count": count,
+              "pct": round(100.0 * count / len(filled), 1) if filled else 0.0}
+             for name, count in dept_counts.items()),
+            key=lambda r: (-r["count"], r["dept"]),
+        ),
+        "levels": sorted(
+            ({"level": name, "count": count} for name, count in level_counts.items()),
+            key=lambda r: -r["count"],
+        ),
+        "last_at": filled[0]["orientation_at"] if filled else "",
+    })
+    return JSONResponse(report)
+
+
+@router.get("/admin/api/orientation/students")
+async def api_orientation_students(
+    request: Request,
+    campus: str = Query(default=""),
+    group: str = Query(default=ORI_FILLED),
+    dept: str = Query(default=""),
+    ug_or_pg: str = Query(default=""),
+):
+    """Who filled the orientation form (or who still owes it), for one campus."""
+    if not _is_survey_admin(request):
+        raise HTTPException(status_code=403)
+
+    from app.orientation_analysis import QUESTIONS
+
+    data = await _orientation_dataset(campus=campus, dept=dept, ug_or_pg=ug_or_pg)
+    group = ORI_PENDING if group == ORI_PENDING else ORI_FILLED
+    rows = data[group]
+
+    students = []
+    for row in rows:
+        answers = row.get("data", {}) or {}
+        students.append({
+            **{k: v for k, v in row.items() if k != "data"},
+            "answered": sum(
+                1 for key in QUESTIONS
+                if answers.get(key) not in (None, "", [], {})
+            ),
+            "vibe": answers.get("q2"),
+            "nps": answers.get("q34"),
+            "belonging": answers.get("q29"),
+            "avatar": answers.get("q41", ""),
+        })
+
+    return JSONResponse({
+        "campus": campus or "All campuses",
+        "group": group,
+        "total": len(students),
+        "students": students,
+        "filled": len(data["filled"]),
+        "pending": len(data["pending"]),
+    })
+
+
+async def run_orientation_mail_task(
+    task_id: str,
+    recipients: list[dict],
+    subject: str,
+    message: str,
+    base_url: str,
+    campus: str,
+    link_label: str,
+) -> None:
+    """Mail one orientation cohort over a single SMTP connection.
+
+    Same shape as the reminder batch task, so the dashboard can poll progress
+    through the existing /admin/api/alert/status endpoint.
+    """
+    import asyncio
+    from datetime import datetime, timezone
+    from app import emailer
+    from app.routes.landing import email_to_slug
+
+    db = get_db()
+    delay = max(0.0, float(getattr(settings, "email_batch_delay_seconds", 0.4)))
+    sent = 0
+    failed = 0
+
+    try:
+        async with emailer.SmtpBatchSender() as sender:
+            for i, person in enumerate(recipients):
+                if i > 0 and delay:
+                    await asyncio.sleep(delay)
+
+                email = (person.get("email") or "").strip()
+                if not email:
+                    continue
+                name = person.get("name", "")
+
+                try:
+                    # src=reminder keeps the orientation form open for this
+                    # student even when it is closed to everyone else.
+                    link = f"{base_url}/resume/{email_to_slug(email)}?src=reminder"
+                    await sender.send(emailer.build_orientation_message(
+                        email, name, subject, message,
+                        link=link, link_label=link_label,
+                        campus=person.get("campus", "") or campus,
+                    ))
+                    await db["users"].update_one(
+                        {"email": email},
+                        {"$set": {"orientation_mail_sent_at": datetime.now(timezone.utc)},
+                         "$inc": {"orientation_mail_count": 1},
+                         "$unset": {"last_email_error": "", "email_failed_at": ""}},
+                    )
+                    sent += 1
+                except Exception as exc:
+                    failed += 1
+                    log.warning("Orientation mail failed for %s: %s", email, exc)
+                    await db["users"].update_one(
+                        {"email": email},
+                        {"$set": {"last_email_error": str(exc),
+                                  "email_failed_at": datetime.now(timezone.utc)}},
+                    )
+
+                await db["admin_tasks"].update_one(
+                    {"_id": task_id},
+                    {"$set": {"sent": sent, "failed": failed,
+                              "updated_at": datetime.now(timezone.utc)}},
+                )
+    except Exception as exc:
+        log.exception("Orientation mail task %s aborted: %s", task_id, exc)
+        await db["admin_tasks"].update_one(
+            {"_id": task_id},
+            {"$set": {"status": "error", "error": str(exc),
+                      "updated_at": datetime.now(timezone.utc)}},
+        )
+        return
+
+    await db["admin_tasks"].update_one(
+        {"_id": task_id},
+        {"$set": {"status": "completed", "sent": sent, "failed": failed,
+                  "updated_at": datetime.now(timezone.utc)}},
+    )
+
+
+@router.post("/admin/api/orientation/mail")
+async def api_orientation_mail(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    campus: str = Query(default=""),
+    group: str = Query(default=ORI_FILLED),
+    dept: str = Query(default=""),
+    ug_or_pg: str = Query(default=""),
+):
+    """Mail every student in one campus who filled the orientation (or hasn't).
+
+    The subject and body are written by the admin; each mail is addressed
+    personally and carries the student's own resume link.
+    """
+    if not _is_survey_admin(request):
+        raise HTTPException(status_code=403)
+
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid payload")
+
+    subject = str(body.get("subject") or "").strip()
+    message = str(body.get("message") or "").strip()
+    link_label = str(body.get("link_label") or "").strip() or "Open my survey"
+    if not subject or not message:
+        raise HTTPException(status_code=400, detail="A subject and a message are both required.")
+
+    group = ORI_PENDING if group == ORI_PENDING else ORI_FILLED
+    data = await _orientation_dataset(campus=campus, dept=dept, ug_or_pg=ug_or_pg)
+    recipients = [r for r in data[group] if r.get("email")]
+
+    if not recipients:
+        return JSONResponse({"ok": False, "error": "No students match this selection.",
+                             "total": 0}, status_code=400)
+
+    from datetime import datetime, timezone
+    task_id = "ori_mail_" + secrets.token_hex(8)
+    await get_db()["admin_tasks"].insert_one({
+        "_id": task_id,
+        "type": f"orientation-{group}",
+        "campus": campus or "All campuses",
+        "status": "running",
+        "total": len(recipients),
+        "sent": 0,
+        "failed": 0,
+        "subject": subject[:300],
+        "started_at": datetime.now(timezone.utc),
+        "updated_at": datetime.now(timezone.utc),
+    })
+
+    background_tasks.add_task(
+        run_orientation_mail_task,
+        task_id,
+        recipients,
+        subject,
+        message,
+        str(request.base_url).rstrip("/"),
+        campus or "",
+        link_label,
+    )
+
+    return JSONResponse({"ok": True, "task_id": task_id, "total": len(recipients)})
+
+
 # ── Send alert emails to pre-done / post-pending students (survey admin only) ──
 @router.post("/admin/api/alert/post-pending")
 async def api_send_alert(

@@ -1,0 +1,53 @@
+<!doctype html>
+<html>
+<body style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #1B2A4A; background: #ffffff; padding: 24px; margin: 0;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; margin: auto; background: #ffffff; border: 1px solid #E2E8F0; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.02);">
+    <!-- Header/Logo -->
+    <tr>
+      <td style="padding: 32px 32px 16px 32px; text-align: center; border-bottom: 1px solid #F1F5F9;">
+        <img src="cid:logo" alt="JAIN University" style="max-height: 70px; display: inline-block;" />
+        <div style="color: #1B2A4A; font-size: 20px; font-weight: 700; margin-top: 12px; letter-spacing: 0.5px;">
+          Deeksharambh 2026 Orientation
+        </div>
+        {% if campus %}
+        <div style="color: #64748B; font-size: 13px; margin-top: 4px;">{{ campus }} campus</div>
+        {% endif %}
+      </td>
+    </tr>
+    <!-- Content -->
+    <tr>
+      <td style="padding: 32px;">
+        <p style="font-size: 16px; font-weight: 600; margin: 0 0 16px 0;">Dear {{ name or "student" }},</p>
+
+        {% for para in paragraphs %}
+        <p style="font-size: 15px; line-height: 1.6; color: #334155; margin: 0 0 16px 0;">{{ para }}</p>
+        {% endfor %}
+
+        {% if link %}
+        <!-- CTA Button -->
+        <table width="100%" cellpadding="0" cellspacing="0" style="margin: 24px 0 12px 0;">
+          <tr>
+            <td align="center">
+              <a href="{{ link }}" style="display: inline-block; background: #1B2A4A; color: #ffffff; font-size: 15px; font-weight: 700; padding: 14px 32px; border-radius: 6px; text-decoration: none; box-shadow: 0 4px 12px rgba(27, 42, 74, 0.15);">
+                {{ link_label }} &rarr;
+              </a>
+            </td>
+          </tr>
+        </table>
+        <p style="font-size: 12px; line-height: 1.5; color: #94A3B8; margin: 0 0 8px 0; word-break: break-all;">
+          If the button does not work, paste this into your browser: {{ link }}
+        </p>
+        {% endif %}
+      </td>
+    </tr>
+    <!-- Footer -->
+    <tr>
+      <td style="padding: 0 32px 28px 32px;">
+        <p style="font-size: 13px; line-height: 1.6; color: #64748B; margin: 0; border-top: 1px solid #F1F5F9; padding-top: 16px;">
+          Office of Academics<br>JAIN (Deemed-to-be University)
+        </p>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

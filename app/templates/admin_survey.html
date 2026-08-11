@@ -415,6 +415,117 @@
         </div>
       </div>
 
+      <!-- ── ORIENTATION ──────────────────────────────────────────────── -->
+      <div class="panel" id="p-orientation">
+        <div class="space-y-5">
+
+          <!-- STEP 1 — pick a campus. Everything else opens from here. -->
+          <div id="ori-picker" class="space-y-5">
+            <div class="card">
+              <div class="h-card">🎓 Deeksharambh orientation report</div>
+              <div class="sub">Open a campus to read its orientation analysis, see exactly who filled the form, and mail them.
+                The department and level filters in the top bar apply here too.</div>
+            </div>
+            <div id="ori-campus-cards" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div class="card text-center text-xs text-slate-400">Loading campuses…</div>
+            </div>
+          </div>
+
+          <!-- STEP 2 — that campus's report. -->
+          <div id="ori-report" class="hidden space-y-5">
+            <div class="card space-y-4">
+              <div class="flex flex-col lg:flex-row lg:items-center gap-3">
+                <button onclick="closeOriCampus()" class="btn btn-soft">← All campuses</button>
+                <div class="mr-auto">
+                  <div class="h-card">📍 <span id="ori-campus-name">—</span></div>
+                  <div class="sub" id="ori-campus-sub">—</div>
+                </div>
+                <div class="flex flex-wrap gap-2" id="ori-views">
+                  <button class="tabbtn on" data-view="analysis" onclick="setOriView('analysis')">📊 Result analysis</button>
+                  <button class="tabbtn"    data-view="filled"   onclick="setOriView('filled')">✅ Filled</button>
+                  <button class="tabbtn"    data-view="email"    onclick="setOriView('email')">📧 Email</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- ANALYSIS -->
+            <div id="ori-view-analysis" class="space-y-5">
+              <div id="ori-stats" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3"></div>
+              <div id="ori-highlights" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+              <div class="card space-y-3">
+                <div class="h-card">🏢 Who answered</div>
+                <div id="ori-dept-table"></div>
+              </div>
+              <div id="ori-sections" class="space-y-5"></div>
+            </div>
+
+            <!-- FILLED -->
+            <div id="ori-view-filled" class="hidden space-y-5">
+              <div class="card space-y-4">
+                <div class="flex flex-col lg:flex-row lg:items-center gap-3">
+                  <div class="mr-auto">
+                    <div class="h-card">✅ Students who filled the orientation form</div>
+                    <div class="sub">Click a row to open everything held about that student.</div>
+                  </div>
+                  <div class="flex flex-wrap gap-2" id="ori-groups">
+                    <button class="tabbtn on" data-group="filled"  onclick="setOriGroup('filled')">✅ Filled</button>
+                    <button class="tabbtn"    data-group="pending" onclick="setOriGroup('pending')">⏳ Baseline done, orientation pending</button>
+                  </div>
+                  <input id="ori-search" oninput="renderOriStudents()" class="field w-full lg:w-56" placeholder="🔍 Search name, email, department…">
+                </div>
+                <div id="ori-student-table"></div>
+              </div>
+            </div>
+
+            <!-- EMAIL -->
+            <div id="ori-view-email" class="hidden space-y-5">
+              <div class="card space-y-4">
+                <div>
+                  <div class="h-card">📧 Mail this orientation cohort</div>
+                  <div class="sub">Every student gets their own copy, addressed by name, with their personal survey link.
+                    The mail goes out from the portal's mailbox — not from yours.</div>
+                </div>
+
+                <div class="flex flex-wrap gap-2" id="ori-mail-groups">
+                  <button class="tabbtn on" data-group="filled"  onclick="setOriMailGroup('filled')">✅ Filled the orientation</button>
+                  <button class="tabbtn"    data-group="pending" onclick="setOriMailGroup('pending')">⏳ Baseline done, orientation pending</button>
+                </div>
+
+                <div class="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                  <div class="text-xs font-bold text-amber-900">Recipients</div>
+                  <div id="ori-mail-count" class="text-sm font-extrabold text-amber-700 mt-0.5">Counting…</div>
+                </div>
+
+                <div>
+                  <label class="lbl">Subject</label>
+                  <input id="ori-mail-subject" class="field">
+                </div>
+                <div>
+                  <label class="lbl">Message</label>
+                  <textarea id="ori-mail-body" rows="12" class="field font-mono text-[11px] leading-relaxed"></textarea>
+                  <div class="sub">Leave a blank line between paragraphs. "Dear &lt;name&gt;," and the signature are added for you.</div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label class="lbl">Button label</label>
+                    <input id="ori-mail-link-label" class="field" value="Open my survey">
+                  </div>
+                  <div class="flex items-end">
+                    <button onclick="resetOriMailDraft()" class="btn btn-soft">↺ Reset to the suggested wording</button>
+                  </div>
+                </div>
+
+                <div class="flex justify-end">
+                  <button id="ori-mail-send" onclick="sendOriMail(this)" class="btn btn-green">📧 Send to this cohort</button>
+                </div>
+                <div id="ori-mail-status" class="hidden"></div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
       <!-- ── PARENTS ──────────────────────────────────────────────────── -->
       <div class="panel" id="p-parents">
         <div class="space-y-5">
@@ -704,6 +815,7 @@ const PAGES = [
   { id: 'p-emails',   icon: '📧', label: 'Emails',      title: 'Emails',              sub: 'Send reminders, write your own mail, track delivery', load: () => { updateTargetCount(); initComposer(); loadEmailStats(); } },
   { id: 'p-links',    icon: '🔗', label: 'Links',       title: 'Links',               sub: 'Department links for both surveys, plus shareable reports', load: () => loadLinks() },
   { id: 'p-depts',    icon: '🏢', label: 'Departments', title: 'Departments',         sub: 'Literacy and readiness averages per department', load: () => loadDepts() },
+  { id: 'p-orientation', icon: '🎓', label: 'Orientation', title: 'Orientation report', sub: 'Campus-wise Deeksharambh analysis, who filled it, and mailing', load: () => loadOrientationPanel() },
   { id: 'p-parents',  icon: '👨‍👩‍👦', label: 'Parents',  title: 'Parental background', sub: 'Occupations reported in the post survey', load: () => loadParents() },
   { id: 'p-calendar', icon: '📅', label: 'Calendar',    title: 'Calendar',            sub: 'When students filled the surveys', load: () => loadCalendar() },
   { id: 'p-settings', icon: '⚙️', label: 'Settings',    title: 'Settings',            sub: 'Gating, timing and automatic reminders' },
@@ -782,6 +894,7 @@ function applyFilters() {
   const active = document.querySelector('.panel.on');
   if (!active) return;
   if (active.id === 'p-parents') loadParents();
+  if (active.id === 'p-orientation') loadOrientationPanel();
   if (active.id === 'p-students' && studentView === 'duration') renderStudents();
 }
 
@@ -1647,6 +1760,335 @@ function viewDept(dept) {
   $('dept-filter').value = dept;
   applyFilters();
   show('p-students');
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  Orientation — campus report, who filled it, and mailing that cohort
+// ═══════════════════════════════════════════════════════════════════════
+let oriCampus   = '';        // '' = the campus picker is showing
+let oriView     = 'analysis';
+let oriGroup    = 'filled';  // which list the Filled tab is showing
+let oriMailGroup = 'filled'; // who the Email tab will write to
+let oriStudents = [];        // rows currently in the Filled tab
+let oriCounts   = { filled: 0, pending: 0 };
+
+const oriParams = (extra = {}) => new URLSearchParams({
+  campus: oriCampus, dept: deptFilter(), ug_or_pg: levelFilter(), ...extra,
+}).toString();
+
+const oriNum = (v, digits = 1) =>
+  (v === null || v === undefined) ? '—' : Number(v).toFixed(digits);
+
+/** Entry point: always start on the campus picker. */
+function loadOrientationPanel() {
+  if (oriCampus) return loadOriCampusReport();
+  closeOriCampus();
+}
+
+function closeOriCampus() {
+  oriCampus = '';
+  $('ori-report').classList.add('hidden');
+  $('ori-picker').classList.remove('hidden');
+  loadOriCampuses();
+}
+
+async function loadOriCampuses() {
+  const host = $('ori-campus-cards');
+  host.innerHTML = '<div class="card text-center text-xs text-slate-400">Loading campuses…</div>';
+  let d;
+  try { d = await api('/admin/api/orientation/campuses?' + oriParams({ campus: '' })); }
+  catch (err) {
+    host.innerHTML = '<div class="card text-center text-xs text-rose-500">Could not load the campus summary</div>';
+    return;
+  }
+
+  const card = (c, accent) => `
+    <button onclick="openOriCampus('${e(c.campus)}')"
+      class="card text-left hover:border-blue-400 hover:shadow-md transition w-full">
+      <div class="flex items-start justify-between gap-3">
+        <div>
+          <div class="text-base font-extrabold text-slate-900">📍 ${e(c.campus)}</div>
+          <div class="sub">${c.filled} of ${c.eligible} eligible students have filled it${c.last_at ? ' · last on ' + e(c.last_at) : ''}</div>
+        </div>
+        <span class="btn ${accent}">View report →</span>
+      </div>
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
+        <div class="stat border-l-emerald-600 !p-3"><b class="text-emerald-600 !text-lg">${c.filled}</b><s>Filled</s></div>
+        <div class="stat border-l-amber-500 !p-3"><b class="text-amber-600 !text-lg">${c.pending}</b><s>Pending</s></div>
+        <div class="stat border-l-blue-600 !p-3"><b class="text-blue-600 !text-lg">${oriNum(c.vibe, 1)}</b><s>Avg vibe / 10</s></div>
+        <div class="stat border-l-indigo-600 !p-3"><b class="text-indigo-600 !text-lg">${c.nps === null || c.nps === undefined ? '—' : oriNum(c.nps, 0)}</b><s>NPS</s></div>
+      </div>
+    </button>`;
+
+  host.innerHTML =
+    d.campuses.map(c => card(c, 'btn-primary')).join('') +
+    card({ ...d.all, campus: 'All campuses' }, 'btn-dark');
+}
+
+function openOriCampus(campus) {
+  oriCampus = campus === 'All campuses' ? '' : campus;
+  $('ori-campus-name').textContent = campus;
+  $('ori-picker').classList.add('hidden');
+  $('ori-report').classList.remove('hidden');
+  setOriView('analysis');
+}
+
+function setOriView(view) {
+  oriView = view;
+  document.querySelectorAll('#ori-views .tabbtn').forEach(b => b.classList.toggle('on', b.dataset.view === view));
+  ['analysis', 'filled', 'email'].forEach(v =>
+    $('ori-view-' + v).classList.toggle('hidden', v !== view));
+  if (view === 'analysis') loadOriCampusReport();
+  if (view === 'filled')   loadOriStudents();
+  if (view === 'email')    initOriMail();
+}
+
+// ── Analysis ────────────────────────────────────────────────────────────
+async function loadOriCampusReport() {
+  $('ori-stats').innerHTML = '<div class="card col-span-full text-center text-xs text-slate-400">Loading analysis…</div>';
+  $('ori-highlights').innerHTML = '';
+  $('ori-sections').innerHTML = '';
+  tableBusy('ori-dept-table', 'Loading…');
+  let d;
+  try { d = await api('/admin/api/orientation/report?' + oriParams()); }
+  catch (err) {
+    $('ori-stats').innerHTML = '<div class="card col-span-full text-center text-xs text-rose-500">Could not load the analysis</div>';
+    return;
+  }
+  renderOriReport(d);
+}
+
+/** One labelled bar per option, widest first. */
+function oriBars(options, color, limit) {
+  const rows = limit ? options.slice(0, limit) : options;
+  if (!rows.length) return '<div class="text-xs text-slate-400">No answers yet</div>';
+  return rows.map(o => `
+    <div class="mb-2">
+      <div class="flex items-baseline justify-between gap-3 text-[11px] font-semibold text-slate-700">
+        <span class="truncate">${e(o.label)}</span>
+        <span class="shrink-0 text-slate-500">${o.count} · ${oriNum(o.pct, 1)}%</span>
+      </div>
+      <div class="h-1.5 bg-slate-100 rounded mt-1">
+        <div class="h-1.5 rounded" style="width:${Math.min(100, o.pct)}%;background:${color}"></div>
+      </div>
+    </div>`).join('');
+}
+
+function oriQuestionCard(q) {
+  const head = `<div class="text-xs font-extrabold text-slate-900">${e(q.label)}</div>`;
+  if (q.kind === 'matrix') {
+    return `<div class="border border-slate-200 rounded-xl p-4">
+      ${head}<div class="sub mb-3">${q.answered} answered</div>
+      ${q.rows.map(r => `
+        <div class="mb-3">
+          <div class="text-[11px] font-bold text-slate-600 mb-1">${e(r.label)}</div>
+          ${oriBars(r.options, '#6366f1')}
+        </div>`).join('')}
+    </div>`;
+  }
+  if (q.kind === 'nps') {
+    return `<div class="border border-slate-200 rounded-xl p-4">
+      ${head}
+      <div class="sub mb-3">${q.answered} answered · average ${oriNum(q.avg, 2)} / 10 · NPS ${oriNum(q.nps, 0)}</div>
+      <div class="grid grid-cols-3 gap-2 mb-3 text-center">
+        <div class="bg-emerald-50 rounded-lg py-2"><div class="text-sm font-extrabold text-emerald-700">${q.promoters}</div><div class="text-[10px] text-emerald-700">Promoters (9–10)</div></div>
+        <div class="bg-amber-50 rounded-lg py-2"><div class="text-sm font-extrabold text-amber-700">${q.passives}</div><div class="text-[10px] text-amber-700">Passives (7–8)</div></div>
+        <div class="bg-rose-50 rounded-lg py-2"><div class="text-sm font-extrabold text-rose-700">${q.detractors}</div><div class="text-[10px] text-rose-700">Detractors (0–6)</div></div>
+      </div>
+      ${oriBars(q.options.filter(o => o.count), '#0ea5e9')}
+    </div>`;
+  }
+  if (q.kind === 'scale') {
+    return `<div class="border border-slate-200 rounded-xl p-4">
+      ${head}<div class="sub mb-3">${q.answered} answered · average ${oriNum(q.avg, 2)} / ${q.max}</div>
+      ${oriBars(q.options.filter(o => o.count), '#2563eb')}
+    </div>`;
+  }
+  const suffix = q.kind === 'multi' ? ` · ${q.picks} selections` : '';
+  return `<div class="border border-slate-200 rounded-xl p-4">
+    ${head}<div class="sub mb-3">${q.answered} answered${suffix}</div>
+    ${oriBars(q.options, q.kind === 'multi' ? '#0d9488' : '#7c3aed')}
+  </div>`;
+}
+
+function renderOriReport(d) {
+  const h = d.headline, c = d.coverage;
+  $('ori-campus-sub').textContent =
+    `${c.filled} filled · ${c.pending} pending · ${oriNum(c.pct, 1)}% of eligible students` +
+    (d.last_at ? ` · last on ${d.last_at}` : '');
+
+  $('ori-stats').innerHTML = [
+    ['slate-800', 'text-slate-900', d.count, 'Responses'],
+    ['emerald-600', 'text-emerald-600', oriNum(c.pct, 1) + '%', 'Response rate'],
+    ['blue-600', 'text-blue-600', oriNum(h.vibe, 1), 'Avg vibe / 10'],
+    ['indigo-600', 'text-indigo-600', h.nps === null ? '—' : oriNum(h.nps, 0), 'NPS'],
+    ['teal-600', 'text-teal-600', oriNum(h.belonging, 1), 'Belonging / 10'],
+    ['amber-600', 'text-amber-600', oriNum(h.bridge, 1), 'Bridge course / 5'],
+  ].map(([border, text, value, label]) =>
+    `<div class="stat border-l-${border}"><b class="${text}">${e(String(value))}</b><s>${e(label)}</s></div>`).join('');
+
+  if (!d.count) {
+    $('ori-highlights').innerHTML = '<div class="card col-span-full text-center text-xs text-slate-400">No orientation responses for this selection yet</div>';
+    $('ori-sections').innerHTML = '';
+    table('ori-dept-table', ['Department', 'Responses', 'Share'], [], () => [], 'Nothing here yet');
+    return;
+  }
+
+  const panel = (title, options, color) => `
+    <div class="card space-y-2">
+      <div class="text-[11px] font-extrabold uppercase text-slate-600">${e(title)}</div>
+      ${oriBars(options, color, 5)}
+    </div>`;
+
+  $('ori-highlights').innerHTML =
+    panel('🏆 Most impactful sessions', d.highlights.impactful, '#059669') +
+    panel('🛠️ Sessions needing work', d.highlights.needs_work, '#e11d48') +
+    panel('😰 Biggest stressors', d.highlights.stressors, '#f59e0b') +
+    panel('👍 Keep next year', d.highlights.keep, '#2563eb') +
+    panel('🚫 Stop next year', d.highlights.stop, '#9f1239') +
+    panel('✨ Introduce next year', d.highlights.introduce, '#7c3aed');
+
+  table('ori-dept-table', ['#', 'Department', 'Responses', 'Share'],
+    d.departments, (r, i) => [
+      i + 1,
+      `<span class="font-semibold text-slate-900">${e(r.dept)}</span>`,
+      r.count,
+      `<span class="badge b-blue">${oriNum(r.pct, 1)}%</span>`,
+    ], 'No departments yet');
+
+  $('ori-sections').innerHTML = d.sections.map(s => `
+    <div class="card space-y-4">
+      <div class="h-card">${e(s.title)}</div>
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        ${s.questions.map(oriQuestionCard).join('')}
+      </div>
+    </div>`).join('');
+}
+
+// ── Filled / pending lists ──────────────────────────────────────────────
+function setOriGroup(group) {
+  oriGroup = group;
+  document.querySelectorAll('#ori-groups .tabbtn').forEach(b => b.classList.toggle('on', b.dataset.group === group));
+  loadOriStudents();
+}
+
+async function loadOriStudents() {
+  tableBusy('ori-student-table', 'Loading students…');
+  try {
+    const d = await api('/admin/api/orientation/students?' + oriParams({ group: oriGroup }));
+    oriStudents = d.students;
+    oriCounts = { filled: d.filled, pending: d.pending };
+    renderOriStudents();
+  } catch (err) { tableBusy('ori-student-table', 'Could not load the student list'); }
+}
+
+function renderOriStudents() {
+  const q = ($('ori-search').value || '').toLowerCase();
+  const rows = oriStudents.filter(s =>
+    [s.name, s.email, s.program].some(v => (v || '').toLowerCase().includes(q)));
+
+  if (oriGroup === 'pending') {
+    table('ori-student-table', ['#', 'Student', 'Level', 'Department', 'Campus', 'Baseline done'],
+      rows, (s, i) => [
+        i + 1,
+        `<button onclick="openStudent('${e(s.email)}')" class="text-left"><div class="font-semibold text-slate-900 hover:text-blue-600">${e(s.name)}</div><div class="text-[11px] text-slate-500 link">${e(s.email)}</div></button>`,
+        `<span class="badge b-gray">${e((s.ug_or_pg || 'ug').toUpperCase())}</span>`,
+        e(s.program),
+        `<span class="badge b-gray">${e(s.campus)}</span>`,
+        e(s.pre_at || '—'),
+      ], 'Nobody is pending here');
+    return;
+  }
+
+  table('ori-student-table', ['#', 'Student', 'Level', 'Department', 'Campus', 'Submitted', 'Vibe', 'NPS', 'Answered'],
+    rows, (s, i) => [
+      i + 1,
+      `<button onclick="openStudent('${e(s.email)}')" class="text-left"><div class="font-semibold text-slate-900 hover:text-blue-600">${e(s.name)}</div><div class="text-[11px] text-slate-500 link">${e(s.email)}</div></button>`,
+      `<span class="badge b-gray">${e((s.ug_or_pg || 'ug').toUpperCase())}</span>`,
+      e(s.program),
+      `<span class="badge b-gray">${e(s.campus)}</span>`,
+      `<span class="text-[11px] text-slate-500">${e(s.orientation_at || '—')}</span>`,
+      s.vibe == null ? '—' : `${e(String(s.vibe))} / 10`,
+      s.nps == null ? '—' : `${e(String(s.nps))} / 10`,
+      `<span class="badge b-blue">${s.answered}</span>`,
+    ], 'Nobody has filled it yet');
+}
+
+// ── Mailing the cohort ──────────────────────────────────────────────────
+function setOriMailGroup(group) {
+  oriMailGroup = group;
+  document.querySelectorAll('#ori-mail-groups .tabbtn').forEach(b => b.classList.toggle('on', b.dataset.group === group));
+  resetOriMailDraft();
+  refreshOriMailCount();
+}
+
+function initOriMail() {
+  if (!$('ori-mail-subject').value) resetOriMailDraft();
+  refreshOriMailCount();
+}
+
+async function refreshOriMailCount() {
+  $('ori-mail-count').textContent = 'Counting…';
+  try {
+    const d = await api('/admin/api/orientation/students?' + oriParams({ group: oriMailGroup }));
+    oriCounts = { filled: d.filled, pending: d.pending };
+    const label = oriMailGroup === 'filled'
+      ? 'students who filled the orientation'
+      : 'students with the baseline done but no orientation yet';
+    $('ori-mail-count').innerHTML =
+      `<span class="text-lg">${d.total} ${e(label)}</span> — ${e(oriCampus || 'All campuses')} · ${e(scopeLabel())}`;
+  } catch (err) { $('ori-mail-count').textContent = 'Could not count the recipients'; }
+}
+
+/** A sensible starting draft — the admin edits it before anything is sent. */
+function resetOriMailDraft() {
+  const campus = oriCampus || 'your campus';
+  if (oriMailGroup === 'pending') {
+    $('ori-mail-subject').value = 'Please complete your Deeksharambh 2026 orientation feedback';
+    $('ori-mail-link-label').value = 'Fill the orientation form';
+    $('ori-mail-body').value =
+`Thank you for completing your AI Literacy baseline survey.
+
+Your Deeksharambh 2026 orientation feedback is still pending. It takes about five minutes, and it is what shapes the first week for next year's batch at ${campus}.
+
+Please use the button below — it opens your form directly, with your details already filled in.`;
+  } else {
+    $('ori-mail-subject').value = 'Thank you for your Deeksharambh 2026 orientation feedback';
+    $('ori-mail-link-label').value = 'Continue to my next survey';
+    $('ori-mail-body').value =
+`Thank you for filling in the Deeksharambh 2026 orientation feedback. Your answers are already helping us plan the first week for next year's batch at ${campus}.
+
+If you have not finished the post-workshop AI survey yet, the button below takes you straight to it.
+
+If you have, there is nothing further to do — thank you for taking the time.`;
+  }
+}
+
+async function sendOriMail(btn) {
+  const subject = $('ori-mail-subject').value.trim();
+  const message = $('ori-mail-body').value.trim();
+  if (!subject || !message) return toast('A subject and a message are both needed');
+
+  const scope = `${oriCampus || 'All campuses'} · ${scopeLabel()}`;
+  const who = oriMailGroup === 'filled' ? 'students who filled the orientation'
+                                        : 'students whose orientation is pending';
+  if (!confirm(`Send this mail to ${who}?\n\n${scope}`)) return;
+
+  const box = $('ori-mail-status');
+  note(box, 'info', '<b>Queueing…</b> preparing the mails.');
+  btn.disabled = true;
+  const label = btn.textContent; btn.textContent = 'Sending…';
+  try {
+    const d = await api('/admin/api/orientation/mail?' + oriParams({ group: oriMailGroup }), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ subject, message, link_label: $('ori-mail-link-label').value.trim() }),
+    });
+    await pollTask(d.task_id, box, () => { btn.disabled = false; btn.textContent = label; });
+  } catch (err) {
+    note(box, 'err', `<b>Failed:</b> ${e(err.message)}`);
+    btn.disabled = false; btn.textContent = label;
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════
