@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Deeksharambh 2026 Orientation Report — {{ campus_label }} — JAIN University</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/orientation_report.css">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0 }
+  body {
+    font-family: 'Outfit', system-ui, sans-serif;
+    background: #f8fafc; color: #0f172a; padding: 28px 18px 60px;
+  }
+  .wrap { max-width: 1240px; margin: 0 auto }
+
+  .top {
+    background: linear-gradient(135deg, #0d2147 0%, #1a3a7a 100%);
+    color: #fff; border-radius: 20px; padding: 26px 28px;
+    display: flex; align-items: center; gap: 20px; flex-wrap: wrap;
+    box-shadow: 0 10px 28px rgba(13, 33, 71, .18);
+  }
+  .top .logo { background: #fff; border-radius: 12px; padding: 8px; line-height: 0 }
+  .top .logo img { height: 42px; width: auto }
+  .top h1 { font-size: 22px; font-weight: 800; letter-spacing: -.2px }
+  .top p  { font-size: 12.5px; color: rgba(255,255,255,.75); margin-top: 3px }
+  .top .grow { flex: 1; min-width: 200px }
+  .pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(230,179,36,.18); border: 1px solid rgba(230,179,36,.42);
+    color: #f5d76e; border-radius: 999px; padding: 5px 13px;
+    font-size: 10.5px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase;
+  }
+
+  .toolbar {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 18px 0;
+  }
+  .tab {
+    font-size: 12.5px; font-weight: 700; padding: 8px 14px; border-radius: 10px;
+    background: #fff; color: #334155; border: 1px solid #e2e8f0; cursor: pointer;
+  }
+  .tab.on { background: #0d2147; color: #fff; border-color: #0d2147 }
+  .field {
+    padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 10px;
+    font-size: 12.5px; font-family: inherit; background: #fff; color: #0f172a;
+  }
+  .btn {
+    font-size: 12.5px; font-weight: 700; padding: 8px 14px; border-radius: 10px;
+    border: none; cursor: pointer; text-decoration: none; display: inline-block;
+  }
+  .btn-gold { background: #e6b324; color: #0d2147 }
+  .btn-soft { background: #fff; color: #334155; border: 1px solid #e2e8f0 }
+  .spacer { flex: 1 }
+
+  .loading { text-align: center; padding: 60px 20px; color: #94a3b8; font-size: 13.5px }
+  footer {
+    text-align: center; margin-top: 34px; font-size: 11.5px; color: #94a3b8; line-height: 1.7;
+  }
+  @media print {
+    body { padding: 0; background: #fff }
+    .toolbar, .top .pill { display: none }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div class="logo"><img src="/static/logo.png" alt="JAIN University" onerror="this.src='/static/logosmall.png'"></div>
+    <div class="grow">
+      <h1>Deeksharambh 2026 · Orientation Report</h1>
+      <p id="subtitle">📍 {{ campus_label }} · how the first week actually felt</p>
+    </div>
+    <span class="pill">✦ Shared report</span>
+  </header>
+
+  <div class="toolbar">
+    <button class="tab on" data-view="report"      onclick="showView('report')">📊 Result analysis</button>
+    <button class="tab"    data-view="departments" onclick="showView('departments')">🏢 Departments</button>
+    <select id="dept" class="field" onchange="reload()">
+      <option value="">All departments</option>
+    </select>
+    <span class="spacer"></span>
+    <a id="ppt" class="btn btn-gold" href="#">⬇️ Download the deck</a>
+    <button class="btn btn-soft" onclick="window.print()">🖨️ Print</button>
+  </div>
+
+  <div id="loading" class="loading">Loading the orientation report…</div>
+  <div id="report" class="ori-report" hidden></div>
+  <div id="departments" class="ori-depts" hidden></div>
+
+  <footer>
+    Deeksharambh 2026 · JAIN (Deemed-to-be University) · Office of Academics<br>
+    Anonymous and aggregated — no individual student's answers are shown.
+    <span id="generated">Generated {{ generated_at }}.</span>
+  </footer>
+</div>
+
+<script src="/static/js/orientation_report.js"></script>
+<script>
+const CAMPUS = {{ campus | tojson }};
+const TOKEN  = {{ token  | tojson }};
+let view = 'report';
+let deptsFilled = false;
+
+const params = (extra = {}) => new URLSearchParams(
+  Object.assign({ campus: CAMPUS, token: TOKEN, dept: document.getElementById('dept').value }, extra));
+
+function showView(next) {
+  view = next;
+  document.querySelectorAll('.tab').forEach(b => b.classList.toggle('on', b.dataset.view === next));
+  document.getElementById('report').hidden = next !== 'report';
+  document.getElementById('departments').hidden = next !== 'departments';
+}
+
+async function reload() {
+  const loading = document.getElementById('loading');
+  loading.hidden = false;
+  loading.textContent = 'Loading the orientation report…';
+  document.getElementById('report').hidden = true;
+  document.getElementById('departments').hidden = true;
+
+  let data;
+  try {
+    const res = await fetch('/shared/orientation/data?' + params());
+    if (!res.ok) throw new Error('This link is no longer valid.');
+    data = await res.json();
+  } catch (err) {
+    loading.textContent = err.message || 'Could not load this report.';
+    return;
+  }
+
+  const dept = document.getElementById('dept');
+  if (!deptsFilled) {
+    dept.innerHTML = '<option value="">All departments</option>' +
+      data.dept_options.map(d =>
+        `<option value="${OrientationReport.esc(d)}">${OrientationReport.esc(d)}</option>`).join('');
+    deptsFilled = true;
+  }
+
+  document.getElementById('subtitle').textContent =
+    `📍 ${data.campus}${data.dept ? ' · ' + data.dept : ''} · ` +
+    `${data.report.coverage.filled} of ${data.report.coverage.eligible} students answered`;
+  document.getElementById('generated').textContent = 'Generated ' + data.generated_at + '.';
+  document.getElementById('ppt').href = '/shared/orientation/ppt?' + params();
+
+  OrientationReport.renderReport(document.getElementById('report'), data.report);
+  OrientationReport.renderDepartments(document.getElementById('departments'), data.departments);
+
+  loading.hidden = true;
+  showView(view);
+}
+
+reload();
+</script>
+</body>
+</html>

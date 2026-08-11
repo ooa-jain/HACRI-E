@@ -45,6 +45,27 @@ def get_directory_token() -> str:
     return get_dept_token(DIRECTORY_KEY, "directory")
 
 
+# ── Deeksharambh orientation report ──────────────────────────────────────────
+ORIENTATION_KEY = "__orientation__"
+
+
+def get_orientation_token(campus: str = "") -> str:
+    """Token for the shareable orientation report of one campus (or all)."""
+    return get_dept_token(f"{ORIENTATION_KEY}:{campus or 'all'}", "orientation")
+
+
+def verify_orientation_token(campus: str, token: str) -> bool:
+    return hmac.compare_digest(get_orientation_token(campus), token or "")
+
+
+def orientation_share_url(base_url: str, campus: str = "") -> str:
+    """The link an admin copies out of the dashboard."""
+    from urllib.parse import urlencode
+
+    query = urlencode({"campus": campus, "token": get_orientation_token(campus)})
+    return f"{base_url.rstrip('/')}/shared/orientation?{query}"
+
+
 def directory_url(base_url: str) -> str:
     return f"{base_url.rstrip('/')}/shared/departments?token={get_directory_token()}"
 
@@ -423,6 +444,83 @@ async def shared_chart_h1(
             None, chart_helpers.plot_h1_histogram_custom, matched, out
         )
     return FileResponse(str(out), media_type="image/png")
+
+
+@router.get("/shared/orientation", response_class=HTMLResponse)
+async def shared_orientation_page(
+    request: Request,
+    token: str = Query(...),
+    campus: str = Query(default=""),
+):
+    """The Deeksharambh orientation report, readable without an admin login.
+
+    The page itself is a shell; everything on it comes from the data endpoint
+    below, which checks the same token again.
+    """
+    if not verify_orientation_token(campus, token):
+        raise HTTPException(status_code=403, detail="Access denied: Invalid or expired sharing link.")
+
+    return request.app.state.templates.TemplateResponse(
+        request,
+        "shared_orientation.html",
+        {
+            "campus": campus,
+            "campus_label": campus or "All campuses",
+            "token": token,
+            "generated_at": datetime.now().strftime("%d %b %Y, %H:%M"),
+        },
+    )
+
+
+@router.get("/shared/orientation/data")
+async def shared_orientation_data(
+    token: str = Query(...),
+    campus: str = Query(default=""),
+    dept: str = Query(default=""),
+):
+    """Everything the shared orientation page draws, in one payload.
+
+    `dept` narrows the report the way the dashboard's filter does; the token
+    still only covers the campus it was minted for.
+    """
+    if not verify_orientation_token(campus, token):
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    from app.orientation_data import (
+        build_report, department_overview, orientation_dataset,
+    )
+
+    scoped = await orientation_dataset(campus=campus, dept=dept)
+    report = build_report(scoped["filled"], scoped["pending"], campus)
+
+    # Department comparison always covers the whole campus — narrowing it to
+    # one department would leave nothing to compare against.
+    whole = scoped if not dept else await orientation_dataset(campus=campus)
+    departments = department_overview(whole["filled"], whole["pending"], campus)
+
+    return JSONResponse({
+        "campus": campus or "All campuses",
+        "dept": dept,
+        "report": report,
+        "departments": departments,
+        "dept_options": sorted({r["program"] for r in whole["filled"] if r["program"] != "—"}),
+        "generated_at": datetime.now().strftime("%d %b %Y, %H:%M"),
+    })
+
+
+@router.get("/shared/orientation/ppt")
+async def shared_orientation_ppt(
+    token: str = Query(...),
+    campus: str = Query(default=""),
+    dept: str = Query(default=""),
+):
+    """The same slide deck the admin can download, for whoever holds the link."""
+    if not verify_orientation_token(campus, token):
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    from app.orientation_data import deck_response
+
+    return await deck_response(campus=campus, dept=dept)
 
 
 @router.get("/shared/departments", response_class=HTMLResponse)

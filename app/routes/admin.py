@@ -751,114 +751,6 @@ async def api_orientation_responses(request: Request):
 # ══════════════════════════════════════════════════════════════════════════════
 ORI_FILLED = "filled"
 ORI_PENDING = "pending"
-UNSPECIFIED_CAMPUS = "Unspecified"
-
-
-def _fmt_ori_date(doc) -> str:
-    from app.db import _fmt
-    return _fmt((doc or {}).get("submitted_at")) if doc else ""
-
-
-def _ori_date_iso(doc) -> str:
-    """Sortable stamp — the display format ("07 Aug 2026 14:03") is not."""
-    when = (doc or {}).get("submitted_at")
-    return when.isoformat() if isinstance(when, datetime) else ""
-
-
-async def _orientation_dataset(
-    *, campus: str = "", dept: str = "", ug_or_pg: str = ""
-) -> dict:
-    """Everyone in scope, split by whether they filled the orientation form.
-
-    Scope is the department / level chosen in the dashboard, narrowed to one
-    campus when asked. A student's campus comes from the orientation answer
-    first (that is where they confirmed it) and from their registration record
-    otherwise.
-    """
-    from app.db import STATUS_POST_DONE as _POST_DONE
-    from app.orientation_analysis import normalize_campus
-
-    wanted = normalize_campus(campus) if campus else ""
-    unspecified_only = bool(campus) and not wanted and campus.strip().lower() in (
-        "unspecified", "unknown", "other",
-    )
-
-    db = get_db()
-    users = await list_survey_users(dept=dept or None, ug_or_pg=ug_or_pg or None)
-
-    responses: dict[str, dict] = {}
-    async for doc in db[ORI].find({}).sort("submitted_at", 1):
-        key = (doc.get("email") or "").strip().lower()
-        if key:
-            responses[key] = doc  # latest submission wins
-
-    filled: list[dict] = []
-    pending: list[dict] = []
-    seen: set[str] = set()
-
-    for u in users:
-        key = (u.get("email") or "").strip().lower()
-        seen.add(key)
-        doc = responses.get(key)
-        data = (doc or {}).get("data", {}) or {}
-        student_campus = normalize_campus(data.get("location")) or normalize_campus(u.get("location"))
-
-        if wanted and student_campus != wanted:
-            continue
-        if unspecified_only and student_campus:
-            continue
-
-        row = {
-            "email": u.get("email", ""),
-            "email_slug": u.get("email_slug", ""),
-            "name": u.get("name", "") or (doc or {}).get("name", ""),
-            "program": u.get("program", "") or "—",
-            "ug_or_pg": u.get("ug_or_pg", "ug"),
-            "campus": student_campus or UNSPECIFIED_CAMPUS,
-            "status": u.get("status") or "not_started",
-            "pre_at": u.get("pre_at", ""),
-            "post_at": u.get("post_at", ""),
-            "orientation_at": _fmt_ori_date(doc),
-            "orientation_at_iso": _ori_date_iso(doc),
-            "baseline_done": (u.get("status") in (STATUS_PRE_DONE, _POST_DONE)),
-        }
-        if doc:
-            row["data"] = data
-            filled.append(row)
-        elif row["baseline_done"]:
-            pending.append(row)
-
-    # Orientation replies with no matching user record still belong in the
-    # report — but only when no department/level filter is narrowing the view,
-    # since we have nothing to filter them by.
-    if not dept and not ug_or_pg:
-        for key, doc in responses.items():
-            if key in seen:
-                continue
-            data = doc.get("data", {}) or {}
-            student_campus = normalize_campus(data.get("location"))
-            if wanted and student_campus != wanted:
-                continue
-            if unspecified_only and student_campus:
-                continue
-            filled.append({
-                "email": doc.get("email", ""),
-                "email_slug": "",
-                "name": doc.get("name", ""),
-                "program": "—",
-                "ug_or_pg": "ug",
-                "campus": student_campus or UNSPECIFIED_CAMPUS,
-                "status": "not_started",
-                "pre_at": "", "post_at": "",
-                "orientation_at": _fmt_ori_date(doc),
-                "orientation_at_iso": _ori_date_iso(doc),
-                "baseline_done": False,
-                "data": data,
-            })
-
-    filled.sort(key=lambda r: r["orientation_at_iso"], reverse=True)
-    pending.sort(key=lambda r: r["name"].lower())
-    return {"filled": filled, "pending": pending}
 
 
 @router.get("/admin/api/orientation/campuses")
@@ -871,39 +763,16 @@ async def api_orientation_campuses(
     if not _is_survey_admin(request):
         raise HTTPException(status_code=403)
 
-    from app.orientation_analysis import CAMPUSES, summarize_orientation
+    from app.orientation_data import (
+        ALL_CAMPUSES, campus_card, campus_cards, orientation_dataset,
+    )
 
-    data = await _orientation_dataset(dept=dept, ug_or_pg=ug_or_pg)
+    data = await orientation_dataset(dept=dept, ug_or_pg=ug_or_pg)
     filled, pending = data["filled"], data["pending"]
 
-    def card(name: str, rows: list[dict], waiting: list[dict]) -> dict:
-        headline = summarize_orientation([r["data"] for r in rows])["headline"]
-        return {
-            "campus": name,
-            "filled": len(rows),
-            "pending": len(waiting),
-            "eligible": len(rows) + len(waiting),
-            "departments": len({r["program"] for r in rows if r["program"] != "—"}),
-            "vibe": headline["vibe"],
-            "nps": headline["nps"],
-            "belonging": headline["belonging"],
-            "last_at": rows[0]["orientation_at"] if rows else "",
-        }
-
-    campuses = [
-        card(name,
-             [r for r in filled if r["campus"] == name],
-             [p for p in pending if p["campus"] == name])
-        for name in CAMPUSES
-    ]
-    stray_filled = [r for r in filled if r["campus"] == UNSPECIFIED_CAMPUS]
-    stray_pending = [p for p in pending if p["campus"] == UNSPECIFIED_CAMPUS]
-    if stray_filled or stray_pending:
-        campuses.append(card(UNSPECIFIED_CAMPUS, stray_filled, stray_pending))
-
     return JSONResponse({
-        "campuses": campuses,
-        "all": card("All campuses", filled, pending),
+        "campuses": campus_cards(filled, pending),
+        "all": campus_card(ALL_CAMPUSES, filled, pending),
     })
 
 
@@ -918,42 +787,10 @@ async def api_orientation_report(
     if not _is_survey_admin(request):
         raise HTTPException(status_code=403)
 
-    from app.orientation_analysis import summarize_orientation
+    from app.orientation_data import build_report, orientation_dataset
 
-    data = await _orientation_dataset(campus=campus, dept=dept, ug_or_pg=ug_or_pg)
-    filled, pending = data["filled"], data["pending"]
-
-    dept_counts: dict[str, int] = {}
-    for row in filled:
-        dept_counts[row["program"]] = dept_counts.get(row["program"], 0) + 1
-    level_counts: dict[str, int] = {}
-    for row in filled:
-        level = (row["ug_or_pg"] or "ug").upper()
-        level_counts[level] = level_counts.get(level, 0) + 1
-
-    report = summarize_orientation([r["data"] for r in filled])
-    report.update({
-        "campus": campus or "All campuses",
-        "coverage": {
-            "filled": len(filled),
-            "pending": len(pending),
-            "eligible": len(filled) + len(pending),
-            "pct": round(100.0 * len(filled) / (len(filled) + len(pending)), 1)
-                   if (filled or pending) else 0.0,
-        },
-        "departments": sorted(
-            ({"dept": name, "count": count,
-              "pct": round(100.0 * count / len(filled), 1) if filled else 0.0}
-             for name, count in dept_counts.items()),
-            key=lambda r: (-r["count"], r["dept"]),
-        ),
-        "levels": sorted(
-            ({"level": name, "count": count} for name, count in level_counts.items()),
-            key=lambda r: -r["count"],
-        ),
-        "last_at": filled[0]["orientation_at"] if filled else "",
-    })
-    return JSONResponse(report)
+    data = await orientation_dataset(campus=campus, dept=dept, ug_or_pg=ug_or_pg)
+    return JSONResponse(build_report(data["filled"], data["pending"], campus))
 
 
 @router.get("/admin/api/orientation/students")
@@ -969,8 +806,9 @@ async def api_orientation_students(
         raise HTTPException(status_code=403)
 
     from app.orientation_analysis import QUESTIONS
+    from app.orientation_data import orientation_dataset
 
-    data = await _orientation_dataset(campus=campus, dept=dept, ug_or_pg=ug_or_pg)
+    data = await orientation_dataset(campus=campus, dept=dept, ug_or_pg=ug_or_pg)
     group = ORI_PENDING if group == ORI_PENDING else ORI_FILLED
     rows = data[group]
 
@@ -999,49 +837,6 @@ async def api_orientation_students(
     })
 
 
-def _orientation_dept_rows(filled: list[dict], pending: list[dict]) -> list[dict]:
-    """One row per department: how many answered, and how that department feels.
-
-    Departments with nobody registered are left out — the point of the table is
-    to compare places where students actually are.
-    """
-    from app.orientation_analysis import summarize_orientation
-
-    groups: dict[str, dict] = {}
-    for row in filled:
-        groups.setdefault(row["program"], {"filled": [], "pending": []})["filled"].append(row)
-    for row in pending:
-        groups.setdefault(row["program"], {"filled": [], "pending": []})["pending"].append(row)
-
-    rows = []
-    for dept, members in groups.items():
-        answered = members["filled"]
-        waiting = members["pending"]
-        eligible = len(answered) + len(waiting)
-        summary = summarize_orientation([r["data"] for r in answered])
-        head = summary["headline"]
-        top = summary["highlights"]
-        rows.append({
-            "dept": dept,
-            "filled": len(answered),
-            "pending": len(waiting),
-            "eligible": eligible,
-            "pct": round(100.0 * len(answered) / eligible, 1) if eligible else 0.0,
-            "vibe": head["vibe"],
-            "nps": head["nps"],
-            "belonging": head["belonging"],
-            "success": head["success"],
-            "bridge": head["bridge"],
-            "promoters": head["promoters"],
-            "detractors": head["detractors"],
-            "top_session": (top["impactful"][0]["label"] if top["impactful"] else ""),
-            "top_stressor": (top["stressors"][0]["label"] if top["stressors"] else ""),
-        })
-
-    rows.sort(key=lambda r: (-(r["vibe"] or 0), -r["filled"], r["dept"].lower()))
-    return rows
-
-
 @router.get("/admin/api/orientation/departments")
 async def api_orientation_departments(
     request: Request,
@@ -1056,30 +851,32 @@ async def api_orientation_departments(
     if not _is_survey_admin(request):
         raise HTTPException(status_code=403)
 
-    from app.orientation_analysis import summarize_orientation
+    from app.orientation_data import department_overview, orientation_dataset
 
-    data = await _orientation_dataset(campus=campus, ug_or_pg=ug_or_pg)
-    filled, pending = data["filled"], data["pending"]
-    rows = _orientation_dept_rows(filled, pending)
+    data = await orientation_dataset(campus=campus, ug_or_pg=ug_or_pg)
+    return JSONResponse(department_overview(data["filled"], data["pending"], campus))
 
-    overall = summarize_orientation([r["data"] for r in filled])["headline"]
-    eligible = len(filled) + len(pending)
 
+@router.get("/admin/api/orientation/share-links")
+async def api_orientation_share_links(request: Request):
+    """Copyable links that open the orientation report without a login.
+
+    One per campus plus one for everything — each carries a token that only
+    unlocks that campus, so a Kochi link cannot be edited into a Bangalore one.
+    """
+    if not _is_survey_admin(request):
+        raise HTTPException(status_code=403)
+
+    from app.orientation_analysis import CAMPUSES
+    from app.orientation_data import ALL_CAMPUSES
+    from app.routes.shared_analysis import orientation_share_url
+
+    base = str(request.base_url).rstrip("/")
     return JSONResponse({
-        "campus": campus or "All campuses",
-        "departments": rows,
-        "overall": {
-            "dept": "All departments",
-            "filled": len(filled),
-            "pending": len(pending),
-            "eligible": eligible,
-            "pct": round(100.0 * len(filled) / eligible, 1) if eligible else 0.0,
-            "vibe": overall["vibe"],
-            "nps": overall["nps"],
-            "belonging": overall["belonging"],
-            "success": overall["success"],
-            "bridge": overall["bridge"],
-        },
+        "links": [
+            {"campus": ALL_CAMPUSES, "url": orientation_share_url(base, "")},
+            *({"campus": name, "url": orientation_share_url(base, name)} for name in CAMPUSES),
+        ]
     })
 
 
@@ -1094,49 +891,9 @@ async def admin_orientation_ppt(
     if not _is_survey_admin(request):
         raise HTTPException(status_code=403)
 
-    import io
-    from app.orientation_analysis import summarize_orientation
-    from app.orientation_ppt import generate_orientation_ppt
-    from app.routes.shared_analysis import _in_thread
+    from app.orientation_data import deck_response
 
-    data = await _orientation_dataset(campus=campus, dept=dept, ug_or_pg=ug_or_pg)
-    filled, pending = data["filled"], data["pending"]
-    eligible = len(filled) + len(pending)
-
-    report = summarize_orientation([r["data"] for r in filled])
-    report["coverage"] = {
-        "filled": len(filled),
-        "pending": len(pending),
-        "eligible": eligible,
-        "pct": round(100.0 * len(filled) / eligible, 1) if eligible else 0.0,
-    }
-    report["departments"] = sorted(
-        {r["program"] for r in filled}
-    )
-
-    # A department-scoped deck compares nothing, so its scoreboard is just that
-    # one department; the campus deck compares them all.
-    dept_rows = _orientation_dept_rows(filled, pending)
-
-    scope = dept or "All departments"
-    if ug_or_pg:
-        scope += f" · {ug_or_pg.upper()}"
-
-    ppt_bytes = await _in_thread(
-        generate_orientation_ppt,
-        campus=campus or "All campuses",
-        scope=scope,
-        report=report,
-        departments=dept_rows,
-    )
-
-    filename = f"Deeksharambh_2026_Orientation_{campus or 'All'}_{dept or 'All'}.pptx"
-    filename = "".join(c if (c.isalnum() or c in "._-") else "_" for c in filename)
-    return StreamingResponse(
-        io.BytesIO(ppt_bytes),
-        media_type="application/vnd.openxmlformats-officedocument.presentationml.presentation",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
-    )
+    return await deck_response(campus=campus, dept=dept, ug_or_pg=ug_or_pg)
 
 
 async def run_orientation_mail_task(
@@ -1248,8 +1005,10 @@ async def api_orientation_mail(
     if not subject or not message:
         raise HTTPException(status_code=400, detail="A subject and a message are both required.")
 
+    from app.orientation_data import orientation_dataset
+
     group = ORI_PENDING if group == ORI_PENDING else ORI_FILLED
-    data = await _orientation_dataset(campus=campus, dept=dept, ug_or_pg=ug_or_pg)
+    data = await orientation_dataset(campus=campus, dept=dept, ug_or_pg=ug_or_pg)
     recipients = [r for r in data[group] if r.get("email")]
 
     if not recipients:
