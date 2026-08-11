@@ -189,6 +189,121 @@ async def test_filled_and_pending_lists(client):
 
 
 @pytest.mark.asyncio
+async def test_department_analysis_ranks_and_ignores_the_dept_filter(client):
+    await _seed()
+    r = await client.get("/admin/api/orientation/departments",
+                         params={"campus": "Bangalore", "dept": "Department of Law"})
+    body = r.json()
+
+    # Both Bangalore departments are present despite the dept parameter — this
+    # view exists to compare them.
+    by_dept = {row["dept"]: row for row in body["departments"]}
+    assert set(by_dept) == {"Department of Law", "Department of Commerce"}
+
+    law = by_dept["Department of Law"]
+    assert (law["filled"], law["pending"], law["eligible"]) == (1, 1, 2)
+    assert law["pct"] == 50.0
+    assert law["vibe"] == 10.0
+    assert law["top_session"] == ""          # nobody answered q11 in the seed
+    assert by_dept["Department of Commerce"]["vibe"] == 6.0
+
+    # Ranked by vibe, best first.
+    assert [row["dept"] for row in body["departments"]][0] == "Department of Law"
+    assert body["overall"]["filled"] == 2
+    assert body["overall"]["vibe"] == 8.0
+
+
+@pytest.mark.asyncio
+async def test_department_analysis_is_scoped_to_the_campus(client):
+    await _seed()
+    body = (await client.get("/admin/api/orientation/departments",
+                             params={"campus": "Kochi"})).json()
+    assert [row["dept"] for row in body["departments"]] == ["Department of Law"]
+    assert body["departments"][0]["filled"] == 1
+
+
+@pytest.mark.asyncio
+async def test_ppt_download_is_a_real_deck(client):
+    await _seed()
+    r = await client.get("/admin/survey/orientation-ppt", params={"campus": "Bangalore"})
+    assert r.status_code == 200
+    assert "presentationml" in r.headers["content-type"]
+    assert "Bangalore" in r.headers["content-disposition"]
+
+    from io import BytesIO
+    from pptx import Presentation
+
+    deck = Presentation(BytesIO(r.content))
+    assert len(deck.slides) >= 8
+    words = " ".join(
+        shape.text_frame.text
+        for slide in deck.slides for shape in slide.shapes
+        if shape.has_text_frame
+    )
+    assert "Orientation Experience Report" in words
+    assert "Bangalore" in words
+    assert "8.0 / 10" in words          # the cohort's average vibe, on the cover
+    assert "Loving it".upper() in words.upper()
+
+
+@pytest.mark.asyncio
+async def test_ppt_download_survives_an_empty_cohort(client):
+    await _seed()
+    r = await client.get("/admin/survey/orientation-ppt",
+                         params={"campus": "Bangalore", "dept": "Department of Design"})
+    assert r.status_code == 200
+    assert len(r.content) > 10_000
+
+
+@pytest.mark.asyncio
+async def test_ppt_and_department_analysis_need_the_admin_cookie(app_with_mock):
+    transport = ASGITransport(app=app_with_mock)
+    async with AsyncClient(transport=transport, base_url="http://test") as anon:
+        assert (await anon.get("/admin/api/orientation/departments")).status_code == 403
+        assert (await anon.get("/admin/survey/orientation-ppt")).status_code == 403
+
+
+def test_mood_words_track_the_average():
+    from app.orientation_charts import mood_for
+
+    assert mood_for(9.4)[0] == "Buzzing"
+    assert mood_for(8.2)[0] == "Loving it"
+    assert mood_for(7.0)[0] == "Good vibes"
+    assert mood_for(6.4)[0] == "Warming up"
+    assert mood_for(5.1)[0] == "Mixed feelings"
+    assert mood_for(3.0)[0] == "Needs a lift"
+    assert mood_for(None)[0] == "No answers yet"
+
+
+def test_chart_labels_drop_emoji_and_trim():
+    from app.orientation_charts import clean
+
+    assert clean("🎪 Student Club Fair") == "Student Club Fair"
+    assert clean("💻 ERP / LMS Onboarding") == "ERP / LMS Onboarding"
+    assert clean("x" * 50).endswith("…")
+
+
+def test_charts_write_pngs_even_with_no_answers(tmp_path):
+    from app.orientation_charts import (
+        plot_dept_vibe, plot_nps_ring, plot_response_rate, plot_top_options,
+        plot_vibe_hero,
+    )
+
+    for name, fn, args in [
+        ("vibe", plot_vibe_hero, ({"options": [], "avg": None},)),
+        ("nps", plot_nps_ring, ({"promoters": 0, "passives": 0, "detractors": 0},)),
+        ("dept", plot_dept_vibe, ([],)),
+        ("rate", plot_response_rate, ([],)),
+    ]:
+        out = fn(*args, tmp_path / f"{name}.png")
+        assert out.exists() and out.stat().st_size > 0
+
+    out = plot_top_options([{"label": "🎪 Club fair", "count": 3, "pct": 60.0}],
+                           tmp_path / "top.png", "Top sessions")
+    assert out.exists() and out.stat().st_size > 0
+
+
+@pytest.mark.asyncio
 async def test_mail_queues_one_message_per_student(client, monkeypatch):
     await _seed()
 

@@ -999,6 +999,146 @@ async def api_orientation_students(
     })
 
 
+def _orientation_dept_rows(filled: list[dict], pending: list[dict]) -> list[dict]:
+    """One row per department: how many answered, and how that department feels.
+
+    Departments with nobody registered are left out — the point of the table is
+    to compare places where students actually are.
+    """
+    from app.orientation_analysis import summarize_orientation
+
+    groups: dict[str, dict] = {}
+    for row in filled:
+        groups.setdefault(row["program"], {"filled": [], "pending": []})["filled"].append(row)
+    for row in pending:
+        groups.setdefault(row["program"], {"filled": [], "pending": []})["pending"].append(row)
+
+    rows = []
+    for dept, members in groups.items():
+        answered = members["filled"]
+        waiting = members["pending"]
+        eligible = len(answered) + len(waiting)
+        summary = summarize_orientation([r["data"] for r in answered])
+        head = summary["headline"]
+        top = summary["highlights"]
+        rows.append({
+            "dept": dept,
+            "filled": len(answered),
+            "pending": len(waiting),
+            "eligible": eligible,
+            "pct": round(100.0 * len(answered) / eligible, 1) if eligible else 0.0,
+            "vibe": head["vibe"],
+            "nps": head["nps"],
+            "belonging": head["belonging"],
+            "success": head["success"],
+            "bridge": head["bridge"],
+            "promoters": head["promoters"],
+            "detractors": head["detractors"],
+            "top_session": (top["impactful"][0]["label"] if top["impactful"] else ""),
+            "top_stressor": (top["stressors"][0]["label"] if top["stressors"] else ""),
+        })
+
+    rows.sort(key=lambda r: (-(r["vibe"] or 0), -r["filled"], r["dept"].lower()))
+    return rows
+
+
+@router.get("/admin/api/orientation/departments")
+async def api_orientation_departments(
+    request: Request,
+    campus: str = Query(default=""),
+    ug_or_pg: str = Query(default=""),
+):
+    """Department-by-department orientation analysis for one campus.
+
+    Deliberately ignores the dashboard's department filter — this view exists
+    to compare departments against each other and against the campus average.
+    """
+    if not _is_survey_admin(request):
+        raise HTTPException(status_code=403)
+
+    from app.orientation_analysis import summarize_orientation
+
+    data = await _orientation_dataset(campus=campus, ug_or_pg=ug_or_pg)
+    filled, pending = data["filled"], data["pending"]
+    rows = _orientation_dept_rows(filled, pending)
+
+    overall = summarize_orientation([r["data"] for r in filled])["headline"]
+    eligible = len(filled) + len(pending)
+
+    return JSONResponse({
+        "campus": campus or "All campuses",
+        "departments": rows,
+        "overall": {
+            "dept": "All departments",
+            "filled": len(filled),
+            "pending": len(pending),
+            "eligible": eligible,
+            "pct": round(100.0 * len(filled) / eligible, 1) if eligible else 0.0,
+            "vibe": overall["vibe"],
+            "nps": overall["nps"],
+            "belonging": overall["belonging"],
+            "success": overall["success"],
+            "bridge": overall["bridge"],
+        },
+    })
+
+
+@router.get("/admin/survey/orientation-ppt")
+async def admin_orientation_ppt(
+    request: Request,
+    campus: str = Query(default=""),
+    dept: str = Query(default=""),
+    ug_or_pg: str = Query(default=""),
+):
+    """Download the orientation report as a slide deck."""
+    if not _is_survey_admin(request):
+        raise HTTPException(status_code=403)
+
+    import io
+    from app.orientation_analysis import summarize_orientation
+    from app.orientation_ppt import generate_orientation_ppt
+    from app.routes.shared_analysis import _in_thread
+
+    data = await _orientation_dataset(campus=campus, dept=dept, ug_or_pg=ug_or_pg)
+    filled, pending = data["filled"], data["pending"]
+    eligible = len(filled) + len(pending)
+
+    report = summarize_orientation([r["data"] for r in filled])
+    report["coverage"] = {
+        "filled": len(filled),
+        "pending": len(pending),
+        "eligible": eligible,
+        "pct": round(100.0 * len(filled) / eligible, 1) if eligible else 0.0,
+    }
+    report["departments"] = sorted(
+        {r["program"] for r in filled}
+    )
+
+    # A department-scoped deck compares nothing, so its scoreboard is just that
+    # one department; the campus deck compares them all.
+    dept_rows = _orientation_dept_rows(filled, pending)
+
+    scope = dept or "All departments"
+    if ug_or_pg:
+        scope += f" · {ug_or_pg.upper()}"
+
+    ppt_bytes = await _in_thread(
+        generate_orientation_ppt,
+        campus=campus or "All campuses",
+        scope=scope,
+        report=report,
+        departments=dept_rows,
+    )
+
+    filename = f"Deeksharambh_2026_Orientation_{campus or 'All'}_{dept or 'All'}.pptx"
+    filename = "".join(c if (c.isalnum() or c in "._-") else "_" for c in filename)
+    return StreamingResponse(
+        io.BytesIO(ppt_bytes),
+        media_type="application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
 async def run_orientation_mail_task(
     task_id: str,
     recipients: list[dict],
