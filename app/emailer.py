@@ -384,6 +384,38 @@ def build_post_reminder_message(email: str, name: str, resume_link: str) -> MIME
     return _build_html_message(email, name, subject, body_text, html_body)
 
 
+def build_orientation_message(
+    email: str,
+    name: str,
+    subject: str,
+    message: str,
+    link: str = "",
+    link_label: str = "Open my survey",
+    campus: str = "",
+) -> MIMEMultipart:
+    """An admin-written mail to one orientation cohort student.
+
+    The admin types plain text in the dashboard; blank lines become paragraphs
+    so the HTML version reads the way it was written.
+    """
+    paragraphs = [p.strip() for p in (message or "").replace("\r\n", "\n").split("\n\n") if p.strip()]
+    tpl = _env.get_template("orientation_broadcast_email.html")
+    html_body = tpl.render(
+        name=name,
+        paragraphs=paragraphs,
+        link=link,
+        link_label=link_label or "Open my survey",
+        campus=campus,
+    )
+
+    body_text = f"Dear {name or 'student'},\n\n" + "\n\n".join(paragraphs)
+    if link:
+        body_text += f"\n\n{link_label}: {link}"
+    body_text += "\n\nOffice of Academics\nJAIN (Deemed-to-be University)"
+
+    return _build_html_message(email, name, subject, body_text, html_body)
+
+
 async def send_pre_reminder_email(email: str, name: str, resume_link: str) -> None:
     msg = build_pre_reminder_message(email, name, resume_link)
     if _is_dry_run():
