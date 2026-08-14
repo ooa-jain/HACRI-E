@@ -8,7 +8,10 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <!-- The orientation report draws itself; the same pair renders the public
      shared page, so both sides of the login look identical. -->
-<link rel="stylesheet" href="/static/css/admin_shell.css">
+<!-- nginx serves /static/ with `expires 7d`, so the version marker is what
+     makes a restyle reach browsers that already hold the old sheet. Bump it
+     whenever admin_shell.css changes. -->
+<link rel="stylesheet" href="/static/css/admin_shell.css?v=2">
 <link rel="stylesheet" href="/static/css/orientation_report.css">
 <script src="/static/js/orientation_report.js"></script>
 <link rel="stylesheet" href="/static/css/cohort_report.css">
