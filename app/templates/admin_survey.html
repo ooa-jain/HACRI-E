@@ -6,6 +6,13 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- The orientation report draws itself; the same pair renders the public
+     shared page, so both sides of the login look identical. -->
+<link rel="stylesheet" href="/static/css/admin_shell.css">
+<link rel="stylesheet" href="/static/css/orientation_report.css">
+<script src="/static/js/orientation_report.js"></script>
+<link rel="stylesheet" href="/static/css/cohort_report.css">
+<script src="/static/js/cohort_report.js"></script>
 <style>
   body { font-family: 'Inter', system-ui, sans-serif; }
   .panel { display: none; }
@@ -45,17 +52,20 @@
   td { padding:10px 12px; vertical-align:top }
 </style>
 </head>
-<body class="h-full text-slate-800 antialiased bg-slate-50">
+<body class="h-full text-slate-800 antialiased admin-shell">
 <div class="min-h-screen flex flex-col md:flex-row">
 
   <!-- ══ SIDEBAR ══════════════════════════════════════════════════════════ -->
   <aside id="sidebar" class="fixed inset-y-0 left-0 w-60 bg-slate-900 text-slate-200 z-50 transition-transform duration-200 md:translate-x-0 -translate-x-full flex flex-col">
     <div class="px-5 py-4 border-b border-slate-800 flex items-center gap-3">
       <div class="bg-white p-1.5 rounded-lg"><img src="/static/logo.png" alt="JAIN" class="h-7 w-auto" onerror="this.src='/static/logosmall.png'"></div>
-      <div>
+      <div class="mr-auto">
         <div class="font-extrabold text-sm text-white">JAIN <span class="text-amber-400">UNIVERSITY</span></div>
         <div class="text-[10px] text-slate-400">AI Survey Admin</div>
       </div>
+      <button id="sidebar-close" onclick="closeSidebar()" title="Hide the menu"
+              aria-label="Hide the menu"
+              class="text-slate-400 hover:text-white text-lg px-1 rounded-md">&#10005;</button>
     </div>
 
     <nav id="nav" class="flex-1 px-3 py-4 space-y-1 overflow-y-auto"></nav>
@@ -66,10 +76,11 @@
   </aside>
 
   <!-- ══ MAIN ═════════════════════════════════════════════════════════════ -->
-  <div class="md:ml-60 flex-1 flex flex-col min-h-screen">
+  <div id="shell" class="md:ml-60 flex-1 flex flex-col min-h-screen">
 
-    <header class="sticky top-0 z-40 bg-white border-b border-slate-200 px-4 md:px-6 py-3 flex flex-wrap items-center gap-3">
-      <button onclick="toggleSidebar()" class="md:hidden btn btn-soft">☰</button>
+    <header class="admin-bar sticky top-0 z-40 px-4 md:px-6 py-3 flex flex-wrap items-center gap-3">
+      <button onclick="toggleSidebar()" class="md:hidden btn btn-soft">&#9776;</button>
+      <button id="sidebar-open" onclick="openSidebar()" class="btn btn-soft" title="Show the menu">&#9776;</button>
       <div>
         <h1 id="page-title" class="text-sm font-bold text-slate-900">Overview</h1>
         <p id="page-sub" class="text-xs text-slate-500">Cohort progress at a glance</p>
@@ -114,9 +125,14 @@
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-5 mt-5">
           <div class="card lg:col-span-2 space-y-3">
-            <div class="flex items-center justify-between">
+            <div class="flex flex-wrap items-center justify-between gap-2">
               <div><div class="h-card">Cohort charts</div><div class="sub">Quadrant alignment, score spread and understanding change.</div></div>
-              <button onclick="refreshCharts()" class="btn btn-soft">🔄 Refresh</button>
+              <div class="flex flex-wrap gap-2">
+                <button onclick="show('p-cohort')" class="btn btn-soft">Outcome &amp; impact</button>
+                <a id="ov-ppt" href="/admin/survey/cohort-ppt" class="btn btn-dark">Download PPT</a>
+                <button onclick="copyCohortShareLink()" class="btn btn-soft">Copy share link</button>
+                <button onclick="refreshCharts()" class="btn btn-soft">🔄 Refresh</button>
+              </div>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-center">
               <div><div class="text-xs font-semibold text-slate-600 mb-1">Quadrant alignment</div><img id="cohort-chart-img" src="/admin/cohort.png" alt="Cohort chart" class="w-full h-auto rounded-lg border"></div>
@@ -415,6 +431,40 @@
         </div>
       </div>
 
+      <!-- ── COHORT: OUTCOME & IMPACT ─────────────────────────────────── -->
+      <div class="panel" id="p-cohort">
+        <div class="space-y-5">
+          <div class="card space-y-4">
+            <div class="flex flex-col lg:flex-row lg:items-center gap-3">
+              <div class="mr-auto">
+                <div class="h-card">Outcome and impact</div>
+                <div class="sub">The baseline the cohort started from, what changed after the workshop,
+                  and how far each campus and department has come through the three steps.</div>
+              </div>
+              <div class="flex flex-wrap gap-2" id="cohort-campus-tabs">
+                <button class="tabbtn on" data-campus="" onclick="setCohortCampus('')">All campuses</button>
+                <button class="tabbtn" data-campus="Bangalore" onclick="setCohortCampus('Bangalore')">Bangalore</button>
+                <button class="tabbtn" data-campus="Kochi" onclick="setCohortCampus('Kochi')">Kochi</button>
+              </div>
+              <a id="cohort-ppt" href="#" class="btn btn-dark">Download PPT</a>
+              <button onclick="copyCohortShareLink()" class="btn btn-soft">Copy share link</button>
+            </div>
+            <div id="cohort-scope" class="note note-info">Loading…</div>
+          </div>
+
+          <div id="cohort-host" class="coh-report"></div>
+
+          <div class="card space-y-3">
+            <div>
+              <div class="h-card">Share this report</div>
+              <div class="sub">Read-only links to the same outcome and impact page — no admin login,
+                aggregate figures only.</div>
+            </div>
+            <div id="cohort-share-links" class="space-y-2"></div>
+          </div>
+        </div>
+      </div>
+
       <!-- ── ORIENTATION ──────────────────────────────────────────────── -->
       <div class="panel" id="p-orientation">
         <div class="space-y-5">
@@ -428,6 +478,15 @@
             </div>
             <div id="ori-campus-cards" class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div class="card text-center text-xs text-slate-400">Loading campuses…</div>
+            </div>
+
+            <div class="card space-y-3">
+              <div>
+                <div class="h-card">🔗 Share the report</div>
+                <div class="sub">Anyone with one of these links can read that campus's full analysis and download the
+                  deck — no admin login. Only the aggregate is shown, never a named student's answers.</div>
+              </div>
+              <div id="ori-share-links" class="space-y-2"></div>
             </div>
           </div>
 
@@ -447,19 +506,13 @@
                   <button class="tabbtn"    data-view="email"       onclick="setOriView('email')">📧 Email</button>
                 </div>
                 <a id="ori-ppt" href="#" class="btn btn-dark">⬇️ Download PPT</a>
+                <button onclick="copyOriShareLink(this)" class="btn btn-soft">🔗 Copy share link</button>
               </div>
             </div>
 
             <!-- ANALYSIS -->
-            <div id="ori-view-analysis" class="space-y-5">
-              <div id="ori-hero"></div>
-              <div id="ori-stats" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3"></div>
-              <div id="ori-highlights" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
-              <div class="card space-y-3">
-                <div class="h-card">🏢 Who answered</div>
-                <div id="ori-dept-table"></div>
-              </div>
-              <div id="ori-sections" class="space-y-5"></div>
+            <div id="ori-view-analysis">
+              <div id="ori-report-host" class="ori-report"></div>
             </div>
 
             <!-- DEPARTMENTS -->
@@ -478,7 +531,7 @@
                     <option value="filled">Sort by responses</option>
                   </select>
                 </div>
-                <div id="ori-dept-bars" class="space-y-2"></div>
+                <div id="ori-dept-bars" class="ori-depts"></div>
               </div>
               <div class="card space-y-3">
                 <div class="h-card">📋 Department scoreboard</div>
@@ -842,6 +895,7 @@ const PAGES = [
   { id: 'p-emails',   icon: '📧', label: 'Emails',      title: 'Emails',              sub: 'Send reminders, write your own mail, track delivery', load: () => { updateTargetCount(); initComposer(); loadEmailStats(); } },
   { id: 'p-links',    icon: '🔗', label: 'Links',       title: 'Links',               sub: 'Department links for both surveys, plus shareable reports', load: () => loadLinks() },
   { id: 'p-depts',    icon: '🏢', label: 'Departments', title: 'Departments',         sub: 'Literacy and readiness averages per department', load: () => loadDepts() },
+  { id: 'p-cohort',   icon: '📈', label: 'Outcome & impact', title: 'Outcome and impact', sub: 'Baseline, what changed after the workshop, and the journey between them', load: () => loadCohort() },
   { id: 'p-orientation', icon: '🎓', label: 'Orientation', title: 'Orientation report', sub: 'Campus-wise Deeksharambh analysis, who filled it, and mailing', load: () => loadOrientationPanel() },
   { id: 'p-parents',  icon: '👨‍👩‍👦', label: 'Parents',  title: 'Parental background', sub: 'Occupations reported in the post survey', load: () => loadParents() },
   { id: 'p-calendar', icon: '📅', label: 'Calendar',    title: 'Calendar',            sub: 'When students filled the surveys', load: () => loadCalendar() },
@@ -876,7 +930,26 @@ function show(pageId) {
   if (page && page.load) page.load();
 }
 
+// The sidebar can be closed on any screen; the choice is remembered.
 function toggleSidebar() { $('sidebar').classList.toggle('-translate-x-full'); }
+
+function closeSidebar() {
+  document.body.classList.add('sidebar-closed');
+  $('sidebar').classList.add('-translate-x-full');
+  try { localStorage.setItem('hacri.sidebar', 'closed'); } catch (err) { /* private mode */ }
+}
+
+function openSidebar() {
+  document.body.classList.remove('sidebar-closed');
+  $('sidebar').classList.remove('-translate-x-full');
+  try { localStorage.setItem('hacri.sidebar', 'open'); } catch (err) { /* private mode */ }
+}
+
+function restoreSidebar() {
+  let saved = null;
+  try { saved = localStorage.getItem('hacri.sidebar'); } catch (err) { /* private mode */ }
+  if (saved === 'closed') closeSidebar();
+}
 
 // ═══════════════════════════════════════════════════════════════════════
 //  Filters + users
@@ -921,6 +994,7 @@ function applyFilters() {
   const active = document.querySelector('.panel.on');
   if (!active) return;
   if (active.id === 'p-parents') loadParents();
+  if (active.id === 'p-cohort') loadCohort();
   if (active.id === 'p-orientation') loadOrientationPanel();
   if (active.id === 'p-students' && studentView === 'duration') renderStudents();
 }
@@ -1790,6 +1864,79 @@ function viewDept(dept) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════
+//  Outcome and impact — one page, drawn by /static/js/cohort_report.js
+// ═══════════════════════════════════════════════════════════════════════
+let cohortCampus = '';
+let cohortShareLinks = null;
+
+const cohortParams = () => new URLSearchParams({
+  campus: cohortCampus, dept: deptFilter(), ug_or_pg: levelFilter(),
+}).toString();
+
+function setCohortCampus(campus) {
+  cohortCampus = campus;
+  document.querySelectorAll('#cohort-campus-tabs .tabbtn')
+    .forEach(b => b.classList.toggle('on', b.dataset.campus === campus));
+  loadCohort();
+}
+
+async function loadCohort() {
+  const host = $('cohort-host');
+  host.innerHTML = '<div class="coh-card coh-empty-card">Loading the outcome and impact report…</div>';
+  $('cohort-ppt').href = '/admin/survey/cohort-ppt?' + cohortParams();
+  $('ov-ppt').href = '/admin/survey/cohort-ppt?' + cohortParams();
+  if (!cohortShareLinks) loadCohortShareLinks();
+
+  let d;
+  try { d = await api('/admin/api/cohort?' + cohortParams()); }
+  catch (err) {
+    host.innerHTML = '<div class="coh-card coh-empty-card">Could not load the outcome and impact report</div>';
+    return;
+  }
+
+  const j = d.journey;
+  note($('cohort-scope'), 'info',
+    `<b>${e(d.scope.campus)} · ${e(d.scope.dept)} · ${e(d.scope.level)}</b> — ` +
+    `${j.registered} registered, ${j.stages[1].count} finished the baseline, ` +
+    `${j.stages[2].count} the Deeksharambh orientation and ${j.stages[3].count} the post survey. ` +
+    `${j.pending_post} still owe the post survey.`);
+
+  // Clicking a campus tile is the same as pressing its tab.
+  CohortReport.render(host, d, { activeCampus: cohortCampus, onCampus: pickCohortCampus });
+}
+
+function pickCohortCampus(name) {
+  setCohortCampus(cohortCampus === name ? '' : name);
+}
+
+async function loadCohortShareLinks() {
+  const host = $('cohort-share-links');
+  if (!host) return;
+  try {
+    cohortShareLinks = (await api('/admin/api/cohort/share-links')).links;
+  } catch (err) {
+    host.innerHTML = '<div class="text-xs text-rose-500">Could not build the share links</div>';
+    return;
+  }
+  host.innerHTML = cohortShareLinks.map(l => `
+    <div class="flex flex-col sm:flex-row sm:items-center gap-2">
+      <span class="text-xs font-bold text-slate-700 sm:w-32 shrink-0">${e(l.campus)}</span>
+      <input readonly class="field link flex-1" value="${e(l.url)}" onclick="this.select()">
+      <button class="btn btn-soft" onclick="copy('${e(l.url)}')">Copy</button>
+      <a href="${e(l.url)}" target="_blank" rel="noopener" class="btn btn-primary">Open</a>
+    </div>`).join('');
+}
+
+/** Copy the link for whichever campus the report is scoped to. */
+async function copyCohortShareLink() {
+  if (!cohortShareLinks) await loadCohortShareLinks();
+  const wanted = cohortCampus || 'All campuses';
+  const row = (cohortShareLinks || []).find(l => l.campus === wanted);
+  if (!row) return toast('Share link not ready yet');
+  copy(row.url);
+}
+
+// ═══════════════════════════════════════════════════════════════════════
 //  Orientation — campus report, who filled it, and mailing that cohort
 // ═══════════════════════════════════════════════════════════════════════
 let oriOpen     = false;     // false = the campus picker is showing
@@ -1820,6 +1967,7 @@ function closeOriCampus() {
   $('ori-report').classList.add('hidden');
   $('ori-picker').classList.remove('hidden');
   loadOriCampuses();
+  if (!oriShareLinks) loadOriShareLinks();
 }
 
 async function loadOriCampuses() {
@@ -1855,6 +2003,36 @@ async function loadOriCampuses() {
     card({ ...d.all, campus: 'All campuses' }, 'btn-dark');
 }
 
+// ── Share links ─────────────────────────────────────────────────────────
+// Read-only links to the same report, for people without an admin account.
+let oriShareLinks = null;
+
+async function loadOriShareLinks() {
+  const host = $('ori-share-links');
+  if (!host) return;
+  try {
+    oriShareLinks = (await api('/admin/api/orientation/share-links')).links;
+  } catch (err) {
+    host.innerHTML = '<div class="text-xs text-rose-500">Could not build the share links</div>';
+    return;
+  }
+  host.innerHTML = oriShareLinks.map(l => `
+    <div class="flex flex-col sm:flex-row sm:items-center gap-2">
+      <span class="text-xs font-bold text-slate-700 sm:w-32 shrink-0">📍 ${e(l.campus)}</span>
+      <input readonly class="field link flex-1" value="${e(l.url)}" onclick="this.select()">
+      <button class="btn btn-soft" onclick="copy('${e(l.url)}')">Copy</button>
+      <a href="${e(l.url)}" target="_blank" rel="noopener" class="btn btn-primary">Open</a>
+    </div>`).join('');
+}
+
+/** Copy the link for whichever campus is open. */
+function copyOriShareLink(btn) {
+  const wanted = oriCampus || 'All campuses';
+  const row = (oriShareLinks || []).find(l => l.campus === wanted);
+  if (!row) return toast('Share link not ready yet — reopen this page');
+  copy(row.url);
+}
+
 function openOriCampus(campus) {
   oriOpen = true;
   oriCampus = campus === 'All campuses' ? '' : campus;
@@ -1877,201 +2055,33 @@ function setOriView(view) {
   if (view === 'email')       initOriMail();
 }
 
-/** What an average out of ten actually feels like — mirrors orientation_charts.py. */
-const ORI_MOODS = [
-  [9, 'Buzzing',        '🤩', '#059669'],
-  [8, 'Loving it',      '😍', '#16a34a'],
-  [7, 'Good vibes',     '😄', '#84cc16'],
-  [6, 'Warming up',     '🙂', '#facc15'],
-  [5, 'Mixed feelings', '😐', '#f97316'],
-  [0, 'Needs a lift',   '😕', '#e11d48'],
-];
-const oriMood = avg => (avg === null || avg === undefined)
-  ? ['No answers yet', '🫥', '#94a3b8']
-  : (ORI_MOODS.find(m => avg >= m[0]) || ORI_MOODS[ORI_MOODS.length - 1]).slice(1);
+/** Mood words come from the shared renderer so the two never drift. */
+const oriMood = avg => OrientationReport.mood(avg);
 
 // ── Analysis ────────────────────────────────────────────────────────────
+// The report itself is drawn by /static/js/orientation_report.js, the same
+// renderer the public shared page uses.
 async function loadOriCampusReport() {
-  $('ori-stats').innerHTML = '<div class="card col-span-full text-center text-xs text-slate-400">Loading analysis…</div>';
-  $('ori-highlights').innerHTML = '';
-  $('ori-sections').innerHTML = '';
-  tableBusy('ori-dept-table', 'Loading…');
+  const host = $('ori-report-host');
+  host.innerHTML = '<div class="ori-card ori-empty-card">Loading the analysis…</div>';
   let d;
   try { d = await api('/admin/api/orientation/report?' + oriParams()); }
   catch (err) {
-    $('ori-stats').innerHTML = '<div class="card col-span-full text-center text-xs text-rose-500">Could not load the analysis</div>';
+    host.innerHTML = '<div class="ori-card ori-empty-card">Could not load the analysis</div>';
     return;
   }
-  renderOriReport(d);
-}
-
-/** One labelled bar per option, widest first. */
-function oriBars(options, color, limit) {
-  const rows = limit ? options.slice(0, limit) : options;
-  if (!rows.length) return '<div class="text-xs text-slate-400">No answers yet</div>';
-  return rows.map(o => `
-    <div class="mb-2">
-      <div class="flex items-baseline justify-between gap-3 text-[11px] font-semibold text-slate-700">
-        <span class="truncate">${e(o.label)}</span>
-        <span class="shrink-0 text-slate-500">${o.count} · ${oriNum(o.pct, 1)}%</span>
-      </div>
-      <div class="h-1.5 bg-slate-100 rounded mt-1">
-        <div class="h-1.5 rounded" style="width:${Math.min(100, o.pct)}%;background:${color}"></div>
-      </div>
-    </div>`).join('');
-}
-
-function oriQuestionCard(q) {
-  const head = `<div class="text-xs font-extrabold text-slate-900">${e(q.label)}</div>`;
-  if (q.kind === 'matrix') {
-    return `<div class="border border-slate-200 rounded-xl p-4">
-      ${head}<div class="sub mb-3">${q.answered} answered</div>
-      ${q.rows.map(r => `
-        <div class="mb-3">
-          <div class="text-[11px] font-bold text-slate-600 mb-1">${e(r.label)}</div>
-          ${oriBars(r.options, '#6366f1')}
-        </div>`).join('')}
-    </div>`;
-  }
-  if (q.kind === 'nps') {
-    return `<div class="border border-slate-200 rounded-xl p-4">
-      ${head}
-      <div class="sub mb-3">${q.answered} answered · average ${oriNum(q.avg, 2)} / 10 · NPS ${oriNum(q.nps, 0)}</div>
-      <div class="grid grid-cols-3 gap-2 mb-3 text-center">
-        <div class="bg-emerald-50 rounded-lg py-2"><div class="text-sm font-extrabold text-emerald-700">${q.promoters}</div><div class="text-[10px] text-emerald-700">Promoters (9–10)</div></div>
-        <div class="bg-amber-50 rounded-lg py-2"><div class="text-sm font-extrabold text-amber-700">${q.passives}</div><div class="text-[10px] text-amber-700">Passives (7–8)</div></div>
-        <div class="bg-rose-50 rounded-lg py-2"><div class="text-sm font-extrabold text-rose-700">${q.detractors}</div><div class="text-[10px] text-rose-700">Detractors (0–6)</div></div>
-      </div>
-      ${oriBars(q.options.filter(o => o.count), '#0ea5e9')}
-    </div>`;
-  }
-  if (q.kind === 'scale') {
-    return `<div class="border border-slate-200 rounded-xl p-4">
-      ${head}<div class="sub mb-3">${q.answered} answered · average ${oriNum(q.avg, 2)} / ${q.max}</div>
-      ${oriBars(q.options.filter(o => o.count), '#2563eb')}
-    </div>`;
-  }
-  const suffix = q.kind === 'multi' ? ` · ${q.picks} selections` : '';
-  return `<div class="border border-slate-200 rounded-xl p-4">
-    ${head}<div class="sub mb-3">${q.answered} answered${suffix}</div>
-    ${oriBars(q.options, q.kind === 'multi' ? '#0d9488' : '#7c3aed')}
-  </div>`;
-}
-
-/** The headline the room came for: one number, one word, one colour. */
-function oriHero(d) {
-  const h = d.headline, c = d.coverage;
-  const [word, emoji, colour] = oriMood(h.vibe);
-  const vibeQ = (d.sections.find(s => s.questions.some(q => q.key === 'q2')) || { questions: [] })
-    .questions.find(q => q.key === 'q2');
-  const top = vibeQ ? Math.max(1, ...vibeQ.options.map(o => o.count)) : 1;
-
-  // Two rows: the bars fill a fixed-height track, the numbers sit under it.
-  const strip = vibeQ ? `
-    <div class="flex items-end gap-1 h-20 mt-3">
-      ${vibeQ.options.map(o => `
-        <div class="flex-1 h-full flex flex-col justify-end" title="${o.count} student(s) rated ${e(o.label)}/10">
-          <div class="w-full rounded-t" style="height:${Math.max(2, Math.round(100 * o.count / top))}%;background:${oriMood(Number(o.label))[2]}"></div>
-        </div>`).join('')}
-    </div>
-    <div class="flex gap-1">
-      ${vibeQ.options.map(o => `
-        <div class="flex-1 text-center text-[9px] font-bold text-white/70">${e(o.label)}</div>`).join('')}
-    </div>` : '';
-
-  const chip = (value, label) => `
-    <div class="rounded-xl px-4 py-3 text-center" style="background:rgba(255,255,255,.12)">
-      <div class="text-xl font-extrabold text-white">${e(String(value))}</div>
-      <div class="text-[10px] font-bold uppercase tracking-wide text-white/70">${e(label)}</div>
-    </div>`;
-
-  return `
-    <div class="rounded-2xl p-6 text-white" style="background:linear-gradient(135deg,#0d2147 0%,#1a3a7a 55%,${colour} 220%)">
-      <div class="flex flex-col lg:flex-row lg:items-center gap-6">
-        <div class="shrink-0">
-          <div class="text-[11px] font-extrabold uppercase tracking-widest" style="color:${colour}">Overall vibe of the students</div>
-          <div class="flex items-end gap-3 mt-1">
-            <div class="text-6xl leading-none">${emoji}</div>
-            <div>
-              <div class="text-5xl font-extrabold leading-none">${oriNum(h.vibe, 1)}<span class="text-2xl font-bold text-white/60"> / 10</span></div>
-              <div class="text-sm font-extrabold uppercase tracking-wider mt-1" style="color:${colour}">${e(word)}</div>
-            </div>
-          </div>
-        </div>
-        <div class="flex-1 min-w-0">
-          ${strip}
-          <div class="text-[10px] text-white/60 mt-1">1 — I wanted to leave · 10 — I wish it never ended</div>
-        </div>
-        <div class="grid grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-2 shrink-0">
-          ${chip(h.nps === null ? '—' : oriNum(h.nps, 0), 'NPS')}
-          ${chip(oriNum(h.belonging, 1), 'Belonging')}
-          ${chip(oriNum(h.success, 1), 'Will succeed')}
-          ${chip(oriNum(c.pct, 0) + '%', 'Answered')}
-        </div>
-      </div>
-    </div>`;
-}
-
-function renderOriReport(d) {
-  const h = d.headline, c = d.coverage;
+  const c = d.coverage;
   $('ori-campus-sub').textContent =
     `${c.filled} filled · ${c.pending} pending · ${oriNum(c.pct, 1)}% of eligible students` +
     (d.last_at ? ` · last on ${d.last_at}` : '');
-  $('ori-hero').innerHTML = d.count ? oriHero(d) : '';
-
-  $('ori-stats').innerHTML = [
-    ['slate-800', 'text-slate-900', d.count, 'Responses'],
-    ['emerald-600', 'text-emerald-600', oriNum(c.pct, 1) + '%', 'Response rate'],
-    ['blue-600', 'text-blue-600', oriNum(h.vibe, 1), 'Avg vibe / 10'],
-    ['indigo-600', 'text-indigo-600', h.nps === null ? '—' : oriNum(h.nps, 0), 'NPS'],
-    ['teal-600', 'text-teal-600', oriNum(h.belonging, 1), 'Belonging / 10'],
-    ['amber-600', 'text-amber-600', oriNum(h.bridge, 1), 'Bridge course / 5'],
-  ].map(([border, text, value, label]) =>
-    `<div class="stat border-l-${border}"><b class="${text}">${e(String(value))}</b><s>${e(label)}</s></div>`).join('');
-
-  if (!d.count) {
-    $('ori-highlights').innerHTML = '<div class="card col-span-full text-center text-xs text-slate-400">No orientation responses for this selection yet</div>';
-    $('ori-sections').innerHTML = '';
-    table('ori-dept-table', ['Department', 'Responses', 'Share'], [], () => [], 'Nothing here yet');
-    return;
-  }
-
-  const panel = (title, options, color) => `
-    <div class="card space-y-2">
-      <div class="text-[11px] font-extrabold uppercase text-slate-600">${e(title)}</div>
-      ${oriBars(options, color, 5)}
-    </div>`;
-
-  $('ori-highlights').innerHTML =
-    panel('🏆 Most impactful sessions', d.highlights.impactful, '#059669') +
-    panel('🛠️ Sessions needing work', d.highlights.needs_work, '#e11d48') +
-    panel('😰 Biggest stressors', d.highlights.stressors, '#f59e0b') +
-    panel('👍 Keep next year', d.highlights.keep, '#2563eb') +
-    panel('🚫 Stop next year', d.highlights.stop, '#9f1239') +
-    panel('✨ Introduce next year', d.highlights.introduce, '#7c3aed');
-
-  table('ori-dept-table', ['#', 'Department', 'Responses', 'Share'],
-    d.departments, (r, i) => [
-      i + 1,
-      `<span class="font-semibold text-slate-900">${e(r.dept)}</span>`,
-      r.count,
-      `<span class="badge b-blue">${oriNum(r.pct, 1)}%</span>`,
-    ], 'No departments yet');
-
-  $('ori-sections').innerHTML = d.sections.map(s => `
-    <div class="card space-y-4">
-      <div class="h-card">${e(s.title)}</div>
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        ${s.questions.map(oriQuestionCard).join('')}
-      </div>
-    </div>`).join('');
+  OrientationReport.renderReport(host, d);
 }
 
 // ── Departments ─────────────────────────────────────────────────────────
 let oriDeptData = null;
 
 async function loadOriDepartments() {
-  $('ori-dept-bars').innerHTML = '<div class="text-center p-8 text-slate-400 text-xs">Loading departments…</div>';
+  $('ori-dept-bars').innerHTML = '<div class="ori-card ori-empty-card">Loading departments…</div>';
   tableBusy('ori-dept-scoreboard', 'Loading…');
   try {
     // Deliberately campus + level only: this view compares departments, so it
@@ -2080,64 +2090,23 @@ async function loadOriDepartments() {
       new URLSearchParams({ campus: oriCampus, ug_or_pg: levelFilter() }));
     renderOriDepartments();
   } catch (err) {
-    $('ori-dept-bars').innerHTML = '<div class="text-center p-8 text-rose-500 text-xs">Could not load the department analysis</div>';
+    $('ori-dept-bars').innerHTML = '<div class="ori-card ori-empty-card">Could not load the department analysis</div>';
   }
 }
 
 function renderOriDepartments() {
   if (!oriDeptData) return;
-  const metric = $('ori-dept-metric').value;
-  const rows = [...oriDeptData.departments].sort((a, b) => (b[metric] ?? -999) - (a[metric] ?? -999));
-  const overall = oriDeptData.overall;
 
-  if (!rows.length) {
-    $('ori-dept-bars').innerHTML = '<div class="text-center p-8 text-slate-400 text-xs">No orientation responses for this campus yet</div>';
-    table('ori-dept-scoreboard', ['Department'], [], () => [], 'Nothing here yet');
-    return;
-  }
-
-  const scale = metric === 'nps' ? 100 : metric === 'pct' ? 100
-              : metric === 'filled' ? Math.max(...rows.map(r => r.filled), 1) : 10;
-  const width = v => Math.max(2, Math.min(100, metric === 'nps' ? (v + 100) / 2 : 100 * v / scale));
-  const shown = v => metric === 'pct' ? oriNum(v, 0) + '%'
-                   : metric === 'filled' ? String(v)
-                   : metric === 'nps' ? oriNum(v, 0)
-                   : oriNum(v, 1);
-
-  $('ori-dept-bars').innerHTML = rows.map(r => {
-    const [word, emoji, colour] = oriMood(r.vibe);
-    const value = r[metric];
-    return `
-      <button onclick="viewOriDept('${e(r.dept)}')"
-        class="w-full text-left rounded-xl border border-slate-200 hover:border-blue-400 hover:shadow-sm transition p-3">
-        <div class="flex items-center gap-3">
-          <div class="text-2xl shrink-0">${emoji}</div>
-          <div class="min-w-0 flex-1">
-            <div class="flex items-baseline justify-between gap-3">
-              <span class="text-xs font-extrabold text-slate-900 truncate">${e(r.dept)}</span>
-              <span class="text-[11px] font-bold shrink-0" style="color:${colour}">${e(word)}${value === null || value === undefined ? '' : ' · ' + shown(value)}</span>
-            </div>
-            <div class="h-2 bg-slate-100 rounded mt-1.5">
-              <div class="h-2 rounded" style="width:${width(value || 0)}%;background:${colour}"></div>
-            </div>
-            <div class="text-[10px] text-slate-500 mt-1">
-              ${r.filled} of ${r.eligible} answered (${oriNum(r.pct, 0)}%) · vibe ${oriNum(r.vibe, 1)}/10 · NPS ${r.nps === null ? '—' : oriNum(r.nps, 0)} · belonging ${oriNum(r.belonging, 1)}/10
-            </div>
-          </div>
-        </div>
-      </button>`;
-  }).join('') + `
-    <div class="rounded-xl bg-slate-900 text-white p-3 text-[11px] font-semibold flex flex-wrap gap-x-5 gap-y-1">
-      <span class="font-extrabold">${e(oriDeptData.campus)} average</span>
-      <span>vibe ${oriNum(overall.vibe, 1)}/10</span>
-      <span>NPS ${overall.nps === null ? '—' : oriNum(overall.nps, 0)}</span>
-      <span>belonging ${oriNum(overall.belonging, 1)}/10</span>
-      <span>${overall.filled} of ${overall.eligible} answered (${oriNum(overall.pct, 0)}%)</span>
-    </div>`;
+  // The leaderboard is the shared renderer's; the scoreboard below it is the
+  // dashboard's own table, so admins keep the sortable detail view.
+  OrientationReport.renderDepartments($('ori-dept-bars'), oriDeptData, {
+    metric: $('ori-dept-metric').value,
+    onPick: viewOriDept,
+  });
 
   table('ori-dept-scoreboard',
     ['#', 'Department', 'Answered', 'Rate', 'Vibe', 'NPS', 'Belonging', 'Bridge', 'Loudest praise', 'Biggest stressor'],
-    rows, (r, i) => [
+    oriDeptData.departments, (r, i) => [
       i + 1,
       `<button onclick="viewOriDept('${e(r.dept)}')" class="font-semibold text-slate-900 hover:text-blue-600">${e(r.dept)}</button>`,
       `${r.filled} / ${r.eligible}`,
@@ -2607,6 +2576,7 @@ document.addEventListener('keydown', ev => {
 });
 
 buildNav();
+restoreSidebar();
 buildToggles();
 loadFlags();
 loadUsers();

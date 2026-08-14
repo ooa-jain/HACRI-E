@@ -1,0 +1,223 @@
+/*
+ * orientation_report.css — the look of the Deeksharambh report.
+ *
+ * Paired with static/js/orientation_report.js and loaded by both the survey
+ * admin dashboard and the public shared page, so the report looks the same
+ * either side of the login. Everything is namespaced `.ori-` and self
+ * contained: the shared page has no CSS framework behind it.
+ */
+
+.ori-report { --ink: #0f172a; --muted: #64748b; --line: #e2e8f0; --paper: #fff; }
+
+.ori-report *, .ori-report *::before, .ori-report *::after { box-sizing: border-box; }
+
+/* ── Cards and grids ─────────────────────────────────────────────────────── */
+.ori-card {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 18px 20px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, .04);
+}
+.ori-card-title { font-size: 14px; font-weight: 800; color: var(--ink); }
+.ori-card-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.ori-card-split { display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
+.ori-empty { font-size: 12px; color: #94a3b8; padding: 6px 0; }
+.ori-empty-card { text-align: center; color: #94a3b8; padding: 34px 20px; font-size: 13px; }
+
+.ori-grid-2  { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; }
+.ori-grid-3  { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 14px; }
+.ori-grid-2-wide { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 14px; }
+.ori-report > * + * { margin-top: 16px; }
+
+/* ── Hero ────────────────────────────────────────────────────────────────── */
+.ori-hero {
+  --mood: #84cc16;
+  display: grid;
+  grid-template-columns: minmax(200px, auto) minmax(220px, 1fr) minmax(190px, auto);
+  gap: 26px;
+  align-items: center;
+  padding: 26px 28px;
+  border-radius: 22px;
+  color: #fff;
+  background:
+    radial-gradient(120% 160% at 100% 0%, color-mix(in srgb, var(--mood) 55%, transparent) 0%, transparent 60%),
+    linear-gradient(135deg, #0d2147 0%, #1a3a7a 100%);
+  box-shadow: 0 14px 34px rgba(13, 33, 71, .22);
+}
+@supports not (background: color-mix(in srgb, red 50%, blue)) {
+  .ori-hero { background: linear-gradient(135deg, #0d2147 0%, #1a3a7a 60%, #24518f 100%); }
+}
+.ori-hero-kicker {
+  font-size: 10.5px; font-weight: 800; letter-spacing: 1.6px;
+  text-transform: uppercase; color: var(--mood);
+}
+.ori-hero-row { display: flex; align-items: flex-end; gap: 14px; margin-top: 6px; }
+.ori-hero-emoji { font-size: 58px; line-height: 1; }
+.ori-hero-value { font-size: 52px; font-weight: 800; line-height: 1; }
+.ori-hero-value span { font-size: 22px; font-weight: 700; color: rgba(255, 255, 255, .6); margin-left: 6px; }
+.ori-hero-word {
+  font-size: 13px; font-weight: 800; letter-spacing: 1.4px;
+  text-transform: uppercase; color: var(--mood); margin-top: 6px;
+}
+.ori-strip { display: flex; align-items: flex-end; gap: 4px; height: 84px; }
+.ori-strip-col { flex: 1; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; }
+.ori-strip-bar { width: 100%; border-radius: 6px 6px 0 0; }
+.ori-strip-axis { display: flex; gap: 4px; margin-top: 5px; }
+.ori-strip-axis span {
+  flex: 1; text-align: center; font-size: 9.5px; font-weight: 700; color: rgba(255, 255, 255, .7);
+}
+.ori-strip-note { font-size: 10px; color: rgba(255, 255, 255, .55); margin-top: 5px; }
+.ori-hero-chips { display: grid; grid-template-columns: repeat(2, minmax(84px, 1fr)); gap: 8px; }
+.ori-chip {
+  background: rgba(255, 255, 255, .12);
+  border: 1px solid rgba(255, 255, 255, .16);
+  border-radius: 12px; padding: 10px 12px; text-align: center;
+}
+.ori-chip b { display: block; font-size: 19px; font-weight: 800; }
+.ori-chip span {
+  display: block; font-size: 9.5px; font-weight: 700; letter-spacing: .8px;
+  text-transform: uppercase; color: rgba(255, 255, 255, .72); margin-top: 2px;
+}
+
+/* ── Stat tiles ──────────────────────────────────────────────────────────── */
+.ori-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+.ori-tile {
+  --tone: #0f172a;
+  background: var(--paper); border: 1px solid var(--line);
+  border-left: 4px solid var(--tone); border-radius: 14px; padding: 14px 16px;
+}
+.ori-tile-value { font-size: 24px; font-weight: 800; color: var(--tone); line-height: 1.1; }
+.ori-tile-label {
+  font-size: 10.5px; font-weight: 700; letter-spacing: .6px;
+  text-transform: uppercase; color: var(--muted); margin-top: 4px;
+}
+
+/* ── Bars, ranks, rings ──────────────────────────────────────────────────── */
+.ori-track { height: 7px; background: #eef2f7; border-radius: 999px; overflow: hidden; }
+.ori-fill  { height: 100%; border-radius: 999px; transition: width .35s ease; }
+.ori-bar + .ori-bar { margin-top: 9px; }
+.ori-bar-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 4px; }
+.ori-bar-label {
+  font-size: 11.5px; font-weight: 600; color: #334155;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.ori-bar-value { font-size: 11px; font-weight: 700; color: var(--muted); flex-shrink: 0; }
+
+.ori-ranks { margin-top: 12px; }
+.ori-rank { display: flex; align-items: center; gap: 10px; }
+.ori-rank + .ori-rank { margin-top: 10px; }
+.ori-rank-badge {
+  width: 26px; height: 26px; flex-shrink: 0; border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 800; background: #f1f5f9; color: #475569;
+}
+.ori-rank-body { flex: 1; min-width: 0; }
+.ori-rank-label {
+  font-size: 11.5px; font-weight: 600; color: #334155; margin-bottom: 4px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.ori-rank-value { flex-shrink: 0; text-align: right; font-size: 13px; font-weight: 800; color: var(--ink); }
+.ori-rank-value span { display: block; font-size: 10px; font-weight: 700; color: var(--muted); }
+
+.ori-ring { position: relative; flex-shrink: 0; line-height: 0; }
+.ori-ring-centre {
+  position: absolute; inset: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; line-height: 1.1;
+}
+.ori-ring-value { font-size: 26px; font-weight: 800; color: #0d2147; }
+.ori-ring-caption {
+  font-size: 9.5px; font-weight: 800; letter-spacing: 1.6px;
+  text-transform: uppercase; color: var(--muted); margin-top: 2px;
+}
+.ori-legend { margin-top: 12px; }
+.ori-legend-row { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #334155; }
+.ori-legend-row + .ori-legend-row { margin-top: 6px; }
+.ori-legend-label { flex: 1; }
+.ori-legend-pct { color: var(--muted); font-weight: 600; min-width: 38px; text-align: right; }
+.ori-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+
+/* ── Section nav + question cards ────────────────────────────────────────── */
+.ori-nav { display: flex; flex-wrap: wrap; gap: 8px; }
+.ori-nav-chip {
+  --tone: #2563eb;
+  font-size: 11.5px; font-weight: 700; text-decoration: none;
+  padding: 6px 12px; border-radius: 999px;
+  color: var(--tone); background: color-mix(in srgb, var(--tone) 12%, #fff);
+  border: 1px solid color-mix(in srgb, var(--tone) 28%, #fff);
+}
+@supports not (background: color-mix(in srgb, red 50%, blue)) {
+  .ori-nav-chip { background: #f1f5f9; border-color: var(--line); }
+}
+.ori-nav-chip:hover { filter: brightness(.96); }
+
+.ori-section { --tone: #2563eb; border-top: 4px solid var(--tone); }
+.ori-section-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 12px; margin-bottom: 14px;
+}
+.ori-section-title { font-size: 15px; font-weight: 800; color: var(--ink); }
+.ori-section-count {
+  font-size: 10.5px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .6px; color: var(--muted);
+}
+.ori-q { border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; background: #fff; }
+/* A section with one question shouldn't stretch its bars across the page. */
+.ori-grid-2 > .ori-q:only-child { max-width: 680px; }
+.ori-q-title { font-size: 12.5px; font-weight: 800; color: var(--ink); }
+.ori-q-sub { font-size: 11px; color: var(--muted); margin: 2px 0 12px; }
+.ori-q-row + .ori-q-row { margin-top: 12px; }
+.ori-q-row-label { font-size: 11px; font-weight: 700; color: #475569; margin-bottom: 6px; }
+
+.ori-split3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
+.ori-mini {
+  --tone: #2563eb; text-align: center; border-radius: 10px; padding: 8px 4px;
+  background: color-mix(in srgb, var(--tone) 10%, #fff);
+}
+@supports not (background: color-mix(in srgb, red 50%, blue)) { .ori-mini { background: #f8fafc; } }
+.ori-mini b { display: block; font-size: 16px; font-weight: 800; color: var(--tone); }
+.ori-mini span { display: block; font-size: 9.5px; font-weight: 700; color: var(--muted); margin-top: 2px; }
+
+.ori-scale { display: flex; align-items: flex-end; gap: 4px; }
+.ori-scale-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.ori-scale-count { font-size: 9.5px; font-weight: 800; color: #475569; height: 12px; }
+.ori-scale-track { width: 100%; height: 66px; display: flex; align-items: flex-end; }
+.ori-scale-bar { width: 100%; border-radius: 5px 5px 0 0; }
+.ori-scale-label { font-size: 9.5px; font-weight: 700; color: var(--muted); }
+
+/* ── Department leaderboard ──────────────────────────────────────────────── */
+.ori-depts > * + * { margin-top: 10px; }
+.ori-dept {
+  display: flex; align-items: center; gap: 12px;
+  border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; background: #fff;
+}
+.ori-dept-click {
+  cursor: pointer; width: 100%; text-align: left; font: inherit; color: inherit;
+  transition: border-color .15s, box-shadow .15s;
+}
+.ori-dept-click:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
+.ori-dept-click:hover { border-color: #60a5fa; box-shadow: 0 2px 10px rgba(37, 99, 235, .12); }
+.ori-dept-rank {
+  width: 26px; text-align: center; font-size: 14px; font-weight: 800; color: var(--muted); flex-shrink: 0;
+}
+.ori-dept-face { font-size: 24px; flex-shrink: 0; }
+.ori-dept-body { flex: 1; min-width: 0; }
+.ori-dept-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.ori-dept-name {
+  font-size: 12.5px; font-weight: 800; color: var(--ink);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.ori-dept-mood { font-size: 11px; font-weight: 800; flex-shrink: 0; }
+.ori-dept-meta { font-size: 10.5px; color: var(--muted); margin-top: 5px; }
+.ori-dept .ori-track { margin-top: 6px; }
+.ori-dept-average {
+  display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: center;
+  background: #0f172a; color: #fff; border-radius: 14px; padding: 12px 16px;
+  font-size: 11.5px; font-weight: 600;
+}
+.ori-dept-average b { font-size: 12.5px; font-weight: 800; }
+
+@media (max-width: 900px) {
+  .ori-hero { grid-template-columns: 1fr; gap: 18px; }
+  .ori-split3 { grid-template-columns: 1fr; }
+}

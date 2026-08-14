@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Literacy Outcome and Impact — {{ campus_label }} — JAIN University</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/cohort_report.css">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0 }
+  body {
+    font-family: 'Outfit', system-ui, sans-serif;
+    background: #f4f6fa; color: #101828; padding: 28px 18px 60px;
+  }
+  .wrap { max-width: 1280px; margin: 0 auto }
+
+  .top {
+    background: #0d2147; color: #fff; border-radius: 16px; padding: 26px 28px;
+    display: flex; align-items: center; gap: 20px; flex-wrap: wrap;
+    border-top: 3px solid #c9a84c;
+  }
+  .top .logo { background: #fff; border-radius: 10px; padding: 8px; line-height: 0 }
+  .top .logo img { height: 40px; width: auto }
+  .top h1 { font-size: 21px; font-weight: 700; letter-spacing: -.3px }
+  .top p { font-size: 12.5px; color: #b8c4d9; margin-top: 4px }
+  .top .grow { flex: 1; min-width: 200px }
+  .tag {
+    font-size: 10px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase;
+    color: #c9a84c; border: 1px solid rgba(201,168,76,.45); border-radius: 6px; padding: 5px 11px;
+  }
+
+  .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 18px 0 }
+  .field {
+    padding: 9px 12px; border: 1px solid #d0d5dd; border-radius: 9px;
+    font-size: 12.5px; font-family: inherit; background: #fff; color: #101828;
+  }
+  .btn {
+    font-size: 12.5px; font-weight: 600; padding: 9px 15px; border-radius: 9px;
+    border: 1px solid transparent; cursor: pointer; text-decoration: none; display: inline-block;
+    font-family: inherit;
+  }
+  .btn-primary { background: #0d2147; color: #fff }
+  .btn-soft { background: #fff; color: #344054; border-color: #d0d5dd }
+  .spacer { flex: 1 }
+  .loading { text-align: center; padding: 60px 20px; color: #667085; font-size: 13.5px }
+  footer { text-align: center; margin-top: 30px; font-size: 11.5px; color: #98a2b3; line-height: 1.7 }
+
+  @media print {
+    body { padding: 0; background: #fff }
+    .toolbar, .tag { display: none }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div class="logo"><img src="/static/logo.png" alt="JAIN University" onerror="this.src='/static/logosmall.png'"></div>
+    <div class="grow">
+      <h1>AI Literacy Outcome and Impact</h1>
+      <p id="subtitle">{{ campus_label }} · baseline, Deeksharambh and post-workshop survey</p>
+    </div>
+    <span class="tag">Shared report</span>
+  </header>
+
+  <div class="toolbar">
+    <select id="campus" class="field" onchange="reload()">
+      <option value="">All campuses</option>
+    </select>
+    <select id="dept" class="field" onchange="reload()">
+      <option value="">All departments</option>
+    </select>
+    <select id="level" class="field" onchange="reload()">
+      <option value="">UG and PG</option>
+      <option value="ug">UG only</option>
+      <option value="pg">PG only</option>
+    </select>
+    <span class="spacer"></span>
+    <a id="ppt" class="btn btn-primary" href="#">Download the deck</a>
+    <button class="btn btn-soft" onclick="window.print()">Print</button>
+  </div>
+
+  <div id="loading" class="loading">Loading the outcome and impact report…</div>
+  <div id="report" class="coh-report" hidden></div>
+
+  <footer>
+    HACRI-E · JAIN (Deemed-to-be University) · Office of Academics<br>
+    Aggregated figures only — no individual student's answers are shown.
+    <span id="generated">Generated {{ generated_at }}.</span>
+  </footer>
+</div>
+
+<script src="/static/js/cohort_report.js"></script>
+<script>
+const CAMPUS = {{ campus | tojson }};
+const TOKEN  = {{ token  | tojson }};
+let filled = false;
+
+// The token covers one campus, so the campus picker only ever narrows within
+// it — an all-campuses link can look at either, a Kochi link cannot.
+const params = () => new URLSearchParams({
+  campus: CAMPUS || document.getElementById('campus').value,
+  token: TOKEN,
+  dept: document.getElementById('dept').value,
+  ug_or_pg: document.getElementById('level').value,
+});
+
+async function reload() {
+  const loading = document.getElementById('loading');
+  const host = document.getElementById('report');
+  loading.hidden = false;
+  loading.textContent = 'Loading the outcome and impact report…';
+  host.hidden = true;
+
+  let data;
+  try {
+    const res = await fetch('/shared/cohort/data?' + params());
+    if (!res.ok) throw new Error('This link is no longer valid.');
+    data = await res.json();
+  } catch (err) {
+    loading.textContent = err.message || 'Could not load this report.';
+    return;
+  }
+
+  if (!filled) {
+    const dept = document.getElementById('dept');
+    dept.innerHTML = '<option value="">All departments</option>' +
+      data.dept_options.map(d =>
+        `<option value="${CohortReport.esc(d)}">${CohortReport.esc(d)}</option>`).join('');
+    const campus = document.getElementById('campus');
+    if (CAMPUS) {
+      campus.innerHTML = `<option value="${CohortReport.esc(CAMPUS)}">${CohortReport.esc(CAMPUS)}</option>`;
+      campus.disabled = true;
+    } else {
+      campus.innerHTML = '<option value="">All campuses</option>' +
+        (data.report.campuses || []).map(c =>
+          `<option value="${CohortReport.esc(c.campus)}">${CohortReport.esc(c.campus)}</option>`).join('');
+    }
+    filled = true;
+  }
+
+  const scope = data.report.scope;
+  document.getElementById('subtitle').textContent =
+    `${scope.campus} · ${scope.dept} · ${scope.level}`;
+  document.getElementById('generated').textContent = 'Generated ' + data.generated_at + '.';
+  document.getElementById('ppt').href = '/shared/cohort/ppt?' + params();
+
+  CohortReport.render(host, data.report, {
+    activeCampus: document.getElementById('campus').value,
+    onCampus: CAMPUS ? null : pickCampus,
+  });
+
+  loading.hidden = true;
+  host.hidden = false;
+}
+
+function pickCampus(name) {
+  const select = document.getElementById('campus');
+  select.value = select.value === name ? '' : name;
+  reload();
+}
+
+reload();
+</script>
+</body>
+</html>
