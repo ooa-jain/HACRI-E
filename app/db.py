@@ -116,6 +116,12 @@ async def init_indexes(allow_duplicate_email: bool = False):
         await _ensure_index(db[USERS], "email", name="email_unique", unique=False)
     else:
         await _ensure_index(db[USERS], "email", name="email_unique", unique=True)
+    # The admin dashboard lists users newest first, and filters by department
+    # and level. Without these the sort is done in memory over the whole
+    # collection on every load — slow while it works, and a hard failure once
+    # the result passes MongoDB's 32MB in-memory sort limit.
+    await _ensure_index(db[USERS], [("created_at", -1)], name="users_created_at")
+    await _ensure_index(db[USERS], [("program", 1), ("ug_or_pg", 1)], name="users_program_level")
     await _ensure_index(db[PRE  ], "email", name="pre_email")
     await _ensure_index(db[POST ], "email", name="post_email")
     await _ensure_index(db[ORI  ], "email", name="ori_email")
@@ -336,9 +342,23 @@ async def list_survey_users(limit: int = 10_000, dept: str | None = None, ug_or_
     if ug_or_pg:
         query["ug_or_pg"] = ug_or_pg
 
+    # Only the fields the dashboard actually reads. Fetching whole documents
+    # made every row carry payload nothing rendered, over the wire and through
+    # the sort.
+    fields = {
+        "email", "name", "program", "ug_or_pg", "location", "education_type",
+        "status", "orientation_submitted", "created_at", "pre_submitted_at",
+        "post_submitted_at", "orientation_at", "pre_reminder_sent_at",
+        "post_reminder_sent_at", "pre_reminder_count", "post_reminder_count",
+        "reminder_clicked_at", "last_email_error", "email_failed_at",
+    }
+    projection = {name: 1 for name in fields}
+
     result = []
-    async for u in get_db()[USERS].find(query).sort("created_at", -1).limit(limit):
-        email = u["email"]
+    async for u in get_db()[USERS].find(query, projection).sort("created_at", -1).limit(limit):
+        # A record with no email is not worth losing the whole dashboard over:
+        # `u["email"]` raised KeyError and took every other student with it.
+        email = u.get("email") or ""
         slug = base64.urlsafe_b64encode(email.lower().encode()).rstrip(b"=").decode()
         pre_reminder = u.get("pre_reminder_sent_at")
         post_reminder = u.get("post_reminder_sent_at")
