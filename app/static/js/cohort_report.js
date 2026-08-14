@@ -363,6 +363,123 @@
       </section>`;
   }
 
+  /** AI Literacy × AI Readiness, with an arrow per student from pre to post.
+   *
+   * Drawn as inline SVG on a 1-5 square split at 3, so the four quadrants read
+   * the way the student's own results page presents them.
+   */
+  function quadrantChart(report) {
+    const q = report.quadrant || {};
+    const pre = q.pre || [], post = q.post || [], pairs = q.pairs || [];
+    if (!pre.length && !post.length) return '';
+
+    // Plot area inside the SVG viewBox, leaving room for the axes.
+    const W = 620, H = 520, L = 58, R = 22, T = 20, B = 52;
+    const px = v => L + ((v - 1) / 4) * (W - L - R);
+    const py = v => H - B - ((v - 1) / 4) * (H - T - B);
+    const mid = { x: px(3), y: py(3) };
+
+    const band = (x, y, w, h, fill) =>
+      `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${fill}"></rect>`;
+
+    const quadrantLabel = (x, y, anchor, title, sub, colour) => `
+      <text x="${x}" y="${y}" text-anchor="${anchor}" fill="${colour}"
+            font-size="11" font-weight="700">${esc(title)}</text>
+      <text x="${x}" y="${y + 13}" text-anchor="${anchor}" fill="${colour}"
+            font-size="9.5" opacity=".8">${esc(sub)}</text>`;
+
+    const arrows = pairs.map(p => {
+      const x1 = px(p.pre_lit), y1 = py(p.pre_read);
+      const x2 = px(p.post_lit), y2 = py(p.post_read);
+      const rising = (p.post_lit + p.post_read) >= (p.pre_lit + p.pre_read);
+      return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"
+                    stroke="${rising ? POST : '#be123c'}" stroke-width="1.1"
+                    opacity=".45" marker-end="url(#coh-arrow-${rising ? 'up' : 'down'})"></line>`;
+    }).join('');
+
+    const dots = (points, fill, radius) => points.map(p =>
+      `<circle cx="${px(p.lit)}" cy="${py(p.read)}" r="${radius}" fill="${fill}"
+               fill-opacity=".62" stroke="#fff" stroke-width=".8"></circle>`).join('');
+
+    const centreMark = (point, fill, label) => {
+      if (!point) return '';
+      return `
+        <g>
+          <circle cx="${px(point.lit)}" cy="${py(point.read)}" r="8" fill="${fill}"
+                  stroke="#fff" stroke-width="2"></circle>
+          <text x="${px(point.lit)}" y="${py(point.read) - 15}" text-anchor="middle"
+                font-size="10.5" font-weight="700" fill="${fill}"
+                paint-order="stroke" stroke="#fff" stroke-width="3.5"
+                stroke-linejoin="round">${esc(label)}</text>
+        </g>`;
+    };
+
+    const ticks = [1, 2, 3, 4, 5];
+
+    return `
+      <section class="coh-card">
+        <div class="coh-card-head">
+          <div>
+            <h2 class="coh-h2">Literacy against readiness</h2>
+            <p class="coh-sub">Every student placed by what they understand about AI and how ready they
+              feel to use it. Each line runs from where a student sat at the baseline to where they sat
+              after the workshop; the large markers are the cohort average.</p>
+          </div>
+        </div>
+        <div class="coh-legend">
+          <span><i class="round" style="background:${BASELINE}"></i>Baseline</span>
+          <span><i class="round" style="background:${POST}"></i>Post workshop</span>
+          <span><i style="background:#be123c"></i>Moved backwards</span>
+        </div>
+        <div class="coh-quad">
+          <svg viewBox="0 0 ${W} ${H}" role="img"
+               aria-label="AI literacy against AI readiness, baseline and post workshop">
+            <defs>
+              <marker id="coh-arrow-up" viewBox="0 0 8 8" refX="7" refY="4"
+                      markerWidth="5" markerHeight="5" orient="auto">
+                <path d="M0,0 L8,4 L0,8 z" fill="${POST}"></path>
+              </marker>
+              <marker id="coh-arrow-down" viewBox="0 0 8 8" refX="7" refY="4"
+                      markerWidth="5" markerHeight="5" orient="auto">
+                <path d="M0,0 L8,4 L0,8 z" fill="#be123c"></path>
+              </marker>
+            </defs>
+
+            ${band(L, T, mid.x - L, mid.y - T, '#fff9e6')}
+            ${band(mid.x, T, W - R - mid.x, mid.y - T, '#ebf5ec')}
+            ${band(L, mid.y, mid.x - L, H - B - mid.y, '#fbeaea')}
+            ${band(mid.x, mid.y, W - R - mid.x, H - B - mid.y, '#e8eef7')}
+
+            ${quadrantLabel(L + 10, T + 18, 'start', 'Q2  AI Enthusiast', 'Low literacy · high readiness', '#6b3900')}
+            ${quadrantLabel(W - R - 10, T + 18, 'end', 'Q1  AI Champion', 'High literacy · high readiness', '#1a6b3a')}
+            ${quadrantLabel(L + 10, H - B - 18, 'start', 'Q3  AI Novice', 'Low literacy · low readiness', '#7b1818')}
+            ${quadrantLabel(W - R - 10, H - B - 18, 'end', 'Q4  AI Sceptic', 'High literacy · low readiness', '#1b2a4a')}
+
+            <line x1="${mid.x}" y1="${T}" x2="${mid.x}" y2="${H - B}" stroke="#94a3b8" stroke-dasharray="4 4"></line>
+            <line x1="${L}" y1="${mid.y}" x2="${W - R}" y2="${mid.y}" stroke="#94a3b8" stroke-dasharray="4 4"></line>
+            <rect x="${L}" y="${T}" width="${W - L - R}" height="${H - T - B}" fill="none" stroke="#cbd5e1"></rect>
+
+            ${arrows}
+            ${dots(pre, BASELINE, 3.6)}
+            ${dots(post, POST, 3.6)}
+            ${centreMark(q.pre_centre, BASELINE, 'Baseline average')}
+            ${centreMark(q.post_centre, POST, 'Post average')}
+
+            ${ticks.map(t => `
+              <text x="${px(t)}" y="${H - B + 18}" text-anchor="middle" font-size="11" fill="#667085">${t}</text>
+              <text x="${L - 12}" y="${py(t) + 4}" text-anchor="end" font-size="11" fill="#667085">${t}</text>`).join('')}
+            <text x="${(L + W - R) / 2}" y="${H - 10}" text-anchor="middle" font-size="11.5"
+                  font-weight="600" fill="#344054">AI Literacy — do I understand AI?</text>
+            <text x="16" y="${(T + H - B) / 2}" text-anchor="middle" font-size="11.5" font-weight="600"
+                  fill="#344054" transform="rotate(-90 16 ${(T + H - B) / 2})">AI Readiness — am I ready to use AI?</text>
+          </svg>
+        </div>
+        <p class="coh-sub">${pre.length} baseline and ${post.length} post-workshop responses plotted,
+          ${pairs.length} of them joined as the same student.${
+            q.truncated ? ' Showing the first 800 of each.' : ''}</p>
+      </section>`;
+  }
+
   /** Campus toggle strip — the same numbers for Bangalore and Kochi. */
   function campuses(rows, active, onPick) {
     if (!rows.length) return '';
@@ -468,6 +585,7 @@
       journey(report.journey) +
       leaders(report) +
       trajectory(report) +
+      quadrantChart(report) +
       campuses(report.campuses || [], opts.activeCampus || '', opts.onCampus) +
       outcome(report) +
       impact(report) +

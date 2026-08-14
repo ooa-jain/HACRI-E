@@ -18,7 +18,7 @@ from pptx.util import Emu, Inches, Pt
 
 from app.cohort_charts import (
     clean, plot_campus_split, plot_departments, plot_distribution, plot_journey,
-    plot_mix, plot_movement, plot_pre_post, plot_trajectory,
+    plot_mix, plot_movement, plot_pre_post, plot_quadrant, plot_trajectory,
 )
 
 NAVY = RGBColor(0x0D, 0x21, 0x47)
@@ -238,6 +238,34 @@ def generate_cohort_ppt(*, report: dict, generated_at: str = "") -> bytes:
                  "Outcome to impact")
         _picture(slide, plot_trajectory(report, tmpdir / "trajectory.png", title=""),
                  Inches(0.7), Inches(1.5), Inches(11.9), Inches(5.5))
+
+        # ── The quadrant ─────────────────────────────────────────────────────
+        slide = _blank(prs)
+        _heading(slide, "Literacy against readiness, student by student",
+                 "Outcome to impact")
+        _picture(slide, plot_quadrant(report, tmpdir / "quadrant.png", title=""),
+                 Inches(0.7), Inches(1.45), Inches(7.6), Inches(5.6))
+        _text(slide, Inches(8.6), Inches(1.6), Inches(4.1), Inches(0.4),
+              "HOW TO READ IT", size=11, bold=True, colour=GOLD)
+        notes = [
+            "Each dot is one student: how much they understand about AI across, "
+            "how ready they feel to use it up.",
+            "A line runs from where a student sat at the baseline to where they "
+            "sat after the workshop.",
+            "The large markers are the cohort average, before and after.",
+            f"{movement.get('moved_quadrant', 0)} of {movement.get('matched', 0)} "
+            "matched students changed quadrant.",
+        ]
+        box = slide.shapes.add_textbox(Inches(8.6), Inches(2.0), Inches(4.1), Inches(4.2))
+        frame = box.text_frame
+        frame.word_wrap = True
+        for i, line in enumerate(notes):
+            para = frame.paragraphs[0] if i == 0 else frame.add_paragraph()
+            para.text = line
+            para.font.size = Pt(12)
+            para.font.color.rgb = INK if i < 3 else NAVY
+            para.font.bold = i == 3
+            para.space_after = Pt(12)
 
         # ── Campus split ─────────────────────────────────────────────────────
         campuses = [c for c in report.get("campuses", []) if c.get("registered")]

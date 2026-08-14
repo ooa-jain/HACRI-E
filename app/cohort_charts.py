@@ -224,6 +224,77 @@ def plot_trajectory(report: dict, out_path: Path,
     return _save(fig, out_path)
 
 
+def plot_quadrant(report: dict, out_path: Path,
+                  title: str = "Literacy against readiness") -> Path:
+    """The 2×2: every student placed, with an arrow from baseline to post."""
+    q = report.get("quadrant", {}) or {}
+    pre, post, pairs = q.get("pre") or [], q.get("post") or [], q.get("pairs") or []
+    if not pre and not post:
+        return _empty(out_path, "No scored responses in this scope yet", size=(8, 6))
+
+    fig, ax = plt.subplots(figsize=(8.6, 7.4))
+    ax.set_xlim(1, 5)
+    ax.set_ylim(1, 5)
+
+    # Quadrant washes, matching the student's own results page.
+    ax.add_patch(plt.Rectangle((1, 3), 2, 2, facecolor="#fff9e6", zorder=0))
+    ax.add_patch(plt.Rectangle((3, 3), 2, 2, facecolor="#ebf5ec", zorder=0))
+    ax.add_patch(plt.Rectangle((1, 1), 2, 2, facecolor="#fbeaea", zorder=0))
+    ax.add_patch(plt.Rectangle((3, 1), 2, 2, facecolor="#e8eef7", zorder=0))
+    for text, (x, y, ha, va, colour) in {
+        "Q2  AI Enthusiast\n(Low Lit · High Read)": (1.08, 4.9, "left", "top", "#6b3900"),
+        "Q1  AI Champion\n(High Lit · High Read)": (3.08, 4.9, "left", "top", "#1a6b3a"),
+        "Q3  AI Novice\n(Low Lit · Low Read)": (1.08, 1.1, "left", "bottom", "#7b1818"),
+        "Q4  AI Sceptic\n(High Lit · Low Read)": (3.08, 1.1, "left", "bottom", "#1b2a4a"),
+    }.items():
+        ax.text(x, y, text, ha=ha, va=va, fontsize=8.5, color=colour, zorder=2)
+
+    ax.axvline(3, color="#94a3b8", linestyle="--", linewidth=1, zorder=1)
+    ax.axhline(3, color="#94a3b8", linestyle="--", linewidth=1, zorder=1)
+
+    for pair in pairs:
+        rising = (pair["post_lit"] + pair["post_read"]) >= (pair["pre_lit"] + pair["pre_read"])
+        ax.annotate("", xy=(pair["post_lit"], pair["post_read"]),
+                    xytext=(pair["pre_lit"], pair["pre_read"]),
+                    arrowprops=dict(arrowstyle="-|>", mutation_scale=9,
+                                    color=TEAL if rising else ROSE,
+                                    linewidth=.9, alpha=.45, shrinkA=2, shrinkB=2),
+                    zorder=3)
+
+    if pre:
+        ax.scatter([p["lit"] for p in pre], [p["read"] for p in pre], s=26,
+                   color=PRE_COLOUR, alpha=.65, edgecolors="white", linewidths=.5,
+                   label="Baseline", zorder=4)
+    if post:
+        ax.scatter([p["lit"] for p in post], [p["read"] for p in post], s=26,
+                   color=POST_COLOUR, alpha=.65, edgecolors="white", linewidths=.5,
+                   label="Post workshop", zorder=4)
+
+    for centre, colour, label in ((q.get("pre_centre"), PRE_COLOUR, "Baseline average"),
+                                  (q.get("post_centre"), POST_COLOUR, "Post average")):
+        if not centre:
+            continue
+        ax.scatter([centre["lit"]], [centre["read"]], s=180, color=colour,
+                   edgecolors="white", linewidths=2, zorder=6)
+        ax.annotate(label, (centre["lit"], centre["read"]), textcoords="offset points",
+                    xytext=(0, 14), ha="center", fontsize=9.5, fontweight="bold",
+                    color=colour, zorder=6)
+
+    ax.set_xticks([1, 2, 3, 4, 5])
+    ax.set_yticks([1, 2, 3, 4, 5])
+    ax.set_xlabel("AI Literacy — do I understand AI?", fontsize=10.5, color=SLATE, labelpad=8)
+    ax.set_ylabel("AI Readiness — am I ready to use AI?", fontsize=10.5, color=SLATE, labelpad=8)
+    ax.set_title(title, fontsize=15, fontweight="bold", color=NAVY, loc="left", pad=26)
+    ax.legend(frameon=False, fontsize=10, ncol=2, loc="lower right", bbox_to_anchor=(1.0, 1.0))
+    for side in ("top", "right"):
+        ax.spines[side].set_visible(False)
+    ax.spines["left"].set_color(LINE)
+    ax.spines["bottom"].set_color(LINE)
+    ax.tick_params(colors=SLATE, length=0)
+    fig.tight_layout()
+    return _save(fig, out_path)
+
+
 def plot_mix(outcome: dict, impact: dict, out_path: Path, key: str = "quadrants",
              title: str = "Quadrant mix, baseline against post") -> Path:
     """Quadrant or band counts, before and after."""

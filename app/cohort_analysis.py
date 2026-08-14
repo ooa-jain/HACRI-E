@@ -184,6 +184,52 @@ def movement_block(rows: list[dict]) -> dict:
     }
 
 
+# Plotting every student in a very large cohort would bloat the payload for no
+# visible gain — the cloud is already solid by this point.
+MAX_POINTS = 800
+
+
+def quadrant_block(rows: list[dict]) -> dict:
+    """Anonymous literacy × readiness coordinates, for the quadrant chart.
+
+    Coordinates only — no name, no email. Each matched student contributes a
+    pre point, a post point and the line between them.
+    """
+    pre_points: list[dict] = []
+    post_points: list[dict] = []
+    pairs: list[dict] = []
+
+    for row in rows:
+        pre = score_for_user(row["pre"]) if row.get("pre") else None
+        post = score_for_user(row["post"]) if row.get("post") else None
+        has_pre = pre and pre["lit"] is not None and pre["read"] is not None
+        has_post = post and post["lit"] is not None and post["read"] is not None
+        if has_pre:
+            pre_points.append({"lit": pre["lit"], "read": pre["read"]})
+        if has_post:
+            post_points.append({"lit": post["lit"], "read": post["read"]})
+        if has_pre and has_post:
+            pairs.append({
+                "pre_lit": pre["lit"], "pre_read": pre["read"],
+                "post_lit": post["lit"], "post_read": post["read"],
+            })
+
+    def centre(points: list[dict]) -> dict | None:
+        if not points:
+            return None
+        return {"lit": _mean([p["lit"] for p in points]),
+                "read": _mean([p["read"] for p in points])}
+
+    return {
+        "pre": pre_points[:MAX_POINTS],
+        "post": post_points[:MAX_POINTS],
+        "pairs": pairs[:MAX_POINTS],
+        "pre_centre": centre(pre_points),
+        "post_centre": centre(post_points),
+        "truncated": max(len(pre_points), len(post_points)) > MAX_POINTS,
+    }
+
+
 def journey_block(rows: list[dict]) -> dict:
     """The wire flow: registered, then each step, with who is still owed.
 
@@ -336,6 +382,7 @@ def build_cohort_report(rows: list[dict], *, campus: str = "", dept: str = "",
         "outcome": outcome,
         "impact": impact,
         "movement": movement,
+        "quadrant": quadrant_block(rows),
         "departments": departments,
         "campuses": campus_rows(rows),
         "leaders": {

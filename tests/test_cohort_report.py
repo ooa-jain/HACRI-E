@@ -280,6 +280,50 @@ async def test_the_renderer_and_stylesheet_are_served(client):
         assert len(r.content) > 1000
 
 
+def test_quadrant_block_places_every_student_without_naming_them():
+    from app.cohort_analysis import quadrant_block
+
+    rows = _rows([("Law", True, True, True), ("Law", True, True, False)])
+    q = quadrant_block(rows)
+
+    assert len(q["pre"]) == 2          # both did the baseline
+    assert len(q["post"]) == 1         # one finished the post survey
+    assert len(q["pairs"]) == 1        # only that one can be joined up
+    assert q["pre_centre"] == {"lit": 2.0, "read": 2.0}
+    assert q["post_centre"] == {"lit": 4.0, "read": 4.0}
+    assert q["pairs"][0] == {"pre_lit": 2.0, "pre_read": 2.0,
+                             "post_lit": 4.0, "post_read": 4.0}
+    # Coordinates only.
+    assert set(q["pre"][0]) == {"lit", "read"}
+    assert "email" not in repr(q)
+
+
+@pytest.mark.asyncio
+async def test_the_quadrant_points_follow_the_scope(client):
+    await _seed()
+    kochi = (await client.get("/admin/api/cohort", params={"campus": "Kochi"})).json()
+    assert len(kochi["quadrant"]["pre"]) == 1
+    assert len(kochi["quadrant"]["pairs"]) == 1
+
+    everyone = (await client.get("/admin/api/cohort")).json()
+    assert len(everyone["quadrant"]["pre"]) == 5
+
+
+@pytest.mark.asyncio
+async def test_the_deck_carries_the_quadrant_slide(client):
+    await _seed()
+    r = await client.get("/admin/survey/cohort-ppt")
+
+    from io import BytesIO
+    from pptx import Presentation
+
+    words = " ".join(shape.text_frame.text
+                     for slide in Presentation(BytesIO(r.content)).slides
+                     for shape in slide.shapes if shape.has_text_frame)
+    assert "Literacy against readiness, student by student" in words
+    assert "HOW TO READ IT" in words
+
+
 def test_trajectory_chart_draws_a_row_per_department(tmp_path):
     from app.cohort_charts import plot_trajectory
 
@@ -318,7 +362,7 @@ async def test_the_admin_stylesheet_is_served(client):
 def test_charts_write_pngs_even_with_nothing_to_draw(tmp_path):
     from app.cohort_charts import (
         plot_campus_split, plot_departments, plot_distribution, plot_journey,
-        plot_mix, plot_movement, plot_pre_post, plot_trajectory,
+        plot_mix, plot_movement, plot_pre_post, plot_quadrant, plot_trajectory,
     )
 
     empty_block = score_block([], "Baseline")
@@ -329,6 +373,7 @@ def test_charts_write_pngs_even_with_nothing_to_draw(tmp_path):
         ("mix", plot_mix, (empty_block, empty_block)),
         ("move", plot_movement, (movement_block([]),)),
         ("traj", plot_trajectory, (build_cohort_report([]),)),
+        ("quad", plot_quadrant, (build_cohort_report([]),)),
         ("dept", plot_departments, ([],)),
         ("campus", plot_campus_split, ([],)),
     ]
