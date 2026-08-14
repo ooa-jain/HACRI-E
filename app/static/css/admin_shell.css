@@ -2,41 +2,55 @@
  * admin_shell.css — the look of the admin dashboards.
  *
  * Loaded by every admin page (survey, orientation, login) so they read as one
- * product. Quiet and university-appropriate, with a soft-morphism surface: a
- * tinted mesh background, frosted translucent panels, hairline borders and
- * shadows that lift rather than outline. Navy and gold are JAIN's; everything
- * else is greys.
+ * product. The shape is a modern analytics console: a dark navy rail on the
+ * left, a quiet white workspace on the right, and content that arrives as
+ * cards — hero KPIs with a trend delta and a sparkline, chart panels, a
+ * ranked leaderboard, an activity feed, and tables with sticky headers.
  *
- * It restyles the component classes the templates already use (.card, .stat,
- * .btn, .field, .tabbtn, tables) rather than asking the markup to change, and
- * gently overrides the report renderers' surfaces so those sit on the same
- * material.
+ * Navy and gold are JAIN's; everything else is greys with a small semantic
+ * set (green up, rose down, amber waiting). It restyles the component classes
+ * the templates already use (.card, .stat, .btn, .field, .tabbtn, tables)
+ * rather than asking existing markup to change, and adds the new primitives
+ * (.kpi, .rank, .feed, .panel-head) the overview page builds on.
  */
 
 :root {
+  /* Brand */
   --a-navy: #0d2147;
   --a-navy-soft: #17305e;
+  --a-navy-deep: #081428;
   --a-gold: #c9a84c;
-  --a-ink: #101828;
-  --a-muted: #667085;
-  --a-line: rgba(16, 24, 40, .09);
-  --a-line-strong: rgba(16, 24, 40, .14);
-  --a-surface: rgba(255, 255, 255, .78);
-  --a-surface-solid: #fff;
-  --a-radius: 16px;
-  --a-shadow: 0 1px 2px rgba(16, 24, 40, .04), 0 8px 24px -12px rgba(16, 24, 40, .18);
-  --a-shadow-lift: 0 2px 4px rgba(16, 24, 40, .05), 0 16px 32px -16px rgba(16, 24, 40, .26);
-  --a-sidebar: 15rem;
+
+  /* Ink and ground */
+  --a-ink: #0f172a;
+  --a-ink-soft: #344054;
+  --a-muted: #6b7280;
+  --a-faint: #98a2b3;
+  --a-bg: #f6f7f9;
+  --a-surface: #fff;
+  --a-surface-sunk: #f8fafc;
+  --a-line: #e7e9ee;
+  --a-line-strong: #d5d9e2;
+
+  /* Semantics */
+  --a-up: #059669;
+  --a-up-bg: #e7f7f0;
+  --a-down: #e11d48;
+  --a-down-bg: #ffeef1;
+  --a-wait: #b45309;
+  --a-wait-bg: #fef4e6;
+  --a-info: #2563eb;
+  --a-info-bg: #eaf1ff;
+
+  --a-radius: 14px;
+  --a-shadow: 0 1px 2px rgba(16, 24, 40, .05), 0 1px 3px rgba(16, 24, 40, .04);
+  --a-shadow-lift: 0 4px 8px -2px rgba(16, 24, 40, .08), 0 16px 32px -18px rgba(16, 24, 40, .28);
+  --a-sidebar: 15.5rem;
 }
 
 /* ── Ground ──────────────────────────────────────────────────────────────── */
 body.admin-shell {
-  background-color: #f4f6fb;
-  background-image:
-    radial-gradient(58rem 34rem at 88% -12%, rgba(201, 168, 76, .13), transparent 60%),
-    radial-gradient(46rem 30rem at -8% 4%, rgba(13, 33, 71, .12), transparent 62%),
-    radial-gradient(40rem 28rem at 50% 108%, rgba(13, 148, 136, .09), transparent 60%);
-  background-attachment: fixed;
+  background-color: var(--a-bg);
   color: var(--a-ink);
   -webkit-font-smoothing: antialiased;
 }
@@ -46,8 +60,6 @@ body.admin-shell .card,
 body.admin-shell .ori-card,
 body.admin-shell .coh-card {
   background: var(--a-surface);
-  backdrop-filter: blur(14px) saturate(140%);
-  -webkit-backdrop-filter: blur(14px) saturate(140%);
   border: 1px solid var(--a-line);
   border-radius: var(--a-radius);
   box-shadow: var(--a-shadow);
@@ -57,19 +69,114 @@ body.admin-shell .ori-q,
 body.admin-shell .coh-campus,
 body.admin-shell .ori-dept,
 body.admin-shell .coh-node {
-  background: rgba(255, 255, 255, .62);
+  background: var(--a-surface-sunk);
   border-color: var(--a-line);
-  border-radius: 13px;
+  border-radius: 12px;
 }
+body.admin-shell .h-card {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: -.2px;
+  color: var(--a-ink);
+}
+body.admin-shell .sub { color: var(--a-muted); }
+
+/* A card's own header row: title on the left, controls on the right. */
+.panel-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.panel-head .panel-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* ── KPI cards ───────────────────────────────────────────────────────────── */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 14px;
+}
+.kpi {
+  background: var(--a-surface);
+  border: 1px solid var(--a-line);
+  border-radius: var(--a-radius);
+  padding: 16px 16px 14px;
+  box-shadow: var(--a-shadow);
+  transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+  min-width: 0;
+}
+.kpi:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--a-shadow-lift);
+  border-color: var(--a-line-strong);
+}
+.kpi-top { display: flex; align-items: center; gap: 9px; }
+.kpi-ico {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px; height: 30px;
+  border-radius: 9px;
+  color: var(--a-navy);
+  background: #eef1f7;
+  flex: none;
+}
+.kpi-ico svg { width: 16px; height: 16px; }
+.kpi-ico-blue  { background: var(--a-info-bg); color: #1d4ed8 }
+.kpi-ico-green { background: var(--a-up-bg);   color: #047857 }
+.kpi-ico-amber { background: var(--a-wait-bg); color: #b45309 }
+.kpi-ico-gold  { background: #fbf3dd;          color: #8a6d16 }
+.kpi-label {
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: .2px;
+  color: var(--a-muted);
+  text-transform: uppercase;
+}
+.kpi-row {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+.kpi-val {
+  font-size: 27px;
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -1px;
+  color: var(--a-ink);
+}
+.kpi-delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.kpi-delta.up   { background: var(--a-up-bg);   color: var(--a-up) }
+.kpi-delta.down { background: var(--a-down-bg); color: var(--a-down) }
+.kpi-delta.flat { background: #f1f3f7;          color: var(--a-muted) }
+.kpi-spark { height: 34px; margin-top: 10px }
+.kpi-spark svg { display: block; width: 100%; height: 100% }
+.kpi-foot {
+  font-size: 11px;
+  color: var(--a-faint);
+  margin-top: 8px;
+}
+
+/* The smaller strip under the hero row — one figure, one caption. */
 body.admin-shell .stat,
 body.admin-shell .ori-tile,
 body.admin-shell .coh-tile,
 body.admin-shell .coh-owed-item {
-  background: rgba(255, 255, 255, .74);
-  backdrop-filter: blur(12px) saturate(140%);
-  -webkit-backdrop-filter: blur(12px) saturate(140%);
+  background: var(--a-surface);
   border: 1px solid var(--a-line);
-  border-radius: 14px;
+  border-radius: 12px;
   box-shadow: var(--a-shadow);
   transition: transform .16s ease, box-shadow .16s ease;
 }
@@ -79,32 +186,205 @@ body.admin-shell .ori-tile:hover {
   transform: translateY(-1px);
   box-shadow: var(--a-shadow-lift);
 }
-body.admin-shell .h-card { letter-spacing: -.2px; color: var(--a-navy); }
-body.admin-shell .sub { color: var(--a-muted); }
+body.admin-shell .stat b { letter-spacing: -.6px }
+body.admin-shell .stat s { letter-spacing: .1px }
+
+/* ── Leaderboard ─────────────────────────────────────────────────────────── */
+.rank {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 11px 0;
+  border-top: 1px solid var(--a-line);
+}
+.rank:first-child { border-top: none; padding-top: 4px }
+.rank-n {
+  flex: none;
+  width: 22px; height: 22px;
+  border-radius: 7px;
+  background: var(--a-surface-sunk);
+  border: 1px solid var(--a-line);
+  color: var(--a-muted);
+  font-size: 11px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 1px;
+}
+.rank:nth-child(1) .rank-n { background: var(--a-navy); border-color: var(--a-navy); color: #fff }
+.rank:nth-child(2) .rank-n { background: #eef1f7; border-color: #dde3ee; color: var(--a-navy) }
+.rank:nth-child(3) .rank-n { background: #fbf3dd; border-color: #f0e2bd; color: #8a6d16 }
+.rank-body { flex: 1; min-width: 0 }
+.rank-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+.rank-name {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--a-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rank-val { font-size: 12.5px; font-weight: 800; color: var(--a-navy); flex: none }
+.bar {
+  height: 6px;
+  border-radius: 999px;
+  background: #eef0f4;
+  overflow: hidden;
+  margin: 6px 0 5px;
+}
+.bar > i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--a-navy), #2f5aa8);
+  transition: width .5s cubic-bezier(.22, 1, .36, 1);
+}
+.bar.bar-gold > i { background: linear-gradient(90deg, #b9932f, var(--a-gold)) }
+.rank-sub { font-size: 11px; color: var(--a-faint) }
+
+/* ── Activity feed ───────────────────────────────────────────────────────── */
+.feed { position: relative; margin: 0; padding: 2px 0 0; list-style: none }
+.feed::before {
+  content: '';
+  position: absolute;
+  left: 5px; top: 10px; bottom: 10px;
+  width: 1px;
+  background: var(--a-line);
+}
+.feed-item {
+  position: relative;
+  display: flex;
+  gap: 12px;
+  padding: 8px 0;
+}
+.feed-dot {
+  position: relative;
+  z-index: 1;
+  flex: none;
+  width: 11px; height: 11px;
+  margin-top: 4px;
+  border-radius: 999px;
+  background: var(--a-faint);
+  box-shadow: 0 0 0 3px var(--a-surface);
+}
+.feed-dot.d-green { background: var(--a-up) }
+.feed-dot.d-blue  { background: var(--a-info) }
+.feed-dot.d-gold  { background: var(--a-gold) }
+.feed-dot.d-grey  { background: #cbd2dd }
+.feed-body { min-width: 0 }
+.feed-title {
+  font-size: 12.5px;
+  color: var(--a-ink-soft);
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.feed-title b { color: var(--a-ink); font-weight: 650 }
+.feed-time { font-size: 11px; color: var(--a-faint); margin-top: 2px }
+.feed-empty { font-size: 12px; color: var(--a-faint); padding: 18px 0; text-align: center }
 
 /* ── Sidebar ─────────────────────────────────────────────────────────────── */
 body.admin-shell #sidebar {
   width: var(--a-sidebar);
-  background:
-    linear-gradient(180deg, rgba(13, 33, 71, .97), rgba(9, 24, 52, .97));
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-  border-right: 1px solid rgba(255, 255, 255, .08);
-  box-shadow: 0 0 40px -12px rgba(13, 33, 71, .5);
+  background: linear-gradient(180deg, var(--a-navy) 0%, var(--a-navy-deep) 100%);
+  border-right: 1px solid rgba(255, 255, 255, .06);
+}
+body.admin-shell #sidebar .nav-group {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, .34);
+  padding: 14px 12px 6px;
 }
 body.admin-shell #sidebar .nav-btn {
-  border-radius: 11px;
+  border-radius: 10px;
   position: relative;
+  color: rgba(255, 255, 255, .72);
   transition: background .15s ease, color .15s ease;
 }
-body.admin-shell #sidebar .nav-btn:hover { background: rgba(255, 255, 255, .07); }
-body.admin-shell #sidebar .nav-btn.bg-slate-800 {
-  background: rgba(255, 255, 255, .12);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08);
+body.admin-shell #sidebar .nav-btn .nav-ico {
+  flex: none;
+  width: 18px; height: 18px;
+  opacity: .8;
 }
-body.admin-shell #sidebar .nav-btn.bg-slate-800::before {
-  content: ''; position: absolute; left: -12px; top: 22%; bottom: 22%;
-  width: 3px; border-radius: 0 3px 3px 0; background: var(--a-gold);
+body.admin-shell #sidebar .nav-btn:hover { background: rgba(255, 255, 255, .07); color: #fff }
+body.admin-shell #sidebar .nav-btn.on {
+  background: rgba(255, 255, 255, .11);
+  color: #fff;
+  font-weight: 650;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .07);
+}
+body.admin-shell #sidebar .nav-btn.on .nav-ico { opacity: 1; color: var(--a-gold) }
+body.admin-shell #sidebar .nav-btn.on::before {
+  content: '';
+  position: absolute;
+  left: -12px; top: 20%; bottom: 20%;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--a-gold);
+}
+/* Count chip on the right of a nav row. */
+body.admin-shell #sidebar .nav-btn .nav-chip {
+  margin-left: auto;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .12);
+  color: rgba(255, 255, 255, .8);
+}
+
+/* The signed-in card at the foot of the rail. */
+.who {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, .06);
+  border: 1px solid rgba(255, 255, 255, .08);
+}
+.who-av {
+  flex: none;
+  width: 32px; height: 32px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--a-gold), #a9832c);
+  color: #24190a;
+  font-size: 12px;
+  font-weight: 800;
+}
+.who-name { font-size: 12px; font-weight: 650; color: #fff; line-height: 1.2 }
+.who-role {
+  font-size: 10.5px;
+  color: rgba(255, 255, 255, .5);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Sign-out sits inside the dark rail, so it is drawn as a quiet outline
+   rather than the solid rose used on destructive buttons in the workspace. */
+body.admin-shell #sidebar .btn-rose {
+  background: rgba(255, 255, 255, .06);
+  border: 1px solid rgba(255, 255, 255, .12);
+  color: rgba(255, 255, 255, .8);
+  box-shadow: none;
+}
+body.admin-shell #sidebar .btn-rose:hover {
+  background: rgba(225, 29, 72, .18);
+  border-color: rgba(225, 29, 72, .5);
+  color: #fff;
+  box-shadow: none;
 }
 
 /* Collapsing: the sidebar slides away and the page reclaims its width. */
@@ -117,36 +397,77 @@ body.admin-shell.sidebar-closed #sidebar-open { display: inline-flex; }
 
 /* ── Header ──────────────────────────────────────────────────────────────── */
 body.admin-shell header.admin-bar {
-  background: rgba(255, 255, 255, .72);
-  backdrop-filter: blur(16px) saturate(150%);
-  -webkit-backdrop-filter: blur(16px) saturate(150%);
+  background: rgba(255, 255, 255, .86);
+  backdrop-filter: blur(12px) saturate(150%);
+  -webkit-backdrop-filter: blur(12px) saturate(150%);
   border-bottom: 1px solid var(--a-line);
 }
-body.admin-shell #page-title { font-size: 14px; letter-spacing: -.2px; color: var(--a-navy); }
+body.admin-shell #page-title {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -.3px;
+  color: var(--a-ink);
+}
+body.admin-shell #page-sub { color: var(--a-muted) }
+
+/* The bar's own selects size to their content — `.field` is 100% wide by
+   default, which otherwise pushed each filter onto a line of its own. */
+body.admin-shell header.admin-bar select.field {
+  width: auto;
+  min-width: 8rem;
+  max-width: 14rem;
+}
+
+/* Search box in the bar, with a leading icon slot. */
+.search-wrap { position: relative }
+.search-wrap .search-ico {
+  position: absolute;
+  left: 11px; top: 50%;
+  transform: translateY(-50%);
+  width: 15px; height: 15px;
+  color: var(--a-faint);
+  pointer-events: none;
+}
+.search-wrap .field { padding-left: 32px; padding-right: 42px }
+.search-kbd {
+  position: absolute;
+  right: 8px; top: 50%;
+  transform: translateY(-50%);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--a-faint);
+  background: var(--a-surface-sunk);
+  border: 1px solid var(--a-line);
+  border-radius: 5px;
+  padding: 1px 5px;
+  pointer-events: none;
+}
 
 /* ── Controls ────────────────────────────────────────────────────────────── */
 body.admin-shell .btn {
-  border-radius: 10px;
+  border-radius: 9px;
   font-weight: 600;
   letter-spacing: .1px;
-  box-shadow: 0 1px 2px rgba(16, 24, 40, .06);
+  box-shadow: 0 1px 2px rgba(16, 24, 40, .05);
   transition: transform .14s ease, box-shadow .14s ease, background .14s ease;
 }
-body.admin-shell .btn:hover { transform: translateY(-1px); box-shadow: var(--a-shadow); }
+body.admin-shell .btn:hover { transform: translateY(-1px); box-shadow: var(--a-shadow-lift); }
 body.admin-shell .btn:active { transform: none; }
 body.admin-shell .btn-soft {
-  background: rgba(255, 255, 255, .8);
+  background: var(--a-surface);
   border: 1px solid var(--a-line-strong);
-  color: #344054;
+  color: var(--a-ink-soft);
 }
+body.admin-shell .btn-soft:hover { background: var(--a-surface-sunk) }
 body.admin-shell .btn-primary { background: var(--a-navy); }
 body.admin-shell .btn-primary:hover { background: var(--a-navy-soft); }
 body.admin-shell .btn-dark { background: #101828; }
 body.admin-shell .field,
 body.admin-shell .coh-select {
-  background: rgba(255, 255, 255, .86);
+  background: var(--a-surface);
   border: 1px solid var(--a-line-strong);
-  border-radius: 10px;
+  border-radius: 9px;
+  color: var(--a-ink-soft);
   transition: border-color .14s ease, box-shadow .14s ease;
 }
 body.admin-shell .field:focus,
@@ -156,35 +477,63 @@ body.admin-shell .coh-select:focus {
   outline: none;
 }
 body.admin-shell .tabbtn {
-  background: rgba(255, 255, 255, .74);
+  background: var(--a-surface);
   border: 1px solid var(--a-line);
-  border-radius: 10px;
+  color: var(--a-ink-soft);
+  border-radius: 9px;
   transition: background .14s ease, color .14s ease, box-shadow .14s ease;
 }
-body.admin-shell .tabbtn:hover { box-shadow: var(--a-shadow); }
+body.admin-shell .tabbtn:hover { background: var(--a-surface-sunk) }
 body.admin-shell .tabbtn.on {
   background: var(--a-navy);
   border-color: var(--a-navy);
   color: #fff;
-  box-shadow: 0 6px 16px -8px rgba(13, 33, 71, .8);
+  box-shadow: 0 6px 14px -8px rgba(13, 33, 71, .9);
 }
-body.admin-shell .badge { border-radius: 8px; font-weight: 600; }
+body.admin-shell .badge { border-radius: 7px; font-weight: 600; }
+
+/* Segmented control for the trend window (7 / 30 / 90 days). */
+.seg {
+  display: inline-flex;
+  padding: 3px;
+  gap: 2px;
+  border-radius: 10px;
+  background: var(--a-surface-sunk);
+  border: 1px solid var(--a-line);
+}
+.seg button {
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--a-muted);
+  padding: 4px 10px;
+  border-radius: 7px;
+  transition: background .14s ease, color .14s ease;
+}
+.seg button:hover { color: var(--a-ink) }
+.seg button.on {
+  background: var(--a-surface);
+  color: var(--a-navy);
+  box-shadow: var(--a-shadow);
+}
 
 /* ── Tables ──────────────────────────────────────────────────────────────── */
 body.admin-shell table { border-radius: 12px; overflow: hidden; }
-body.admin-shell thead tr { background: rgba(241, 245, 249, .8) !important; }
+body.admin-shell thead tr { background: var(--a-surface-sunk) !important; }
 body.admin-shell th {
   font-size: 10.5px; font-weight: 700; letter-spacing: .5px;
   text-transform: uppercase; color: var(--a-muted);
 }
 body.admin-shell tbody tr { transition: background .12s ease; }
-body.admin-shell tbody tr:hover { background: rgba(13, 33, 71, .035) !important; }
+body.admin-shell tbody tr:hover { background: #f7f9fc !important; }
 
 /* ── Notes and toasts ────────────────────────────────────────────────────── */
-body.admin-shell .note { border-radius: 12px; }
+body.admin-shell .note { border-radius: 11px; }
 body.admin-shell #toast {
-  border-radius: 12px;
-  background: rgba(16, 24, 40, .92);
+  border-radius: 11px;
+  background: rgba(15, 23, 42, .94);
   backdrop-filter: blur(8px);
   box-shadow: var(--a-shadow-lift);
 }
@@ -193,5 +542,6 @@ body.admin-shell #toast {
 @media (prefers-reduced-motion: reduce) {
   body.admin-shell * { transition: none !important; }
   body.admin-shell .btn:hover,
-  body.admin-shell .stat:hover { transform: none; }
+  body.admin-shell .stat:hover,
+  .kpi:hover { transform: none; }
 }

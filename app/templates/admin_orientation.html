@@ -16,6 +16,7 @@
   .stat s { display:block; font-size:11px; color:#64748b; margin-top:4px; text-decoration:none }
   .badge  { display:inline-flex; padding:2px 8px; border-radius:999px; font-size:11px; font-weight:600 }
   .b-blue { background:#dbeafe; color:#1e40af } .b-gray { background:#f1f5f9; color:#475569 }
+  .b-green { background:#d1fae5; color:#065f46 } .b-rose { background:#ffe4e6; color:#9f1239 }
   .btn    { font-size:12px; font-weight:700; border-radius:8px; padding:7px 12px; cursor:pointer; border:none; transition:.15s }
   .btn-soft { background:#f1f5f9; color:#334155 } .btn-soft:hover { background:#e2e8f0 }
   .btn-primary { background:#2563eb; color:#fff } .btn-primary:hover { background:#1d4ed8 }
@@ -27,21 +28,45 @@
 </head>
 <body class="h-full text-slate-800 antialiased admin-shell">
 
-<header class="bg-slate-900 text-white px-5 py-3 flex items-center gap-3">
+<header style="background:linear-gradient(180deg,#0d2147,#081428)" class="text-white px-5 py-3 flex items-center gap-3">
   <div class="bg-white p-1.5 rounded-lg"><img src="/static/logo.png" alt="JAIN" class="h-7 w-auto" onerror="this.src='/static/logosmall.png'"></div>
   <div class="mr-auto">
     <div class="font-extrabold text-sm">JAIN <span class="text-amber-400">UNIVERSITY</span></div>
     <div class="text-[10px] text-slate-400">Deeksharambh Orientation Admin</div>
   </div>
+  <span id="st-flag" class="badge b-gray">…</span>
   <a href="/admin/orientation/logout" class="btn btn-rose">Sign out</a>
 </header>
 
 <main class="max-w-5xl mx-auto p-5 space-y-5">
 
-  <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-    <div class="stat border-l-teal-600"><b id="st-count" class="text-teal-600">—</b><s>Responses</s></div>
-    <div class="stat border-l-blue-600"><b id="st-depts" class="text-blue-600">—</b><s>Departments</s></div>
-    <div class="stat border-l-slate-400"><b id="st-flag" class="text-sm pt-1.5">…</b><s>Form status</s></div>
+  <!-- The same hero cards the survey dashboard uses, so the two admin
+       surfaces read as one product. -->
+  <div class="kpi-grid">
+    <article class="kpi">
+      <div class="kpi-top">
+        <span class="kpi-ico kpi-ico-green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 15l2 2 4-4"/></svg></span>
+        <span class="kpi-label">Responses</span>
+      </div>
+      <div class="kpi-row"><b class="kpi-val" id="st-count">—</b></div>
+      <div class="kpi-foot">Orientation forms submitted</div>
+    </article>
+    <article class="kpi">
+      <div class="kpi-top">
+        <span class="kpi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v16"/><path d="M15 9h2a2 2 0 0 1 2 2v10"/></svg></span>
+        <span class="kpi-label">Departments</span>
+      </div>
+      <div class="kpi-row"><b class="kpi-val" id="st-depts">—</b></div>
+      <div class="kpi-foot">Represented in the replies</div>
+    </article>
+    <article class="kpi">
+      <div class="kpi-top">
+        <span class="kpi-ico kpi-ico-gold"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>
+        <span class="kpi-label">Latest reply</span>
+      </div>
+      <div class="kpi-row"><b class="kpi-val" id="st-latest" style="font-size:17px">—</b></div>
+      <div class="kpi-foot" id="st-latest-who">Nothing submitted yet</div>
+    </article>
   </div>
 
   <div class="card space-y-4">
@@ -85,9 +110,9 @@ async function loadFlags() {
   try {
     const f = await api('/admin/api/flags');
     $('tog-ori').checked = !!f.orientation_enabled;
-    $('st-flag').innerHTML = f.orientation_enabled
-      ? '<span class="text-emerald-600 font-bold text-sm">🟢 Open</span>'
-      : '<span class="text-rose-600 font-bold text-sm">🔴 Closed</span>';
+    const pill = $('st-flag');
+    pill.className = 'badge ' + (f.orientation_enabled ? 'b-green' : 'b-rose');
+    pill.textContent = f.orientation_enabled ? '● Form open' : '● Form closed';
   } catch (err) { console.error(err); }
 }
 
@@ -107,6 +132,13 @@ async function loadResponses() {
     responses = await api('/admin/api/orientation/responses');
     $('st-count').textContent = responses.length;
     $('st-depts').textContent = new Set(responses.map(r => r.program || '—')).size;
+    // The API hands them back newest first, so the head of the list is the
+    // most recent reply.
+    const latest = responses[0];
+    $('st-latest').textContent = latest ? (latest.submitted_at || '—') : '—';
+    $('st-latest-who').textContent = latest
+      ? `${latest.name || latest.email}${latest.program ? ' · ' + latest.program : ''}`
+      : 'Nothing submitted yet';
     render();
   } catch (err) {
     $('table').innerHTML = '<div class="text-center p-8 text-rose-500 text-xs">Could not load responses</div>';
