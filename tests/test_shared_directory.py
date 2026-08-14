@@ -177,16 +177,18 @@ async def test_overall_excel_covers_every_department(client: AsyncClient):
     totals_row = next(r for r in flat if r and r[0] == "ALL DEPARTMENTS")
     assert totals_row[1] == 4                  # every registered student
 
-    # Sheet 2: the students themselves, from both departments, each tagged
-    # with the department they belong to.
-    rows = list(wb["Department Analysis"].iter_rows(values_only=True))
-    emails = {c for row in rows for c in row if isinstance(c, str) and "@example.com" in c}
+    # Then the rosters: everyone who has filled the baseline, and everyone
+    # registered who still owes it.
+    filled = list(wb["Filled - Pre Survey"].iter_rows(values_only=True))
+    emails = {c for row in filled for c in row if isinstance(c, str) and "@example.com" in c}
     assert emails == {"a@example.com", "b@example.com", "d@example.com"}
-    named_depts = {c for row in rows for c in row if c in (LAW, COM)}
-    assert named_depts == {LAW, COM}
+
+    pending = list(wb["Registered - Pre Not Filled"].iter_rows(values_only=True))
+    pending_emails = {c for row in pending for c in row
+                      if isinstance(c, str) and "@example.com" in c}
+    assert pending_emails == {"c@example.com"}
 
 
-@pytest.mark.asyncio
 async def test_single_department_excel_has_no_breakdown_sheet(client: AsyncClient):
     """The breakdown only makes sense on the all-departments export."""
     await _seed()
@@ -199,7 +201,8 @@ async def test_single_department_excel_has_no_breakdown_sheet(client: AsyncClien
     import io
     from openpyxl import load_workbook
     wb = load_workbook(io.BytesIO(resp.content))
-    assert wb.sheetnames == ["Department Analysis"]
+    assert wb.sheetnames == ["Summary", "Registered - Pre Not Filled",
+                             "Filled - Pre Survey"]
 
 
 @pytest.mark.asyncio
@@ -356,3 +359,72 @@ async def test_mail_drafts_carry_the_department_figures(client: AsyncClient):
     assert '"registered": 3' in analysis or "registered: 3" in analysis
     assert "pre_done: 2" in analysis
     assert "post_done: 1" in analysis
+
+
+@pytest.mark.asyncio
+async def test_excel_counts_everyone_registered_not_only_the_finishers(client: AsyncClient):
+    """The workbook's registered figure has to match the report page.
+
+    It used to count only the students already in the sheet, so a department
+    with 59 registered and 50 finished exported "50 registered".
+    """
+    await _seed()
+    from app.routes.shared_analysis import get_dept_token
+
+    token = get_dept_token(LAW, "pre")
+    resp = await client.get(f"/shared/analysis/export-excel?dept={LAW}&token={token}&type=pre")
+
+    import io
+    from openpyxl import load_workbook
+    wb = load_workbook(io.BytesIO(resp.content))
+
+    summary = {row[0]: row[1] for row in wb["Summary"].iter_rows(values_only=True)
+               if row and isinstance(row[0], str)}
+    assert summary["Total Registered Students"] == 3     # a, b and c
+    assert summary["Baseline (Pre) Survey Completed"] == 2
+    assert summary["Baseline (Pre) Survey Pending"] == 1
+
+
+@pytest.mark.asyncio
+async def test_the_roster_sheets_carry_only_the_five_columns(client: AsyncClient):
+    await _seed()
+    from app.routes.shared_analysis import get_dept_token
+
+    token = get_dept_token(LAW, "pre")
+    resp = await client.get(f"/shared/analysis/export-excel?dept={LAW}&token={token}&type=pre")
+
+    import io
+    from openpyxl import load_workbook
+    wb = load_workbook(io.BytesIO(resp.content))
+
+    expected = ["Name", "Email", "Department", "Level", "Education Type"]
+    for sheet in ("Registered - Pre Not Filled", "Filled - Pre Survey"):
+        ws = wb[sheet]
+        assert [ws.cell(4, c).value for c in range(1, ws.max_column + 1)] == expected
+        # No score columns anywhere in the sheet.
+        text = " ".join(str(c.value) for row in ws.iter_rows() for c in row)
+        assert "Literacy" not in text and "Quadrant" not in text
+
+    assert {ws.cell(r, 2).value for r in range(5, wb["Filled - Pre Survey"].max_row + 1)} == \
+        {"a@example.com", "b@example.com"}
+    assert wb["Registered - Pre Not Filled"].cell(5, 2).value == "c@example.com"
+
+
+@pytest.mark.asyncio
+async def test_the_post_export_splits_on_the_post_survey(client: AsyncClient):
+    await _seed()
+    from app.routes.shared_analysis import get_dept_token
+
+    token = get_dept_token(LAW, "post")
+    resp = await client.get(f"/shared/analysis/export-excel?dept={LAW}&token={token}&type=post")
+
+    import io
+    from openpyxl import load_workbook
+    wb = load_workbook(io.BytesIO(resp.content))
+
+    assert wb.sheetnames == ["Summary", "Registered - Post Not Filled",
+                             "Filled - Post Survey"]
+    assert wb["Filled - Post Survey"].cell(5, 2).value == "a@example.com"
+    pending = {wb["Registered - Post Not Filled"].cell(r, 2).value
+               for r in range(5, wb["Registered - Post Not Filled"].max_row + 1)}
+    assert pending == {"b@example.com", "c@example.com"}

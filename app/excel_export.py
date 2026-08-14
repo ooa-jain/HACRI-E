@@ -1,222 +1,175 @@
 """
 Excel export helper using openpyxl.
-Generates a styled Excel sheet containing cohort data and survey scores.
+
+The shared department workbook is a roster, not a scoresheet: who is
+registered and still owes the survey, and who has filled it. Scores live in
+the report itself and in the admin's own custom export, so this file stays
+readable by the people who chase students.
 """
 from __future__ import annotations
 import io
 from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
-from app.hacri_e2_compat import SCHEMA
-from app.scoring import score_for_user
 
-_LEFT_COLUMNS = {"Name", "Email", "Department", "Education Type"}
-_CENTRE_COLUMNS = {"Level", "PRE Quadrant", "PRE Band", "POST Quadrant",
-                   "POST Band", "Movement"}
-_ALIGN_LEFT = Alignment(horizontal="left")
-_ALIGN_CENTRE = Alignment(horizontal="center")
-_ALIGN_RIGHT = Alignment(horizontal="right")
+# The only columns the roster sheets carry.
+ROSTER_HEADERS = ["Name", "Email", "Department", "Level", "Education Type"]
+_COLUMN_WIDTHS = [26, 32, 38, 10, 22]
+
+NAVY = "1B2A4A"
+GOLD = "C9A84C"
+MIST = "F5F6FA"
 
 
-def _alignment_for(header: str) -> Alignment:
-    if header in _LEFT_COLUMNS:
-        return _ALIGN_LEFT
-    if header in _CENTRE_COLUMNS:
-        return _ALIGN_CENTRE
-    return _ALIGN_RIGHT
+def _styles():
+    return {
+        "navy": PatternFill(start_color=NAVY, end_color=NAVY, fill_type="solid"),
+        "gold": PatternFill(start_color=GOLD, end_color=GOLD, fill_type="solid"),
+        "gray": PatternFill(start_color=MIST, end_color=MIST, fill_type="solid"),
+        "white_font": Font(name="Segoe UI", size=11, bold=True, color="FFFFFF"),
+        "title_font": Font(name="Segoe UI", size=16, bold=True, color="1B2A4A"),
+        "bold_font": Font(name="Segoe UI", size=11, bold=True),
+        "normal_font": Font(name="Segoe UI", size=11),
+        "border": Border(
+            left=Side(style="thin", color="DDDDDD"),
+            right=Side(style="thin", color="DDDDDD"),
+            top=Side(style="thin", color="DDDDDD"),
+            bottom=Side(style="thin", color="DDDDDD"),
+        ),
+    }
+
+
+def _has_pre(user: dict) -> bool:
+    return user.get("status") in ("pre_done", "post_done")
+
+
+def _has_post(user: dict) -> bool:
+    return user.get("status") == "post_done"
+
+
+def _roster_sheet(wb, title: str, subtitle: str, users: list[dict], st, fill) -> None:
+    """One tab: the five columns, nothing else."""
+    ws = wb.create_sheet(title[:31])
+    ws.views.sheetView[0].showGridLines = True
+
+    ws["A1"] = title
+    ws["A1"].font = st["title_font"]
+    ws["A2"] = subtitle
+    ws["A2"].font = st["bold_font"]
+
+    header_row = 4
+    for col_idx, text in enumerate(ROSTER_HEADERS, start=1):
+        cell = ws.cell(row=header_row, column=col_idx, value=text)
+        cell.font = st["white_font"]
+        cell.fill = fill
+        cell.alignment = Alignment(horizontal="center", vertical="center")
+        cell.border = st["border"]
+    ws.row_dimensions[header_row].height = 24
+
+    for row_idx, user in enumerate(users, start=header_row + 1):
+        values = [
+            user.get("name", ""),
+            user.get("email", ""),
+            user.get("program", "") or "—",
+            (user.get("ug_or_pg", "ug") or "ug").upper(),
+            user.get("education_type", "") or "—",
+        ]
+        for col_idx, value in enumerate(values, start=1):
+            cell = ws.cell(row=row_idx, column=col_idx, value=value)
+            cell.font = st["normal_font"]
+            cell.border = st["border"]
+            cell.alignment = Alignment(horizontal="center" if col_idx == 4 else "left")
+
+    if not users:
+        cell = ws.cell(row=header_row + 1, column=1, value="Nobody in this list")
+        cell.font = st["normal_font"]
+
+    for col_idx, width in enumerate(_COLUMN_WIDTHS, start=1):
+        ws.column_dimensions[get_column_letter(col_idx)].width = width
+    ws.freeze_panes = ws.cell(row=header_row + 1, column=1)
 
 
 def generate_cohort_excel(
     dept_name: str,
     users_list: list[dict],
-    pre_docs: list[dict],
-    post_docs: list[dict],
+    survey_type: str = "pre",
     dept_rows: list[dict] | None = None,
 ) -> bytes:
-    """Cohort workbook for one department — or for all of them.
+    """Roster workbook for one department — or for all of them.
 
-    `dept_rows` adds a "Department Breakdown" sheet: one line per department
-    with its counts, reminder-mail figures and average scores. Pass it for the
-    all-departments export, where a flat student list alone says nothing about
-    how each department is doing.
+    `users_list` is every registered student in scope, filled or not: the
+    counts here are meant to match the report page, and they cannot if the
+    caller has already dropped the students who never answered.
+
+    Three sheets — a summary, who still owes the survey, and who has filled
+    it. `dept_rows` adds the per-department breakdown used by the
+    all-departments export.
     """
+    label = "Post" if survey_type == "post" else "Pre"
+    done = _has_post if survey_type == "post" else _has_pre
+
+    filled = [u for u in users_list if done(u)]
+    not_filled = [u for u in users_list if not done(u)]
+
+    st = _styles()
     wb = Workbook()
     ws = wb.active
-    ws.title = "Department Analysis"
-    
-    # Enable grid lines explicitly
+    ws.title = "Summary"
     ws.views.sheetView[0].showGridLines = True
 
-    # Color Palette (Navy / Gold Theme)
-    navy_fill = PatternFill(start_color="1B2A4A", end_color="1B2A4A", fill_type="solid")
-    gold_fill = PatternFill(start_color="C9A84C", end_color="C9A84C", fill_type="solid")
-    gray_fill = PatternFill(start_color="F5F6FA", end_color="F5F6FA", fill_type="solid")
-    white_font = Font(name="Segoe UI", size=11, bold=True, color="FFFFFF")
-    title_font = Font(name="Segoe UI", size=16, bold=True, color="1B2A4A")
-    bold_font = Font(name="Segoe UI", size=11, bold=True)
-    normal_font = Font(name="Segoe UI", size=11)
-    
-    thin_border = Border(
-        left=Side(style='thin', color='DDDDDD'),
-        right=Side(style='thin', color='DDDDDD'),
-        top=Side(style='thin', color='DDDDDD'),
-        bottom=Side(style='thin', color='DDDDDD')
+    ws["A1"] = "HACRI-E2 Department Cohort"
+    ws["A1"].font = st["title_font"]
+    ws["A2"] = f"Department: {dept_name or 'All Departments'}"
+    ws["A2"].font = st["bold_font"]
+
+    stats = [
+        ("Total Registered Students", len(users_list)),
+        ("Baseline (Pre) Survey Completed", sum(1 for u in users_list if _has_pre(u))),
+        ("Baseline (Pre) Survey Pending", sum(1 for u in users_list if not _has_pre(u))),
+        ("Post-Workshop Survey Completed", sum(1 for u in users_list if _has_post(u))),
+        ("Post-Workshop Survey Pending", sum(1 for u in users_list if not _has_post(u))),
+        (f"In this workbook — {label} filled", len(filled)),
+        (f"In this workbook — {label} not filled", len(not_filled)),
+    ]
+
+    for col_idx, text in enumerate(["Metric", "Count"], start=1):
+        cell = ws.cell(row=4, column=col_idx, value=text)
+        cell.font = st["white_font"]
+        cell.fill = st["navy"]
+        cell.alignment = Alignment(horizontal="center")
+        cell.border = st["border"]
+
+    for row_idx, (metric, value) in enumerate(stats, start=5):
+        name_cell = ws.cell(row=row_idx, column=1, value=metric)
+        name_cell.font = st["normal_font"]
+        name_cell.fill = st["gray"]
+        name_cell.border = st["border"]
+
+        value_cell = ws.cell(row=row_idx, column=2, value=value)
+        value_cell.font = st["bold_font"]
+        value_cell.border = st["border"]
+        value_cell.alignment = Alignment(horizontal="center")
+
+    ws.column_dimensions["A"].width = 40
+    ws.column_dimensions["B"].width = 14
+
+    _roster_sheet(
+        wb, f"Registered - {label} Not Filled",
+        f"{len(not_filled)} student(s) registered who have not filled the "
+        f"{label.lower()} survey — {dept_name or 'All Departments'}",
+        not_filled, st, st["gold"],
+    )
+    _roster_sheet(
+        wb, f"Filled - {label} Survey",
+        f"{len(filled)} student(s) who have filled the {label.lower()} survey — "
+        f"{dept_name or 'All Departments'}",
+        filled, st, st["navy"],
     )
 
-    # 1. Title
-    ws["A1"] = f"HACRI-E2 Department Cohort Analysis"
-    ws["A1"].font = title_font
-    ws["A2"] = f"Department: {dept_name or 'All Departments'}"
-    ws["A2"].font = bold_font
-    
-    # 2. Key Stats Summary Table
-    total = len(users_list)
-    pre_done = sum(1 for u in users_list if u.get("status") in ("pre_done", "post_done"))
-    post_done = sum(1 for u in users_list if u.get("status") == "post_done")
-    pending = pre_done - post_done
-
-    stats_headers = ["Metric", "Count"]
-    stats_data = [
-        ("Total Registered Students", total),
-        ("Baseline (Pre) Survey Completed", pre_done),
-        ("Post-Workshop Survey Completed", post_done),
-        ("Pending Post-Workshop Survey", pending)
-    ]
-    
-    # Write summary table
-    for col_idx, text in enumerate(stats_headers, start=1):
-        cell = ws.cell(row=4, column=col_idx, value=text)
-        cell.font = white_font
-        cell.fill = navy_fill
-        cell.alignment = Alignment(horizontal="center")
-        cell.border = thin_border
-        
-    for row_idx, (metric, val) in enumerate(stats_data, start=5):
-        cell_m = ws.cell(row=row_idx, column=1, value=metric)
-        cell_m.font = normal_font
-        cell_m.border = thin_border
-        cell_m.fill = gray_fill
-        
-        cell_v = ws.cell(row=row_idx, column=2, value=val)
-        cell_v.font = bold_font
-        cell_v.border = thin_border
-        cell_v.alignment = Alignment(horizontal="center")
-        
-    # 3. Main Data Table
-    start_row = 10
-    
-    # Build column headers
-    base_headers = [
-        "Name", "Email", "Department", "Level", "Education Type",
-        "PRE Literacy", "PRE Readiness", "PRE Quadrant", "PRE Band",
-        "POST Literacy", "POST Readiness", "POST Quadrant", "POST Band",
-        "Δ Literacy", "Δ Readiness", "Movement"
-    ]
-    
-    item_headers = []
-    for key in SCHEMA:
-        item_headers += [f"PRE {key}", f"POST {key}", f"Δ {key}"]
-        
-    headers = base_headers + item_headers
-    _ALIGNMENTS = {h: _alignment_for(h) for h in base_headers}
-
-    
-    for col_idx, h_text in enumerate(headers, start=1):
-        cell = ws.cell(row=start_row, column=col_idx, value=h_text)
-        cell.font = white_font
-        # Use gold fill for post survey columns to distinguish
-        if "POST" in h_text or "Δ" in h_text or "Movement" in h_text:
-            cell.fill = gold_fill
-        else:
-            cell.fill = navy_fill
-        cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
-        cell.border = thin_border
-        
-    ws.row_dimensions[start_row].height = 28
-    
-    pre_map = {doc["email"]: doc.get("fields", {}) for doc in pre_docs}
-    post_map = {doc["email"]: doc.get("fields", {}) for doc in post_docs}
-    
-    # Fill Data
-    current_row = start_row + 1
-    for u in users_list:
-        email = u["email"]
-        name = u.get("name", "")
-        level = u.get("ug_or_pg", "ug").upper()
-        edu = u.get("education_type", "")
-        
-        pre = pre_map.get(email, {})
-        post = post_map.get(email, {})
-        
-        pre_s = score_for_user(pre)
-        post_s = score_for_user(post)
-        
-        d_lit = (
-            round(post_s["lit"] - pre_s["lit"], 3)
-            if (pre_s["lit"] is not None and post_s["lit"] is not None)
-            else ""
-        )
-        d_read = (
-            round(post_s["read"] - pre_s["read"], 3)
-            if (pre_s["read"] is not None and post_s["read"] is not None)
-            else ""
-        )
-        
-        if isinstance(d_lit, float) and isinstance(d_read, float):
-            if d_lit > 0 and d_read > 0:
-                movement = "Champion gain"
-            elif d_lit < 0 and d_read < 0:
-                movement = "Decline"
-            else:
-                movement = "Mixed change"
-        else:
-            movement = "Insufficient data"
-            
-        row_vals = [
-            name, email, u.get("program", "") or "—", level, edu,
-            pre_s["lit"], pre_s["read"], pre_s["quadrant"], pre_s["band"],
-            post_s["lit"], post_s["read"], post_s["quadrant"], post_s["band"],
-            d_lit, d_read, movement
-        ]
-        
-        # Add per-item values
-        for key in SCHEMA:
-            pv = pre.get(key)
-            ov = post.get(key)
-            try:
-                pv_n = int(pv) if pv not in (None, "") else ""
-                ov_n = int(ov) if ov not in (None, "") else ""
-                d = (ov_n - pv_n) if isinstance(pv_n, int) and isinstance(ov_n, int) else ""
-            except (TypeError, ValueError):
-                pv_n, ov_n, d = "", "", ""
-            row_vals += [pv_n, ov_n, d]
-            
-        for col_idx, val in enumerate(row_vals, start=1):
-            cell = ws.cell(row=current_row, column=col_idx, value=val)
-            # Only the summary block is styled — the per-item columns beyond it
-            # are plain numbers, and styling each one costs ~10s on a
-            # full-cohort export while looking no different.
-            if col_idx <= len(base_headers):
-                cell.font = normal_font
-                cell.border = thin_border
-                cell.alignment = _ALIGNMENTS[base_headers[col_idx - 1]]
-
-        current_row += 1
-
-    # Column widths from the header text. Measuring every cell instead means a
-    # second full pass over ~400k cells, which is minutes on a large cohort.
-    for col_idx, h_text in enumerate(headers, start=1):
-        ws.column_dimensions[get_column_letter(col_idx)].width = max(len(h_text) + 3, 10)
-
-
-    ws.column_dimensions["A"].width = 24
-    ws.column_dimensions["B"].width = 28
-    ws.column_dimensions["C"].width = 34
-
     if dept_rows:
-        _write_dept_breakdown(wb, dept_rows, navy_fill, gold_fill, gray_fill,
-                              white_font, title_font, bold_font, normal_font,
-                              thin_border)
+        _write_dept_breakdown(wb, dept_rows, st["navy"], st["gold"], st["gray"],
+                              st["white_font"], st["title_font"], st["bold_font"],
+                              st["normal_font"], st["border"])
 
     out_buf = io.BytesIO()
     wb.save(out_buf)

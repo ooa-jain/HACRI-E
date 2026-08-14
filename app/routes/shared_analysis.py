@@ -294,27 +294,10 @@ async def shared_export_excel(
     # "Overall" is every department, not a department literally named that.
     query = {} if _is_overall(dept) else {"program": dept}
 
-    # Query users based on type
-    users_list = []
-    async for u in db["users"].find(query).sort("created_at", -1):
-        # For pre: include everyone who at least completed pre
-        # For post: include only those who completed post
-        status = u.get("status", "")
-        if survey_type == "pre" and status not in ("pre_done", "post_done"):
-            continue
-        if survey_type == "post" and status != "post_done":
-            continue
-        users_list.append(u)
-
-    emails = {u["email"] for u in users_list}
-    pre_docs = []
-    if survey_type == "pre":
-        async for doc in db["pre_responses"].find({"email": {"$in": list(emails)}}):
-            pre_docs.append(doc)
-    post_docs = []
-    if survey_type == "post":
-        async for doc in db["post_responses"].find({"email": {"$in": list(emails)}}):
-            post_docs.append(doc)
+    # Everyone registered, filled or not. The workbook splits them into the
+    # two rosters itself, and its counts have to match the page — which they
+    # cannot if the students who never answered are dropped here.
+    users_list = [u async for u in db["users"].find(query).sort("created_at", -1)]
 
     # The all-departments export gets a per-department breakdown sheet — a flat
     # student list across 30-odd departments says nothing on its own.
@@ -322,9 +305,7 @@ async def shared_export_excel(
 
     excel_bytes = await _in_thread(
         generate_cohort_excel,
-        dept, users_list,
-        pre_docs if survey_type == "pre" else [],
-        post_docs if survey_type == "post" else [],
+        dept, users_list, survey_type,
         dept_rows=dept_rows,
     )
     
