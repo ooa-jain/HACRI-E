@@ -18,7 +18,7 @@ from pptx.util import Emu, Inches, Pt
 
 from app.cohort_charts import (
     clean, plot_campus_split, plot_departments, plot_distribution, plot_journey,
-    plot_mix, plot_movement, plot_pre_post,
+    plot_mix, plot_movement, plot_pre_post, plot_trajectory,
 )
 
 NAVY = RGBColor(0x0D, 0x21, 0x47)
@@ -231,6 +231,13 @@ def generate_cohort_ppt(*, report: dict, generated_at: str = "") -> bytes:
         ]):
             _card(slide, Inches(0.7) + i * Inches(3.15), Inches(5.15),
                   Inches(2.85), Inches(1.75), value, label, tone)
+
+        # ── Baseline to post, department by department ───────────────────────
+        slide = _blank(prs)
+        _heading(slide, "Where each department started, and where it reached",
+                 "Outcome to impact")
+        _picture(slide, plot_trajectory(report, tmpdir / "trajectory.png", title=""),
+                 Inches(0.7), Inches(1.5), Inches(11.9), Inches(5.5))
 
         # ── Campus split ─────────────────────────────────────────────────────
         campuses = [c for c in report.get("campuses", []) if c.get("registered")]

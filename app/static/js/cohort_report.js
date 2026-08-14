@@ -273,6 +273,96 @@
       </div>`).join('');
   }
 
+  /** Where each department started and where it reached, on one 1-5 scale.
+   *
+   * The single picture the report is really about: a dot at the baseline, a dot
+   * after the workshop, and the distance between them.
+   */
+  function trajectoryRows(report) {
+    const rows = [];
+    if (report.outcome.avg_overall !== null && report.outcome.avg_overall !== undefined) {
+      rows.push({
+        dept: 'Overall', overall: true,
+        pre: report.outcome.avg_overall,
+        post: report.impact.avg_overall,
+        delta: delta(report.impact.avg_overall, report.outcome.avg_overall),
+        matched: report.movement.matched,
+      });
+    }
+    (report.departments || []).forEach(d => {
+      if (d.pre_avg === null || d.pre_avg === undefined) return;
+      rows.push({ dept: d.dept, pre: d.pre_avg, post: d.post_avg, delta: d.delta, matched: d.matched });
+    });
+    return rows;
+  }
+
+  const scaleX = v => Math.max(0, Math.min(100, ((v - 1) / 4) * 100));
+
+  function trajectoryTrack(row) {
+    const from = scaleX(row.pre);
+    const to = row.post === null || row.post === undefined ? null : scaleX(row.post);
+    const rising = row.delta === null || row.delta === undefined ? true : row.delta >= 0;
+    const bar = to === null ? '' : `
+      <span class="coh-traj-link ${rising ? 'up' : 'down'}"
+            style="left:${Math.min(from, to)}%;width:${Math.abs(to - from)}%"></span>
+      <span class="coh-traj-dot post" style="left:${to}%"><b>${num(row.post, 2)}</b></span>`;
+    return `
+      <div class="coh-traj-track">
+        ${[1, 2, 3, 4, 5].map(t => `<span class="coh-traj-tick" style="left:${scaleX(t)}%"></span>`).join('')}
+        ${bar}
+        <span class="coh-traj-dot pre" style="left:${from}%"><b>${num(row.pre, 2)}</b></span>
+      </div>`;
+  }
+
+  function trajectoryBody(report, dept) {
+    let rows = trajectoryRows(report);
+    if (dept) rows = rows.filter(r => r.overall || r.dept === dept);
+    if (!rows.length) return '<p class="coh-empty">No scored responses in this scope yet.</p>';
+
+    return `
+      <div class="coh-traj">
+        ${rows.map(r => `
+          <div class="coh-traj-row${r.overall ? ' overall' : ''}">
+            <div class="coh-traj-name">${esc(r.dept)}</div>
+            ${trajectoryTrack(r)}
+            <div class="coh-traj-delta ${r.delta === null || r.delta === undefined ? '' : (r.delta < 0 ? 'down' : 'up')}">
+              ${signed(r.delta)}
+            </div>
+          </div>`).join('')}
+        <div class="coh-traj-axis">
+          ${[1, 2, 3, 4, 5].map(t => `<span style="left:${scaleX(t)}%">${t}</span>`).join('')}
+        </div>
+      </div>`;
+  }
+
+  function trajectory(report) {
+    const rows = trajectoryRows(report);
+    if (!rows.length) return '';
+    const options = rows.filter(r => !r.overall).map(r => r.dept);
+
+    return `
+      <section class="coh-card coh-traj-card">
+        <div class="coh-card-head">
+          <div>
+            <h2 class="coh-h2">From baseline to post workshop</h2>
+            <p class="coh-sub">Where the cohort started and where it reached, on the same 1 to 5 scale.
+              The left dot is the baseline, the right dot is the post-workshop score, and the bar between
+              them is the distance travelled.</p>
+          </div>
+          ${options.length > 1 ? `
+            <select class="coh-select" id="coh-traj-dept">
+              <option value="">Every department</option>
+              ${options.map(d => `<option value="${esc(d)}">${esc(d)}</option>`).join('')}
+            </select>` : ''}
+        </div>
+        <div class="coh-legend">
+          <span><i style="background:${BASELINE}"></i>Baseline</span>
+          <span><i style="background:${POST}"></i>Post workshop</span>
+        </div>
+        <div id="coh-traj-body">${trajectoryBody(report, '')}</div>
+      </section>`;
+  }
+
   /** Campus toggle strip — the same numbers for Bangalore and Kochi. */
   function campuses(rows, active, onPick) {
     if (!rows.length) return '';
@@ -377,10 +467,19 @@
     host.innerHTML =
       journey(report.journey) +
       leaders(report) +
+      trajectory(report) +
       campuses(report.campuses || [], opts.activeCampus || '', opts.onCampus) +
       outcome(report) +
       impact(report) +
       departments(report.departments || []);
+
+    // The trajectory has its own department picker; it redraws just that block.
+    const picker = host.querySelector('#coh-traj-dept');
+    if (picker) {
+      picker.addEventListener('change', () => {
+        host.querySelector('#coh-traj-body').innerHTML = trajectoryBody(report, picker.value);
+      });
+    }
 
     if (typeof opts.onCampus === 'function') {
       host.querySelectorAll('.coh-campus').forEach(el =>

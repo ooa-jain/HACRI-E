@@ -147,6 +147,61 @@
 .coh-facts span { color: var(--muted); }
 .coh-facts b { color: var(--ink); }
 
+/* ── Baseline to post trajectory ─────────────────────────────────────────── */
+.coh-select {
+  font: inherit; font-size: 12.5px; padding: 8px 12px;
+  border: 1px solid var(--line); border-radius: 9px; background: #fff; color: var(--ink);
+}
+.coh-traj { padding-top: 4px; }
+.coh-traj-row {
+  display: grid; grid-template-columns: minmax(120px, 190px) 1fr 62px;
+  align-items: center; gap: 14px; padding: 11px 0;
+  border-bottom: 1px solid var(--line);
+}
+.coh-traj-row.overall { background: var(--mist); border-radius: 10px; padding: 12px 10px; margin-bottom: 4px; }
+.coh-traj-row.overall .coh-traj-name { font-weight: 700; color: var(--navy); }
+.coh-traj-name {
+  font-size: 12px; font-weight: 600; color: #344054;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.coh-traj-track {
+  position: relative; height: 30px;
+  background: linear-gradient(#eef2f7, #eef2f7) center/100% 3px no-repeat;
+  border-radius: 999px;
+}
+.coh-traj-tick {
+  position: absolute; top: 50%; width: 1px; height: 11px; margin-top: -5px;
+  background: #d7dde7;
+}
+.coh-traj-link {
+  position: absolute; top: 50%; height: 5px; margin-top: -2px; border-radius: 999px;
+}
+.coh-traj-link.up { background: linear-gradient(90deg, var(--deep), var(--teal)); }
+.coh-traj-link.down { background: linear-gradient(90deg, var(--deep), var(--rose)); }
+.coh-traj-dot {
+  position: absolute; top: 50%; width: 13px; height: 13px; margin: -6.5px 0 0 -6.5px;
+  border-radius: 50%; border: 2px solid #fff;
+}
+.coh-traj-dot.pre { background: var(--deep); }
+.coh-traj-dot.post { background: var(--teal); }
+.coh-traj-dot b {
+  position: absolute; left: 50%; top: -17px; transform: translateX(-50%);
+  font-size: 10.5px; font-weight: 700; color: var(--ink); white-space: nowrap;
+}
+.coh-traj-dot.pre b { top: 12px; }
+.coh-traj-delta { font-size: 12.5px; font-weight: 700; text-align: right; color: var(--muted); }
+.coh-traj-delta.up { color: var(--teal); }
+.coh-traj-delta.down { color: var(--rose); }
+.coh-traj-axis { position: relative; height: 18px; margin-top: 6px; }
+.coh-traj-axis span {
+  position: absolute; transform: translateX(-50%);
+  font-size: 10.5px; color: var(--muted); font-weight: 600;
+}
+@media (max-width: 720px) {
+  .coh-traj-row { grid-template-columns: 1fr 56px; }
+  .coh-traj-track { grid-column: 1 / -1; }
+}
+
 /* ── Campus tiles ────────────────────────────────────────────────────────── */
 .coh-campus-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; }
 .coh-campus {

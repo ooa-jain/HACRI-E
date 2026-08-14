@@ -280,10 +280,45 @@ async def test_the_renderer_and_stylesheet_are_served(client):
         assert len(r.content) > 1000
 
 
+def test_trajectory_chart_draws_a_row_per_department(tmp_path):
+    from app.cohort_charts import plot_trajectory
+
+    rows = _rows([("Law", True, True, True), ("Commerce", True, True, False)])
+    report = build_cohort_report(rows)
+    out = plot_trajectory(report, tmp_path / "traj.png")
+    assert out.exists() and out.stat().st_size > 0
+
+    # A department with no post score still belongs on the chart — it shows the
+    # baseline dot alone rather than being dropped.
+    assert [d["dept"] for d in report["departments"]] == ["Law", "Commerce"]
+    assert report["departments"][1]["post_avg"] is None
+
+
+@pytest.mark.asyncio
+async def test_the_deck_carries_the_trajectory_slide(client):
+    await _seed()
+    r = await client.get("/admin/survey/cohort-ppt")
+
+    from io import BytesIO
+    from pptx import Presentation
+
+    words = " ".join(shape.text_frame.text
+                     for slide in Presentation(BytesIO(r.content)).slides
+                     for shape in slide.shapes if shape.has_text_frame)
+    assert "Where each department started, and where it reached" in words
+
+
+@pytest.mark.asyncio
+async def test_the_admin_stylesheet_is_served(client):
+    r = await client.get("/static/css/admin_shell.css")
+    assert r.status_code == 200
+    assert b"sidebar-closed" in r.content
+
+
 def test_charts_write_pngs_even_with_nothing_to_draw(tmp_path):
     from app.cohort_charts import (
         plot_campus_split, plot_departments, plot_distribution, plot_journey,
-        plot_mix, plot_movement, plot_pre_post,
+        plot_mix, plot_movement, plot_pre_post, plot_trajectory,
     )
 
     empty_block = score_block([], "Baseline")
@@ -293,6 +328,7 @@ def test_charts_write_pngs_even_with_nothing_to_draw(tmp_path):
         ("prepost", plot_pre_post, (empty_block, empty_block)),
         ("mix", plot_mix, (empty_block, empty_block)),
         ("move", plot_movement, (movement_block([]),)),
+        ("traj", plot_trajectory, (build_cohort_report([]),)),
         ("dept", plot_departments, ([],)),
         ("campus", plot_campus_split, ([],)),
     ]

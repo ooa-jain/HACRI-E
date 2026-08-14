@@ -168,6 +168,62 @@ def plot_pre_post(outcome: dict, impact: dict, out_path: Path,
     return _save(fig, out_path)
 
 
+def plot_trajectory(report: dict, out_path: Path,
+                    title: str = "From baseline to post workshop") -> Path:
+    """Where each department started and where it reached, on one 1-5 scale."""
+    rows = []
+    outcome, impact = report.get("outcome", {}), report.get("impact", {})
+    if outcome.get("avg_overall") is not None:
+        rows.append({"dept": "Overall", "pre": outcome["avg_overall"],
+                     "post": impact.get("avg_overall")})
+    for d in report.get("departments", []):
+        if d.get("pre_avg") is not None:
+            rows.append({"dept": d["dept"], "pre": d["pre_avg"], "post": d.get("post_avg")})
+
+    if not rows:
+        return _empty(out_path, "No scored responses in this scope yet")
+
+    rows = rows[:13][::-1]           # widest first at the bottom, Overall on top
+    labels = [clean(r["dept"], 30) for r in rows]
+
+    fig, ax = plt.subplots(figsize=(11.6, max(3.4, .52 * len(rows) + 1.9)))
+    for i, row in enumerate(rows):
+        pre, post = row["pre"], row["post"]
+        if post is not None:
+            rising = post >= pre
+            ax.annotate("", xy=(post, i), xytext=(pre, i),
+                        arrowprops=dict(arrowstyle="-|>", mutation_scale=14,
+                                        color=TEAL if rising else ROSE, linewidth=3,
+                                        shrinkA=0, shrinkB=0))
+            ax.scatter([post], [i], s=110, color=POST_COLOUR, zorder=4,
+                       edgecolors="white", linewidths=1.5)
+            ax.text(post, i + .3, f"{post:.2f}", ha="center", fontsize=9.5,
+                    fontweight="bold", color=INK)
+        ax.scatter([pre], [i], s=110, color=PRE_COLOUR, zorder=4,
+                   edgecolors="white", linewidths=1.5)
+        ax.text(pre, i - .42, f"{pre:.2f}", ha="center", fontsize=9.5,
+                fontweight="bold", color=SLATE)
+
+    ax.set_yticks(range(len(rows)))
+    ax.set_yticklabels(labels, fontsize=10.5)
+    ax.set_xlim(1, 5)
+    ax.set_ylim(-.7, len(rows) - .3)
+    ax.set_xticks([1, 2, 3, 4, 5])
+    ax.set_xlabel("Average score out of 5", fontsize=10, color=SLATE)
+    ax.set_title(title, fontsize=15, fontweight="bold", color=NAVY, loc="left", pad=26)
+    ax.scatter([], [], s=90, color=PRE_COLOUR, label="Baseline")
+    ax.scatter([], [], s=90, color=POST_COLOUR, label="Post workshop")
+    ax.legend(frameon=False, fontsize=10, ncol=2, loc="lower right",
+              bbox_to_anchor=(1.0, 1.0))
+    for side in ("top", "right", "left"):
+        ax.spines[side].set_visible(False)
+    ax.spines["bottom"].set_color(LINE)
+    ax.tick_params(colors=SLATE, length=0)
+    ax.grid(axis="x", linestyle=":", alpha=.4, zorder=0)
+    fig.tight_layout()
+    return _save(fig, out_path)
+
+
 def plot_mix(outcome: dict, impact: dict, out_path: Path, key: str = "quadrants",
              title: str = "Quadrant mix, baseline against post") -> Path:
     """Quadrant or band counts, before and after."""

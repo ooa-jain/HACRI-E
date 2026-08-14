@@ -8,6 +8,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <!-- The orientation report draws itself; the same pair renders the public
      shared page, so both sides of the login look identical. -->
+<link rel="stylesheet" href="/static/css/admin_shell.css">
 <link rel="stylesheet" href="/static/css/orientation_report.css">
 <script src="/static/js/orientation_report.js"></script>
 <link rel="stylesheet" href="/static/css/cohort_report.css">
@@ -51,17 +52,20 @@
   td { padding:10px 12px; vertical-align:top }
 </style>
 </head>
-<body class="h-full text-slate-800 antialiased bg-slate-50">
+<body class="h-full text-slate-800 antialiased admin-shell">
 <div class="min-h-screen flex flex-col md:flex-row">
 
   <!-- ══ SIDEBAR ══════════════════════════════════════════════════════════ -->
   <aside id="sidebar" class="fixed inset-y-0 left-0 w-60 bg-slate-900 text-slate-200 z-50 transition-transform duration-200 md:translate-x-0 -translate-x-full flex flex-col">
     <div class="px-5 py-4 border-b border-slate-800 flex items-center gap-3">
       <div class="bg-white p-1.5 rounded-lg"><img src="/static/logo.png" alt="JAIN" class="h-7 w-auto" onerror="this.src='/static/logosmall.png'"></div>
-      <div>
+      <div class="mr-auto">
         <div class="font-extrabold text-sm text-white">JAIN <span class="text-amber-400">UNIVERSITY</span></div>
         <div class="text-[10px] text-slate-400">AI Survey Admin</div>
       </div>
+      <button id="sidebar-close" onclick="closeSidebar()" title="Hide the menu"
+              aria-label="Hide the menu"
+              class="text-slate-400 hover:text-white text-lg px-1 rounded-md">&#10005;</button>
     </div>
 
     <nav id="nav" class="flex-1 px-3 py-4 space-y-1 overflow-y-auto"></nav>
@@ -72,10 +76,11 @@
   </aside>
 
   <!-- ══ MAIN ═════════════════════════════════════════════════════════════ -->
-  <div class="md:ml-60 flex-1 flex flex-col min-h-screen">
+  <div id="shell" class="md:ml-60 flex-1 flex flex-col min-h-screen">
 
-    <header class="sticky top-0 z-40 bg-white border-b border-slate-200 px-4 md:px-6 py-3 flex flex-wrap items-center gap-3">
-      <button onclick="toggleSidebar()" class="md:hidden btn btn-soft">☰</button>
+    <header class="admin-bar sticky top-0 z-40 px-4 md:px-6 py-3 flex flex-wrap items-center gap-3">
+      <button onclick="toggleSidebar()" class="md:hidden btn btn-soft">&#9776;</button>
+      <button id="sidebar-open" onclick="openSidebar()" class="btn btn-soft" title="Show the menu">&#9776;</button>
       <div>
         <h1 id="page-title" class="text-sm font-bold text-slate-900">Overview</h1>
         <p id="page-sub" class="text-xs text-slate-500">Cohort progress at a glance</p>
@@ -925,7 +930,26 @@ function show(pageId) {
   if (page && page.load) page.load();
 }
 
+// The sidebar can be closed on any screen; the choice is remembered.
 function toggleSidebar() { $('sidebar').classList.toggle('-translate-x-full'); }
+
+function closeSidebar() {
+  document.body.classList.add('sidebar-closed');
+  $('sidebar').classList.add('-translate-x-full');
+  try { localStorage.setItem('hacri.sidebar', 'closed'); } catch (err) { /* private mode */ }
+}
+
+function openSidebar() {
+  document.body.classList.remove('sidebar-closed');
+  $('sidebar').classList.remove('-translate-x-full');
+  try { localStorage.setItem('hacri.sidebar', 'open'); } catch (err) { /* private mode */ }
+}
+
+function restoreSidebar() {
+  let saved = null;
+  try { saved = localStorage.getItem('hacri.sidebar'); } catch (err) { /* private mode */ }
+  if (saved === 'closed') closeSidebar();
+}
 
 // ═══════════════════════════════════════════════════════════════════════
 //  Filters + users
@@ -2552,6 +2576,7 @@ document.addEventListener('keydown', ev => {
 });
 
 buildNav();
+restoreSidebar();
 buildToggles();
 loadFlags();
 loadUsers();
