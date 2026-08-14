@@ -66,6 +66,26 @@ def orientation_share_url(base_url: str, campus: str = "") -> str:
     return f"{base_url.rstrip('/')}/shared/orientation?{query}"
 
 
+# ── Cohort outcome and impact report ─────────────────────────────────────────
+COHORT_KEY = "__cohort__"
+
+
+def get_cohort_token(campus: str = "") -> str:
+    """Token for the shareable outcome and impact report of one campus (or all)."""
+    return get_dept_token(f"{COHORT_KEY}:{campus or 'all'}", "cohort")
+
+
+def verify_cohort_token(campus: str, token: str) -> bool:
+    return hmac.compare_digest(get_cohort_token(campus), token or "")
+
+
+def cohort_share_url(base_url: str, campus: str = "") -> str:
+    from urllib.parse import urlencode
+
+    query = urlencode({"campus": campus, "token": get_cohort_token(campus)})
+    return f"{base_url.rstrip('/')}/shared/cohort?{query}"
+
+
 def directory_url(base_url: str) -> str:
     return f"{base_url.rstrip('/')}/shared/departments?token={get_directory_token()}"
 
@@ -521,6 +541,67 @@ async def shared_orientation_ppt(
     from app.orientation_data import deck_response
 
     return await deck_response(campus=campus, dept=dept)
+
+
+@router.get("/shared/cohort", response_class=HTMLResponse)
+async def shared_cohort_page(
+    request: Request,
+    token: str = Query(...),
+    campus: str = Query(default=""),
+):
+    """The outcome and impact report, readable without an admin login."""
+    if not verify_cohort_token(campus, token):
+        raise HTTPException(status_code=403, detail="Access denied: Invalid or expired sharing link.")
+
+    return request.app.state.templates.TemplateResponse(
+        request,
+        "shared_cohort.html",
+        {
+            "campus": campus,
+            "campus_label": campus or "All campuses",
+            "token": token,
+            "generated_at": datetime.now().strftime("%d %b %Y, %H:%M"),
+        },
+    )
+
+
+@router.get("/shared/cohort/data")
+async def shared_cohort_data(
+    token: str = Query(...),
+    campus: str = Query(default=""),
+    dept: str = Query(default=""),
+    ug_or_pg: str = Query(default=""),
+):
+    """Everything the shared cohort page draws, in one payload."""
+    if not verify_cohort_token(campus, token):
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    from app.cohort_analysis import cohort_report
+
+    report = await cohort_report(campus=campus, dept=dept, ug_or_pg=ug_or_pg)
+    # The department picker lists the whole campus, not just what is in scope.
+    whole = report if not dept else await cohort_report(campus=campus)
+    return JSONResponse({
+        "report": report,
+        "dept_options": sorted({d["dept"] for d in whole["departments"]}),
+        "generated_at": datetime.now().strftime("%d %b %Y, %H:%M"),
+    })
+
+
+@router.get("/shared/cohort/ppt")
+async def shared_cohort_ppt(
+    token: str = Query(...),
+    campus: str = Query(default=""),
+    dept: str = Query(default=""),
+    ug_or_pg: str = Query(default=""),
+):
+    """The same deck the admin can download, for whoever holds the link."""
+    if not verify_cohort_token(campus, token):
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    from app.cohort_analysis import cohort_deck_response
+
+    return await cohort_deck_response(campus=campus, dept=dept, ug_or_pg=ug_or_pg)
 
 
 @router.get("/shared/departments", response_class=HTMLResponse)

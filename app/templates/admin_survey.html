@@ -10,6 +10,8 @@
      shared page, so both sides of the login look identical. -->
 <link rel="stylesheet" href="/static/css/orientation_report.css">
 <script src="/static/js/orientation_report.js"></script>
+<link rel="stylesheet" href="/static/css/cohort_report.css">
+<script src="/static/js/cohort_report.js"></script>
 <style>
   body { font-family: 'Inter', system-ui, sans-serif; }
   .panel { display: none; }
@@ -118,9 +120,14 @@
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-5 mt-5">
           <div class="card lg:col-span-2 space-y-3">
-            <div class="flex items-center justify-between">
+            <div class="flex flex-wrap items-center justify-between gap-2">
               <div><div class="h-card">Cohort charts</div><div class="sub">Quadrant alignment, score spread and understanding change.</div></div>
-              <button onclick="refreshCharts()" class="btn btn-soft">🔄 Refresh</button>
+              <div class="flex flex-wrap gap-2">
+                <button onclick="show('p-cohort')" class="btn btn-soft">Outcome &amp; impact</button>
+                <a id="ov-ppt" href="/admin/survey/cohort-ppt" class="btn btn-dark">Download PPT</a>
+                <button onclick="copyCohortShareLink()" class="btn btn-soft">Copy share link</button>
+                <button onclick="refreshCharts()" class="btn btn-soft">🔄 Refresh</button>
+              </div>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-center">
               <div><div class="text-xs font-semibold text-slate-600 mb-1">Quadrant alignment</div><img id="cohort-chart-img" src="/admin/cohort.png" alt="Cohort chart" class="w-full h-auto rounded-lg border"></div>
@@ -415,6 +422,40 @@
           <div class="card space-y-3">
             <div class="h-card">📋 All departments</div>
             <div id="dept-table"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── COHORT: OUTCOME & IMPACT ─────────────────────────────────── -->
+      <div class="panel" id="p-cohort">
+        <div class="space-y-5">
+          <div class="card space-y-4">
+            <div class="flex flex-col lg:flex-row lg:items-center gap-3">
+              <div class="mr-auto">
+                <div class="h-card">Outcome and impact</div>
+                <div class="sub">The baseline the cohort started from, what changed after the workshop,
+                  and how far each campus and department has come through the three steps.</div>
+              </div>
+              <div class="flex flex-wrap gap-2" id="cohort-campus-tabs">
+                <button class="tabbtn on" data-campus="" onclick="setCohortCampus('')">All campuses</button>
+                <button class="tabbtn" data-campus="Bangalore" onclick="setCohortCampus('Bangalore')">Bangalore</button>
+                <button class="tabbtn" data-campus="Kochi" onclick="setCohortCampus('Kochi')">Kochi</button>
+              </div>
+              <a id="cohort-ppt" href="#" class="btn btn-dark">Download PPT</a>
+              <button onclick="copyCohortShareLink()" class="btn btn-soft">Copy share link</button>
+            </div>
+            <div id="cohort-scope" class="note note-info">Loading…</div>
+          </div>
+
+          <div id="cohort-host" class="coh-report"></div>
+
+          <div class="card space-y-3">
+            <div>
+              <div class="h-card">Share this report</div>
+              <div class="sub">Read-only links to the same outcome and impact page — no admin login,
+                aggregate figures only.</div>
+            </div>
+            <div id="cohort-share-links" class="space-y-2"></div>
           </div>
         </div>
       </div>
@@ -849,6 +890,7 @@ const PAGES = [
   { id: 'p-emails',   icon: '📧', label: 'Emails',      title: 'Emails',              sub: 'Send reminders, write your own mail, track delivery', load: () => { updateTargetCount(); initComposer(); loadEmailStats(); } },
   { id: 'p-links',    icon: '🔗', label: 'Links',       title: 'Links',               sub: 'Department links for both surveys, plus shareable reports', load: () => loadLinks() },
   { id: 'p-depts',    icon: '🏢', label: 'Departments', title: 'Departments',         sub: 'Literacy and readiness averages per department', load: () => loadDepts() },
+  { id: 'p-cohort',   icon: '📈', label: 'Outcome & impact', title: 'Outcome and impact', sub: 'Baseline, what changed after the workshop, and the journey between them', load: () => loadCohort() },
   { id: 'p-orientation', icon: '🎓', label: 'Orientation', title: 'Orientation report', sub: 'Campus-wise Deeksharambh analysis, who filled it, and mailing', load: () => loadOrientationPanel() },
   { id: 'p-parents',  icon: '👨‍👩‍👦', label: 'Parents',  title: 'Parental background', sub: 'Occupations reported in the post survey', load: () => loadParents() },
   { id: 'p-calendar', icon: '📅', label: 'Calendar',    title: 'Calendar',            sub: 'When students filled the surveys', load: () => loadCalendar() },
@@ -928,6 +970,7 @@ function applyFilters() {
   const active = document.querySelector('.panel.on');
   if (!active) return;
   if (active.id === 'p-parents') loadParents();
+  if (active.id === 'p-cohort') loadCohort();
   if (active.id === 'p-orientation') loadOrientationPanel();
   if (active.id === 'p-students' && studentView === 'duration') renderStudents();
 }
@@ -1794,6 +1837,79 @@ function viewDept(dept) {
   $('dept-filter').value = dept;
   applyFilters();
   show('p-students');
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  Outcome and impact — one page, drawn by /static/js/cohort_report.js
+// ═══════════════════════════════════════════════════════════════════════
+let cohortCampus = '';
+let cohortShareLinks = null;
+
+const cohortParams = () => new URLSearchParams({
+  campus: cohortCampus, dept: deptFilter(), ug_or_pg: levelFilter(),
+}).toString();
+
+function setCohortCampus(campus) {
+  cohortCampus = campus;
+  document.querySelectorAll('#cohort-campus-tabs .tabbtn')
+    .forEach(b => b.classList.toggle('on', b.dataset.campus === campus));
+  loadCohort();
+}
+
+async function loadCohort() {
+  const host = $('cohort-host');
+  host.innerHTML = '<div class="coh-card coh-empty-card">Loading the outcome and impact report…</div>';
+  $('cohort-ppt').href = '/admin/survey/cohort-ppt?' + cohortParams();
+  $('ov-ppt').href = '/admin/survey/cohort-ppt?' + cohortParams();
+  if (!cohortShareLinks) loadCohortShareLinks();
+
+  let d;
+  try { d = await api('/admin/api/cohort?' + cohortParams()); }
+  catch (err) {
+    host.innerHTML = '<div class="coh-card coh-empty-card">Could not load the outcome and impact report</div>';
+    return;
+  }
+
+  const j = d.journey;
+  note($('cohort-scope'), 'info',
+    `<b>${e(d.scope.campus)} · ${e(d.scope.dept)} · ${e(d.scope.level)}</b> — ` +
+    `${j.registered} registered, ${j.stages[1].count} finished the baseline, ` +
+    `${j.stages[2].count} the Deeksharambh orientation and ${j.stages[3].count} the post survey. ` +
+    `${j.pending_post} still owe the post survey.`);
+
+  // Clicking a campus tile is the same as pressing its tab.
+  CohortReport.render(host, d, { activeCampus: cohortCampus, onCampus: pickCohortCampus });
+}
+
+function pickCohortCampus(name) {
+  setCohortCampus(cohortCampus === name ? '' : name);
+}
+
+async function loadCohortShareLinks() {
+  const host = $('cohort-share-links');
+  if (!host) return;
+  try {
+    cohortShareLinks = (await api('/admin/api/cohort/share-links')).links;
+  } catch (err) {
+    host.innerHTML = '<div class="text-xs text-rose-500">Could not build the share links</div>';
+    return;
+  }
+  host.innerHTML = cohortShareLinks.map(l => `
+    <div class="flex flex-col sm:flex-row sm:items-center gap-2">
+      <span class="text-xs font-bold text-slate-700 sm:w-32 shrink-0">${e(l.campus)}</span>
+      <input readonly class="field link flex-1" value="${e(l.url)}" onclick="this.select()">
+      <button class="btn btn-soft" onclick="copy('${e(l.url)}')">Copy</button>
+      <a href="${e(l.url)}" target="_blank" rel="noopener" class="btn btn-primary">Open</a>
+    </div>`).join('');
+}
+
+/** Copy the link for whichever campus the report is scoped to. */
+async function copyCohortShareLink() {
+  if (!cohortShareLinks) await loadCohortShareLinks();
+  const wanted = cohortCampus || 'All campuses';
+  const row = (cohortShareLinks || []).find(l => l.campus === wanted);
+  if (!row) return toast('Share link not ready yet');
+  copy(row.url);
 }
 
 // ═══════════════════════════════════════════════════════════════════════

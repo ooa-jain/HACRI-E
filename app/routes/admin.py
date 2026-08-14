@@ -857,6 +857,60 @@ async def api_orientation_departments(
     return JSONResponse(department_overview(data["filled"], data["pending"], campus))
 
 
+# ══════════════════════════════════════════════════════════════════════════════
+# COHORT REPORT (survey admin) — outcome, impact and the journey between them
+# ══════════════════════════════════════════════════════════════════════════════
+@router.get("/admin/api/cohort")
+async def api_cohort(
+    request: Request,
+    campus: str = Query(default=""),
+    dept: str = Query(default=""),
+    ug_or_pg: str = Query(default=""),
+):
+    """Outcome, impact and the journey, for one campus / department / level."""
+    if not _is_survey_admin(request):
+        raise HTTPException(status_code=403)
+
+    from app.cohort_analysis import cohort_report
+
+    return JSONResponse(await cohort_report(campus=campus, dept=dept, ug_or_pg=ug_or_pg))
+
+
+@router.get("/admin/survey/cohort-ppt")
+async def admin_cohort_ppt(
+    request: Request,
+    campus: str = Query(default=""),
+    dept: str = Query(default=""),
+    ug_or_pg: str = Query(default=""),
+):
+    """Download the outcome and impact report as a slide deck."""
+    if not _is_survey_admin(request):
+        raise HTTPException(status_code=403)
+
+    from app.cohort_analysis import cohort_deck_response
+
+    return await cohort_deck_response(campus=campus, dept=dept, ug_or_pg=ug_or_pg)
+
+
+@router.get("/admin/api/cohort/share-links")
+async def api_cohort_share_links(request: Request):
+    """Copyable links that open the outcome and impact report without a login."""
+    if not _is_survey_admin(request):
+        raise HTTPException(status_code=403)
+
+    from app.cohort_analysis import ALL_CAMPUSES
+    from app.orientation_analysis import CAMPUSES
+    from app.routes.shared_analysis import cohort_share_url
+
+    base = str(request.base_url).rstrip("/")
+    return JSONResponse({
+        "links": [
+            {"campus": ALL_CAMPUSES, "url": cohort_share_url(base, "")},
+            *({"campus": name, "url": cohort_share_url(base, name)} for name in CAMPUSES),
+        ]
+    })
+
+
 @router.get("/admin/api/orientation/share-links")
 async def api_orientation_share_links(request: Request):
     """Copyable links that open the orientation report without a login.
