@@ -2,10 +2,11 @@
  * admin_shell.css — the look of the admin dashboards.
  *
  * Loaded by every admin page (survey, orientation, login) so they read as one
- * product. The shape is a modern analytics console: a dark navy rail on the
- * left, a quiet white workspace on the right, and content that arrives as
- * cards — hero KPIs with a trend delta and a sparkline, chart panels, a
- * ranked leaderboard, an activity feed, and tables with sticky headers.
+ * product. The shape is a modern analytics console: a white rail on the left
+ * held off the page by a blue edge, a quiet workspace on the right, and
+ * content that arrives as cards — hero KPIs with a trend delta and a
+ * sparkline, chart panels, a ranked leaderboard, an activity feed, and tables
+ * with sticky headers.
  *
  * Navy and gold are JAIN's; everything else is greys with a small semantic
  * set (green up, rose down, amber waiting). It restyles the component classes
@@ -289,46 +290,77 @@ body.admin-shell .stat s { letter-spacing: .1px }
 .feed-time { font-size: 11px; color: var(--a-faint); margin-top: 2px }
 .feed-empty { font-size: 12px; color: var(--a-faint); padding: 18px 0; text-align: center }
 
-/* ── Sidebar ─────────────────────────────────────────────────────────────── */
+/* ── Sidebar ───────────────────────────────────────────────────────────────
+   The rail is light: a white panel held off the workspace by a blue edge,
+   with navy text and a tinted active row. Its palette lives in the four
+   tokens below — to go cement grey instead, set --a-rail-bg to #e6e8ec,
+   --a-rail-sunk to #dcdfe5 and --a-rail-edge to #b9bec7, and leave the rest
+   alone. */
+body.admin-shell {
+  --a-rail-bg: #ffffff;
+  --a-rail-sunk: #f3f6fc;
+  --a-rail-edge: #3566c9;
+  --a-rail-accent: #2563eb;
+}
+
 body.admin-shell #sidebar {
   width: var(--a-sidebar);
-  background: linear-gradient(180deg, var(--a-navy) 0%, var(--a-navy-deep) 100%);
-  border-right: 1px solid rgba(255, 255, 255, .06);
+  background: var(--a-rail-bg);
+  border-right: 2px solid var(--a-rail-edge);
+  color: var(--a-ink-soft);
 }
+
+/* The brand block and the foot rule were drawn for a dark rail. */
+body.admin-shell #sidebar .border-white\/5 { border-color: var(--a-line); }
+body.admin-shell #sidebar .text-white { color: var(--a-navy); }
+body.admin-shell #sidebar .text-slate-400 { color: var(--a-muted); }
+body.admin-shell #sidebar .text-amber-400 { color: #8a6d16; }
+/* The logo tile no longer separates itself from the panel, so outline it. */
+body.admin-shell #sidebar .bg-white {
+  border: 1px solid var(--a-line);
+  background: var(--a-rail-bg);
+}
+body.admin-shell #sidebar #sidebar-close { color: var(--a-faint); }
+body.admin-shell #sidebar #sidebar-close:hover { color: var(--a-navy); }
+
 body.admin-shell #sidebar .nav-group {
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 1px;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, .34);
+  color: var(--a-faint);
   padding: 14px 12px 6px;
 }
 body.admin-shell #sidebar .nav-btn {
   border-radius: 10px;
   position: relative;
-  color: rgba(255, 255, 255, .72);
+  color: var(--a-ink-soft);
   transition: background .15s ease, color .15s ease;
 }
 body.admin-shell #sidebar .nav-btn .nav-ico {
   flex: none;
   width: 18px; height: 18px;
-  opacity: .8;
+  color: var(--a-muted);
 }
-body.admin-shell #sidebar .nav-btn:hover { background: rgba(255, 255, 255, .07); color: #fff }
+body.admin-shell #sidebar .nav-btn:hover {
+  background: var(--a-surface-sunk);
+  color: var(--a-navy);
+}
+body.admin-shell #sidebar .nav-btn:hover .nav-ico { color: var(--a-navy); }
 body.admin-shell #sidebar .nav-btn.on {
-  background: rgba(255, 255, 255, .11);
-  color: #fff;
+  background: var(--a-rail-sunk);
+  color: var(--a-navy);
   font-weight: 650;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .07);
+  box-shadow: inset 0 0 0 1px rgba(37, 99, 235, .14);
 }
-body.admin-shell #sidebar .nav-btn.on .nav-ico { opacity: 1; color: var(--a-gold) }
+body.admin-shell #sidebar .nav-btn.on .nav-ico { color: var(--a-rail-accent); }
 body.admin-shell #sidebar .nav-btn.on::before {
   content: '';
   position: absolute;
   left: -12px; top: 20%; bottom: 20%;
   width: 3px;
   border-radius: 0 3px 3px 0;
-  background: var(--a-gold);
+  background: var(--a-rail-accent);
 }
 /* Count chip on the right of a nav row. */
 body.admin-shell #sidebar .nav-btn .nav-chip {
@@ -337,8 +369,9 @@ body.admin-shell #sidebar .nav-btn .nav-chip {
   font-weight: 700;
   padding: 1px 6px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, .12);
-  color: rgba(255, 255, 255, .8);
+  background: var(--a-rail-sunk);
+  color: var(--a-navy);
+  box-shadow: inset 0 0 0 1px rgba(37, 99, 235, .12);
 }
 
 /* The signed-in card at the foot of the rail. */
@@ -348,8 +381,8 @@ body.admin-shell #sidebar .nav-btn .nav-chip {
   gap: 10px;
   padding: 10px;
   border-radius: 12px;
-  background: rgba(255, 255, 255, .06);
-  border: 1px solid rgba(255, 255, 255, .08);
+  background: var(--a-rail-sunk);
+  border: 1px solid var(--a-line);
 }
 .who-av {
   flex: none;
@@ -358,32 +391,31 @@ body.admin-shell #sidebar .nav-btn .nav-chip {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, var(--a-gold), #a9832c);
-  color: #24190a;
+  background: linear-gradient(135deg, var(--a-navy), #2f5aa8);
+  color: #fff;
   font-size: 12px;
   font-weight: 800;
 }
-.who-name { font-size: 12px; font-weight: 650; color: #fff; line-height: 1.2 }
+.who-name { font-size: 12px; font-weight: 650; color: var(--a-navy); line-height: 1.2 }
 .who-role {
   font-size: 10.5px;
-  color: rgba(255, 255, 255, .5);
+  color: var(--a-muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-/* Sign-out sits inside the dark rail, so it is drawn as a quiet outline
-   rather than the solid rose used on destructive buttons in the workspace. */
+/* Sign-out reads as a quiet outline until you reach for it. */
 body.admin-shell #sidebar .btn-rose {
-  background: rgba(255, 255, 255, .06);
-  border: 1px solid rgba(255, 255, 255, .12);
-  color: rgba(255, 255, 255, .8);
+  background: var(--a-rail-bg);
+  border: 1px solid var(--a-line-strong);
+  color: #be123c;
   box-shadow: none;
 }
 body.admin-shell #sidebar .btn-rose:hover {
-  background: rgba(225, 29, 72, .18);
-  border-color: rgba(225, 29, 72, .5);
-  color: #fff;
+  background: #fff1f2;
+  border-color: #fbc9d2;
+  color: #9f1239;
   box-shadow: none;
 }
 
