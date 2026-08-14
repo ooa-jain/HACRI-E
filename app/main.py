@@ -76,6 +76,27 @@ templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 # every template instead of threading it through each route's context.
 from app.departments import DEPARTMENTS  # noqa: E402
 templates.env.globals["departments"] = DEPARTMENTS
+
+
+def asset(path: str) -> str:
+    """A /static URL stamped with the file's modification time.
+
+    Without this a browser keeps the previous stylesheet or script after a
+    deploy and the page renders with last week's code — invisible from the
+    server side and maddening to debug. The stamp changes when the file does,
+    so a pull is enough to bust the cache.
+    """
+    relative = path.split("?", 1)[0].lstrip("/")
+    if relative.startswith("static/"):
+        relative = relative[len("static/"):]
+    try:
+        stamp = int((BASE_DIR / "static" / relative).stat().st_mtime)
+    except OSError:
+        return path
+    return f"{path}?v={stamp}"
+
+
+templates.env.globals["asset"] = asset
 app.state.templates = templates
 
 app.mount("/static",    StaticFiles(directory=str(BASE_DIR / "static")),         name="static")

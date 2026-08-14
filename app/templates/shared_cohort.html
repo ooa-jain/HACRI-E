@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AI Literacy Outcome and Impact — {{ campus_label }} — JAIN University</title>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/static/css/cohort_report.css">
+<link rel="stylesheet" href="{{ asset('/static/css/cohort_report.css') }}">
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0 }
   body {
@@ -90,7 +90,7 @@
   </footer>
 </div>
 
-<script src="/static/js/cohort_report.js"></script>
+<script src="{{ asset('/static/js/cohort_report.js') }}"></script>
 <script>
 const CAMPUS = {{ campus | tojson }};
 const TOKEN  = {{ token  | tojson }};

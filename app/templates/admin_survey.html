@@ -8,11 +8,11 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <!-- The orientation report draws itself; the same pair renders the public
      shared page, so both sides of the login look identical. -->
-<link rel="stylesheet" href="/static/css/admin_shell.css">
-<link rel="stylesheet" href="/static/css/orientation_report.css">
-<script src="/static/js/orientation_report.js"></script>
-<link rel="stylesheet" href="/static/css/cohort_report.css">
-<script src="/static/js/cohort_report.js"></script>
+<link rel="stylesheet" href="{{ asset('/static/css/admin_shell.css') }}">
+<link rel="stylesheet" href="{{ asset('/static/css/orientation_report.css') }}">
+<script src="{{ asset('/static/js/orientation_report.js') }}"></script>
+<link rel="stylesheet" href="{{ asset('/static/css/cohort_report.css') }}">
+<script src="{{ asset('/static/js/cohort_report.js') }}"></script>
 <style>
   body { font-family: 'Inter', system-ui, sans-serif; }
   .panel { display: none; }
