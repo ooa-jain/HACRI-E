@@ -125,6 +125,10 @@
 
     <main class="p-4 md:p-6 flex-1 space-y-5">
 
+      <!-- Shown only when the students request fails, so an empty dashboard is
+           never mistaken for an empty cohort. -->
+      <div id="load-error" class="hidden"></div>
+
       <!-- ── OVERVIEW ─────────────────────────────────────────────────── -->
       <div class="panel on" id="p-overview">
 
@@ -1088,13 +1092,24 @@ function scopeLabel() {
 }
 
 async function loadUsers() {
+  const banner = $('load-error');
   try {
     users = await api('/admin/api/survey/users?' + filterParams());
+    banner.classList.add('hidden');
     populateDepts();
     renderOverview();
     renderStudents();
     updateTargetCount();
-  } catch (err) { console.error(err); }
+  } catch (err) {
+    // Swallowing this into the console left the dashboard showing dashes with
+    // no way to tell a failed request from an empty cohort. Say so on the page.
+    console.error(err);
+    banner.classList.remove('hidden');
+    note(banner, 'err',
+      `<b>Could not load students.</b> ${e(err.message)} — the dashboard below is empty because ` +
+      `the request for <code>/admin/api/survey/users</code> did not come back. ` +
+      `<button class="btn btn-soft ml-2" onclick="loadUsers()">Try again</button>`);
+  }
 }
 
 let deptsPopulated = false;
