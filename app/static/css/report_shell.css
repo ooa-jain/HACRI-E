@@ -1,0 +1,238 @@
+/*
+ * report_shell.css — the look of the public shared pages.
+ *
+ * The department directory and the analysis reports are handed out by link to
+ * people who never see the admin, so they carry the same design as the admin
+ * console: the same ground and card material, the same KPI treatment, the same
+ * tables and buttons. Only the frame differs — a report opens with a navy
+ * cover band rather than a navigation rail.
+ *
+ * Like admin_shell.css this restyles the classes the templates already use
+ * (.card, .summary, .stat-card, .btn, .badge, tables) instead of asking the
+ * markup to change. It is scoped to `body.report-shell` so it outweighs each
+ * template's own inline <style> regardless of load order.
+ */
+
+:root {
+  --r-navy: #0d2147;
+  --r-navy-soft: #17305e;
+  --r-navy-deep: #081428;
+  --r-gold: #c9a84c;
+
+  --r-ink: #0f172a;
+  --r-ink-soft: #344054;
+  --r-muted: #6b7280;
+  --r-faint: #98a2b3;
+  --r-bg: #f6f7f9;
+  --r-surface: #fff;
+  --r-surface-sunk: #f8fafc;
+  --r-line: #e7e9ee;
+  --r-line-strong: #d5d9e2;
+  --r-accent: #2563eb;
+
+  --r-radius: 14px;
+  --r-shadow: 0 1px 2px rgba(16, 24, 40, .05), 0 1px 3px rgba(16, 24, 40, .04);
+  --r-shadow-lift: 0 4px 8px -2px rgba(16, 24, 40, .08), 0 16px 32px -18px rgba(16, 24, 40, .28);
+}
+
+/* ── Ground ──────────────────────────────────────────────────────────────── */
+body.report-shell {
+  background: var(--r-bg);
+  color: var(--r-ink);
+  font-family: 'Inter', 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Cover band ──────────────────────────────────────────────────────────
+   A report is a document, so it keeps a titled cover rather than borrowing
+   the console's rail. Navy, with the gold rule kept as a hairline. */
+body.report-shell .header {
+  background: linear-gradient(135deg, var(--r-navy) 0%, var(--r-navy-deep) 100%);
+  border-bottom: 2px solid var(--r-gold);
+  padding: 34px 20px 30px;
+}
+body.report-shell .header h1 {
+  font-size: 23px;
+  font-weight: 800;
+  letter-spacing: -.5px;
+}
+body.report-shell .header h1 span { color: var(--r-gold); }
+body.report-shell .header p { color: rgba(255, 255, 255, .62); font-size: 13.5px; }
+
+/* The directory's header sits on the page rather than in a band. */
+body.report-shell.plain-head .header {
+  background: none;
+  border-bottom: none;
+  padding: 0;
+  margin-bottom: 30px;
+}
+body.report-shell.plain-head .header h1 {
+  color: var(--r-navy);
+  font-size: 27px;
+}
+body.report-shell.plain-head .header p { color: var(--r-muted); font-size: 14px; }
+
+/* ── Panels ──────────────────────────────────────────────────────────────── */
+body.report-shell .card,
+body.report-shell .charts-card,
+body.report-shell .action-banner,
+body.report-shell .table-card {
+  background: var(--r-surface);
+  border: 1px solid var(--r-line);
+  border-radius: var(--r-radius);
+  box-shadow: var(--r-shadow);
+}
+body.report-shell .charts-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--r-ink);
+  letter-spacing: -.2px;
+  border-bottom: 1px solid var(--r-line);
+  padding-bottom: 12px;
+  margin-bottom: 20px;
+}
+body.report-shell .chart-item {
+  background: var(--r-surface-sunk);
+  border: 1px solid var(--r-line);
+  border-radius: 12px;
+}
+body.report-shell .action-info h2 { font-size: 15px; font-weight: 700; color: var(--r-ink); }
+body.report-shell .action-info p { font-size: 12.5px; color: var(--r-muted); }
+
+/* ── Figures ─────────────────────────────────────────────────────────────
+   The directory's `.summary div` and the report's `.stat-card` become the
+   same object as the console's KPI card: label above, figure below, an
+   accent kept as a top rule. */
+body.report-shell .summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 14px;
+  margin-bottom: 22px;
+}
+body.report-shell .summary div,
+body.report-shell .stat-card {
+  position: relative;
+  overflow: hidden;
+  /* These sit in a grid beside a taller chart card and get stretched to
+     match it, so the figure is centred rather than stranded at the top. */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background: var(--r-surface);
+  border: 1px solid var(--r-line);
+  border-left: 1px solid var(--r-line);
+  border-radius: var(--r-radius);
+  box-shadow: var(--r-shadow);
+  padding: 16px 18px;
+  text-align: left;
+  transition: transform .16s ease, box-shadow .16s ease;
+}
+body.report-shell .summary div:hover,
+body.report-shell .stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--r-shadow-lift);
+}
+/* The templates set the accent through border-left-color or ::after; keep
+   both working, drawn as one rule along the top. */
+body.report-shell .summary div::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: currentColor;
+  opacity: .85;
+}
+body.report-shell .stat-card::after { height: 3px; }
+
+body.report-shell .summary b,
+body.report-shell .stat-val {
+  display: block;
+  font-size: 26px;
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -1px;
+  color: var(--r-ink);
+  margin: 0 0 5px;
+}
+body.report-shell .summary span,
+body.report-shell .stat-lbl {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--r-muted);
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  margin: 0;
+}
+
+/* ── Tables ──────────────────────────────────────────────────────────────── */
+body.report-shell th {
+  padding: 12px 14px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: .5px;
+  text-transform: uppercase;
+  color: var(--r-muted);
+  background: var(--r-surface-sunk);
+  border-bottom: 1px solid var(--r-line);
+}
+body.report-shell td {
+  padding: 12px 14px;
+  font-size: 13px;
+  border-bottom: 1px solid var(--r-line);
+  vertical-align: middle;
+}
+body.report-shell tbody tr { transition: background .12s ease; }
+body.report-shell tbody tr:hover { background: #f7f9fc; }
+body.report-shell .dept-name { font-weight: 650; color: var(--r-ink); }
+
+/* ── Badges ──────────────────────────────────────────────────────────────── */
+body.report-shell .badge {
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 9px;
+}
+body.report-shell .badge-gray  { background: #f1f3f7; color: #475569 }
+body.report-shell .badge-blue  { background: #eaf1ff; color: #1d4ed8 }
+body.report-shell .badge-green { background: #e7f7f0; color: #047857 }
+body.report-shell .badge-amber { background: #fef4e6; color: #b45309 }
+body.report-shell .badge-rose  { background: #ffeef1; color: #be123c }
+
+/* ── Buttons ─────────────────────────────────────────────────────────────── */
+body.report-shell .btn {
+  border-radius: 9px;
+  font-weight: 600;
+  letter-spacing: .1px;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, .05);
+  transition: transform .14s ease, box-shadow .14s ease, background .14s ease;
+}
+body.report-shell .btn:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--r-shadow-lift);
+}
+body.report-shell .btn:active { transform: none; }
+body.report-shell .btn-pre   { background: var(--r-navy); color: #fff }
+body.report-shell .btn-pre:hover { background: var(--r-navy-soft) }
+body.report-shell .btn-post,
+body.report-shell .btn-excel,
+body.report-shell .btn-green { background: #047857; color: #fff }
+body.report-shell .btn-post:hover,
+body.report-shell .btn-excel:hover,
+body.report-shell .btn-green:hover { background: #036049 }
+body.report-shell .btn-ppt,
+body.report-shell .btn-gold { background: #b45309; color: #fff }
+body.report-shell .btn-ppt:hover,
+body.report-shell .btn-gold:hover { background: #92400e }
+body.report-shell .btn-mail { background: var(--r-ink); color: #fff }
+body.report-shell .btn-mail:hover { background: #1e293b }
+
+body.report-shell .foot { color: var(--r-faint); font-size: 12px }
+
+/* Reduced motion: keep the surfaces, drop the movement. */
+@media (prefers-reduced-motion: reduce) {
+  body.report-shell * { transition: none !important; }
+  body.report-shell .btn:hover,
+  body.report-shell .summary div:hover,
+  body.report-shell .stat-card:hover { transform: none; }
+}

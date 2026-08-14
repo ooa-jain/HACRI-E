@@ -217,22 +217,23 @@
       line-height: 1.7;
     }
   </style>
+  <link rel="stylesheet" href="{{ asset('/static/css/report_shell.css') }}">
 </head>
-<body>
+<body class="report-shell plain-head">
   <div class="container">
     <div class="header">
-      <h1>🏢 Department Analysis Directory</h1>
+      <h1>Department Analysis Directory</h1>
       <p>JAIN (Deemed-to-be University) · Shared Public Reports Directory</p>
     </div>
 
     <div class="summary">
-      <div style="border-left-color:#1B2A4A"><b>{{ overall.registered }}</b><span>Registered</span></div>
-      <div style="border-left-color:#0369a1"><b>{{ overall.pre_done }}</b><span>Baseline filled</span></div>
-      <div style="border-left-color:#15803d"><b>{{ overall.post_done }}</b><span>Post filled</span></div>
-      <div style="border-left-color:#b45309"><b>{{ overall.post_pending }}</b><span>Post pending</span></div>
-      <div style="border-left-color:#4338ca"><b>{{ overall.reminders_sent }}</b><span>Reminders sent</span></div>
-      <div style="border-left-color:#0d9488"><b>{{ overall.clicked }}</b><span>Clicked the mail</span></div>
-      <div style="border-left-color:#7c3aed"><b>{{ overall.completed_after }}</b><span>Filled after mail</span></div>
+      <div style="color:#1B2A4A"><b>{{ overall.registered }}</b><span>Registered</span></div>
+      <div style="color:#0369a1"><b>{{ overall.pre_done }}</b><span>Baseline filled</span></div>
+      <div style="color:#15803d"><b>{{ overall.post_done }}</b><span>Post filled</span></div>
+      <div style="color:#b45309"><b>{{ overall.post_pending }}</b><span>Post pending</span></div>
+      <div style="color:#4338ca"><b>{{ overall.reminders_sent }}</b><span>Reminders sent</span></div>
+      <div style="color:#0d9488"><b>{{ overall.clicked }}</b><span>Clicked the mail</span></div>
+      <div style="color:#7c3aed"><b>{{ overall.completed_after }}</b><span>Filled after mail</span></div>
     </div>
 
     <div class="card">
@@ -294,27 +295,27 @@
                 <div class="link-row">
                   <b>Pre</b>
                   <a class="btn btn-pre btn-sm" target="_blank"
-                     href="/shared/analysis?dept={{ enc }}&token={{ d.token_pre }}&type=pre">📈 Analysis</a>
+                     href="/shared/analysis?dept={{ enc }}&token={{ d.token_pre }}&type=pre"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg> Analysis</a>
                   <a class="btn btn-excel btn-sm"
-                     href="/shared/analysis/export-excel?dept={{ enc }}&token={{ d.token_pre }}&type=pre">📥 Excel</a>
+                     href="/shared/analysis/export-excel?dept={{ enc }}&token={{ d.token_pre }}&type=pre"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="M7 11l5 5 5-5"/><path d="M4 20h16"/></svg> Excel</a>
                   <a class="btn btn-ppt btn-sm"
-                     href="/shared/analysis/download-ppt?dept={{ enc }}&token={{ d.token_pre }}&type=pre">📊 PPT</a>
+                     href="/shared/analysis/download-ppt?dept={{ enc }}&token={{ d.token_pre }}&type=pre"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M12 16v4M8 20h8"/></svg> PPT</a>
                   <button type="button" class="btn btn-mail btn-sm" data-mail="pre"
                      data-dept="{{ d.name }}" data-enc="{{ enc }}"
-                     data-token="{{ d.token_pre }}" data-registered="{{ d.registered }}" data-pre-done="{{ d.pre_done }}" data-post-done="{{ d.post_done }}" data-post-pending="{{ d.post_pending }}" data-lit-pre="{{ d.avg_lit_pre if d.avg_lit_pre is not none else '' }}" data-read-pre="{{ d.avg_read_pre if d.avg_read_pre is not none else '' }}" data-lit-post="{{ d.avg_lit_post if d.avg_lit_post is not none else '' }}" data-read-post="{{ d.avg_read_post if d.avg_read_post is not none else '' }}">✉️ Mail</button>
+                     data-token="{{ d.token_pre }}" data-registered="{{ d.registered }}" data-pre-done="{{ d.pre_done }}" data-post-done="{{ d.post_done }}" data-post-pending="{{ d.post_pending }}" data-lit-pre="{{ d.avg_lit_pre if d.avg_lit_pre is not none else '' }}" data-read-pre="{{ d.avg_read_pre if d.avg_read_pre is not none else '' }}" data-lit-post="{{ d.avg_lit_post if d.avg_lit_post is not none else '' }}" data-read-post="{{ d.avg_read_post if d.avg_read_post is not none else '' }}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="5" width="19" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg> Mail</button>
                 </div>
                 <div class="link-row">
                   <b>Post</b>
                   <a class="btn btn-post btn-sm" target="_blank"
-                     href="/shared/analysis?dept={{ enc }}&token={{ d.token_post }}&type=post">📊 Analysis</a>
+                     href="/shared/analysis?dept={{ enc }}&token={{ d.token_post }}&type=post"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4V10H4zM10 20h4V4h-4zM16 20h4v-7h-4z"/></svg> Analysis</a>
                   <a class="btn btn-excel btn-sm"
-                     href="/shared/analysis/export-excel?dept={{ enc }}&token={{ d.token_post }}&type=post">📥 Excel</a>
+                     href="/shared/analysis/export-excel?dept={{ enc }}&token={{ d.token_post }}&type=post"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="M7 11l5 5 5-5"/><path d="M4 20h16"/></svg> Excel</a>
                   <a class="btn btn-ppt btn-sm"
-                     href="/shared/analysis/download-ppt?dept={{ enc }}&token={{ d.token_post }}&type=post">📊 PPT</a>
+                     href="/shared/analysis/download-ppt?dept={{ enc }}&token={{ d.token_post }}&type=post"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M12 16v4M8 20h8"/></svg> PPT</a>
                   <button type="button" class="btn btn-mail btn-sm" data-mail="post"
                      data-dept="{{ d.name }}" data-enc="{{ enc }}"
                      data-token="{{ d.token_post }}"
-                     data-student-path="{{ d.student_post_path }}" data-registered="{{ d.registered }}" data-pre-done="{{ d.pre_done }}" data-post-done="{{ d.post_done }}" data-post-pending="{{ d.post_pending }}" data-lit-pre="{{ d.avg_lit_pre if d.avg_lit_pre is not none else '' }}" data-read-pre="{{ d.avg_read_pre if d.avg_read_pre is not none else '' }}" data-lit-post="{{ d.avg_lit_post if d.avg_lit_post is not none else '' }}" data-read-post="{{ d.avg_read_post if d.avg_read_post is not none else '' }}">✉️ Mail</button>
+                     data-student-path="{{ d.student_post_path }}" data-registered="{{ d.registered }}" data-pre-done="{{ d.pre_done }}" data-post-done="{{ d.post_done }}" data-post-pending="{{ d.post_pending }}" data-lit-pre="{{ d.avg_lit_pre if d.avg_lit_pre is not none else '' }}" data-read-pre="{{ d.avg_read_pre if d.avg_read_pre is not none else '' }}" data-lit-post="{{ d.avg_lit_post if d.avg_lit_post is not none else '' }}" data-read-post="{{ d.avg_read_post if d.avg_read_post is not none else '' }}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="5" width="19" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg> Mail</button>
                 </div>
               </div>
             </td>
