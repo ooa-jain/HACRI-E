@@ -24,28 +24,28 @@
 
   /** What an average out of ten actually feels like. */
   const MOODS = [
-    [9, 'Buzzing',        '', '#059669'],
-    [8, 'Loving it',      '', '#16a34a'],
-    [7, 'Good vibes',     '', '#84cc16'],
-    [6, 'Warming up',     '', '#facc15'],
-    [5, 'Mixed feelings', '', '#f97316'],
-    [0, 'Needs a lift',   '', '#e11d48'],
+    [9, 'Buzzing',        '', '#15803d'],
+    [8, 'Loving it',      '', '#3f9142'],
+    [7, 'Good vibes',     '', '#a3a821'],
+    [6, 'Warming up',     '', '#eab308'],
+    [5, 'Mixed feelings', '', '#d97706'],
+    [0, 'Needs a lift',   '', '#c2410c'],
   ];
   const mood = avg => (avg === null || avg === undefined)
-    ? ['No answers yet', '', '#94a3b8']
+    ? ['No answers yet', '', '#a89e90']
     : (MOODS.find(m => avg >= m[0]) || MOODS[MOODS.length - 1]).slice(1);
 
   // Section accents, cycled so each section reads as its own chapter.
-  const ACCENTS = ['#2563eb', '#0d9488', '#7c3aed', '#e11d48', '#f59e0b',
-                   '#0ea5e9', '#16a34a', '#db2777', '#4f46e5'];
+  const ACCENTS = ['#b9862c', '#15803d', '#8a6320', '#c2410c', '#d9a441',
+                   '#c8a96a', '#3f9142', '#a8532a', '#6b5b3e'];
 
   const PANELS = [
-    ['impactful',  'Sessions that landed',   '#059669'],
-    ['needs_work', 'Sessions needing work',  '#e11d48'],
-    ['stressors',  'Biggest stressors',      '#f59e0b'],
-    ['keep',       'Keep next year',         '#2563eb'],
-    ['stop',       'Stop next year',         '#9f1239'],
-    ['introduce',  'Introduce next year',    '#7c3aed'],
+    ['impactful',  'Sessions that landed',   '#15803d'],
+    ['needs_work', 'Sessions needing work',  '#c2410c'],
+    ['stressors',  'Biggest stressors',      '#d9a441'],
+    ['keep',       'Keep next year',         '#b9862c'],
+    ['stop',       'Stop next year',         '#992d12'],
+    ['introduce',  'Introduce next year',    '#8a6320'],
   ];
 
 
@@ -109,7 +109,7 @@
     return `
       <div class="ori-ring">
         <svg viewBox="0 0 ${size} ${size}" width="${size}" height="${size}">
-          <circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="#eef2f7" stroke-width="16"></circle>
+          <circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="#f0eade" stroke-width="16"></circle>
           ${arcs}
         </svg>
         <div class="ori-ring-centre">
@@ -191,13 +191,13 @@
   function tiles(report) {
     const h = report.headline, c = report.coverage || {};
     return `<div class="ori-tiles">
-      ${tile(report.count, 'Responses', '#0f172a', null)}
-      ${tile(num(c.pct, 0) + '%', 'Response rate', '#0d9488', c.pct)}
+      ${tile(report.count, 'Responses', '#1c1917', null)}
+      ${tile(num(c.pct, 0) + '%', 'Response rate', '#15803d', c.pct)}
       ${tile(num(h.vibe, 1), 'Vibe / 10', mood(h.vibe)[2], h.vibe === null ? 0 : h.vibe * 10)}
-      ${tile(h.nps === null || h.nps === undefined ? '—' : num(h.nps, 0), 'NPS', '#4f46e5',
+      ${tile(h.nps === null || h.nps === undefined ? '—' : num(h.nps, 0), 'NPS', '#6b5b3e',
              h.nps === null || h.nps === undefined ? 0 : (h.nps + 100) / 2)}
-      ${tile(num(h.belonging, 1), 'Belonging / 10', '#0ea5e9', h.belonging === null ? 0 : h.belonging * 10)}
-      ${tile(num(h.bridge, 1), 'Bridge course / 5', '#f59e0b', h.bridge === null ? 0 : h.bridge * 20)}
+      ${tile(num(h.belonging, 1), 'Belonging / 10', '#c8a96a', h.belonging === null ? 0 : h.belonging * 10)}
+      ${tile(num(h.bridge, 1), 'Bridge course / 5', '#d9a441', h.bridge === null ? 0 : h.bridge * 20)}
     </div>`;
   }
 
@@ -206,9 +206,9 @@
     const h = report.headline;
     const q = questionOf(report, 'q34') || h;
     const segs = [
-      { value: q.promoters || 0,  colour: '#059669', label: 'Promoters 9–10' },
-      { value: q.passives || 0,   colour: '#facc15', label: 'Passives 7–8' },
-      { value: q.detractors || 0, colour: '#e11d48', label: 'Detractors 0–6' },
+      { value: q.promoters || 0,  colour: '#15803d', label: 'Promoters 9–10' },
+      { value: q.passives || 0,   colour: '#eab308', label: 'Passives 7–8' },
+      { value: q.detractors || 0, colour: '#c2410c', label: 'Detractors 0–6' },
     ];
     const total = segs.reduce((s, x) => s + x.value, 0);
     return `
@@ -337,7 +337,7 @@
         <div class="ori-bars">
           ${rows.map(r => bar(
             { label: r.dept, count: r.count, pct: r.pct, width: 100 * r.count / top },
-            '#2563eb')).join('')}
+            '#b9862c')).join('')}
         </div>
       </div>`;
   }

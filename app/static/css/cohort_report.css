@@ -7,15 +7,15 @@
  */
 
 .coh-report {
-  --navy: #0d2147;
-  --gold: #c9a84c;
-  --teal: #0d9488;
-  --deep: #1e3a8a;
-  --rose: #be123c;
-  --ink: #101828;
-  --muted: #667085;
-  --line: #e4e7ec;
-  --mist: #f8fafc;
+  --navy: #1f1a12;
+  --gold: #d9a441;
+  --teal: #15803d;
+  --deep: #3b3020;
+  --rose: #c2410c;
+  --ink: #1c1917;
+  --muted: #7c7266;
+  --line: #ece3d4;
+  --mist: #f9f4ea;
   --paper: #fff;
   color: var(--ink);
 }
@@ -45,7 +45,7 @@
 /* ── The wire flow ───────────────────────────────────────────────────────── */
 .coh-flow { display: flex; align-items: stretch; gap: 0; flex-wrap: wrap; }
 .coh-node {
-  --tone: #0d2147;
+  --tone: #1f1a12;
   flex: 1 1 190px; min-width: 180px;
   border: 1px solid var(--line); border-top: 3px solid var(--tone);
   border-radius: 12px; padding: 14px 16px; background: var(--paper);
@@ -76,7 +76,7 @@
 
 .coh-owed { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
 .coh-owed-item {
-  --tone: #0d2147;
+  --tone: #1f1a12;
   border: 1px solid var(--line); border-left: 3px solid var(--tone);
   border-radius: 10px; padding: 12px 14px; background: var(--mist);
 }
@@ -85,7 +85,7 @@
 .coh-owed-label { font-size: 11.5px; color: var(--muted); margin-top: 3px; }
 
 /* ── Outcome / impact brackets ───────────────────────────────────────────── */
-.coh-bracket { --tone: #1e3a8a; border-top: 3px solid var(--tone); }
+.coh-bracket { --tone: #3b3020; border-top: 3px solid var(--tone); }
 .coh-bracket-head { display: flex; align-items: flex-start; gap: 14px; }
 .coh-bracket-tag {
   flex-shrink: 0; font-size: 10.5px; font-weight: 700; letter-spacing: 1.2px;
@@ -95,7 +95,7 @@
 
 .coh-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
 .coh-tile {
-  --tone: #0d2147;
+  --tone: #1f1a12;
   border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; background: var(--mist);
 }
 .coh-tile-value { font-size: 26px; font-weight: 700; line-height: 1.1; color: var(--tone); }
@@ -114,15 +114,15 @@
 .coh-hist-label { font-size: 9.5px; color: var(--muted); white-space: nowrap; }
 .coh-hist-caption { font-size: 11px; color: var(--muted); margin-top: 10px; }
 
-.coh-track { height: 8px; background: #eef2f7; border-radius: 999px; overflow: hidden; flex: 1; }
+.coh-track { height: 8px; background: #f4eee2; border-radius: 999px; overflow: hidden; flex: 1; }
 .coh-fill { height: 100%; border-radius: 999px; min-width: 2px; }
 .coh-bar + .coh-bar { margin-top: 10px; }
 .coh-bar-head { display: flex; justify-content: space-between; gap: 12px; font-size: 11.5px; margin-bottom: 5px; }
-.coh-bar-head span:first-child { font-weight: 600; color: #344054; }
+.coh-bar-head span:first-child { font-weight: 600; color: #443c33; }
 .coh-bar-value { color: var(--muted); font-weight: 600; white-space: nowrap; }
 
 .coh-compare + .coh-compare { margin-top: 12px; }
-.coh-compare-label { font-size: 11.5px; font-weight: 600; color: #344054; margin-bottom: 5px; }
+.coh-compare-label { font-size: 11.5px; font-weight: 600; color: #443c33; margin-bottom: 5px; }
 .coh-compare-row { display: flex; align-items: center; gap: 8px; }
 .coh-compare-row + .coh-compare-row { margin-top: 4px; }
 .coh-compare-row span { font-size: 11px; font-weight: 700; color: var(--muted); min-width: 26px; text-align: right; }
@@ -133,7 +133,7 @@
 
 .coh-split { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
 .coh-split-cell {
-  --tone: #0d9488; text-align: center; border: 1px solid var(--line);
+  --tone: #15803d; text-align: center; border: 1px solid var(--line);
   border-bottom: 3px solid var(--tone); border-radius: 10px; padding: 12px 8px;
 }
 .coh-split-value { font-size: 22px; font-weight: 700; color: var(--tone); line-height: 1.1; }
@@ -161,17 +161,17 @@
 .coh-traj-row.overall { background: var(--mist); border-radius: 10px; padding: 12px 10px; margin-bottom: 4px; }
 .coh-traj-row.overall .coh-traj-name { font-weight: 700; color: var(--navy); }
 .coh-traj-name {
-  font-size: 12px; font-weight: 600; color: #344054;
+  font-size: 12px; font-weight: 600; color: #443c33;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .coh-traj-track {
   position: relative; height: 30px;
-  background: linear-gradient(#eef2f7, #eef2f7) center/100% 3px no-repeat;
+  background: linear-gradient(#f4eee2, #f4eee2) center/100% 3px no-repeat;
   border-radius: 999px;
 }
 .coh-traj-tick {
   position: absolute; top: 50%; width: 1px; height: 11px; margin-top: -5px;
-  background: #d7dde7;
+  background: #ddd0bb;
 }
 .coh-traj-link {
   position: absolute; top: 50%; height: 5px; margin-top: -2px; border-radius: 999px;
@@ -214,7 +214,7 @@
   background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px;
   transition: border-color .15s, box-shadow .15s;
 }
-.coh-campus:hover { border-color: #7f9fd4; box-shadow: 0 2px 10px rgba(13, 33, 71, .08); }
+.coh-campus:hover { border-color: #c8a96a; box-shadow: 0 2px 10px rgba(60, 45, 20, .1); }
 .coh-campus.on { border-color: var(--navy); box-shadow: inset 0 0 0 1px var(--navy); }
 .coh-campus-static { cursor: default; }
 .coh-campus-static:hover { border-color: var(--line); box-shadow: none; }
@@ -238,7 +238,7 @@
   text-transform: uppercase; color: var(--gold);
 }
 .coh-leader-dept { font-size: 14px; font-weight: 700; margin-top: 6px; line-height: 1.35; }
-.coh-leader-note { font-size: 11.5px; color: #b8c4d9; margin-top: 4px; }
+.coh-leader-note { font-size: 11.5px; color: #cabfa9; margin-top: 4px; }
 
 .coh-table-wrap { overflow-x: auto; }
 .coh-table { width: 100%; border-collapse: collapse; font-size: 12px; }
@@ -253,7 +253,7 @@
 .coh-warn { color: var(--rose); font-weight: 700; }
 .coh-up { color: var(--teal); font-weight: 700; }
 .coh-down { color: var(--rose); font-weight: 700; }
-.coh-mini-track { width: 62px; height: 6px; background: #eef2f7; border-radius: 999px; display: inline-block; overflow: hidden; vertical-align: middle; }
+.coh-mini-track { width: 62px; height: 6px; background: #f4eee2; border-radius: 999px; display: inline-block; overflow: hidden; vertical-align: middle; }
 .coh-mini-fill { height: 100%; background: var(--teal); border-radius: 999px; display: block; }
 .coh-mini-value { font-size: 11px; font-weight: 700; margin-left: 7px; }
 

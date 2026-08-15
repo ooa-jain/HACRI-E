@@ -7,7 +7,7 @@
  * contained: the shared page has no CSS framework behind it.
  */
 
-.ori-report { --ink: #0f172a; --muted: #64748b; --line: #e2e8f0; --paper: #fff; }
+.ori-report { --ink: #1c1917; --muted: #7c7266; --line: #ece3d4; --paper: #fff; }
 
 .ori-report *, .ori-report *::before, .ori-report *::after { box-sizing: border-box; }
 
@@ -17,13 +17,13 @@
   border: 1px solid var(--line);
   border-radius: 16px;
   padding: 18px 20px;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, .04);
+  box-shadow: 0 1px 2px rgba(60, 45, 20, .05);
 }
 .ori-card-title { font-size: 14px; font-weight: 800; color: var(--ink); }
 .ori-card-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
 .ori-card-split { display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
-.ori-empty { font-size: 12px; color: #94a3b8; padding: 6px 0; }
-.ori-empty-card { text-align: center; color: #94a3b8; padding: 34px 20px; font-size: 13px; }
+.ori-empty { font-size: 12px; color: #a89e90; padding: 6px 0; }
+.ori-empty-card { text-align: center; color: #a89e90; padding: 34px 20px; font-size: 13px; }
 
 .ori-grid-2  { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; }
 .ori-grid-3  { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 14px; }
@@ -32,7 +32,7 @@
 
 /* ── Hero ────────────────────────────────────────────────────────────────── */
 .ori-hero {
-  --mood: #84cc16;
+  --mood: #d9a441;
   display: grid;
   grid-template-columns: minmax(200px, auto) minmax(220px, 1fr) minmax(190px, auto);
   gap: 26px;
@@ -42,11 +42,11 @@
   color: #fff;
   background:
     radial-gradient(120% 160% at 100% 0%, color-mix(in srgb, var(--mood) 55%, transparent) 0%, transparent 60%),
-    linear-gradient(135deg, #0d2147 0%, #1a3a7a 100%);
-  box-shadow: 0 14px 34px rgba(13, 33, 71, .22);
+    linear-gradient(135deg, #1f1a12 0%, #3b3020 100%);
+  box-shadow: 0 14px 34px rgba(60, 45, 20, .22);
 }
 @supports not (background: color-mix(in srgb, red 50%, blue)) {
-  .ori-hero { background: linear-gradient(135deg, #0d2147 0%, #1a3a7a 60%, #24518f 100%); }
+  .ori-hero { background: linear-gradient(135deg, #1f1a12 0%, #3b3020 60%, #4a3c27 100%); }
 }
 .ori-hero-kicker {
   font-size: 10.5px; font-weight: 800; letter-spacing: 1.6px;
@@ -83,7 +83,7 @@
 /* ── Stat tiles ──────────────────────────────────────────────────────────── */
 .ori-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
 .ori-tile {
-  --tone: #0f172a;
+  --tone: #1c1917;
   background: var(--paper); border: 1px solid var(--line);
   border-left: 4px solid var(--tone); border-radius: 14px; padding: 14px 16px;
 }
@@ -94,12 +94,12 @@
 }
 
 /* ── Bars, ranks, rings ──────────────────────────────────────────────────── */
-.ori-track { height: 7px; background: #eef2f7; border-radius: 999px; overflow: hidden; }
+.ori-track { height: 7px; background: #f4eee2; border-radius: 999px; overflow: hidden; }
 .ori-fill  { height: 100%; border-radius: 999px; transition: width .35s ease; }
 .ori-bar + .ori-bar { margin-top: 9px; }
 .ori-bar-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 4px; }
 .ori-bar-label {
-  font-size: 11.5px; font-weight: 600; color: #334155;
+  font-size: 11.5px; font-weight: 600; color: #443c33;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .ori-bar-value { font-size: 11px; font-weight: 700; color: var(--muted); flex-shrink: 0; }
@@ -110,11 +110,11 @@
 .ori-rank-badge {
   width: 26px; height: 26px; flex-shrink: 0; border-radius: 9px;
   display: flex; align-items: center; justify-content: center;
-  font-size: 13px; font-weight: 800; background: #f1f5f9; color: #475569;
+  font-size: 13px; font-weight: 800; background: #f4eee2; color: #5c5347;
 }
 .ori-rank-body { flex: 1; min-width: 0; }
 .ori-rank-label {
-  font-size: 11.5px; font-weight: 600; color: #334155; margin-bottom: 4px;
+  font-size: 11.5px; font-weight: 600; color: #443c33; margin-bottom: 4px;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .ori-rank-value { flex-shrink: 0; text-align: right; font-size: 13px; font-weight: 800; color: var(--ink); }
@@ -125,13 +125,13 @@
   position: absolute; inset: 0; display: flex; flex-direction: column;
   align-items: center; justify-content: center; line-height: 1.1;
 }
-.ori-ring-value { font-size: 26px; font-weight: 800; color: #0d2147; }
+.ori-ring-value { font-size: 26px; font-weight: 800; color: #1f1a12; }
 .ori-ring-caption {
   font-size: 9.5px; font-weight: 800; letter-spacing: 1.6px;
   text-transform: uppercase; color: var(--muted); margin-top: 2px;
 }
 .ori-legend { margin-top: 12px; }
-.ori-legend-row { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #334155; }
+.ori-legend-row { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #443c33; }
 .ori-legend-row + .ori-legend-row { margin-top: 6px; }
 .ori-legend-label { flex: 1; }
 .ori-legend-pct { color: var(--muted); font-weight: 600; min-width: 38px; text-align: right; }
@@ -140,18 +140,18 @@
 /* ── Section nav + question cards ────────────────────────────────────────── */
 .ori-nav { display: flex; flex-wrap: wrap; gap: 8px; }
 .ori-nav-chip {
-  --tone: #2563eb;
+  --tone: #b9862c;
   font-size: 11.5px; font-weight: 700; text-decoration: none;
   padding: 6px 12px; border-radius: 999px;
   color: var(--tone); background: color-mix(in srgb, var(--tone) 12%, #fff);
   border: 1px solid color-mix(in srgb, var(--tone) 28%, #fff);
 }
 @supports not (background: color-mix(in srgb, red 50%, blue)) {
-  .ori-nav-chip { background: #f1f5f9; border-color: var(--line); }
+  .ori-nav-chip { background: #f4eee2; border-color: var(--line); }
 }
 .ori-nav-chip:hover { filter: brightness(.96); }
 
-.ori-section { --tone: #2563eb; border-top: 4px solid var(--tone); }
+.ori-section { --tone: #b9862c; border-top: 4px solid var(--tone); }
 .ori-section-head {
   display: flex; align-items: baseline; justify-content: space-between;
   gap: 12px; margin-bottom: 14px;
@@ -167,20 +167,20 @@
 .ori-q-title { font-size: 12.5px; font-weight: 800; color: var(--ink); }
 .ori-q-sub { font-size: 11px; color: var(--muted); margin: 2px 0 12px; }
 .ori-q-row + .ori-q-row { margin-top: 12px; }
-.ori-q-row-label { font-size: 11px; font-weight: 700; color: #475569; margin-bottom: 6px; }
+.ori-q-row-label { font-size: 11px; font-weight: 700; color: #5c5347; margin-bottom: 6px; }
 
 .ori-split3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
 .ori-mini {
-  --tone: #2563eb; text-align: center; border-radius: 10px; padding: 8px 4px;
+  --tone: #b9862c; text-align: center; border-radius: 10px; padding: 8px 4px;
   background: color-mix(in srgb, var(--tone) 10%, #fff);
 }
-@supports not (background: color-mix(in srgb, red 50%, blue)) { .ori-mini { background: #f8fafc; } }
+@supports not (background: color-mix(in srgb, red 50%, blue)) { .ori-mini { background: #f9f4ea; } }
 .ori-mini b { display: block; font-size: 16px; font-weight: 800; color: var(--tone); }
 .ori-mini span { display: block; font-size: 9.5px; font-weight: 700; color: var(--muted); margin-top: 2px; }
 
 .ori-scale { display: flex; align-items: flex-end; gap: 4px; }
 .ori-scale-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; }
-.ori-scale-count { font-size: 9.5px; font-weight: 800; color: #475569; height: 12px; }
+.ori-scale-count { font-size: 9.5px; font-weight: 800; color: #5c5347; height: 12px; }
 .ori-scale-track { width: 100%; height: 66px; display: flex; align-items: flex-end; }
 .ori-scale-bar { width: 100%; border-radius: 5px 5px 0 0; }
 .ori-scale-label { font-size: 9.5px; font-weight: 700; color: var(--muted); }
@@ -195,8 +195,8 @@
   cursor: pointer; width: 100%; text-align: left; font: inherit; color: inherit;
   transition: border-color .15s, box-shadow .15s;
 }
-.ori-dept-click:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
-.ori-dept-click:hover { border-color: #60a5fa; box-shadow: 0 2px 10px rgba(37, 99, 235, .12); }
+.ori-dept-click:focus-visible { outline: 2px solid #b9862c; outline-offset: 2px; }
+.ori-dept-click:hover { border-color: #e2b862; box-shadow: 0 2px 10px rgba(37, 99, 235, .12); }
 .ori-dept-rank {
   width: 26px; text-align: center; font-size: 14px; font-weight: 800; color: var(--muted); flex-shrink: 0;
 }
@@ -212,7 +212,7 @@
 .ori-dept .ori-track { margin-top: 6px; }
 .ori-dept-average {
   display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: center;
-  background: #0f172a; color: #fff; border-radius: 14px; padding: 12px 16px;
+  background: #1c1917; color: #fff; border-radius: 14px; padding: 12px 16px;
   font-size: 11.5px; font-weight: 600;
 }
 .ori-dept-average b { font-size: 12.5px; font-weight: 800; }

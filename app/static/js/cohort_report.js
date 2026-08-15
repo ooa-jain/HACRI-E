@@ -23,9 +23,9 @@
 
   const pct = v => (v === null || v === undefined) ? '—' : Number(v).toFixed(0) + '%';
 
-  const BASELINE = '#1e3a8a';
-  const POST = '#0d9488';
-  const STAGE_TONES = ['#0d2147', '#1e3a8a', '#c9a84c', '#0d9488'];
+  const BASELINE = '#3b3020';
+  const POST = '#15803d';
+  const STAGE_TONES = ['#1f1a12', '#3b3020', '#d9a441', '#15803d'];
 
   const delta = (after, before) =>
     (after === null || after === undefined || before === null || before === undefined)
@@ -64,8 +64,8 @@
         </div>
         <div class="coh-flow">${nodes}</div>
         <div class="coh-owed">
-          ${owed('Baseline still to complete', j.pending_pre, '#be123c')}
-          ${owed('Deeksharambh still to complete', j.pending_orientation, '#c9a84c')}
+          ${owed('Baseline still to complete', j.pending_pre, '#c2410c')}
+          ${owed('Deeksharambh still to complete', j.pending_orientation, '#d9a441')}
           ${owed('Post survey still to complete', j.pending_post, BASELINE)}
           ${owed('Finished all three steps', j.fully_done, POST, pct(j.completion_pct))}
         </div>
@@ -140,10 +140,10 @@
       <section class="coh-card coh-bracket" style="--tone:${BASELINE}">
         ${bracketHead('Outcome', 'Where the cohort started', 'Baseline survey')}
         <div class="coh-tiles">
-          ${tile(o.scored, 'Scored responses', '#0d2147')}
+          ${tile(o.scored, 'Scored responses', '#1f1a12')}
           ${tile(num(o.avg_lit, 2), 'AI Literacy / 5', BASELINE)}
           ${tile(num(o.avg_read, 2), 'AI Readiness / 5', POST)}
-          ${tile(num(o.avg_overall, 2), 'Overall / 5', '#c9a84c')}
+          ${tile(num(o.avg_overall, 2), 'Overall / 5', '#d9a441')}
         </div>
         <div class="coh-grid-2">
           <div class="coh-panel">
@@ -185,10 +185,10 @@
       <section class="coh-card coh-bracket" style="--tone:${POST}">
         ${bracketHead('Impact', 'Where the cohort ended up', 'Post-workshop survey')}
         <div class="coh-tiles">
-          ${tile(i.scored, 'Scored responses', '#0d2147')}
+          ${tile(i.scored, 'Scored responses', '#1f1a12')}
           ${tile(num(i.avg_lit, 2), 'AI Literacy / 5', BASELINE, `${signed(dLit)} on baseline`)}
           ${tile(num(i.avg_read, 2), 'AI Readiness / 5', POST, `${signed(dRead)} on baseline`)}
-          ${tile(signed(dAll), 'Overall change', dAll !== null && dAll < 0 ? '#be123c' : '#c9a84c')}
+          ${tile(signed(dAll), 'Overall change', dAll !== null && dAll < 0 ? '#c2410c' : '#d9a441')}
         </div>
         <div class="coh-grid-2">
           <div class="coh-panel">
@@ -224,8 +224,8 @@
             ${m.matched ? `
               <div class="coh-split">
                 ${splitCell('Improved', m.gained, m.matched, POST)}
-                ${splitCell('No change', m.unchanged, m.matched, '#64748b')}
-                ${splitCell('Declined', m.declined, m.matched, '#be123c')}
+                ${splitCell('No change', m.unchanged, m.matched, '#7c7266')}
+                ${splitCell('Declined', m.declined, m.matched, '#c2410c')}
               </div>
               <div class="coh-facts">
                 <div><span>Average literacy change</span><b>${signed(m.avg_delta_lit)}</b></div>
@@ -393,7 +393,7 @@
       const x2 = px(p.post_lit), y2 = py(p.post_read);
       const rising = (p.post_lit + p.post_read) >= (p.pre_lit + p.pre_read);
       return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"
-                    stroke="${rising ? POST : '#be123c'}" stroke-width="1.1"
+                    stroke="${rising ? POST : '#c2410c'}" stroke-width="1.1"
                     opacity=".45" marker-end="url(#coh-arrow-${rising ? 'up' : 'down'})"></line>`;
     }).join('');
 
@@ -447,13 +447,13 @@
 
             ${band(L, T, mid.x - L, mid.y - T, '#fff9e6')}
             ${band(mid.x, T, W - R - mid.x, mid.y - T, '#ebf5ec')}
-            ${band(L, mid.y, mid.x - L, H - B - mid.y, '#fbeaea')}
-            ${band(mid.x, mid.y, W - R - mid.x, H - B - mid.y, '#e8eef7')}
+            ${band(L, mid.y, mid.x - L, H - B - mid.y, '#fbeee6')}
+            ${band(mid.x, mid.y, W - R - mid.x, H - B - mid.y, '#f4eee2')}
 
-            ${quadrantLabel(L + 10, T + 18, 'start', 'Q2  AI Enthusiast', 'Low literacy · high readiness', '#6b3900')}
-            ${quadrantLabel(W - R - 10, T + 18, 'end', 'Q1  AI Champion', 'High literacy · high readiness', '#1a6b3a')}
-            ${quadrantLabel(L + 10, H - B - 18, 'start', 'Q3  AI Novice', 'Low literacy · low readiness', '#7b1818')}
-            ${quadrantLabel(W - R - 10, H - B - 18, 'end', 'Q4  AI Sceptic', 'High literacy · low readiness', '#1b2a4a')}
+            ${quadrantLabel(L + 10, T + 18, 'start', 'Q2  AI Enthusiast', 'Low literacy · high readiness', '#7a5f22')}
+            ${quadrantLabel(W - R - 10, T + 18, 'end', 'Q1  AI Champion', 'High literacy · high readiness', '#15803d')}
+            ${quadrantLabel(L + 10, H - B - 18, 'start', 'Q3  AI Novice', 'Low literacy · low readiness', '#8a3a12')}
+            ${quadrantLabel(W - R - 10, H - B - 18, 'end', 'Q4  AI Sceptic', 'High literacy · low readiness', '#2e271c')}
 
             <line x1="${mid.x}" y1="${T}" x2="${mid.x}" y2="${H - B}" stroke="#94a3b8" stroke-dasharray="4 4"></line>
             <line x1="${L}" y1="${mid.y}" x2="${W - R}" y2="${mid.y}" stroke="#94a3b8" stroke-dasharray="4 4"></line>
