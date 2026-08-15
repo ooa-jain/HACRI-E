@@ -41,36 +41,54 @@ body.report-shell {
   color: var(--r-ink);
   font-family: 'Inter', 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   -webkit-font-smoothing: antialiased;
+  /* The cover runs edge to edge, so the page's own padding moves inward to
+     the container that holds the content. */
+  padding: 0;
+}
+body.report-shell .container {
+  padding-left: 20px;
+  padding-right: 20px;
+  padding-bottom: 40px;
 }
 
 /* ── Cover band ──────────────────────────────────────────────────────────
-   A report is a document, so it keeps a titled cover rather than borrowing
-   the console's rail. Navy, with the gold rule kept as a hairline. */
+   Every shared page opens the same way: a navy cover carrying the title,
+   released into the page by a wave rather than a ruled edge. The wave is an
+   inline SVG filled with the page ground, so it needs no image request and
+   stays exact at any width. */
 body.report-shell .header {
+  position: relative;
   background: linear-gradient(135deg, var(--r-navy) 0%, var(--r-navy-deep) 100%);
-  border-bottom: 2px solid var(--r-gold);
-  padding: 34px 20px 30px;
+  border-bottom: none;
+  padding: 40px 20px 62px;
+  text-align: center;
+  color: #fff;
+  margin-bottom: 26px;
+}
+body.report-shell .header::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0; bottom: -1px;
+  height: 44px;
+  background: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 44' preserveAspectRatio='none'%3E%3Cpath d='M0 26c180 24 340-16 520-8s300 30 470 20 270-30 450-14v20H0z' fill='%23f6f7f9'/%3E%3C/svg%3E")
+              bottom center / 100% 100% no-repeat;
+  pointer-events: none;
 }
 body.report-shell .header h1 {
-  font-size: 23px;
-  font-weight: 800;
+  font-size: 25px;
+  font-weight: 700;
   letter-spacing: -.5px;
+  margin: 0 0 6px;
+  /* The directory's own sheet paints this navy, which on the cover is
+     navy on navy. */
+  color: #fff;
 }
-body.report-shell .header h1 span { color: var(--r-gold); }
-body.report-shell .header p { color: rgba(255, 255, 255, .62); font-size: 13.5px; }
-
-/* The directory's header sits on the page rather than in a band. */
-body.report-shell.plain-head .header {
-  background: none;
-  border-bottom: none;
-  padding: 0;
-  margin-bottom: 30px;
+body.report-shell .header h1 span { color: var(--r-gold); font-weight: 700; }
+body.report-shell .header p {
+  color: rgba(255, 255, 255, .6);
+  font-size: 13.5px;
+  font-weight: 400;
 }
-body.report-shell.plain-head .header h1 {
-  color: var(--r-navy);
-  font-size: 27px;
-}
-body.report-shell.plain-head .header p { color: var(--r-muted); font-size: 14px; }
 
 /* ── Panels ──────────────────────────────────────────────────────────────── */
 body.report-shell .card,
@@ -199,33 +217,52 @@ body.report-shell .badge-green { background: #e7f7f0; color: #047857 }
 body.report-shell .badge-amber { background: #fef4e6; color: #b45309 }
 body.report-shell .badge-rose  { background: #ffeef1; color: #be123c }
 
-/* ── Buttons ─────────────────────────────────────────────────────────────── */
+/* ── Buttons ─────────────────────────────────────────────────────────────
+   Minimal: one filled action per group carries the eye, everything beside it
+   is a quiet outline. The old sheets painted every button a different colour,
+   which made a row of exports read as a rainbow. */
 body.report-shell .btn {
   border-radius: 9px;
   font-weight: 600;
   letter-spacing: .1px;
-  box-shadow: 0 1px 2px rgba(16, 24, 40, .05);
-  transition: transform .14s ease, box-shadow .14s ease, background .14s ease;
+  box-shadow: none;
+  border: 1px solid transparent;
+  transition: background .14s ease, border-color .14s ease, color .14s ease;
 }
-body.report-shell .btn:hover {
-  transform: translateY(-1px);
-  box-shadow: var(--r-shadow-lift);
-}
-body.report-shell .btn:active { transform: none; }
-body.report-shell .btn-pre   { background: var(--r-navy); color: #fff }
-body.report-shell .btn-pre:hover { background: var(--r-navy-soft) }
+body.report-shell .btn:hover { transform: none; box-shadow: none; }
+
+/* The one filled action. */
+body.report-shell .btn-pre,
 body.report-shell .btn-post,
-body.report-shell .btn-excel,
-body.report-shell .btn-green { background: #047857; color: #fff }
+body.report-shell .btn-green {
+  background: var(--r-navy);
+  border-color: var(--r-navy);
+  color: #fff;
+}
+body.report-shell .btn-pre:hover,
 body.report-shell .btn-post:hover,
-body.report-shell .btn-excel:hover,
-body.report-shell .btn-green:hover { background: #036049 }
+body.report-shell .btn-green:hover {
+  background: var(--r-navy-soft);
+  border-color: var(--r-navy-soft);
+}
+
+/* Everything else: outline. */
+body.report-shell .btn-excel,
 body.report-shell .btn-ppt,
-body.report-shell .btn-gold { background: #b45309; color: #fff }
+body.report-shell .btn-gold,
+body.report-shell .btn-mail {
+  background: var(--r-surface);
+  border-color: var(--r-line-strong);
+  color: var(--r-ink-soft);
+}
+body.report-shell .btn-excel:hover,
 body.report-shell .btn-ppt:hover,
-body.report-shell .btn-gold:hover { background: #92400e }
-body.report-shell .btn-mail { background: var(--r-ink); color: #fff }
-body.report-shell .btn-mail:hover { background: #1e293b }
+body.report-shell .btn-gold:hover,
+body.report-shell .btn-mail:hover {
+  background: var(--r-surface-sunk);
+  border-color: var(--r-muted);
+  color: var(--r-ink);
+}
 
 body.report-shell .foot { color: var(--r-faint); font-size: 12px }
 

@@ -99,7 +99,7 @@
   <div class="mc-box" id="mc-box" role="dialog" aria-modal="true" aria-labelledby="mc-title">
     <div class="mc-head">
       <div>
-        <h3 id="mc-title">✉️ Compose mail</h3>
+        <h3 id="mc-title">Compose mail</h3>
         <p id="mc-sub">Write your subject and message. This department's links are added below it.</p>
       </div>
       <button type="button" class="mc-x" onclick="closeMailDraft()" aria-label="Close">&times;</button>
@@ -116,11 +116,11 @@
         <label>Mail format</label>
         <div class="mc-modes">
           <button type="button" class="mc-mode on" data-mode="plain" onclick="setMailMode('plain')">
-            <b>📄 Normal mail</b>
+            <b>Normal mail</b>
             <span>Plain text. Goes straight into Gmail's compose window.</span>
           </button>
           <button type="button" class="mc-mode" data-mode="html" onclick="setMailMode('html')">
-            <b>🎨 HTML mail</b>
+            <b>HTML mail</b>
             <span>Styled page with "Click here" buttons. Copy, then paste into the mail.</span>
           </button>
         </div>
@@ -150,10 +150,10 @@
 
     <div class="mc-foot">
       <button type="button" class="mc-btn grey" onclick="closeMailDraft()">Cancel</button>
-      <a class="mc-btn grey mc-html-only" id="mc-preview" href="#" target="_blank" rel="noopener">👁️ Preview</a>
+      <a class="mc-btn grey mc-html-only" id="mc-preview" href="#" target="_blank" rel="noopener">Preview</a>
       <button type="button" class="mc-btn green" id="mc-copy" onclick="copyMailDraft(this)">Copy message</button>
-      <a class="mc-btn grey mc-plain-only" id="mc-mailto" href="#">📮 Mail app</a>
-      <a class="mc-btn navy" id="mc-gmail" href="#" target="_blank" rel="noopener">✉️ Open in Gmail</a>
+      <a class="mc-btn grey mc-plain-only" id="mc-mailto" href="#">Mail app</a>
+      <a class="mc-btn navy" id="mc-gmail" href="#" target="_blank" rel="noopener">Open in Gmail</a>
     </div>
   </div>
 </div>
@@ -377,7 +377,7 @@
   window.openMailDraft = function (options) {
     ctx = options;
     const label = ctx.kind === 'post' ? 'Post-Workshop Survey' : 'Baseline Analysis';
-    $mc('mc-title').textContent = `✉️ Mail — ${ctx.dept}`;
+    $mc('mc-title').textContent = `Mail — ${ctx.dept}`;
     $mc('mc-subject').value = `HACRI-E ${label} — ${ctx.dept}`;
     $mc('mc-message').value = '';
     $mc('mc-to').value = '';

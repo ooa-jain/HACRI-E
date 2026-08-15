@@ -10,7 +10,7 @@
  *
  *   OrientationReport.renderReport(hostEl, report)
  *   OrientationReport.renderDepartments(hostEl, overview, { onPick })
- *   OrientationReport.mood(avg) -> [word, emoji, colour]
+ *   OrientationReport.mood(avg) -> [word, '', colour]
  */
 (function (global) {
   'use strict';
@@ -24,15 +24,15 @@
 
   /** What an average out of ten actually feels like. */
   const MOODS = [
-    [9, 'Buzzing',        '🤩', '#059669'],
-    [8, 'Loving it',      '😍', '#16a34a'],
-    [7, 'Good vibes',     '😄', '#84cc16'],
-    [6, 'Warming up',     '🙂', '#facc15'],
-    [5, 'Mixed feelings', '😐', '#f97316'],
-    [0, 'Needs a lift',   '😕', '#e11d48'],
+    [9, 'Buzzing',        '', '#059669'],
+    [8, 'Loving it',      '', '#16a34a'],
+    [7, 'Good vibes',     '', '#84cc16'],
+    [6, 'Warming up',     '', '#facc15'],
+    [5, 'Mixed feelings', '', '#f97316'],
+    [0, 'Needs a lift',   '', '#e11d48'],
   ];
   const mood = avg => (avg === null || avg === undefined)
-    ? ['No answers yet', '🫥', '#94a3b8']
+    ? ['No answers yet', '', '#94a3b8']
     : (MOODS.find(m => avg >= m[0]) || MOODS[MOODS.length - 1]).slice(1);
 
   // Section accents, cycled so each section reads as its own chapter.
@@ -40,15 +40,14 @@
                    '#0ea5e9', '#16a34a', '#db2777', '#4f46e5'];
 
   const PANELS = [
-    ['impactful',  '🏆 Sessions that landed',   '#059669'],
-    ['needs_work', '🛠️ Sessions needing work',  '#e11d48'],
-    ['stressors',  '😰 Biggest stressors',      '#f59e0b'],
-    ['keep',       '👍 Keep next year',         '#2563eb'],
-    ['stop',       '🚫 Stop next year',         '#9f1239'],
-    ['introduce',  '✨ Introduce next year',    '#7c3aed'],
+    ['impactful',  'Sessions that landed',   '#059669'],
+    ['needs_work', 'Sessions needing work',  '#e11d48'],
+    ['stressors',  'Biggest stressors',      '#f59e0b'],
+    ['keep',       'Keep next year',         '#2563eb'],
+    ['stop',       'Stop next year',         '#9f1239'],
+    ['introduce',  'Introduce next year',    '#7c3aed'],
   ];
 
-  const MEDALS = ['🥇', '🥈', '🥉'];
 
   // ── Small building blocks ─────────────────────────────────────────────────
 
@@ -82,7 +81,7 @@
     return options.slice(0, limit).map((o, i) => `
       <div class="ori-rank">
         <div class="ori-rank-badge" style="${i < 3 ? '' : `background:${tone}1a;color:${tone}`}">
-          ${i < 3 ? MEDALS[i] : i + 1}
+          ${i + 1}
         </div>
         <div class="ori-rank-body">
           <div class="ori-rank-label">${esc(o.label)}</div>
@@ -215,7 +214,7 @@
     return `
       <div class="ori-card ori-card-split">
         <div>
-          <div class="ori-card-title">💬 Would they recommend JAIN?</div>
+          <div class="ori-card-title">Would they recommend JAIN?</div>
           <div class="ori-card-sub">${total} answered · average ${num(h.nps_avg, 2)} / 10</div>
           <div class="ori-legend">
             ${segs.map(s => `
@@ -330,7 +329,7 @@
     const top = Math.max(1, ...rows.map(r => r.count));
     return `
       <div class="ori-card">
-        <div class="ori-card-title">🏢 Who answered</div>
+        <div class="ori-card-title">Who answered</div>
         <div class="ori-card-sub">${rows.length} department${rows.length === 1 ? '' : 's'}${
           (report.levels || []).length
             ? ' · ' + report.levels.map(l => `${l.count} ${esc(l.level)}`).join(' · ')
@@ -394,7 +393,7 @@
       return `
         <${tag} ${clickable ? 'type="button"' : ''}
           class="ori-dept${clickable ? ' ori-dept-click' : ''}" data-dept="${esc(r.dept)}">
-          <div class="ori-dept-rank">${i < 3 ? MEDALS[i] : i + 1}</div>
+          <div class="ori-dept-rank">${i + 1}</div>
           <div class="ori-dept-face">${emoji}</div>
           <div class="ori-dept-body">
             <div class="ori-dept-head">

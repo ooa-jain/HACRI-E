@@ -257,10 +257,10 @@
         <div class="card space-y-4">
           <div class="flex flex-col lg:flex-row lg:items-center gap-3">
             <div class="flex flex-wrap gap-2 mr-auto" id="student-views">
-              <button class="tabbtn on" data-view="status"      onclick="setStudentView('status')">👥 Status</button>
+              <button class="tabbtn on" data-view="status"      onclick="setStudentView('status')">Status</button>
               <button class="tabbtn"    data-view="duration"    onclick="setStudentView('duration')">⏱️ Time taken</button>
               <button class="tabbtn"    data-view="timeline"    onclick="setStudentView('timeline')">⏳ Timeline</button>
-              <button class="tabbtn"    data-view="orientation" onclick="setStudentView('orientation')">🎓 Orientation</button>
+              <button class="tabbtn"    data-view="orientation" onclick="setStudentView('orientation')">Orientation</button>
             </div>
             <select id="status-filter" onchange="renderStudents()" class="field w-auto">
               <option value="">Any status</option>
@@ -273,7 +273,7 @@
               <option value="completed_after">Completed after mail</option>
               <option value="failed">Email failed</option>
             </select>
-            <input id="student-search" oninput="renderStudents()" class="field w-full lg:w-64" placeholder="🔍 Search name, email, department…">
+            <input id="student-search" oninput="renderStudents()" class="field w-full lg:w-64" placeholder="Search name, email, department…">
           </div>
 
           <div id="student-summary" class="grid grid-cols-2 sm:grid-cols-4 gap-3"></div>
@@ -285,14 +285,14 @@
       <div class="panel" id="p-emails">
         <div class="space-y-5">
           <div class="card space-y-4">
-            <div><div class="h-card">🔔 Send reminder emails</div>
+            <div><div class="h-card">Send reminder emails</div>
               <div class="sub">Pick who should get the mail. The department and level filters in the top bar decide the recipients.</div></div>
 
             <div class="flex flex-wrap gap-2" id="cohort-tabs">
-              <button class="tabbtn on" data-cohort="post-pending"     onclick="setCohort('post-pending')">📝 Post survey pending</button>
-              <button class="tabbtn"    data-cohort="pre-pending"      onclick="setCohort('pre-pending')">📊 Baseline pending</button>
+              <button class="tabbtn on" data-cohort="post-pending"     onclick="setCohort('post-pending')">Post survey pending</button>
+              <button class="tabbtn"    data-cohort="pre-pending"      onclick="setCohort('pre-pending')">Baseline pending</button>
               <button class="tabbtn"    data-cohort="sent-not-clicked" onclick="setCohort('sent-not-clicked')">⏳ Sent, not clicked</button>
-              <button class="tabbtn"    data-cohort="all-pending"      onclick="setCohort('all-pending')">👥 Everyone unfinished</button>
+              <button class="tabbtn"    data-cohort="all-pending"      onclick="setCohort('all-pending')">Everyone unfinished</button>
             </div>
 
             <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -300,14 +300,14 @@
                 <div class="text-xs font-bold text-amber-900">Recipients</div>
                 <div id="target-count" class="text-sm font-extrabold text-amber-700 mt-0.5">Counting…</div>
               </div>
-              <button id="btn-send" onclick="sendReminders(this)" class="btn btn-green">📧 Send reminders</button>
+              <button id="btn-send" onclick="sendReminders(this)" class="btn btn-green">Send reminders</button>
             </div>
 
             <div id="send-status" class="hidden"></div>
           </div>
 
           <div class="card space-y-4">
-            <div><div class="h-card">✍️ Write a mail yourself</div>
+            <div><div class="h-card">Write a mail yourself</div>
               <div class="sub">
                 Pick a department and we'll draft the subject and body around that department's post-survey link.
                 Edit it, then open it straight in Gmail — the sending is yours, so nothing goes out until you press
@@ -324,8 +324,8 @@
               <div>
                 <label class="lbl">Which link to include</label>
                 <select id="draft-kind" onchange="buildDraft()" class="field">
-                  <option value="post">📊 Impact — post survey</option>
-                  <option value="pre">📝 Outcome Survey 1 — baseline</option>
+                  <option value="post">Impact — post survey</option>
+                  <option value="pre">Outcome Survey 1 — baseline</option>
                 </select>
               </div>
               <div>
@@ -349,8 +349,8 @@
             </div>
 
             <div class="flex flex-wrap items-center gap-2">
-              <a id="draft-gmail" href="#" target="_blank" rel="noopener" class="btn btn-primary">✉️ Open in Gmail</a>
-              <a id="draft-mailto" href="#" class="btn btn-soft">📮 Open in mail app</a>
+              <a id="draft-gmail" href="#" target="_blank" rel="noopener" class="btn btn-primary">Open in Gmail</a>
+              <a id="draft-mailto" href="#" class="btn btn-soft">Open in mail app</a>
               <button class="btn btn-soft" onclick="copy($('draft-body').value)">Copy body</button>
               <button id="draft-copy-recipients" class="btn btn-green" onclick="copyRecipients()">
                 Copy recipients
@@ -361,7 +361,7 @@
           </div>
 
           <div class="card space-y-4">
-            <div><div class="h-card">📧 Delivery tracking</div>
+            <div><div class="h-card">Delivery tracking</div>
               <div class="sub">Department-wise reminder delivery, clicks, completions and unfinished drafts.</div></div>
 
             <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
@@ -382,7 +382,7 @@
       <div class="panel" id="p-links">
         <div class="space-y-5">
           <div class="card space-y-4">
-            <div><div class="h-card">🏢 Overall department directory — one link for everything</div>
+            <div><div class="h-card">Overall department directory — one link for everything</div>
               <div class="sub">
                 A single shareable page listing every department with registered, baseline filled, post filled and
                 post pending counts, how the reminder mails landed (sent / clicked / filled after), and average
@@ -400,7 +400,7 @@
           </div>
 
           <div class="card space-y-4">
-            <div><div class="h-card">🔗 Department survey links</div>
+            <div><div class="h-card">Department survey links</div>
               <div class="sub">
                 Every department gets two links to hand out.
                 <b class="text-blue-700">Outcome Survey 1 — Baseline</b> opens the registration page with that
@@ -412,7 +412,7 @@
 
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
               <div class="bg-slate-900 text-white rounded-xl p-4 space-y-2">
-                <div class="text-xs font-bold text-sky-400">📝 Outcome Survey 1 — any department</div>
+                <div class="text-xs font-bold text-sky-400">Outcome Survey 1 — any department</div>
                 <div class="flex items-center gap-2">
                   <input id="all-pre-link" readonly class="field link flex-1 bg-slate-800 border-slate-700 text-slate-100">
                   <button class="btn btn-soft" onclick="copy(document.getElementById('all-pre-link').value)">Copy</button>
@@ -421,7 +421,7 @@
                 <div class="text-[11px] text-slate-400">The normal registration page — the student picks their own department.</div>
               </div>
               <div class="bg-slate-900 text-white rounded-xl p-4 space-y-2">
-                <div class="text-xs font-bold text-amber-400">📊 Impact Post Survey — any department</div>
+                <div class="text-xs font-bold text-amber-400">Impact Post Survey — any department</div>
                 <div class="flex items-center gap-2">
                   <input id="all-post-link" readonly class="field link flex-1 bg-slate-800 border-slate-700 text-slate-100">
                   <button class="btn btn-soft" onclick="copy(document.getElementById('all-post-link').value)">Copy</button>
@@ -432,44 +432,44 @@
             </div>
 
             <input id="link-search" oninput="renderPostLinks()" class="field"
-                   placeholder="🔍 Filter departments…">
+                   placeholder="Filter departments…">
             <div id="post-links-table"></div>
           </div>
 
           <div class="card space-y-4">
-            <div><div class="h-card">📈 Public analysis links (all departments combined)</div>
+            <div><div class="h-card">Public analysis links (all departments combined)</div>
               <div class="sub">Read-only report pages that can be shared outside the admin portal.</div></div>
 
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <div class="border border-slate-200 rounded-xl p-4 space-y-2">
-                <div class="text-xs font-bold text-teal-700">📝 Baseline (pre) — overall report</div>
+                <div class="text-xs font-bold text-teal-700">Baseline (pre) — overall report</div>
                 <div class="flex items-center gap-2">
                   <input id="overall-pre-link" readonly class="field link flex-1">
                   <button class="btn btn-soft" onclick="copy(document.getElementById('overall-pre-link').value)">Copy</button>
                 </div>
                 <div class="flex flex-wrap gap-2">
-                  <a id="overall-pre-view"  href="#" target="_blank" class="btn btn-primary">📈 View</a>
-                  <a id="overall-pre-excel" href="#" class="btn btn-green">📥 Excel</a>
-                  <a id="overall-pre-ppt"   href="#" class="btn btn-soft">📊 PPT</a>
+                  <a id="overall-pre-view"  href="#" target="_blank" class="btn btn-primary">View</a>
+                  <a id="overall-pre-excel" href="#" class="btn btn-green">Excel</a>
+                  <a id="overall-pre-ppt"   href="#" class="btn btn-soft">PPT</a>
                 </div>
               </div>
               <div class="border border-slate-200 rounded-xl p-4 space-y-2">
-                <div class="text-xs font-bold text-emerald-700">📊 Post-workshop — overall report</div>
+                <div class="text-xs font-bold text-emerald-700">Post-workshop — overall report</div>
                 <div class="flex items-center gap-2">
                   <input id="overall-post-link" readonly class="field link flex-1">
                   <button class="btn btn-soft" onclick="copy(document.getElementById('overall-post-link').value)">Copy</button>
                 </div>
                 <div class="flex flex-wrap gap-2">
-                  <a id="overall-post-view"  href="#" target="_blank" class="btn btn-primary">📊 View</a>
-                  <a id="overall-post-excel" href="#" class="btn btn-green">📥 Excel</a>
-                  <a id="overall-post-ppt"   href="#" class="btn btn-soft">📊 PPT</a>
+                  <a id="overall-post-view"  href="#" target="_blank" class="btn btn-primary">View</a>
+                  <a id="overall-post-excel" href="#" class="btn btn-green">Excel</a>
+                  <a id="overall-post-ppt"   href="#" class="btn btn-soft">PPT</a>
                 </div>
               </div>
             </div>
           </div>
 
           <div class="card space-y-3">
-            <div><div class="h-card">🎓 Student entry points</div><div class="sub">The links students use to begin.</div></div>
+            <div><div class="h-card">Student entry points</div><div class="sub">The links students use to begin.</div></div>
             <div id="entry-links" class="space-y-2"></div>
           </div>
         </div>
@@ -480,7 +480,7 @@
         <div class="space-y-5">
           <div class="card">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-              <div><div class="h-card">🏢 Department scores</div>
+              <div><div class="h-card">Department scores</div>
                 <div class="sub">AI literacy and readiness, averaged per department.</div></div>
               <div class="flex gap-1 bg-slate-100 p-1 rounded-lg">
                 <button id="rank-pre"  class="tabbtn on" onclick="setRankType('pre')">Baseline</button>
@@ -500,22 +500,22 @@
 
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-4">
               <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-3">
-                <div class="text-[11px] font-extrabold text-emerald-800 uppercase">🏆 Highest literacy</div>
+                <div class="text-[11px] font-extrabold text-emerald-800 uppercase">Highest literacy</div>
                 <div id="rk-hi-lit" class="text-sm font-extrabold text-emerald-950 mt-1">…</div>
                 <div id="rk-hi-lit-s" class="text-xs font-bold text-emerald-700">—</div>
               </div>
               <div class="bg-rose-50 border border-rose-200 rounded-xl p-3">
-                <div class="text-[11px] font-extrabold text-rose-800 uppercase">⚠️ Lowest literacy</div>
+                <div class="text-[11px] font-extrabold text-rose-800 uppercase">Lowest literacy</div>
                 <div id="rk-lo-lit" class="text-sm font-extrabold text-rose-950 mt-1">…</div>
                 <div id="rk-lo-lit-s" class="text-xs font-bold text-rose-700">—</div>
               </div>
               <div class="bg-teal-50 border border-teal-200 rounded-xl p-3">
-                <div class="text-[11px] font-extrabold text-teal-800 uppercase">🚀 Highest readiness</div>
+                <div class="text-[11px] font-extrabold text-teal-800 uppercase">Highest readiness</div>
                 <div id="rk-hi-read" class="text-sm font-extrabold text-teal-950 mt-1">…</div>
                 <div id="rk-hi-read-s" class="text-xs font-bold text-teal-700">—</div>
               </div>
               <div class="bg-amber-50 border border-amber-200 rounded-xl p-3">
-                <div class="text-[11px] font-extrabold text-amber-800 uppercase">📉 Lowest readiness</div>
+                <div class="text-[11px] font-extrabold text-amber-800 uppercase">Lowest readiness</div>
                 <div id="rk-lo-read" class="text-sm font-extrabold text-amber-950 mt-1">…</div>
                 <div id="rk-lo-read-s" class="text-xs font-bold text-amber-700">—</div>
               </div>
@@ -523,12 +523,12 @@
           </div>
 
           <div class="card">
-            <div class="h-card mb-3">📊 Literacy &amp; readiness by department</div>
+            <div class="h-card mb-3">Literacy &amp; readiness by department</div>
             <div class="relative h-80"><canvas id="dept-bar-chart"></canvas></div>
           </div>
 
           <div class="card space-y-3">
-            <div class="h-card">📋 All departments</div>
+            <div class="h-card">All departments</div>
             <div id="dept-table"></div>
           </div>
         </div>
@@ -575,7 +575,7 @@
           <!-- STEP 1 — pick a campus. Everything else opens from here. -->
           <div id="ori-picker" class="space-y-5">
             <div class="card">
-              <div class="h-card">🎓 Deeksharambh orientation report</div>
+              <div class="h-card">Deeksharambh orientation report</div>
               <div class="sub">Open a campus to read its orientation analysis, see exactly who filled the form, and mail them.
                 The department and level filters in the top bar apply here too.</div>
             </div>
@@ -585,7 +585,7 @@
 
             <div class="card space-y-3">
               <div>
-                <div class="h-card">🔗 Share the report</div>
+                <div class="h-card">Share the report</div>
                 <div class="sub">Anyone with one of these links can read that campus's full analysis and download the
                   deck — no admin login. Only the aggregate is shown, never a named student's answers.</div>
               </div>
@@ -599,17 +599,17 @@
               <div class="flex flex-col lg:flex-row lg:items-center gap-3">
                 <button onclick="closeOriCampus()" class="btn btn-soft">← All campuses</button>
                 <div class="mr-auto">
-                  <div class="h-card">📍 <span id="ori-campus-name">—</span></div>
+                  <div class="h-card"><span id="ori-campus-name">—</span></div>
                   <div class="sub" id="ori-campus-sub">—</div>
                 </div>
                 <div class="flex flex-wrap gap-2" id="ori-views">
-                  <button class="tabbtn on" data-view="analysis"    onclick="setOriView('analysis')">📊 Result analysis</button>
-                  <button class="tabbtn"    data-view="departments" onclick="setOriView('departments')">🏢 Departments</button>
-                  <button class="tabbtn"    data-view="filled"      onclick="setOriView('filled')">✅ Filled</button>
-                  <button class="tabbtn"    data-view="email"       onclick="setOriView('email')">📧 Email</button>
+                  <button class="tabbtn on" data-view="analysis"    onclick="setOriView('analysis')">Result analysis</button>
+                  <button class="tabbtn"    data-view="departments" onclick="setOriView('departments')">Departments</button>
+                  <button class="tabbtn"    data-view="filled"      onclick="setOriView('filled')">Filled</button>
+                  <button class="tabbtn"    data-view="email"       onclick="setOriView('email')">Email</button>
                 </div>
                 <a id="ori-ppt" href="#" class="btn btn-dark">⬇️ Download PPT</a>
-                <button onclick="copyOriShareLink(this)" class="btn btn-soft">🔗 Copy share link</button>
+                <button onclick="copyOriShareLink(this)" class="btn btn-soft">Copy share link</button>
               </div>
             </div>
 
@@ -623,7 +623,7 @@
               <div class="card space-y-3">
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div>
-                    <div class="h-card">🏢 Vibe, department by department</div>
+                    <div class="h-card">Vibe, department by department</div>
                     <div class="sub">Ranked by how the week actually felt. Click a department to read its own full analysis.</div>
                   </div>
                   <select id="ori-dept-metric" onchange="renderOriDepartments()" class="field w-auto">
@@ -637,7 +637,7 @@
                 <div id="ori-dept-bars" class="ori-depts"></div>
               </div>
               <div class="card space-y-3">
-                <div class="h-card">📋 Department scoreboard</div>
+                <div class="h-card">Department scoreboard</div>
                 <div id="ori-dept-scoreboard"></div>
               </div>
             </div>
@@ -647,14 +647,14 @@
               <div class="card space-y-4">
                 <div class="flex flex-col lg:flex-row lg:items-center gap-3">
                   <div class="mr-auto">
-                    <div class="h-card">✅ Students who filled the orientation form</div>
+                    <div class="h-card">Students who filled the orientation form</div>
                     <div class="sub">Click a row to open everything held about that student.</div>
                   </div>
                   <div class="flex flex-wrap gap-2" id="ori-groups">
-                    <button class="tabbtn on" data-group="filled"  onclick="setOriGroup('filled')">✅ Filled</button>
+                    <button class="tabbtn on" data-group="filled"  onclick="setOriGroup('filled')">Filled</button>
                     <button class="tabbtn"    data-group="pending" onclick="setOriGroup('pending')">⏳ Baseline done, orientation pending</button>
                   </div>
-                  <input id="ori-search" oninput="renderOriStudents()" class="field w-full lg:w-56" placeholder="🔍 Search name, email, department…">
+                  <input id="ori-search" oninput="renderOriStudents()" class="field w-full lg:w-56" placeholder="Search name, email, department…">
                 </div>
                 <div id="ori-student-table"></div>
               </div>
@@ -664,13 +664,13 @@
             <div id="ori-view-email" class="hidden space-y-5">
               <div class="card space-y-4">
                 <div>
-                  <div class="h-card">📧 Mail this orientation cohort</div>
+                  <div class="h-card">Mail this orientation cohort</div>
                   <div class="sub">Every student gets their own copy, addressed by name, with their personal survey link.
                     The mail goes out from the portal's mailbox — not from yours.</div>
                 </div>
 
                 <div class="flex flex-wrap gap-2" id="ori-mail-groups">
-                  <button class="tabbtn on" data-group="filled"  onclick="setOriMailGroup('filled')">✅ Filled the orientation</button>
+                  <button class="tabbtn on" data-group="filled"  onclick="setOriMailGroup('filled')">Filled the orientation</button>
                   <button class="tabbtn"    data-group="pending" onclick="setOriMailGroup('pending')">⏳ Baseline done, orientation pending</button>
                 </div>
 
@@ -699,7 +699,7 @@
                 </div>
 
                 <div class="flex justify-end">
-                  <button id="ori-mail-send" onclick="sendOriMail(this)" class="btn btn-green">📧 Send to this cohort</button>
+                  <button id="ori-mail-send" onclick="sendOriMail(this)" class="btn btn-green">Send to this cohort</button>
                 </div>
                 <div id="ori-mail-status" class="hidden"></div>
               </div>
@@ -713,7 +713,7 @@
       <div class="panel" id="p-parents">
         <div class="space-y-5">
           <div class="card">
-            <div class="h-card">👨‍👩‍👦 Parental background</div>
+            <div class="h-card">‍‍Parental background</div>
             <div class="sub">From the post survey. Follows the department and level filters above.</div>
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
               <div class="stat border-l-slate-800"><b id="bg-total">—</b><s>Respondents</s></div>
@@ -750,14 +750,14 @@
         <div class="space-y-5">
           <div class="card space-y-4">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
-              <div><div class="h-card">🗓️ Submission calendar</div>
+              <div><div class="h-card">Submission calendar</div>
                 <div class="sub">Click any date to see who filled the survey that day, department by department.</div></div>
               <div class="flex items-center gap-2">
                 <button onclick="changeMonth(-1)" class="btn btn-soft">◀</button>
                 <span id="cal-title" class="text-sm font-extrabold text-slate-900 px-1">—</span>
                 <button onclick="changeMonth(1)" class="btn btn-soft">▶</button>
                 <button onclick="calToday()" class="btn btn-primary">Today</button>
-                <button onclick="loadCalendar()" class="btn btn-soft">🔄</button>
+                <button onclick="loadCalendar()" class="btn btn-soft"></button>
               </div>
             </div>
             <div class="grid grid-cols-7 gap-1 text-center text-[11px] font-bold text-slate-500 uppercase bg-slate-50 py-2 rounded-lg border border-slate-200">
@@ -775,17 +775,17 @@
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div class="card"><div class="text-[11px] font-extrabold text-teal-700 uppercase">🚀 First department to start</div>
+            <div class="card"><div class="text-[11px] font-extrabold text-teal-700 uppercase">First department to start</div>
               <div id="hl-start" class="text-sm font-extrabold mt-1">…</div><div id="hl-start-d" class="text-xs text-slate-500">—</div></div>
-            <div class="card"><div class="text-[11px] font-extrabold text-emerald-700 uppercase">🏆 Biggest single day</div>
+            <div class="card"><div class="text-[11px] font-extrabold text-emerald-700 uppercase">Biggest single day</div>
               <div id="hl-max" class="text-sm font-extrabold mt-1">…</div><div id="hl-max-d" class="text-xs text-slate-500">—</div></div>
-            <div class="card"><div class="text-[11px] font-extrabold text-rose-700 uppercase">📉 Quietest single day</div>
+            <div class="card"><div class="text-[11px] font-extrabold text-rose-700 uppercase">Quietest single day</div>
               <div id="hl-min" class="text-sm font-extrabold mt-1">…</div><div id="hl-min-d" class="text-xs text-slate-500">—</div></div>
           </div>
 
           <div class="card space-y-3">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div class="h-card">📈 Daily submissions</div>
+              <div class="h-card">Daily submissions</div>
               <select id="cal-dept" onchange="renderCalChart()" class="field w-auto max-w-xs">
                 <option value="Overall">All departments</option>
               </select>
@@ -793,8 +793,8 @@
             <div class="relative h-72"><canvas id="cal-chart"></canvas></div>
           </div>
 
-          <div class="card space-y-3"><div class="h-card">🏢 Department calendar summary</div><div id="cal-dept-table"></div></div>
-          <div class="card space-y-3"><div class="h-card">📅 Day-by-day log</div><div id="cal-daily-table"></div></div>
+          <div class="card space-y-3"><div class="h-card">Department calendar summary</div><div id="cal-dept-table"></div></div>
+          <div class="card space-y-3"><div class="h-card">Day-by-day log</div><div id="cal-daily-table"></div></div>
         </div>
       </div>
 
@@ -802,7 +802,7 @@
       <div class="panel" id="p-settings">
         <div class="max-w-2xl space-y-5">
           <div class="card space-y-1">
-            <div class="h-card">⚙️ Portal settings</div>
+            <div class="h-card">Portal settings</div>
             <div class="sub">Toggles save the moment you change them.</div>
             <div id="toggles" class="divide-y divide-slate-100 pt-2"></div>
           </div>
@@ -867,7 +867,7 @@
 <div id="export-modal" class="hidden fixed inset-0 bg-slate-950/60 z-50 flex items-center justify-center p-4">
   <div class="bg-white rounded-2xl max-w-md w-full p-5 space-y-4">
     <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-      <div class="h-card">📥 Export cohort data</div>
+      <div class="h-card">Export cohort data</div>
       <button onclick="closeExportModal()" class="btn btn-soft">✕</button>
     </div>
     <form method="GET" action="/admin/survey/export-cohort" class="space-y-4">
@@ -1579,7 +1579,7 @@ function renderStudents() {
       `<div class="flex gap-1.5">
          ${u.status === 'post_done' ? `<a href="/results/${u.email_slug}" target="_blank" class="btn-xs btn-primary">View</a>
            <button class="btn-xs btn-green" onclick="sendResults(this,'${e(u.email)}')">Mail</button>` : ''}
-         <button class="btn-xs btn-rose" onclick="deleteUser(this,'${e(u.email)}')">🗑️</button>
+         <button class="btn-xs btn-rose" onclick="deleteUser(this,'${e(u.email)}')"></button>
        </div>`,
     ], 'No students match these filters');
 }
@@ -1695,7 +1695,7 @@ async function deleteUser(btn, email) {
     if (!r.ok) throw new Error();
     toast('Student deleted');
     await loadUsers();
-  } catch (err) { toast('Could not delete student'); btn.disabled = false; btn.textContent = '🗑️'; }
+  } catch (err) { toast('Could not delete student'); btn.disabled = false; btn.textContent = ''; }
 }
 
 async function sendResults(btn, email) {
@@ -1851,10 +1851,10 @@ function renderStudent(s) {
 
   $('student-modal-body').innerHTML = `
     <div class="flex flex-wrap gap-2">
-      ${s.status === 'post_done' ? `<a href="/results/${s.email_slug}" target="_blank" class="btn btn-primary">👁️ View results</a>
-        <button class="btn btn-green" onclick="sendResults(this,'${e(s.email)}')">📧 Email results</button>` : ''}
-      <button class="btn btn-soft" onclick="jumpToStudent('${e(s.email)}')">🔎 Show in students table</button>
-      <button class="btn btn-rose ml-auto" onclick="deleteUser(this,'${e(s.email)}'); closeStudent();">🗑️ Delete</button>
+      ${s.status === 'post_done' ? `<a href="/results/${s.email_slug}" target="_blank" class="btn btn-primary">View results</a>
+        <button class="btn btn-green" onclick="sendResults(this,'${e(s.email)}')">Email results</button>` : ''}
+      <button class="btn btn-soft" onclick="jumpToStudent('${e(s.email)}')">Show in students table</button>
+      <button class="btn btn-rose ml-auto" onclick="deleteUser(this,'${e(s.email)}'); closeStudent();">Delete</button>
     </div>
 
     <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
@@ -1872,9 +1872,9 @@ function renderStudent(s) {
       <div class="card"><div class="h-card mb-2">Email activity</div><div class="text-xs">${mail}</div></div>
     </div>
 
-    ${answers('📝 Outcome Survey 1 — Baseline answers', s.pre_sections)}
-    ${answers('📊 Impact — Post survey answers', s.post_sections)}
-    ${ori.length ? `<div class="card space-y-2"><div class="h-card">🎓 Orientation answers</div>
+    ${answers('Outcome Survey 1 — Baseline answers', s.pre_sections)}
+    ${answers('Impact — Post survey answers', s.post_sections)}
+    ${ori.length ? `<div class="card space-y-2"><div class="h-card">Orientation answers</div>
       <div class="text-xs space-y-1">${ori.map(([k, v]) => `
         <div class="flex gap-3 py-1 border-b border-slate-50 last:border-0">
           <span class="text-slate-500 w-1/2 shrink-0">${e(k)}</span>
@@ -2160,9 +2160,9 @@ async function loadLinks() {
 /** The handful of links students and staff start from. */
 function renderEntryLinks() {
   $('entry-links').innerHTML = [
-    ['🏠 Survey home (registration)', location.origin + '/'],
-    ['🎓 Deeksharambh orientation', {{ (orientation_share_url or '') | tojson }}],
-    ['🌐 Overall department directory', (linkData && linkData.directory_url) || ''],
+    ['Survey home (registration)', location.origin + '/'],
+    ['Deeksharambh orientation', {{ (orientation_share_url or '') | tojson }}],
+    ['Overall department directory', (linkData && linkData.directory_url) || ''],
   ].filter(([, url]) => !!url).map(([label, url]) => `
     <div class="flex items-center gap-2">
       <span class="text-xs font-semibold text-slate-700 w-56 shrink-0">${label}</span>
@@ -2187,7 +2187,7 @@ function renderPostLinks() {
 
   table('post-links-table',
     ['#', 'Department', 'Registered', 'Baseline done', 'Post done', 'Post pending',
-     '📝 Outcome Survey 1 — Baseline', '📊 Impact — Post Survey', ''],
+     'Outcome Survey 1 — Baseline', 'Impact — Post Survey', ''],
     rows, (row, i) => [
       i + 1,
       `<span class="font-semibold text-slate-900">${e(row.dept)}</span>`,
@@ -2453,7 +2453,7 @@ async function loadOriCampuses() {
       class="card text-left hover:border-blue-400 hover:shadow-md transition w-full">
       <div class="flex items-start justify-between gap-3">
         <div>
-          <div class="text-base font-extrabold text-slate-900">📍 ${e(c.campus)}</div>
+          <div class="text-base font-extrabold text-slate-900">${e(c.campus)}</div>
           <div class="sub">${c.filled} of ${c.eligible} eligible students have filled it${c.last_at ? ' · last on ' + e(c.last_at) : ''}</div>
         </div>
         <span class="btn ${accent}">View report →</span>
@@ -2486,7 +2486,7 @@ async function loadOriShareLinks() {
   }
   host.innerHTML = oriShareLinks.map(l => `
     <div class="flex flex-col sm:flex-row sm:items-center gap-2">
-      <span class="text-xs font-bold text-slate-700 sm:w-32 shrink-0">📍 ${e(l.campus)}</span>
+      <span class="text-xs font-bold text-slate-700 sm:w-32 shrink-0">${e(l.campus)}</span>
       <input readonly class="field link flex-1" value="${e(l.url)}" onclick="this.select()">
       <button class="btn btn-soft" onclick="copy('${e(l.url)}')">Copy</button>
       <a href="${e(l.url)}" target="_blank" rel="noopener" class="btn btn-primary">Open</a>
@@ -2926,7 +2926,7 @@ function renderCalChart() {
 
 function openDateModal(date) {
   const info = (calData && calData.by_date) ? calData.by_date[date] : null;
-  $('date-modal-title').textContent = `📅 Submissions on ${date}`;
+  $('date-modal-title').textContent = `Submissions on ${date}`;
   const total = info ? info.total : 0;
   $('dm-total').textContent = total;
   $('dm-pre').textContent   = info ? info.pre : 0;
@@ -2965,12 +2965,12 @@ function closeDateModal() { $('date-modal').classList.add('hidden'); }
 //  Settings
 // ═══════════════════════════════════════════════════════════════════════
 const TOGGLES = [
-  ['survey_enabled',        '🛡️ Portal open',        'Turn the whole site on or off. When off students see the closed page.'],
-  ['pre_survey_enabled',    '📝 Baseline survey',     'When off, students skip the baseline and go straight on.'],
-  ['orientation_enabled',   '🎓 Deeksharambh',        'When off, the orientation form is hidden.'],
-  ['post_survey_enabled',   '📊 Post survey',         'When off, only invited students (reminder or department link) can fill it.'],
-  ['auto_reminders_enabled','📧 Automatic reminders', 'Email pending students on the schedule below until they finish.'],
-  ['test_mode_enabled',     '🛠️ Test mode',           'Skips answer validation. For demos only — leave off in production.'],
+  ['survey_enabled',        'Portal open',        'Turn the whole site on or off. When off students see the closed page.'],
+  ['pre_survey_enabled',    'Baseline survey',     'When off, students skip the baseline and go straight on.'],
+  ['orientation_enabled',   'Deeksharambh',        'When off, the orientation form is hidden.'],
+  ['post_survey_enabled',   'Post survey',         'When off, only invited students (reminder or department link) can fill it.'],
+  ['auto_reminders_enabled','Automatic reminders', 'Email pending students on the schedule below until they finish.'],
+  ['test_mode_enabled',     'Test mode',           'Skips answer validation. For demos only — leave off in production.'],
 ];
 
 function buildToggles() {
