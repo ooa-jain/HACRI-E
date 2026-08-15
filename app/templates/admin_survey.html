@@ -57,14 +57,14 @@
 
   <!-- ══ SIDEBAR ══════════════════════════════════════════════════════════ -->
   <aside id="sidebar" class="fixed inset-y-0 left-0 w-60 bg-slate-900 text-slate-200 z-50 transition-transform duration-200 md:translate-x-0 -translate-x-full flex flex-col">
-    <div class="px-4 py-4 flex items-center gap-3 border-b border-white/5">
+    <div class="brand px-4 py-4 flex items-center gap-3 border-b border-white/5">
       <div class="bg-white p-1.5 rounded-lg"><img src="/static/logo.png" alt="JAIN" class="h-7 w-auto" onerror="this.src='/static/logosmall.png'"></div>
-      <div class="mr-auto">
+      <div class="brand-text mr-auto">
         <div class="font-extrabold text-sm text-white">JAIN <span class="text-amber-400">UNIVERSITY</span></div>
         <div class="text-[10px] text-slate-400">AI Survey Admin</div>
       </div>
-      <button id="sidebar-close" onclick="closeSidebar()" title="Hide the menu"
-              aria-label="Hide the menu"
+      <button id="sidebar-close" onclick="closeSidebar()" title="Collapse the menu"
+              aria-label="Collapse the menu"
               class="text-slate-400 hover:text-white text-lg px-1 rounded-md">&#10005;</button>
     </div>
 
@@ -79,7 +79,7 @@
 
     <nav id="nav" class="flex-1 px-3 py-2 space-y-0.5 overflow-y-auto"></nav>
 
-    <div class="px-3 pb-4 pt-3 space-y-2 border-t border-white/5">
+    <div class="rail-foot px-3 pb-4 pt-3 space-y-2 border-t border-white/5">
       <div class="who">
         <span class="who-av">JU</span>
         <div class="min-w-0">
@@ -87,7 +87,10 @@
           <div class="who-role" id="who-scope">All departments</div>
         </div>
       </div>
-      <a href="/admin/survey/logout" class="block text-center btn btn-rose w-full">Sign out</a>
+      <a href="/admin/survey/logout" title="Sign out"
+         class="btn btn-rose w-full inline-flex items-center justify-center gap-1.5">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+        Sign out</a>
     </div>
   </aside>
 
@@ -96,7 +99,7 @@
 
     <header class="admin-bar sticky top-0 z-40 px-4 md:px-6 py-3 flex flex-wrap items-center gap-3">
       <button onclick="toggleSidebar()" class="md:hidden btn btn-soft">&#9776;</button>
-      <button id="sidebar-open" onclick="openSidebar()" class="btn btn-soft" title="Show the menu">&#9776;</button>
+      <button id="sidebar-open" onclick="openSidebar()" class="btn btn-soft" title="Expand the menu">&#9776;</button>
       <div>
         <div class="flex items-center gap-2">
           <h1 id="page-title" class="text-sm font-bold text-slate-900">Overview</h1>
@@ -287,8 +290,8 @@
           <div class="flex flex-col lg:flex-row lg:items-center gap-3">
             <div class="flex flex-wrap gap-2 mr-auto" id="student-views">
               <button class="tabbtn on" data-view="status"      onclick="setStudentView('status')">Status</button>
-              <button class="tabbtn"    data-view="duration"    onclick="setStudentView('duration')">⏱️ Time taken</button>
-              <button class="tabbtn"    data-view="timeline"    onclick="setStudentView('timeline')">⏳ Timeline</button>
+              <button class="tabbtn"    data-view="duration"    onclick="setStudentView('duration')">Time taken</button>
+              <button class="tabbtn"    data-view="timeline"    onclick="setStudentView('timeline')">Timeline</button>
               <button class="tabbtn"    data-view="orientation" onclick="setStudentView('orientation')">Orientation</button>
             </div>
             <select id="status-filter" onchange="renderStudents()" class="field w-auto">
@@ -303,6 +306,7 @@
               <option value="failed">Email failed</option>
             </select>
             <input id="student-search" oninput="renderStudents()" class="field w-full lg:w-64" placeholder="Search name, email, department…">
+            <span id="student-count" class="result-count"></span>
           </div>
 
           <div id="student-summary" class="grid grid-cols-2 sm:grid-cols-4 gap-3"></div>
@@ -320,7 +324,7 @@
             <div class="flex flex-wrap gap-2" id="cohort-tabs">
               <button class="tabbtn on" data-cohort="post-pending"     onclick="setCohort('post-pending')">Post survey pending</button>
               <button class="tabbtn"    data-cohort="pre-pending"      onclick="setCohort('pre-pending')">Baseline pending</button>
-              <button class="tabbtn"    data-cohort="sent-not-clicked" onclick="setCohort('sent-not-clicked')">⏳ Sent, not clicked</button>
+              <button class="tabbtn"    data-cohort="sent-not-clicked" onclick="setCohort('sent-not-clicked')">Sent, not clicked</button>
               <button class="tabbtn"    data-cohort="all-pending"      onclick="setCohort('all-pending')">Everyone unfinished</button>
             </div>
 
@@ -637,7 +641,7 @@
                   <button class="tabbtn"    data-view="filled"      onclick="setOriView('filled')">Filled</button>
                   <button class="tabbtn"    data-view="email"       onclick="setOriView('email')">Email</button>
                 </div>
-                <a id="ori-ppt" href="#" class="btn btn-dark">⬇️ Download PPT</a>
+                <a id="ori-ppt" href="#" class="btn btn-dark">Download PPT</a>
                 <button onclick="copyOriShareLink(this)" class="btn btn-soft">Copy share link</button>
               </div>
             </div>
@@ -681,7 +685,7 @@
                   </div>
                   <div class="flex flex-wrap gap-2" id="ori-groups">
                     <button class="tabbtn on" data-group="filled"  onclick="setOriGroup('filled')">Filled</button>
-                    <button class="tabbtn"    data-group="pending" onclick="setOriGroup('pending')">⏳ Baseline done, orientation pending</button>
+                    <button class="tabbtn"    data-group="pending" onclick="setOriGroup('pending')">Baseline done, orientation pending</button>
                   </div>
                   <input id="ori-search" oninput="renderOriStudents()" class="field w-full lg:w-56" placeholder="Search name, email, department…">
                 </div>
@@ -700,7 +704,7 @@
 
                 <div class="flex flex-wrap gap-2" id="ori-mail-groups">
                   <button class="tabbtn on" data-group="filled"  onclick="setOriMailGroup('filled')">Filled the orientation</button>
-                  <button class="tabbtn"    data-group="pending" onclick="setOriMailGroup('pending')">⏳ Baseline done, orientation pending</button>
+                  <button class="tabbtn"    data-group="pending" onclick="setOriMailGroup('pending')">Baseline done, orientation pending</button>
                 </div>
 
                 <div class="bg-amber-50 border border-amber-200 rounded-xl p-4">
@@ -786,7 +790,7 @@
                 <span id="cal-title" class="text-sm font-extrabold text-slate-900 px-1">—</span>
                 <button onclick="changeMonth(1)" class="btn btn-soft">▶</button>
                 <button onclick="calToday()" class="btn btn-primary">Today</button>
-                <button onclick="loadCalendar()" class="btn btn-soft"></button>
+                <button onclick="loadCalendar()" class="btn btn-soft inline-flex items-center gap-1.5" title="Refresh" aria-label="Refresh"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v6h-6"/></svg> Refresh</button>
               </div>
             </div>
             <div class="grid grid-cols-7 gap-1 text-center text-[11px] font-bold text-slate-500 uppercase bg-slate-50 py-2 rounded-lg border border-slate-200">
@@ -837,7 +841,7 @@
           </div>
 
           <div class="card space-y-4">
-            <div><div class="h-card">⏳ Timing</div><div class="sub">How long students wait, and how often we chase them.</div></div>
+            <div><div class="h-card">Timing</div><div class="sub">How long students wait, and how often we chase them.</div></div>
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <label class="lbl">Post survey opens after (days)</label>
@@ -1054,7 +1058,7 @@ const PAGES = [
 function buildNav() {
   $('nav').innerHTML = PAGES.map(p => `
     ${p.group ? `<div class="nav-group">${e(p.group)}</div>` : ''}
-    <button data-page="${p.id}" onclick="show('${p.id}')"
+    <button data-page="${p.id}" data-label="${e(p.label)}" onclick="show('${p.id}')"
       class="nav-btn w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium">
       ${navIcon(p.icon)}<span>${e(p.label)}</span>
       <span class="nav-chip hidden" data-chip="${p.id}"></span>
@@ -1608,27 +1612,54 @@ function renderStudents() {
     ['Both done', rows.filter(u => u.status === 'post_done').length], ['Reminded', rows.filter(wasMailed).length],
   ]);
 
+  resultCount('student-count', rows.length, users.length);
+
   table('student-table',
     ['#', 'Student', 'Level', 'Department', 'Status', 'Orientation', 'Baseline at', 'Post at', 'Email activity', ''],
     rows, (u, i) => [
       i + 1,
-      `<button onclick="openStudent('${e(u.email)}')" class="text-left hover:text-blue-700">
-         <div class="font-semibold text-slate-900">${e(u.name)}</div>
-         <div class="text-[11px] text-slate-500 link">${e(u.email)}</div>
-       </button>`,
+      personCell(u),
       LEVEL[u.ug_or_pg] || 'UG',
       `<div class="text-slate-700">${e(u.program || '—')}</div><div class="text-[11px] text-slate-400">${e(u.education_type || '')}</div>`,
       statusBadge(u.status),
-      u.orientation_submitted ? '<span class="badge b-green">✓</span>' : '<span class="badge b-gray">—</span>',
+      u.orientation_submitted ? '<span class="badge b-green">Filled</span>' : '<span class="badge b-gray">—</span>',
       `<span class="text-slate-500 text-[11px]">${e(u.pre_at || '—')}</span>`,
       `<span class="text-slate-500 text-[11px]">${e(u.post_at || '—')}</span>`,
       emailActivity(u),
-      `<div class="flex gap-1.5">
-         ${u.status === 'post_done' ? `<a href="/results/${u.email_slug}" target="_blank" class="btn-xs btn-primary">View</a>
-           <button class="btn-xs btn-green" onclick="sendResults(this,'${e(u.email)}')">Mail</button>` : ''}
-         <button class="btn-xs btn-rose" onclick="deleteUser(this,'${e(u.email)}')"></button>
+      `<div class="row-actions">
+         ${u.status === 'post_done' ? `<a href="/results/${u.email_slug}" target="_blank" class="icon-btn" title="View results" aria-label="View results">${EYE_ICON}</a>
+           <button class="icon-btn" title="Mail results" aria-label="Mail results" onclick="sendResults(this,'${e(u.email)}')">${MAIL_ICON}</button>` : ''}
+         <button class="icon-btn danger" title="Delete student" aria-label="Delete student" onclick="deleteUser(this,'${e(u.email)}')">${BIN_ICON}</button>
        </div>`,
     ], 'No students match these filters');
+}
+
+// ── People rows ─────────────────────────────────────────────────────────
+// A stable colour per person, so the same student keeps the same avatar.
+const AVATAR_HUES = ['#0d2147', '#2563eb', '#0d9488', '#7c3aed', '#b45309',
+                     '#be123c', '#047857', '#4338ca'];
+function avatarFor(name, email) {
+  const seed = (email || name || '?');
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
+  const initials = (name || email || '?').trim().split(/\s+/)
+    .slice(0, 2).map(w => w[0]).join('').toUpperCase() || '?';
+  return `<span class="avatar" style="background:${AVATAR_HUES[h % AVATAR_HUES.length]}">${e(initials)}</span>`;
+}
+
+const MAIL_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5" width="19" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>';
+const EYE_ICON  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 12S5 5.5 12 5.5 22.5 12 22.5 12 19 18.5 12 18.5 1.5 12 1.5 12z"/><circle cx="12" cy="12" r="3"/></svg>';
+const BIN_ICON  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>';
+
+/** Name and address as one cell, the way a contact list shows a person. */
+function personCell(u) {
+  return `<button onclick="openStudent('${e(u.email)}')" class="cell-user">
+      ${avatarFor(u.name, u.email)}
+      <span>
+        <span class="cell-name">${e(u.name || '—')}</span>
+        <span class="cell-sub">${MAIL_ICON}${e(u.email)}</span>
+      </span>
+    </button>`;
 }
 
 function emailActivity(u) {
@@ -1639,6 +1670,12 @@ function emailActivity(u) {
   if (u.completed_after_reminder) bits.push('<div class="text-emerald-700 font-bold">Completed after mail ✓</div>');
   if (u.last_email_error) bits.push(`<div class="text-rose-600 font-semibold">Failed: ${e(u.last_email_error)}</div>`);
   return bits.length ? `<div class="text-[11px] leading-tight space-y-0.5">${bits.join('')}</div>` : '<span class="text-slate-400">—</span>';
+}
+
+/** "Showing 42 of 420 students" — the reference's result counter. */
+function resultCount(id, shown, total) {
+  const el = $(id);
+  if (el) el.innerHTML = `Showing <b>${shown}</b> of <b>${total}</b> students`;
 }
 
 function summary(pairs) {

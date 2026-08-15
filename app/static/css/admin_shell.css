@@ -47,6 +47,7 @@
   --a-shadow: 0 1px 2px rgba(16, 24, 40, .04);
   --a-shadow-lift: 0 4px 8px -2px rgba(16, 24, 40, .08), 0 16px 32px -18px rgba(16, 24, 40, .28);
   --a-sidebar: 15.5rem;
+  --a-rail-mini: 4.25rem;
 }
 
 /* ── Ground ──────────────────────────────────────────────────────────────── */
@@ -465,12 +466,62 @@ body.admin-shell #sidebar .btn-rose:hover {
   box-shadow: none;
 }
 
-/* Collapsing: the sidebar slides away and the page reclaims its width. */
-body.admin-shell.sidebar-closed #sidebar { transform: translateX(-100%); }
-body.admin-shell.sidebar-closed #shell { margin-left: 0; }
-body.admin-shell #shell { transition: margin-left .2s ease; }
+/* Collapsing: on a wide screen the rail narrows to icons rather than leaving,
+   so the sections stay reachable; on a phone it still slides away. */
+body.admin-shell #sidebar,
+body.admin-shell #shell { transition: width .18s ease, margin-left .18s ease; }
 #sidebar-close, #sidebar-open { line-height: 1; }
 #sidebar-open { display: none; }
+
+@media (min-width: 768px) {
+  body.admin-shell.sidebar-closed #sidebar { width: var(--a-rail-mini); }
+  body.admin-shell.sidebar-closed #shell { margin-left: var(--a-rail-mini); }
+
+  /* Everything but the glyphs steps aside. */
+  body.admin-shell.sidebar-closed #sidebar .nav-btn > span:not(.nav-ico),
+  body.admin-shell.sidebar-closed #sidebar .nav-group,
+  body.admin-shell.sidebar-closed #sidebar .rail-search,
+  body.admin-shell.sidebar-closed #sidebar .who > div,
+  body.admin-shell.sidebar-closed #sidebar .brand-text,
+  body.admin-shell.sidebar-closed #sidebar #sidebar-close { display: none; }
+
+  body.admin-shell.sidebar-closed #sidebar .nav-btn {
+    justify-content: center;
+    padding-left: 0;
+    padding-right: 0;
+  }
+  body.admin-shell.sidebar-closed #sidebar .who { justify-content: center; padding: 8px; }
+  body.admin-shell.sidebar-closed #sidebar .brand { justify-content: center; }
+  body.admin-shell.sidebar-closed #sidebar .rail-foot .btn-rose { font-size: 0; padding: 8px; }
+  body.admin-shell.sidebar-closed #sidebar .rail-foot .btn-rose svg { font-size: 12px; }
+
+  /* The label returns as a tooltip while the rail is narrow. */
+  body.admin-shell.sidebar-closed #sidebar .nav-btn::after {
+    content: attr(data-label);
+    position: absolute;
+    left: calc(100% + 10px);
+    top: 50%;
+    transform: translateY(-50%);
+    padding: 5px 9px;
+    border-radius: 8px;
+    background: rgba(15, 23, 42, .94);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .12s ease;
+    z-index: 60;
+  }
+  body.admin-shell.sidebar-closed #sidebar .nav-btn:hover::after { opacity: 1; }
+}
+
+/* Narrow screens keep the old behaviour: the rail leaves entirely. */
+@media (max-width: 767px) {
+  body.admin-shell.sidebar-closed #sidebar { transform: translateX(-100%); }
+  body.admin-shell.sidebar-closed #shell { margin-left: 0; }
+}
 body.admin-shell.sidebar-closed #sidebar-open { display: inline-flex; }
 
 /* ── Header ──────────────────────────────────────────────────────────────── */
@@ -488,8 +539,18 @@ body.admin-shell #page-title {
 }
 body.admin-shell #page-sub { color: var(--a-muted) }
 
-/* The bar's own selects size to their content — `.field` is 100% wide by
-   default, which otherwise pushed each filter onto a line of its own. */
+/* `.field` is 100% wide by default, so anything asking for `w-auto` has to be
+   told again here — otherwise a status filter eats its whole toolbar and
+   pushes the view tabs onto one line each. */
+body.admin-shell .field.w-auto { width: auto; }
+
+/* The students toolbar: the view tabs hold their line, and the two controls
+   beside them take fixed widths rather than stretching to 100%. */
+@media (min-width: 1024px) {
+  body.admin-shell #student-views { flex: none; flex-wrap: nowrap; }
+  body.admin-shell #student-search { width: 17rem; }
+  body.admin-shell #status-filter { width: auto; min-width: 10rem; }
+}
 body.admin-shell header.admin-bar select.field {
   width: auto;
   min-width: 8rem;
@@ -606,6 +667,64 @@ body.admin-shell th {
 }
 body.admin-shell tbody tr { transition: background .12s ease; }
 body.admin-shell tbody tr:hover { background: #f7f9fc !important; }
+
+/* ── People rows ─────────────────────────────────────────────────────────
+   A student reads as a person: initials, name, and the quiet second line
+   that carries the address or the date. */
+.cell-user { display: flex; align-items: center; gap: 10px; text-align: left; }
+.avatar {
+  flex: none;
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .2px;
+  color: #fff;
+  user-select: none;
+}
+.cell-name {
+  font-size: 12.5px;
+  font-weight: 650;
+  color: var(--a-ink);
+  line-height: 1.3;
+}
+button:hover > .cell-user .cell-name,
+.cell-user:hover .cell-name { color: var(--a-info); }
+.cell-sub {
+  font-size: 11px;
+  color: var(--a-faint);
+  line-height: 1.35;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.cell-sub svg { width: 11px; height: 11px; flex: none; opacity: .8 }
+
+/* Round icon buttons at the end of a row. */
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  border: 1px solid var(--a-line);
+  background: var(--a-surface);
+  color: var(--a-muted);
+  cursor: pointer;
+  transition: background .13s ease, color .13s ease, border-color .13s ease;
+}
+.icon-btn svg { width: 13px; height: 13px }
+.icon-btn:hover { background: var(--a-surface-sunk); color: var(--a-navy); border-color: var(--a-line-strong) }
+.icon-btn.danger:hover { background: #fff1f2; color: #be123c; border-color: #fbc9d2 }
+.icon-btn:disabled { opacity: .45; cursor: not-allowed }
+.row-actions { display: flex; align-items: center; gap: 6px; justify-content: flex-end }
+
+/* "Showing 42 of 420" beside a table's own controls. */
+.result-count { font-size: 11.5px; color: var(--a-muted); white-space: nowrap }
+.result-count b { color: var(--a-ink); font-weight: 700 }
 
 /* ── Notes and toasts ────────────────────────────────────────────────────── */
 body.admin-shell .note { border-radius: 11px; }
