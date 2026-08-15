@@ -2,50 +2,53 @@
  * admin_shell.css — the look of the admin dashboards.
  *
  * Loaded by every admin page (survey, orientation, login) so they read as one
- * product. The shape is a modern analytics console: a white rail on the left
- * held off the page by a blue edge, a quiet workspace on the right, and
- * content that arrives as cards — hero KPIs with a trend delta and a
- * sparkline, chart panels, a ranked leaderboard, an activity feed, and tables
- * with sticky headers.
+ * product. The shape is a warm analytics console: a near-black rail on the
+ * left, a cream workspace on the right, and content that arrives as rounded
+ * cards — a welcome banner, hero KPIs with a trend delta and a sparkline,
+ * chart panels, a ranked leaderboard, an activity feed, and tables.
  *
- * Navy and gold are JAIN's; everything else is greys with a small semantic
- * set (green up, rose down, amber waiting). It restyles the component classes
+ * Gold is the single accent and JAIN's; everything else is warm greys with a
+ * small semantic set (green up, rust down, amber waiting). It restyles the component classes
  * the templates already use (.card, .stat, .btn, .field, .tabbtn, tables)
  * rather than asking existing markup to change, and adds the new primitives
  * (.kpi, .rank, .feed, .panel-head) the overview page builds on.
  */
 
+/* Warm palette: a cream ground, near-black rail, gold as the one accent.
+   Greys carry a little warmth so nothing reads blue against the cream. */
 :root {
   /* Brand */
-  --a-navy: #0d2147;
-  --a-navy-soft: #17305e;
-  --a-navy-deep: #081428;
-  --a-gold: #c9a84c;
+  --a-navy: #1f1a12;
+  --a-navy-soft: #2e271c;
+  --a-navy-deep: #14110c;
+  --a-gold: #d9a441;
+  --a-gold-deep: #b9862c;
+  --a-gold-soft: #f6e9cf;
 
   /* Ink and ground */
-  --a-ink: #0f172a;
-  --a-ink-soft: #344054;
-  --a-muted: #6b7280;
-  --a-faint: #98a2b3;
-  --a-bg: #f6f7f9;
-  --a-surface: #fff;
-  --a-surface-sunk: #f8fafc;
-  --a-line: #eceef3;
-  --a-line-strong: #d5d9e2;
+  --a-ink: #1c1917;
+  --a-ink-soft: #443c33;
+  --a-muted: #7c7266;
+  --a-faint: #a89e90;
+  --a-bg: #f7f2e8;
+  --a-surface: #fffdf9;
+  --a-surface-sunk: #f9f4ea;
+  --a-line: #ece3d4;
+  --a-line-strong: #ddd0bb;
 
-  /* Semantics */
-  --a-up: #059669;
-  --a-up-bg: #e7f7f0;
-  --a-down: #e11d48;
-  --a-down-bg: #ffeef1;
-  --a-wait: #b45309;
-  --a-wait-bg: #fef4e6;
-  --a-info: #2563eb;
-  --a-info-bg: #eaf1ff;
+  /* Semantics, warmed to sit on cream */
+  --a-up: #15803d;
+  --a-up-bg: #e6f4e6;
+  --a-down: #c2410c;
+  --a-down-bg: #fceee6;
+  --a-wait: #a16207;
+  --a-wait-bg: #fbf1da;
+  --a-info: #b9862c;
+  --a-info-bg: #f6e9cf;
 
-  --a-radius: 16px;
-  --a-shadow: 0 1px 2px rgba(16, 24, 40, .04);
-  --a-shadow-lift: 0 4px 8px -2px rgba(16, 24, 40, .08), 0 16px 32px -18px rgba(16, 24, 40, .28);
+  --a-radius: 20px;
+  --a-shadow: 0 1px 2px rgba(60, 45, 20, .05);
+  --a-shadow-lift: 0 6px 14px -4px rgba(60, 45, 20, .12), 0 20px 36px -22px rgba(60, 45, 20, .3);
   --a-sidebar: 15.5rem;
   --a-rail-mini: 4.25rem;
 }
@@ -93,6 +96,79 @@ body.admin-shell .sub { color: var(--a-muted); }
 }
 .panel-head .panel-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 
+/* ── Welcome banner ──────────────────────────────────────────────────────
+   The overview opens by saying where the cohort stands in a sentence, with
+   the two things an admin usually came to do beside it. */
+.hero {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 22px;
+  flex-wrap: wrap;
+  padding: 22px 26px;
+  border-radius: var(--a-radius);
+  background: linear-gradient(120deg, #e8bd68 0%, var(--a-gold) 42%, var(--a-gold-deep) 100%);
+  color: #2a2013;
+  margin-bottom: 18px;
+}
+.hero::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0; bottom: -1px;
+  height: 62px;
+  background: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 600 62' preserveAspectRatio='none'%3E%3Cpath d='M0 34c80 20 150-14 230-6s130 26 200 18 100-24 170-16v34H0z' fill='rgba(255,255,255,0.16)'/%3E%3C/svg%3E")
+              bottom center / 100% 100% no-repeat;
+  pointer-events: none;
+}
+.hero > * { position: relative; z-index: 1 }
+.hero-title {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -.4px;
+  margin: 0 0 5px;
+}
+.hero-sub {
+  font-size: 12.5px;
+  color: rgba(42, 32, 19, .72);
+  margin: 0 0 14px;
+  max-width: 56ch;
+}
+.hero-actions { display: flex; flex-wrap: wrap; gap: 9px }
+.hero-actions .btn { border: none }
+.hero-actions .btn-ink { background: #241c10; color: #fff }
+.hero-actions .btn-ink:hover { background: #3a2e1c }
+.hero-actions .btn-cream { background: rgba(255, 255, 255, .82); color: #3a2e1c }
+.hero-actions .btn-cream:hover { background: #fff }
+/* The ring on the right: completion, drawn as a gauge. */
+.hero-gauge { flex: none; display: flex; align-items: center; gap: 14px }
+.hero-ring {
+  position: relative;
+  width: 96px; height: 96px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: conic-gradient(#241c10 calc(var(--pct, 0) * 1%), rgba(255, 255, 255, .45) 0);
+  transition: background .9s cubic-bezier(.22, 1, .36, 1);
+}
+.hero-ring::after {
+  content: '';
+  position: absolute;
+  inset: 9px;
+  border-radius: 50%;
+  background: linear-gradient(140deg, #f0cd8a, var(--a-gold));
+}
+.hero-ring b {
+  position: relative;
+  z-index: 1;
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: -.6px;
+  color: #2a2013;
+}
+.hero-gauge-label { font-size: 11.5px; font-weight: 700; color: rgba(42,32,19,.78); max-width: 8rem; line-height: 1.35 }
+
 /* ── KPI cards ───────────────────────────────────────────────────────────
    Title and caption on top, then a row: the figure and its movement on the
    left, the fortnight's shape on the right. One card in the set is a filled
@@ -121,15 +197,15 @@ body.admin-shell .sub { color: var(--a-muted); }
   justify-content: center;
   width: 28px; height: 28px;
   border-radius: 9px;
-  color: var(--a-navy);
-  background: #eef1f7;
+  color: var(--a-gold-deep);
+  background: var(--a-gold-soft);
   flex: none;
 }
 .kpi-ico svg { width: 15px; height: 15px; }
-.kpi-ico-blue  { background: var(--a-info-bg); color: #1d4ed8 }
-.kpi-ico-green { background: var(--a-up-bg);   color: #047857 }
-.kpi-ico-amber { background: var(--a-wait-bg); color: #b45309 }
-.kpi-ico-gold  { background: #fbf3dd;          color: #8a6d16 }
+.kpi-ico-blue  { background: #eef0f7; color: #4a4436 }
+.kpi-ico-green { background: var(--a-up-bg);   color: var(--a-up) }
+.kpi-ico-amber { background: var(--a-wait-bg); color: var(--a-wait) }
+.kpi-ico-gold  { background: var(--a-gold-soft); color: var(--a-gold-deep) }
 .kpi-label {
   font-size: 12.5px;
   font-weight: 650;
@@ -167,14 +243,14 @@ body.admin-shell .sub { color: var(--a-muted); }
 }
 .kpi-delta.up   { background: var(--a-up-bg);   color: var(--a-up) }
 .kpi-delta.down { background: var(--a-down-bg); color: var(--a-down) }
-.kpi-delta.flat { background: #f1f3f7;          color: var(--a-muted) }
+.kpi-delta.flat { background: var(--a-surface-sunk); color: var(--a-muted) }
 .kpi-spark { width: 46%; max-width: 130px; height: 40px; flex: none }
 .kpi-spark svg { display: block; width: 100%; height: 100% }
 .kpi-foot { font-size: 11px; color: var(--a-faint); margin-top: 10px }
 
 /* The accent tile: same anatomy, filled, with a wave along its foot. */
 .kpi-accent {
-  background: linear-gradient(135deg, #0f766e 0%, #0d9488 45%, #34d399 100%);
+  background: linear-gradient(135deg, #8a6320 0%, var(--a-gold-deep) 45%, var(--a-gold) 100%);
   border-color: transparent;
   color: #fff;
 }
@@ -217,6 +293,27 @@ body.admin-shell .ori-tile:hover {
 body.admin-shell .stat b { letter-spacing: -.6px }
 body.admin-shell .stat s { letter-spacing: .1px }
 
+/* The counter strip still names its colours through Tailwind utilities, which
+   are all cool. Remap the ones in use so nothing reads blue on cream. */
+body.admin-shell .stat .text-blue-600    { color: var(--a-info) }
+body.admin-shell .stat .text-indigo-600  { color: #6b5b3e }
+body.admin-shell .stat .text-sky-600     { color: #7a6a4e }
+body.admin-shell .stat .text-teal-600,
+body.admin-shell .stat .text-emerald-600 { color: var(--a-up) }
+body.admin-shell .stat .text-rose-600    { color: var(--a-down) }
+body.admin-shell .stat .text-amber-600   { color: var(--a-wait) }
+body.admin-shell .stat.border-l-blue-600    { border-left-color: var(--a-info) }
+body.admin-shell .stat.border-l-indigo-600  { border-left-color: #6b5b3e }
+body.admin-shell .stat.border-l-sky-600     { border-left-color: #7a6a4e }
+body.admin-shell .stat.border-l-teal-600,
+body.admin-shell .stat.border-l-emerald-600 { border-left-color: var(--a-up) }
+body.admin-shell .stat.border-l-rose-500    { border-left-color: var(--a-down) }
+body.admin-shell .stat.border-l-amber-500,
+body.admin-shell .stat.border-l-amber-600   { border-left-color: var(--a-wait) }
+body.admin-shell .stat.border-l-slate-800   { border-left-color: var(--a-navy) }
+body.admin-shell .stat.border-l-slate-400,
+body.admin-shell .stat.border-l-slate-300   { border-left-color: var(--a-line-strong) }
+
 /* ── Leaderboard ─────────────────────────────────────────────────────────── */
 .rank {
   display: flex;
@@ -240,9 +337,9 @@ body.admin-shell .stat s { letter-spacing: .1px }
   justify-content: center;
   margin-top: 1px;
 }
-.rank:nth-child(1) .rank-n { background: var(--a-navy); border-color: var(--a-navy); color: #fff }
-.rank:nth-child(2) .rank-n { background: #eef1f7; border-color: #dde3ee; color: var(--a-navy) }
-.rank:nth-child(3) .rank-n { background: #fbf3dd; border-color: #f0e2bd; color: #8a6d16 }
+.rank:nth-child(1) .rank-n { background: var(--a-gold); border-color: var(--a-gold); color: #241c10 }
+.rank:nth-child(2) .rank-n { background: var(--a-gold-soft); border-color: #ecdcbc; color: var(--a-gold-deep) }
+.rank:nth-child(3) .rank-n { background: var(--a-surface-sunk); border-color: var(--a-line); color: var(--a-muted) }
 .rank-body { flex: 1; min-width: 0 }
 .rank-head {
   display: flex;
@@ -258,11 +355,11 @@ body.admin-shell .stat s { letter-spacing: .1px }
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.rank-val { font-size: 12.5px; font-weight: 800; color: var(--a-navy); flex: none }
+.rank-val { font-size: 12.5px; font-weight: 800; color: var(--a-gold-deep); flex: none }
 .bar {
   height: 6px;
   border-radius: 999px;
-  background: #eef0f4;
+  background: var(--a-surface-sunk);
   overflow: hidden;
   margin: 6px 0 5px;
 }
@@ -270,10 +367,10 @@ body.admin-shell .stat s { letter-spacing: .1px }
   display: block;
   height: 100%;
   border-radius: 999px;
-  background: linear-gradient(90deg, var(--a-navy), #2f5aa8);
+  background: linear-gradient(90deg, var(--a-gold-deep), var(--a-gold));
   transition: width .5s cubic-bezier(.22, 1, .36, 1);
 }
-.bar.bar-gold > i { background: linear-gradient(90deg, #b9932f, var(--a-gold)) }
+.bar.bar-gold > i { background: linear-gradient(90deg, #7a5f22, var(--a-gold-deep)) }
 .rank-sub { font-size: 11px; color: var(--a-faint) }
 
 /* ── Activity feed ───────────────────────────────────────────────────────── */
@@ -302,9 +399,9 @@ body.admin-shell .stat s { letter-spacing: .1px }
   box-shadow: 0 0 0 3px var(--a-surface);
 }
 .feed-dot.d-green { background: var(--a-up) }
-.feed-dot.d-blue  { background: var(--a-info) }
+.feed-dot.d-blue  { background: var(--a-gold-deep) }
 .feed-dot.d-gold  { background: var(--a-gold) }
-.feed-dot.d-grey  { background: #cbd2dd }
+.feed-dot.d-grey  { background: var(--a-line-strong) }
 .feed-body { min-width: 0 }
 .feed-title {
   font-size: 12.5px;
@@ -318,16 +415,14 @@ body.admin-shell .stat s { letter-spacing: .1px }
 .feed-empty { font-size: 12px; color: var(--a-faint); padding: 18px 0; text-align: center }
 
 /* ── Sidebar ───────────────────────────────────────────────────────────────
-   The rail is light: a white panel held off the workspace by a blue edge,
-   with navy text and a tinted active row. Its palette lives in the four
-   tokens below — to go cement grey instead, set --a-rail-bg to #e6e8ec,
-   --a-rail-sunk to #dcdfe5 and --a-rail-edge to #b9bec7, and leave the rest
-   alone. */
+   The rail is near-black, with the active section on a gold pill. To go back
+   to a light rail set --a-rail-bg to #fff and --a-rail-edge to #e4e9f2, then
+   flip the four rgba(255,255,255,…) text colours below to the ink tokens. */
 body.admin-shell {
-  --a-rail-bg: #ffffff;
-  --a-rail-sunk: #f3f6fc;
-  --a-rail-edge: #e4e9f2;
-  --a-rail-accent: #2563eb;
+  --a-rail-bg: #17140f;
+  --a-rail-sunk: var(--a-gold);
+  --a-rail-edge: #17140f;
+  --a-rail-accent: #2a2118;
 }
 
 body.admin-shell #sidebar {
@@ -337,22 +432,17 @@ body.admin-shell #sidebar {
   color: var(--a-ink-soft);
 }
 
-/* The brand block and the foot rule were drawn for a dark rail. */
-body.admin-shell #sidebar .border-white\/5 { border-color: var(--a-line); }
-body.admin-shell #sidebar .text-white { color: var(--a-navy); }
-body.admin-shell #sidebar .text-slate-400 { color: var(--a-muted); }
-body.admin-shell #sidebar .text-amber-400 { color: #8a6d16; }
-/* The logo tile no longer separates itself from the panel, so outline it. */
-body.admin-shell #sidebar .bg-white {
-  border: 1px solid var(--a-line);
-  background: var(--a-rail-bg);
-}
-body.admin-shell #sidebar #sidebar-close { color: var(--a-faint); }
-body.admin-shell #sidebar #sidebar-close:hover { color: var(--a-navy); }
+body.admin-shell #sidebar .border-white\/5 { border-color: rgba(255, 255, 255, .07); }
+body.admin-shell #sidebar .text-white { color: #fff; }
+body.admin-shell #sidebar .text-slate-400 { color: rgba(255, 255, 255, .45); }
+body.admin-shell #sidebar .text-amber-400 { color: var(--a-gold); }
+body.admin-shell #sidebar #sidebar-close { color: rgba(255, 255, 255, .45); }
+body.admin-shell #sidebar #sidebar-close:hover { color: #fff; }
 
 /* The rail's own search field. */
 .rail-search { position: relative; }
 .rail-search svg {
+  color: rgba(255, 255, 255, .45);
   position: absolute;
   left: 10px; top: 50%;
   transform: translateY(-50%);
@@ -364,18 +454,18 @@ body.admin-shell #sidebar #sidebar-close:hover { color: var(--a-navy); }
   width: 100%;
   padding: 7px 10px 7px 30px;
   font-size: 12px;
-  color: var(--a-ink-soft);
-  background: var(--a-surface-sunk);
-  border: 1px solid var(--a-line);
+  color: #fff;
+  background: rgba(255, 255, 255, .07);
+  border: 1px solid rgba(255, 255, 255, .1);
   border-radius: 9px;
   outline: none;
   transition: border-color .14s ease, box-shadow .14s ease;
 }
-.rail-search input::placeholder { color: var(--a-faint); }
+.rail-search input::placeholder { color: rgba(255, 255, 255, .4); }
 .rail-search input:focus {
-  border-color: rgba(37, 99, 235, .4);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, .1);
-  background: var(--a-surface);
+  border-color: rgba(217, 164, 65, .55);
+  box-shadow: 0 0 0 3px rgba(217, 164, 65, .18);
+  background: rgba(255, 255, 255, .1);
 }
 
 body.admin-shell #sidebar .nav-group {
@@ -383,32 +473,32 @@ body.admin-shell #sidebar .nav-group {
   font-weight: 700;
   letter-spacing: 1.1px;
   text-transform: uppercase;
-  color: #a9b1c1;
+  color: rgba(255, 255, 255, .35);
   padding: 15px 12px 5px;
 }
 body.admin-shell #sidebar .nav-btn {
-  border-radius: 10px;
+  border-radius: 12px;
   position: relative;
-  color: var(--a-ink-soft);
+  color: rgba(255, 255, 255, .72);
   transition: background .15s ease, color .15s ease;
 }
 body.admin-shell #sidebar .nav-btn .nav-ico {
   flex: none;
   width: 18px; height: 18px;
-  color: var(--a-muted);
+  color: rgba(255, 255, 255, .6);
 }
 body.admin-shell #sidebar .nav-btn:hover {
-  background: var(--a-surface-sunk);
-  color: var(--a-navy);
+  background: rgba(255, 255, 255, .07);
+  color: #fff;
 }
-body.admin-shell #sidebar .nav-btn:hover .nav-ico { color: var(--a-navy); }
+body.admin-shell #sidebar .nav-btn:hover .nav-ico { color: var(--a-gold); }
 body.admin-shell #sidebar .nav-btn.on {
-  background: var(--a-rail-sunk);
-  color: var(--a-rail-accent);
-  font-weight: 650;
-  box-shadow: none;
+  background: var(--a-gold);
+  color: #241c10;
+  font-weight: 700;
+  box-shadow: 0 6px 14px -6px rgba(217, 164, 65, .7);
 }
-body.admin-shell #sidebar .nav-btn.on .nav-ico { color: var(--a-rail-accent); }
+body.admin-shell #sidebar .nav-btn.on .nav-ico { color: #241c10; }
 /* Count chip on the right of a nav row. */
 body.admin-shell #sidebar .nav-btn .nav-chip {
   margin-left: auto;
@@ -416,10 +506,10 @@ body.admin-shell #sidebar .nav-btn .nav-chip {
   font-weight: 700;
   padding: 1px 6px;
   border-radius: 999px;
-  background: var(--a-rail-sunk);
-  color: var(--a-navy);
-  box-shadow: inset 0 0 0 1px rgba(37, 99, 235, .12);
+  background: rgba(255, 255, 255, .13);
+  color: rgba(255, 255, 255, .85);
 }
+body.admin-shell #sidebar .nav-btn.on .nav-chip { background: rgba(0, 0, 0, .18); color: #241c10; }
 
 /* The signed-in card at the foot of the rail. */
 .who {
@@ -427,26 +517,26 @@ body.admin-shell #sidebar .nav-btn .nav-chip {
   align-items: center;
   gap: 10px;
   padding: 10px;
-  border-radius: 12px;
-  background: var(--a-rail-sunk);
-  border: 1px solid var(--a-line);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, .07);
+  border: 1px solid rgba(255, 255, 255, .09);
 }
 .who-av {
   flex: none;
   width: 32px; height: 32px;
-  border-radius: 10px;
+  border-radius: 11px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, var(--a-navy), #2f5aa8);
-  color: #fff;
+  background: linear-gradient(135deg, var(--a-gold), var(--a-gold-deep));
+  color: #241c10;
   font-size: 12px;
   font-weight: 800;
 }
-.who-name { font-size: 12px; font-weight: 650; color: var(--a-navy); line-height: 1.2 }
+.who-name { font-size: 12px; font-weight: 650; color: #fff; line-height: 1.2 }
 .who-role {
   font-size: 10.5px;
-  color: var(--a-muted);
+  color: rgba(255, 255, 255, .5);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -454,15 +544,15 @@ body.admin-shell #sidebar .nav-btn .nav-chip {
 
 /* Sign-out reads as a quiet outline until you reach for it. */
 body.admin-shell #sidebar .btn-rose {
-  background: var(--a-rail-bg);
-  border: 1px solid var(--a-line-strong);
-  color: #be123c;
+  background: rgba(255, 255, 255, .06);
+  border: 1px solid rgba(255, 255, 255, .12);
+  color: rgba(255, 255, 255, .8);
   box-shadow: none;
 }
 body.admin-shell #sidebar .btn-rose:hover {
-  background: #fff1f2;
-  border-color: #fbc9d2;
-  color: #9f1239;
+  background: rgba(220, 80, 60, .22);
+  border-color: rgba(220, 80, 60, .5);
+  color: #fff;
   box-shadow: none;
 }
 
@@ -599,8 +689,10 @@ body.admin-shell .btn-soft {
 }
 body.admin-shell .btn-soft:hover { background: var(--a-surface-sunk) }
 body.admin-shell .btn-primary { background: var(--a-navy); }
+body.admin-shell .btn-green { background: #241c10; }
+body.admin-shell .btn-green:hover { background: #3a2e1c; }
 body.admin-shell .btn-primary:hover { background: var(--a-navy-soft); }
-body.admin-shell .btn-dark { background: #101828; }
+body.admin-shell .btn-dark { background: #241c10; }
 body.admin-shell .field,
 body.admin-shell .coh-select {
   background: var(--a-surface);
@@ -611,8 +703,8 @@ body.admin-shell .coh-select {
 }
 body.admin-shell .field:focus,
 body.admin-shell .coh-select:focus {
-  border-color: rgba(13, 33, 71, .45);
-  box-shadow: 0 0 0 3px rgba(13, 33, 71, .1);
+  border-color: rgba(185, 134, 44, .55);
+  box-shadow: 0 0 0 3px rgba(217, 164, 65, .18);
   outline: none;
 }
 body.admin-shell .tabbtn {
@@ -627,7 +719,7 @@ body.admin-shell .tabbtn.on {
   background: var(--a-navy);
   border-color: var(--a-navy);
   color: #fff;
-  box-shadow: 0 6px 14px -8px rgba(13, 33, 71, .9);
+  box-shadow: 0 6px 14px -8px rgba(31, 26, 18, .8);
 }
 body.admin-shell .badge { border-radius: 7px; font-weight: 600; }
 
@@ -654,7 +746,7 @@ body.admin-shell .badge { border-radius: 7px; font-weight: 600; }
 .seg button:hover { color: var(--a-ink) }
 .seg button.on {
   background: var(--a-surface);
-  color: var(--a-navy);
+  color: var(--a-gold-deep);
   box-shadow: var(--a-shadow);
 }
 
@@ -666,7 +758,7 @@ body.admin-shell th {
   text-transform: uppercase; color: var(--a-muted);
 }
 body.admin-shell tbody tr { transition: background .12s ease; }
-body.admin-shell tbody tr:hover { background: #f7f9fc !important; }
+body.admin-shell tbody tr:hover { background: var(--a-surface-sunk) !important; }
 
 /* ── People rows ─────────────────────────────────────────────────────────
    A student reads as a person: initials, name, and the quiet second line
@@ -692,7 +784,7 @@ body.admin-shell tbody tr:hover { background: #f7f9fc !important; }
   line-height: 1.3;
 }
 button:hover > .cell-user .cell-name,
-.cell-user:hover .cell-name { color: var(--a-info); }
+.cell-user:hover .cell-name { color: var(--a-gold-deep); }
 .cell-sub {
   font-size: 11px;
   color: var(--a-faint);
@@ -717,7 +809,7 @@ button:hover > .cell-user .cell-name,
   transition: background .13s ease, color .13s ease, border-color .13s ease;
 }
 .icon-btn svg { width: 13px; height: 13px }
-.icon-btn:hover { background: var(--a-surface-sunk); color: var(--a-navy); border-color: var(--a-line-strong) }
+.icon-btn:hover { background: var(--a-gold-soft); color: var(--a-gold-deep); border-color: #ecdcbc }
 .icon-btn.danger:hover { background: #fff1f2; color: #be123c; border-color: #fbc9d2 }
 .icon-btn:disabled { opacity: .45; cursor: not-allowed }
 .row-actions { display: flex; align-items: center; gap: 6px; justify-content: flex-end }

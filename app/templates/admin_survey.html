@@ -144,6 +144,23 @@
       <!-- ── OVERVIEW ─────────────────────────────────────────────────── -->
       <div class="panel on" id="p-overview">
 
+        <!-- Where the cohort stands, in a sentence, with the two things an
+             admin most often came here to do. -->
+        <section class="hero">
+          <div>
+            <h2 class="hero-title" id="hero-title">Welcome back</h2>
+            <p class="hero-sub" id="hero-sub">Loading the cohort…</p>
+            <div class="hero-actions">
+              <button class="btn btn-ink" onclick="show('p-emails')">Send reminders</button>
+              <button class="btn btn-cream" onclick="show('p-cohort')">Outcome &amp; impact</button>
+            </div>
+          </div>
+          <div class="hero-gauge">
+            <div class="hero-ring" id="hero-ring" style="--pct:0"><b id="hero-pct">—</b></div>
+            <div class="hero-gauge-label">of the cohort has finished both surveys</div>
+          </div>
+        </section>
+
         <!-- Hero figures. Each carries the last-7-days movement and a
              sparkline of the fortnight behind it, so a number is never shown
              without the direction it is travelling in. -->
@@ -1193,7 +1210,7 @@ let trendDays = 30;
 let rankSort = 'rate';
 
 // `rate` draws on the filled accent tile, so it is white rather than a hue.
-const HUE = { total: '#0d2147', pre: '#2563eb', post: '#059669', rate: '#ffffff' };
+const HUE = { total: '#3a2e1c', pre: '#b9862c', post: '#15803d', rate: '#ffffff' };
 
 /* ── Dates ─────────────────────────────────────────────────────────────
    Everything on this page is counted per local calendar day, keyed as
@@ -1336,6 +1353,17 @@ function renderOverview() {
   const scope = scopeLabel();
   const whoScope = $('who-scope');
   if (whoScope) whoScope.textContent = scope;
+
+  // The banner says the same thing in a sentence.
+  const hour = new Date().getHours();
+  set('hero-title', (hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening') + ', Survey admin');
+  set('hero-sub', total
+    ? `${scope} · ${total.toLocaleString()} registered, ${pre.toLocaleString()} through the baseline and `
+      + `${post.toLocaleString()} finished. ${pendingPost.toLocaleString()} still owe the post survey.`
+    : 'No students registered under these filters yet.');
+  set('hero-pct', rate.toFixed(0) + '%');
+  const ring = $('hero-ring');
+  if (ring) ring.style.setProperty('--pct', rate.toFixed(1));
   navChip('p-students', total ? total.toLocaleString() : '');
   navChip('p-emails', pendingPost ? String(pendingPost) : '');
 
@@ -1371,7 +1399,7 @@ function renderOverview() {
   // ── Completion split ──────────────────────────────────────────────
   const pct = n => total > 0 ? ((n / total) * 100).toFixed(1) : '0.0';
   $('pie-legend').innerHTML = [
-    ['#059669', 'Both done', post], ['#f59e0b', 'Post pending', pendingPost], ['#ef4444', 'Baseline pending', pendingPre],
+    ['#15803d', 'Both done', post], ['#d9a441', 'Post pending', pendingPost], ['#c2410c', 'Baseline pending', pendingPre],
   ].map(([c, label, n]) => `
     <div class="flex items-center justify-between text-xs">
       <span class="flex items-center gap-1.5 text-slate-600"><span class="w-2.5 h-2.5 rounded-full" style="background:${c}"></span>${label}</span>
@@ -1384,7 +1412,7 @@ function renderOverview() {
     else pieChart = new Chart($('pie-chart').getContext('2d'), {
       type: 'doughnut',
       data: { labels: ['Both done', 'Post pending', 'Baseline pending'],
-              datasets: [{ data, backgroundColor: ['#059669', '#f59e0b', '#ef4444'], borderWidth: 3, borderColor: '#fff' }] },
+              datasets: [{ data, backgroundColor: ['#15803d', '#d9a441', '#c2410c'], borderWidth: 3, borderColor: '#fffdf9' }] },
       options: { responsive: true, maintainAspectRatio: false, cutout: '68%', plugins: { legend: { display: false } } },
     });
   }
@@ -1461,10 +1489,10 @@ function renderTrend() {
         },
         scales: {
           x: { grid: { display: false }, border: { display: false },
-               ticks: { color: '#98a2b3', font: { size: 10 }, maxRotation: 0, autoSkipPadding: 24 } },
+               ticks: { color: '#a89e90', font: { size: 10 }, maxRotation: 0, autoSkipPadding: 24 } },
           y: { beginAtZero: true, border: { display: false },
-               grid: { color: '#eef0f4' },
-               ticks: { color: '#98a2b3', font: { size: 10 }, precision: 0, maxTicksLimit: 5 } },
+               grid: { color: '#efe7d8' },
+               ticks: { color: '#a89e90', font: { size: 10 }, precision: 0, maxTicksLimit: 5 } },
         },
       },
     });
@@ -1636,8 +1664,8 @@ function renderStudents() {
 
 // ── People rows ─────────────────────────────────────────────────────────
 // A stable colour per person, so the same student keeps the same avatar.
-const AVATAR_HUES = ['#0d2147', '#2563eb', '#0d9488', '#7c3aed', '#b45309',
-                     '#be123c', '#047857', '#4338ca'];
+const AVATAR_HUES = ['#3a2e1c', '#b9862c', '#15803d', '#7a5f22', '#a16207',
+                     '#c2410c', '#4f6b3a', '#6b5b3e'];
 function avatarFor(name, email) {
   const seed = (email || name || '?');
   let h = 0;

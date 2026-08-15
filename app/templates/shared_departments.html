@@ -229,13 +229,13 @@
 
   <div class="container">
     <div class="summary">
-      <div style="color:#1B2A4A"><b>{{ overall.registered }}</b><span>Registered</span></div>
-      <div style="color:#0369a1"><b>{{ overall.pre_done }}</b><span>Baseline filled</span></div>
+      <div style="color:#3a2e1c"><b>{{ overall.registered }}</b><span>Registered</span></div>
+      <div style="color:#8a6320"><b>{{ overall.pre_done }}</b><span>Baseline filled</span></div>
       <div style="color:#15803d"><b>{{ overall.post_done }}</b><span>Post filled</span></div>
-      <div style="color:#b45309"><b>{{ overall.post_pending }}</b><span>Post pending</span></div>
-      <div style="color:#4338ca"><b>{{ overall.reminders_sent }}</b><span>Reminders sent</span></div>
-      <div style="color:#0d9488"><b>{{ overall.clicked }}</b><span>Clicked the mail</span></div>
-      <div style="color:#7c3aed"><b>{{ overall.completed_after }}</b><span>Filled after mail</span></div>
+      <div style="color:#a16207"><b>{{ overall.post_pending }}</b><span>Post pending</span></div>
+      <div style="color:#6b5b3e"><b>{{ overall.reminders_sent }}</b><span>Reminders sent</span></div>
+      <div style="color:#7a6a4e"><b>{{ overall.clicked }}</b><span>Clicked the mail</span></div>
+      <div style="color:#9a7b3f"><b>{{ overall.completed_after }}</b><span>Filled after mail</span></div>
     </div>
 
     <div class="card">
@@ -267,11 +267,11 @@
         <tbody>
           {% for d in dept_list %}
           {% set enc = (d.dept_key or d.name) | urlencode %}
-          <tr {% if d.dept_key == 'Overall' %}style="background: #f0fdf4; font-weight: 600;"{% endif %}>
+          <tr {% if d.dept_key == 'Overall' %}style="background: #f9f4ea; font-weight: 600;"{% endif %}>
             <td style="color: var(--gray);">{{ loop.index }}</td>
             <td class="dept-name">
               {% if d.dept_key == 'Overall' %}
-                <span style="display:inline-flex;align-items:center;gap:6px;color:#0d9488;">{{ d.name }}</span>
+                <span style="display:inline-flex;align-items:center;gap:6px;color:#8a6320;">{{ d.name }}</span>
               {% else %}
                 {{ d.name }}
               {% endif %}
