@@ -59,8 +59,9 @@
       border-collapse: collapse;
       text-align: left;
       /* Wide enough that the export buttons never clip; the card scrolls
-         horizontally on narrower screens. */
-      min-width: 1320px;
+         horizontally on narrower screens. The completion column added since
+         means it needs more room than it used to. */
+      min-width: 1480px;
     }
     th {
       padding: 16px;
@@ -218,6 +219,7 @@
     }
   </style>
   <link rel="stylesheet" href="{{ asset('/static/css/report_shell.css') }}">
+  <script defer src="{{ asset('/static/js/report_motion.js') }}"></script>
 </head>
 <body class="report-shell">
   <div class="header">
@@ -237,18 +239,26 @@
     </div>
 
     <div class="card">
+      <div class="table-tools">
+        <div class="tool-search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg>
+          <input id="dept-filter" type="search" placeholder="Filter departments…" autocomplete="off">
+        </div>
+        <span class="result-note" id="dept-count"></span>
+      </div>
       <table>
         <thead>
           <tr>
             <th style="width: 40px;">#</th>
-            <th>Department</th>
-            <th style="text-align:center">Registered</th>
+            <th class="sortable" data-sort="name">Department<span class="caret">&#9660;</span></th>
+            <th style="text-align:center" class="sortable" data-sort="registered">Registered<span class="caret">&#9660;</span></th>
             <th style="text-align:center">Baseline<br>filled</th>
-            <th style="text-align:center">Post<br>filled</th>
-            <th style="text-align:center">Post<br>pending</th>
+            <th style="text-align:center" class="sortable" data-sort="post_done">Post filled<span class="caret">&#9660;</span></th>
+            <th style="text-align:center" class="sortable" data-sort="post_pending">Post pending<span class="caret">&#9660;</span></th>
             <th style="text-align:center">Reminders<br>sent</th>
             <th style="text-align:center">Clicked</th>
             <th style="text-align:center">Filled<br>after mail</th>
+            <th style="text-align:center" class="sortable" data-sort="completion">Completion<span class="caret">&#9660;</span></th>
             <th style="text-align:center">Avg pre<br>lit / read</th>
             <th style="text-align:center">Avg post<br>lit / read</th>
             <th style="width: 340px; min-width: 340px;">Reports &amp; exports</th>
@@ -281,6 +291,15 @@
             <td style="text-align:center">
               {% if d.completed_after %}<span class="badge badge-green">{{ d.completed_after }}</span>
               {% else %}<span class="badge badge-gray">0</span>{% endif %}
+            </td>
+            <td>
+              {% set pct = ((d.post_done / d.registered * 100) | round(0) | int) if d.registered else 0 %}
+              <div class="share-cell">
+                <span class="share-pct">{{ pct }}%</span>
+                <span class="share {{ 'is-high' if pct >= 60 else ('is-low' if pct < 25 else '') }}">
+                  <i data-fill="{{ pct }}"></i>
+                </span>
+              </div>
             </td>
             <td style="text-align:center; font-size:13px;">
               {{ d.avg_lit_pre if d.avg_lit_pre is not none else '—' }} /
@@ -321,7 +340,7 @@
             </td>
           </tr>
           {% else %}
-          <tr><td colspan="12" style="text-align:center; color: var(--gray); padding: 40px;">
+          <tr><td colspan="13" style="text-align:center; color: var(--gray); padding: 40px;">
             No departments found.
           </td></tr>
           {% endfor %}
@@ -358,6 +377,76 @@ document.addEventListener('click', ev => {
     },
   });
 });
+</script>
+
+<script>
+// ── Directory table: filter and sort ───────────────────────────────────────
+// The directory is the page most people are sent, and it is long. Filtering
+// and sorting happen here rather than on the server so a shared link stays a
+// single request.
+(function () {
+  var table = document.querySelector('.card table');
+  if (!table) return;
+  var body = table.tBodies[0];
+  var rows = Array.prototype.slice.call(body.rows).filter(function (r) { return r.cells.length > 3; });
+  var input = document.getElementById('dept-filter');
+  var count = document.getElementById('dept-count');
+
+  // "Overall" is a total, not a department: it stays pinned to the top and
+  // never takes part in the sort.
+  var overall = rows.filter(function (r) { return /Overall/.test(r.cells[1].textContent); });
+  var depts   = rows.filter(function (r) { return overall.indexOf(r) === -1; });
+
+  var COLUMN = { name: 1, registered: 2, post_done: 4, post_pending: 5, completion: 9 };
+  var value = function (row, key) {
+    var cell = row.cells[COLUMN[key]];
+    if (!cell) return 0;
+    if (key === 'name') return cell.textContent.trim().toLowerCase();
+    return parseFloat(cell.textContent.replace(/[^0-9.\-]/g, '')) || 0;
+  };
+
+  var sortKey = null, ascending = false;
+
+  function apply() {
+    var q = (input && input.value || '').trim().toLowerCase();
+    var shown = 0;
+    depts.forEach(function (r) {
+      var hit = !q || r.cells[1].textContent.toLowerCase().indexOf(q) !== -1;
+      r.style.display = hit ? '' : 'none';
+      if (hit) shown++;
+    });
+    overall.forEach(function (r) { r.style.display = q ? 'none' : ''; });
+    if (count) count.textContent = shown + ' of ' + depts.length + ' departments';
+  }
+
+  function sortBy(key) {
+    ascending = (sortKey === key) ? !ascending : (key === 'name');
+    sortKey = key;
+    var sorted = depts.slice().sort(function (a, b) {
+      var x = value(a, key), y = value(b, key);
+      if (x < y) return ascending ? -1 : 1;
+      if (x > y) return ascending ? 1 : -1;
+      return 0;
+    });
+    sorted.forEach(function (r) { body.appendChild(r); });
+    // The row numbers describe position, so they are renumbered after a sort.
+    var n = overall.length;
+    sorted.forEach(function (r) { r.cells[0].textContent = ++n; });
+
+    Array.prototype.forEach.call(table.querySelectorAll('th.sortable'), function (th) {
+      var on = th.getAttribute('data-sort') === key;
+      th.classList.toggle('sorted', on);
+      var caret = th.querySelector('.caret');
+      if (caret) caret.innerHTML = on && ascending ? '&#9650;' : '&#9660;';
+    });
+  }
+
+  Array.prototype.forEach.call(table.querySelectorAll('th.sortable'), function (th) {
+    th.addEventListener('click', function () { sortBy(th.getAttribute('data-sort')); });
+  });
+  if (input) input.addEventListener('input', apply);
+  apply();
+})();
 </script>
 </body>
 </html>

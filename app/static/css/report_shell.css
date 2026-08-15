@@ -266,10 +266,105 @@ body.report-shell .btn-mail:hover {
 
 body.report-shell .foot { color: var(--r-faint); font-size: 12px }
 
+/* ── Movement ────────────────────────────────────────────────────────────
+   Cards arrive rather than appear. report_motion.js adds `reveal` before
+   anything is painted and `reveal-in` once the element is on screen; the
+   delay staggers a row so it reads left to right. */
+body.report-shell .reveal {
+  opacity: 0;
+  transform: translateY(14px);
+}
+body.report-shell .reveal-in {
+  opacity: 1;
+  transform: none;
+  transition: opacity .5s cubic-bezier(.22, 1, .36, 1) var(--reveal-delay, 0ms),
+              transform .55s cubic-bezier(.22, 1, .36, 1) var(--reveal-delay, 0ms);
+}
+
+/* Rows come in with the table rather than one at a time — a 400-row table
+   animating per row would be a mess, so the card carries them. */
+body.report-shell tbody tr { will-change: auto; }
+
+/* A share drawn as a bar, grown once its card is seen. */
+.share {
+  height: 6px;
+  border-radius: 999px;
+  background: #eef0f4;
+  overflow: hidden;
+  min-width: 68px;
+}
+.share > i {
+  display: block;
+  height: 100%;
+  width: 0;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--r-navy), #2f5aa8);
+  transition: width 1s cubic-bezier(.22, 1, .36, 1);
+}
+.share.is-high > i { background: linear-gradient(90deg, #047857, #10b981) }
+.share.is-low  > i { background: linear-gradient(90deg, #b45309, #f59e0b) }
+.share-cell { display: flex; flex-direction: column; gap: 5px; min-width: 92px }
+.share-pct { font-size: 11.5px; font-weight: 700; color: var(--r-ink) }
+
+/* The tools above a table: a filter on the left, a count on the right. */
+.table-tools {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.tool-search { position: relative; flex: 1; min-width: 200px; max-width: 320px }
+.tool-search svg {
+  position: absolute;
+  left: 11px; top: 50%;
+  transform: translateY(-50%);
+  width: 15px; height: 15px;
+  color: var(--r-faint);
+  pointer-events: none;
+}
+.tool-search input {
+  width: 100%;
+  padding: 9px 12px 9px 33px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--r-ink-soft);
+  background: var(--r-surface-sunk);
+  border: 1px solid var(--r-line);
+  border-radius: 10px;
+  outline: none;
+  transition: border-color .14s ease, box-shadow .14s ease, background .14s ease;
+}
+.tool-search input::placeholder { color: var(--r-faint) }
+.tool-search input:focus {
+  background: var(--r-surface);
+  border-color: rgba(37, 99, 235, .4);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, .1);
+}
+.result-note { font-size: 12px; color: var(--r-muted); white-space: nowrap }
+
+/* Sortable column headers. */
+body.report-shell th.sortable {
+  cursor: pointer;
+  user-select: none;
+  transition: color .12s ease, background .12s ease;
+}
+body.report-shell th.sortable:hover { color: var(--r-ink); background: #eef1f6 }
+body.report-shell th.sortable .caret {
+  display: inline-block;
+  margin-left: 4px;
+  opacity: .35;
+  font-size: 9px;
+}
+body.report-shell th.sortable.sorted .caret { opacity: 1; color: var(--r-accent) }
+
 /* Reduced motion: keep the surfaces, drop the movement. */
 @media (prefers-reduced-motion: reduce) {
   body.report-shell * { transition: none !important; }
   body.report-shell .btn:hover,
   body.report-shell .summary div:hover,
   body.report-shell .stat-card:hover { transform: none; }
+  body.report-shell .reveal { opacity: 1; transform: none; }
+  body.report-shell .share > i { transition: none; }
 }
