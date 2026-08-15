@@ -68,6 +68,15 @@
               class="text-slate-400 hover:text-white text-lg px-1 rounded-md">&#10005;</button>
     </div>
 
+    <!-- Filters the rail itself. Ten sections is enough that typing beats
+         hunting, and the header's search is for students, not pages. -->
+    <div class="px-3 pt-3">
+      <div class="rail-search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg>
+        <input id="nav-search" placeholder="Search" autocomplete="off" oninput="filterNav(this.value)">
+      </div>
+    </div>
+
     <nav id="nav" class="flex-1 px-3 py-2 space-y-0.5 overflow-y-auto"></nav>
 
     <div class="px-3 pb-4 pt-3 space-y-2 border-t border-white/5">
@@ -141,9 +150,14 @@
               <span class="kpi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 20v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 20v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
               <span class="kpi-label">Registered</span>
             </div>
-            <div class="kpi-row"><b class="kpi-val" id="ov-total">—</b><span class="kpi-delta flat" id="ov-total-delta">—</span></div>
-            <div class="kpi-spark" id="ov-total-spark"></div>
-            <div class="kpi-foot" id="ov-total-foot">Students on the portal</div>
+            <div class="kpi-caption">Students on the portal</div>
+            <div class="kpi-body">
+              <div class="kpi-figure">
+                <div class="kpi-row"><b class="kpi-val" id="ov-total">—</b><span class="kpi-delta flat" id="ov-total-delta">—</span></div>
+              </div>
+              <div class="kpi-spark" id="ov-total-spark"></div>
+            </div>
+            <div class="kpi-foot" id="ov-total-foot"></div>
           </article>
 
           <article class="kpi">
@@ -151,9 +165,14 @@
               <span class="kpi-ico kpi-ico-blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 15l2 2 4-4"/></svg></span>
               <span class="kpi-label">Baseline done</span>
             </div>
-            <div class="kpi-row"><b class="kpi-val" id="ov-pre">—</b><span class="kpi-delta flat" id="ov-pre-delta">—</span></div>
-            <div class="kpi-spark" id="ov-pre-spark"></div>
-            <div class="kpi-foot" id="ov-pre-foot">Outcome Survey 1 submitted</div>
+            <div class="kpi-caption">Outcome Survey 1 submitted</div>
+            <div class="kpi-body">
+              <div class="kpi-figure">
+                <div class="kpi-row"><b class="kpi-val" id="ov-pre">—</b><span class="kpi-delta flat" id="ov-pre-delta">—</span></div>
+              </div>
+              <div class="kpi-spark" id="ov-pre-spark"></div>
+            </div>
+            <div class="kpi-foot" id="ov-pre-foot"></div>
           </article>
 
           <article class="kpi">
@@ -161,19 +180,29 @@
               <span class="kpi-ico kpi-ico-green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg></span>
               <span class="kpi-label">Post survey done</span>
             </div>
-            <div class="kpi-row"><b class="kpi-val" id="ov-post">—</b><span class="kpi-delta flat" id="ov-post-delta">—</span></div>
-            <div class="kpi-spark" id="ov-post-spark"></div>
-            <div class="kpi-foot" id="ov-post-foot">Both surveys complete</div>
+            <div class="kpi-caption">Both surveys complete</div>
+            <div class="kpi-body">
+              <div class="kpi-figure">
+                <div class="kpi-row"><b class="kpi-val" id="ov-post">—</b><span class="kpi-delta flat" id="ov-post-delta">—</span></div>
+              </div>
+              <div class="kpi-spark" id="ov-post-spark"></div>
+            </div>
+            <div class="kpi-foot" id="ov-post-foot"></div>
           </article>
 
-          <article class="kpi">
+          <article class="kpi kpi-accent">
             <div class="kpi-top">
               <span class="kpi-ico kpi-ico-gold"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg></span>
               <span class="kpi-label">Completion rate</span>
             </div>
-            <div class="kpi-row"><b class="kpi-val" id="ov-rate">—</b><span class="kpi-delta flat" id="ov-rate-delta">—</span></div>
-            <div class="kpi-spark" id="ov-rate-spark"></div>
-            <div class="kpi-foot" id="ov-rate-foot">Share of the cohort finished</div>
+            <div class="kpi-caption">Share of the cohort finished</div>
+            <div class="kpi-body">
+              <div class="kpi-figure">
+                <div class="kpi-row"><b class="kpi-val" id="ov-rate">—</b><span class="kpi-delta flat" id="ov-rate-delta">—</span></div>
+              </div>
+              <div class="kpi-spark" id="ov-rate-spark"></div>
+            </div>
+            <div class="kpi-foot" id="ov-rate-foot"></div>
           </article>
         </div>
 
@@ -1037,6 +1066,23 @@ function markNav(pageId) {
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.toggle('on', b.dataset.page === pageId));
 }
 
+/** Narrow the rail to the sections matching what was typed. */
+function filterNav(query) {
+  const q = (query || '').trim().toLowerCase();
+  PAGES.forEach(p => {
+    const btn = document.querySelector(`.nav-btn[data-page="${p.id}"]`);
+    if (btn) btn.classList.toggle('hidden', !!q && !p.label.toLowerCase().includes(q));
+  });
+  // A group heading with nothing under it is noise.
+  document.querySelectorAll('#nav .nav-group').forEach(head => {
+    let shown = false;
+    for (let el = head.nextElementSibling; el && !el.classList.contains('nav-group'); el = el.nextElementSibling) {
+      if (el.classList.contains('nav-btn') && !el.classList.contains('hidden')) { shown = true; break; }
+    }
+    head.classList.toggle('hidden', !shown);
+  });
+}
+
 /** Put a live count beside a nav row — used for students and pending mail. */
 function navChip(pageId, value) {
   const chip = document.querySelector(`[data-chip="${pageId}"]`);
@@ -1142,7 +1188,8 @@ let trendChart = null;
 let trendDays = 30;
 let rankSort = 'rate';
 
-const HUE = { total: '#0d2147', pre: '#2563eb', post: '#059669', rate: '#c9a84c' };
+// `rate` draws on the filled accent tile, so it is white rather than a hue.
+const HUE = { total: '#0d2147', pre: '#2563eb', post: '#059669', rate: '#ffffff' };
 
 /* ── Dates ─────────────────────────────────────────────────────────────
    Everything on this page is counted per local calendar day, keyed as
