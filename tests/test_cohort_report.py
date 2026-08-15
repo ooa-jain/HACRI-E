@@ -356,7 +356,10 @@ async def test_the_deck_carries_the_trajectory_slide(client):
 async def test_the_admin_stylesheet_is_served(client):
     r = await client.get("/static/css/admin_shell.css")
     assert r.status_code == 200
-    assert b"sidebar-closed" in r.content
+    # The sections used to live in a collapsing rail; they now sit in the top
+    # bar, one page each, so the sheet is checked for the bar it dresses.
+    assert b"bar-nav" in r.content
+    assert b"admin-shell" in r.content
 
 
 def test_charts_write_pngs_even_with_nothing_to_draw(tmp_path):

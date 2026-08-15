@@ -2,10 +2,10 @@
  * admin_shell.css — the look of the admin dashboards.
  *
  * Loaded by every admin page (survey, orientation, login) so they read as one
- * product. The shape is a warm analytics console: a near-black rail on the
- * left, a cream workspace on the right, and content that arrives as rounded
- * cards — a welcome banner, hero KPIs with a trend delta and a sparkline,
- * chart panels, a ranked leaderboard, an activity feed, and tables.
+ * product. The shape is a warm analytics console: every section listed across
+ * a top bar, each on its own page, over a cream workspace of rounded cards —
+ * a welcome banner, hero KPIs with a trend delta and a sparkline, chart
+ * panels, a ranked leaderboard, an activity feed, and tables.
  *
  * Gold is the single accent and JAIN's; everything else is warm greys with a
  * small semantic set (green up, rust down, amber waiting). It restyles the component classes
@@ -49,8 +49,6 @@
   --a-radius: 20px;
   --a-shadow: 0 1px 2px rgba(60, 45, 20, .05);
   --a-shadow-lift: 0 6px 14px -4px rgba(60, 45, 20, .12), 0 20px 36px -22px rgba(60, 45, 20, .3);
-  --a-sidebar: 15.5rem;
-  --a-rail-mini: 4.25rem;
 }
 
 /* ── Ground ──────────────────────────────────────────────────────────────── */
@@ -414,238 +412,90 @@ body.admin-shell .stat.border-l-slate-300   { border-left-color: var(--a-line-st
 .feed-time { font-size: 11px; color: var(--a-faint); margin-top: 2px }
 .feed-empty { font-size: 12px; color: var(--a-faint); padding: 18px 0; text-align: center }
 
-/* ── Sidebar ───────────────────────────────────────────────────────────────
-   The rail is near-black, with the active section on a gold pill. To go back
-   to a light rail set --a-rail-bg to #fff and --a-rail-edge to #e4e9f2, then
-   flip the four rgba(255,255,255,…) text colours below to the ink tokens. */
-body.admin-shell {
-  --a-rail-bg: #17140f;
-  --a-rail-sunk: var(--a-gold);
-  --a-rail-edge: #17140f;
-  --a-rail-accent: #2a2118;
+/* ── Top bar ─────────────────────────────────────────────────────────────
+   The rail is gone. The sections sit in the bar as links, each to its own
+   page, so nothing is hidden behind a collapse and the browser's history
+   works the way a reader expects. */
+body.admin-shell header.admin-bar {
+  background: var(--a-surface);
+  border-bottom: 1px solid var(--a-line);
 }
+.bar-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 11px 20px;
+}
+.bar-brand { display: flex; flex-direction: column; margin-right: 6px; flex: none }
+.bar-word {
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: -.3px;
+  color: var(--a-ink);
+  line-height: 1.15;
+}
+.bar-word em { font-style: normal; color: var(--a-gold-deep) }
+.bar-kicker { font-size: 10px; color: var(--a-faint); letter-spacing: .2px }
 
-body.admin-shell #sidebar {
-  width: var(--a-sidebar);
-  background: var(--a-rail-bg);
-  border-right: 1px solid var(--a-rail-edge);
-  color: var(--a-ink-soft);
-}
+.bar-row .search-wrap { flex: 1; min-width: 200px; max-width: 26rem; position: relative }
+/* `.field` is 100% wide by default, so the bar's selects must be told again
+   or each one claims a line of its own. */
+.bar-row select.field { width: auto; min-width: 8rem; max-width: 13rem; }
+.bar-row .btn { flex: none }
 
-body.admin-shell #sidebar .border-white\/5 { border-color: rgba(255, 255, 255, .07); }
-body.admin-shell #sidebar .text-white { color: #fff; }
-body.admin-shell #sidebar .text-slate-400 { color: rgba(255, 255, 255, .45); }
-body.admin-shell #sidebar .text-amber-400 { color: var(--a-gold); }
-body.admin-shell #sidebar #sidebar-close { color: rgba(255, 255, 255, .45); }
-body.admin-shell #sidebar #sidebar-close:hover { color: #fff; }
-
-/* The rail's own search field. */
-.rail-search { position: relative; }
-.rail-search svg {
-  color: rgba(255, 255, 255, .45);
-  position: absolute;
-  left: 10px; top: 50%;
-  transform: translateY(-50%);
-  width: 14px; height: 14px;
-  color: var(--a-faint);
-  pointer-events: none;
+/* The section links. They scroll sideways rather than wrap on a phone. */
+.bar-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 14px 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
 }
-.rail-search input {
-  width: 100%;
-  padding: 7px 10px 7px 30px;
-  font-size: 12px;
-  color: #fff;
-  background: rgba(255, 255, 255, .07);
-  border: 1px solid rgba(255, 255, 255, .1);
-  border-radius: 9px;
-  outline: none;
-  transition: border-color .14s ease, box-shadow .14s ease;
-}
-.rail-search input::placeholder { color: rgba(255, 255, 255, .4); }
-.rail-search input:focus {
-  border-color: rgba(217, 164, 65, .55);
-  box-shadow: 0 0 0 3px rgba(217, 164, 65, .18);
-  background: rgba(255, 255, 255, .1);
-}
-
-body.admin-shell #sidebar .nav-group {
-  font-size: 9.5px;
-  font-weight: 700;
-  letter-spacing: 1.1px;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, .35);
-  padding: 15px 12px 5px;
-}
-body.admin-shell #sidebar .nav-btn {
-  border-radius: 12px;
-  position: relative;
-  color: rgba(255, 255, 255, .72);
-  transition: background .15s ease, color .15s ease;
-}
-body.admin-shell #sidebar .nav-btn .nav-ico {
+.bar-nav::-webkit-scrollbar { display: none }
+.bar-nav .nav-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
   flex: none;
-  width: 18px; height: 18px;
-  color: rgba(255, 255, 255, .6);
+  padding: 7px 12px;
+  border-radius: 10px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--a-muted);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background .14s ease, color .14s ease;
 }
-body.admin-shell #sidebar .nav-btn:hover {
-  background: rgba(255, 255, 255, .07);
+.bar-nav .nav-btn .nav-ico { width: 16px; height: 16px; flex: none; opacity: .75 }
+.bar-nav .nav-btn:hover { background: var(--a-surface-sunk); color: var(--a-ink) }
+.bar-nav .nav-btn.on {
+  background: var(--a-navy);
   color: #fff;
-}
-body.admin-shell #sidebar .nav-btn:hover .nav-ico { color: var(--a-gold); }
-body.admin-shell #sidebar .nav-btn.on {
-  background: var(--a-gold);
-  color: #241c10;
   font-weight: 700;
-  box-shadow: 0 6px 14px -6px rgba(217, 164, 65, .7);
 }
-body.admin-shell #sidebar .nav-btn.on .nav-ico { color: #241c10; }
-/* Count chip on the right of a nav row. */
-body.admin-shell #sidebar .nav-btn .nav-chip {
-  margin-left: auto;
+.bar-nav .nav-btn.on .nav-ico { opacity: 1; color: var(--a-gold) }
+.bar-nav .nav-chip {
   font-size: 10px;
   font-weight: 700;
   padding: 1px 6px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, .13);
-  color: rgba(255, 255, 255, .85);
+  background: var(--a-surface-sunk);
+  color: var(--a-muted);
 }
-body.admin-shell #sidebar .nav-btn.on .nav-chip { background: rgba(0, 0, 0, .18); color: #241c10; }
+.bar-nav .nav-btn.on .nav-chip { background: rgba(255, 255, 255, .18); color: #fff }
 
-/* The signed-in card at the foot of the rail. */
-.who {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, .07);
-  border: 1px solid rgba(255, 255, 255, .09);
-}
-.who-av {
-  flex: none;
-  width: 32px; height: 32px;
-  border-radius: 11px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, var(--a-gold), var(--a-gold-deep));
-  color: #241c10;
-  font-size: 12px;
+/* The section's own title, under the bar. */
+.page-head { padding: 20px 24px 0 }
+.page-head #page-title {
+  font-size: 20px;
   font-weight: 800;
-}
-.who-name { font-size: 12px; font-weight: 650; color: #fff; line-height: 1.2 }
-.who-role {
-  font-size: 10.5px;
-  color: rgba(255, 255, 255, .5);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* Sign-out reads as a quiet outline until you reach for it. */
-body.admin-shell #sidebar .btn-rose {
-  background: rgba(255, 255, 255, .06);
-  border: 1px solid rgba(255, 255, 255, .12);
-  color: rgba(255, 255, 255, .8);
-  box-shadow: none;
-}
-body.admin-shell #sidebar .btn-rose:hover {
-  background: rgba(220, 80, 60, .22);
-  border-color: rgba(220, 80, 60, .5);
-  color: #fff;
-  box-shadow: none;
-}
-
-/* Collapsing: on a wide screen the rail narrows to icons rather than leaving,
-   so the sections stay reachable; on a phone it still slides away. */
-body.admin-shell #sidebar,
-body.admin-shell #shell { transition: width .18s ease, margin-left .18s ease; }
-#sidebar-close, #sidebar-open { line-height: 1; }
-#sidebar-open { display: none; }
-
-@media (min-width: 768px) {
-  body.admin-shell.sidebar-closed #sidebar { width: var(--a-rail-mini); }
-  body.admin-shell.sidebar-closed #shell { margin-left: var(--a-rail-mini); }
-
-  /* Everything but the glyphs steps aside. */
-  body.admin-shell.sidebar-closed #sidebar .nav-btn > span:not(.nav-ico),
-  body.admin-shell.sidebar-closed #sidebar .nav-group,
-  body.admin-shell.sidebar-closed #sidebar .rail-search,
-  body.admin-shell.sidebar-closed #sidebar .who > div,
-  body.admin-shell.sidebar-closed #sidebar .brand-text,
-  body.admin-shell.sidebar-closed #sidebar #sidebar-close { display: none; }
-
-  body.admin-shell.sidebar-closed #sidebar .nav-btn {
-    justify-content: center;
-    padding-left: 0;
-    padding-right: 0;
-  }
-  body.admin-shell.sidebar-closed #sidebar .who { justify-content: center; padding: 8px; }
-  body.admin-shell.sidebar-closed #sidebar .brand { justify-content: center; }
-  body.admin-shell.sidebar-closed #sidebar .rail-foot .btn-rose { font-size: 0; padding: 8px; }
-  body.admin-shell.sidebar-closed #sidebar .rail-foot .btn-rose svg { font-size: 12px; }
-
-  /* The label returns as a tooltip while the rail is narrow. */
-  body.admin-shell.sidebar-closed #sidebar .nav-btn::after {
-    content: attr(data-label);
-    position: absolute;
-    left: calc(100% + 10px);
-    top: 50%;
-    transform: translateY(-50%);
-    padding: 5px 9px;
-    border-radius: 8px;
-    background: rgba(15, 23, 42, .94);
-    color: #fff;
-    font-size: 11px;
-    font-weight: 600;
-    white-space: nowrap;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity .12s ease;
-    z-index: 60;
-  }
-  body.admin-shell.sidebar-closed #sidebar .nav-btn:hover::after { opacity: 1; }
-}
-
-/* Narrow screens keep the old behaviour: the rail leaves entirely. */
-@media (max-width: 767px) {
-  body.admin-shell.sidebar-closed #sidebar { transform: translateX(-100%); }
-  body.admin-shell.sidebar-closed #shell { margin-left: 0; }
-}
-body.admin-shell.sidebar-closed #sidebar-open { display: inline-flex; }
-
-/* ── Header ──────────────────────────────────────────────────────────────── */
-body.admin-shell header.admin-bar {
-  background: rgba(255, 255, 255, .86);
-  backdrop-filter: blur(12px) saturate(150%);
-  -webkit-backdrop-filter: blur(12px) saturate(150%);
-  border-bottom: 1px solid var(--a-line);
-}
-body.admin-shell #page-title {
-  font-size: 15px;
-  font-weight: 700;
-  letter-spacing: -.3px;
+  letter-spacing: -.5px;
   color: var(--a-ink);
+  margin: 0;
 }
-body.admin-shell #page-sub { color: var(--a-muted) }
-
-/* `.field` is 100% wide by default, so anything asking for `w-auto` has to be
-   told again here — otherwise a status filter eats its whole toolbar and
-   pushes the view tabs onto one line each. */
-body.admin-shell .field.w-auto { width: auto; }
-
-/* The students toolbar: the view tabs hold their line, and the two controls
-   beside them take fixed widths rather than stretching to 100%. */
-@media (min-width: 1024px) {
-  body.admin-shell #student-views { flex: none; flex-wrap: nowrap; }
-  body.admin-shell #student-search { width: 17rem; }
-  body.admin-shell #status-filter { width: auto; min-width: 10rem; }
-}
-body.admin-shell header.admin-bar select.field {
-  width: auto;
-  min-width: 8rem;
-  max-width: 14rem;
-}
+.page-head #page-sub { font-size: 12.5px; color: var(--a-muted); margin: 3px 0 0 }
 
 /* Search box in the bar, with a leading icon slot. */
 .search-wrap { position: relative }

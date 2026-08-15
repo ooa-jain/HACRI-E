@@ -229,19 +229,49 @@ async def survey_logout():
     _del_cookie(r, _SURVEY_COOKIE)
     return r
 
-@router.get("/admin/survey", response_class=HTMLResponse)
-async def survey_dashboard(request: Request):
+# Each admin section is its own page rather than a panel in one long document:
+# the browser's back button works, a section can be bookmarked or linked, and
+# a page only carries the markup for what it shows.
+SURVEY_SECTIONS = {
+    "overview":    ("Overview", "Cohort progress at a glance"),
+    "students":    ("Students", "Status, time taken, timeline and orientation replies"),
+    "emails":      ("Emails", "Send reminders, write your own mail, track delivery"),
+    "links":       ("Links", "Department links for both surveys, plus shareable reports"),
+    "depts":       ("Departments", "Literacy and readiness averages per department"),
+    "cohort":      ("Outcome and impact", "Baseline, what changed after the workshop, and the journey between them"),
+    "orientation": ("Orientation report", "Campus-wise Deeksharambh analysis, who filled it, and mailing"),
+    "parents":     ("Parental background", "Occupations reported in the post survey"),
+    "calendar":    ("Calendar", "When students filled the surveys"),
+    "settings":    ("Settings", "Gating, timing and automatic reminders"),
+}
+
+
+async def _render_survey_section(request: Request, section: str) -> HTMLResponse:
     if not _is_survey_admin(request):
         return RedirectResponse(url="/admin/login", status_code=303)
+    if section not in SURVEY_SECTIONS:
+        return RedirectResponse(url="/admin/survey", status_code=303)
+    title, sub = SURVEY_SECTIONS[section]
     flags = await get_all_flags()
     public_url = str(settings.public_base_url).rstrip('/')
-    orientation_share_url = f"{public_url}/deeksharambh"
     return request.app.state.templates.TemplateResponse(
         request, "admin_survey.html", {
             "flags": flags,
-            "orientation_share_url": orientation_share_url
+            "orientation_share_url": f"{public_url}/deeksharambh",
+            "section": section,
+            "page": {"title": title, "sub": sub},
         },
     )
+
+
+@router.get("/admin/survey", response_class=HTMLResponse)
+async def survey_dashboard(request: Request):
+    return await _render_survey_section(request, "overview")
+
+
+@router.get("/admin/survey/section/{section}", response_class=HTMLResponse)
+async def survey_dashboard_section(request: Request, section: str):
+    return await _render_survey_section(request, section)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
