@@ -1864,3 +1864,21 @@ async def run_auto_reminder_worker():
         except Exception as e:  # never let the loop die
             logger.error("Error in auto-reminder worker loop: %s", e)
         await asyncio.sleep(AUTO_REMINDER_TICK_SECONDS)
+
+
+@router.get("/admin/api/survey/impact-links")
+async def api_survey_impact_links(request: Request):
+    """Copyable links to the public impact page — all campuses, then each one."""
+    if not _is_survey_admin(request):
+        raise HTTPException(status_code=403)
+
+    from app.orientation_analysis import CAMPUSES
+    from app.routes.shared_analysis import vibe_share_url
+
+    base = str(request.base_url).rstrip("/")
+    return JSONResponse({
+        "links": [
+            {"campus": "All campuses", "url": vibe_share_url(base, "")},
+            *({"campus": name, "url": vibe_share_url(base, name)} for name in CAMPUSES),
+        ]
+    })

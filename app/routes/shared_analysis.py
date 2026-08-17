@@ -90,6 +90,26 @@ def directory_url(base_url: str) -> str:
     return f"{base_url.rstrip('/')}/shared/departments?token={get_directory_token()}"
 
 
+# ── The impact page students and parents get sent ────────────────────────────
+VIBE_KEY = "__vibe__"
+
+
+def get_vibe_token(campus: str = "") -> str:
+    """Token for the shareable impact page of one campus (or all)."""
+    return get_dept_token(f"{VIBE_KEY}:{campus or 'all'}", "vibe")
+
+
+def verify_vibe_token(campus: str, token: str) -> bool:
+    return hmac.compare_digest(get_vibe_token(campus), token or "")
+
+
+def vibe_share_url(base_url: str, campus: str = "") -> str:
+    from urllib.parse import urlencode
+
+    query = urlencode({"campus": campus, "token": get_vibe_token(campus)})
+    return f"{base_url.rstrip('/')}/shared/impact?{query}"
+
+
 async def _in_thread(fn, *args, **kwargs):
     """Run a slow, CPU-bound builder off the event loop.
 
@@ -640,3 +660,32 @@ async def shared_departments_list(request: Request, token: str = Query(...)):
         }
     )
 
+
+
+@router.get("/shared/impact", response_class=HTMLResponse)
+async def shared_impact(request: Request, token: str = Query(...), campus: str = Query(default="")):
+    """The impact page, open to anyone holding the link.
+
+    Counts only students who finished both surveys, so "Outcome" and "Impact"
+    describe the same people measured twice. A campus token opens that campus
+    alone — a Kochi link cannot be edited into a Bangalore one.
+    """
+    if not verify_vibe_token(campus, token):
+        raise HTTPException(status_code=403, detail="Access denied: Invalid or expired sharing link.")
+
+    from app.vibe_report import vibe_report
+
+    from app.orientation_analysis import CAMPUSES
+
+    report = await vibe_report(campus=campus)
+    return request.app.state.templates.TemplateResponse(
+        request, "shared_vibe.html", {
+            "report": report,
+            "campus": campus,
+            # The switcher in the hero needs each campus's own token: a link is
+            # only ever valid for the campus it names.
+            "all_token": get_vibe_token(""),
+            "campus_tokens": {name: get_vibe_token(name) for name in CAMPUSES},
+            "generated_at": datetime.now().strftime("%d %b %Y, %H:%M"),
+        },
+    )

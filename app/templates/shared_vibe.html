@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Impact Report — {{ report.campus }} · JAIN University</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+/*
+ * The impact page. Loud on purpose: it is handed to students and parents, not
+ * to an administrator, so it opens with a claim rather than a table. Its own
+ * stylesheet — nothing else on the site looks like this.
+ */
+:root {
+  --ink: #17110a;
+  --ink-soft: #4a3f31;
+  --muted: #7d7060;
+  --paper: #fffdf8;
+  --line: #ece0cc;
+  --cream: #fbf4e6;
+  --grape: #6d28d9;
+  --sun: #f5b731;
+  --lime: #58cc4a;
+  --sky: #2ba7d9;
+  --rose: #f0567a;
+  --radius: 26px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Outfit', system-ui, sans-serif;
+  background: var(--cream);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+.wrap { max-width: 1120px; margin: 0 auto; padding: 0 18px 60px; }
+.stack > * + * { margin-top: 18px; }
+
+/* ── Hero ─────────────────────────────────────────────────────────────── */
+.hero {
+  position: relative;
+  overflow: hidden;
+  padding: 54px 20px 96px;
+  text-align: center;
+  color: #fff;
+  background: linear-gradient(150deg, #2b1055 0%, var(--grape) 45%, #b429a5 100%);
+}
+.hero::after {
+  content: '';
+  position: absolute; left: 0; right: 0; bottom: -1px; height: 60px;
+  background: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 60' preserveAspectRatio='none'%3E%3Cpath d='M0 34c190 26 350-18 540-10s310 32 500 22 260-32 400-18v32H0z' fill='%23fbf4e6'/%3E%3C/svg%3E") bottom/100% 100% no-repeat;
+}
+.hero > * { position: relative; z-index: 1 }
+.hero-pill {
+  display: inline-block;
+  padding: 6px 16px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.16);
+  border: 1px solid rgba(255,255,255,.28);
+  font-size: 12px; font-weight: 700; letter-spacing: 1.4px; text-transform: uppercase;
+}
+.hero h1 {
+  font-size: clamp(34px, 7vw, 68px);
+  font-weight: 900;
+  letter-spacing: -2px;
+  line-height: 1.02;
+  margin: 16px 0 10px;
+}
+.hero h1 em { font-style: normal; color: var(--sun); }
+.hero p { font-size: clamp(14px, 2vw, 17px); color: rgba(255,255,255,.78); max-width: 46ch; margin: 0 auto; }
+.hero-big {
+  font-size: clamp(64px, 15vw, 150px);
+  font-weight: 900;
+  letter-spacing: -6px;
+  line-height: .9;
+  margin: 22px 0 4px;
+  background: linear-gradient(100deg, var(--sun), #ffe9a8 40%, var(--lime));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.hero-big-label { font-size: 13px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: rgba(255,255,255,.7) }
+
+/* Campus switch, right in the hero. */
+.campus-row { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 26px }
+.campus-chip {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 9px 16px; border-radius: 999px;
+  background: rgba(255,255,255,.12);
+  border: 1px solid rgba(255,255,255,.22);
+  color: #fff; font: inherit; font-size: 13px; font-weight: 700;
+  text-decoration: none; cursor: pointer;
+  transition: background .16s ease, transform .16s ease;
+}
+.campus-chip:hover { background: rgba(255,255,255,.22); transform: translateY(-2px) }
+.campus-chip.on { background: #fff; color: var(--grape); border-color: #fff }
+.campus-chip b { font-weight: 800 }
+
+/* ── Cards ────────────────────────────────────────────────────────────── */
+.card {
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  border-radius: var(--radius);
+  padding: 24px;
+  box-shadow: 6px 6px 0 rgba(23,17,10,.1);
+}
+.card-title { font-size: 21px; font-weight: 800; letter-spacing: -.5px }
+.card-sub { font-size: 13.5px; color: var(--muted); margin-top: 4px }
+.section-kicker {
+  display: inline-block;
+  font-size: 11px; font-weight: 800; letter-spacing: 1.6px; text-transform: uppercase;
+  color: var(--grape); margin-bottom: 6px;
+}
+
+/* ── The two brackets ─────────────────────────────────────────────────── */
+.brackets { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px }
+.bracket { position: relative; overflow: hidden; border-radius: var(--radius); padding: 26px; color: #fff }
+.bracket-outcome { background: linear-gradient(140deg, #1d4ed8, var(--sky)) }
+.bracket-impact  { background: linear-gradient(140deg, #15803d, var(--lime)) }
+.bracket-tag { font-size: 11px; font-weight: 800; letter-spacing: 1.6px; text-transform: uppercase; opacity: .82 }
+.bracket h3 { font-size: 25px; font-weight: 900; letter-spacing: -.6px; margin: 4px 0 16px }
+.metric { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 9px 0 }
+.metric + .metric { border-top: 1px solid rgba(255,255,255,.2) }
+.metric span { font-size: 13.5px; font-weight: 600; opacity: .9 }
+.metric b { font-size: 30px; font-weight: 900; letter-spacing: -1px }
+.metric b small { font-size: 14px; font-weight: 700; opacity: .7 }
+.lift-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px }
+.lift {
+  flex: 1; min-width: 130px;
+  background: rgba(255,255,255,.16);
+  border-radius: 14px; padding: 10px 14px;
+}
+.lift i { font-style: normal; font-size: 11px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase; opacity: .82 }
+.lift b { display: block; font-size: 20px; font-weight: 900 }
+
+/* ── Stat tiles ───────────────────────────────────────────────────────── */
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px }
+.tile {
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  border-radius: 20px;
+  padding: 18px;
+  box-shadow: 5px 5px 0 rgba(23,17,10,.09);
+  transition: transform .16s ease, box-shadow .16s ease;
+}
+.tile:hover { transform: translate(-2px, -2px); box-shadow: 8px 8px 0 rgba(23,17,10,.14) }
+.tile b { display: block; font-size: 34px; font-weight: 900; letter-spacing: -1.5px; line-height: 1 }
+.tile span { display: block; font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .6px; margin-top: 7px }
+.tile.t-grape b { color: var(--grape) } .tile.t-sun b { color: #b8860b }
+.tile.t-lime b  { color: #2f8f2a }     .tile.t-sky b { color: #1c7fa8 }
+.tile.t-rose b  { color: var(--rose) }
+
+/* ── Department picker ────────────────────────────────────────────────── */
+.picker { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0 4px }
+.pick {
+  padding: 7px 14px; border-radius: 999px;
+  border: 2px solid var(--ink); background: var(--paper);
+  font: inherit; font-size: 12.5px; font-weight: 700; color: var(--ink);
+  cursor: pointer; transition: background .14s ease, color .14s ease, transform .14s ease;
+}
+.pick:hover { transform: translateY(-1px) }
+.pick.on { background: var(--grape); color: #fff; border-color: var(--grape) }
+.pick-all.on { background: var(--ink); border-color: var(--ink) }
+.pick small { opacity: .7; font-weight: 700 }
+.chart-box { position: relative; height: 380px; margin-top: 18px }
+.picker-note { font-size: 12.5px; color: var(--muted); margin-top: 12px }
+
+/* ── Parents ──────────────────────────────────────────────────────────── */
+.parents { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; margin-top: 16px }
+.parent {
+  border-radius: 20px; padding: 20px; color: #fff;
+  position: relative; overflow: hidden;
+}
+.parent b { display: block; font-size: 38px; font-weight: 900; letter-spacing: -1.5px; line-height: 1 }
+.parent span { display: block; font-size: 12.5px; font-weight: 700; margin-top: 6px; opacity: .9 }
+.parent small { display: block; font-size: 11.5px; opacity: .75; margin-top: 8px }
+.p-salaried { background: linear-gradient(140deg, #1d4ed8, var(--sky)) }
+.p-entrepreneur { background: linear-gradient(140deg, #b45309, var(--sun)) }
+.p-homemaker { background: linear-gradient(140deg, #7c2d92, var(--grape)) }
+
+/* ── Roll call ────────────────────────────────────────────────────────── */
+.roll { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 16px }
+.name-chip {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 7px 14px 7px 7px; border-radius: 999px;
+  background: var(--cream); border: 2px solid var(--ink);
+  font-size: 13px; font-weight: 700;
+}
+.name-chip i {
+  font-style: normal;
+  width: 26px; height: 26px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 800; color: #fff;
+}
+.name-chip u { text-decoration: none; font-size: 11px; font-weight: 600; color: var(--muted) }
+.roll-more {
+  margin-top: 16px; padding: 10px 18px; border-radius: 999px;
+  border: 2px solid var(--ink); background: var(--sun);
+  font: inherit; font-size: 13px; font-weight: 800; cursor: pointer;
+}
+
+/* ── Campus art ───────────────────────────────────────────────────────── */
+.campus-art { display: block; width: 100%; height: auto; border-radius: 20px; margin-top: 16px }
+
+.foot { text-align: center; color: var(--muted); font-size: 12.5px; margin-top: 34px; line-height: 1.8 }
+
+/* Movement, on the way in only. */
+.rise { opacity: 0; transform: translateY(18px); }
+.rise.in {
+  opacity: 1; transform: none;
+  transition: opacity .55s cubic-bezier(.22,1,.36,1) var(--d, 0ms),
+              transform .6s cubic-bezier(.22,1,.36,1) var(--d, 0ms);
+}
+@media (prefers-reduced-motion: reduce) {
+  .rise, .rise.in { opacity: 1; transform: none; transition: none }
+  .tile:hover, .campus-chip:hover, .pick:hover { transform: none }
+}
+</style>
+</head>
+<body>
+
+{% set r = report %}
+{% set pct = ((r.count / r.registered * 100) | round(0) | int) if r.registered else 0 %}
+
+<header class="hero">
+  <span class="hero-pill">Deeksharambh 2026 · JAIN University</span>
+  <h1>We asked. <em>You answered.</em><br>Here's what changed.</h1>
+  <div class="hero-big" data-count>{{ r.count }}</div>
+  <div class="hero-big-label">students finished both surveys</div>
+  <p style="margin-top:14px">
+    Every number here comes from the {{ r.count }} of you who filled the baseline
+    <strong>and</strong> came back for the post survey. If you only did one, you're not in
+    these figures — that's the only way "before" and "after" mean the same people.
+  </p>
+
+  <div class="campus-row">
+    <a class="campus-chip {{ 'on' if not campus }}" href="/shared/impact?campus=&token={{ all_token }}">
+      All campuses <b>{{ r.campuses | sum(attribute='count') }}</b>
+    </a>
+    {% for c in r.campuses %}
+      {% if c.campus in campus_tokens %}
+      <a class="campus-chip {{ 'on' if campus == c.campus }}"
+         href="/shared/impact?campus={{ c.campus }}&token={{ campus_tokens[c.campus] }}">
+        {{ c.campus }} <b>{{ c.count }}</b>
+      </a>
+      {% endif %}
+    {% endfor %}
+  </div>
+</header>
+
+<main class="wrap stack">
+
+  <!-- Campus artwork: drawn, not photographed, so nothing here claims to be a
+       picture of a place it is not. -->
+  {% if r.campus == 'Bangalore' %}
+  <svg class="campus-art rise" viewBox="0 0 1120 190" role="img" aria-label="Bangalore campus">
+    <defs><linearGradient id="bg-b" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#6d28d9"/><stop offset="1" stop-color="#2ba7d9"/></linearGradient></defs>
+    <rect width="1120" height="190" rx="20" fill="url(#bg-b)"/>
+    <g fill="rgba(255,255,255,.16)">
+      <rect x="90" y="96" width="70" height="94" rx="6"/><rect x="176" y="66" width="54" height="124" rx="6"/>
+      <rect x="246" y="112" width="84" height="78" rx="6"/><rect x="346" y="80" width="46" height="110" rx="6"/>
+      <circle cx="470" cy="120" r="46"/><rect x="424" y="120" width="92" height="70" rx="6"/>
+      <rect x="548" y="104" width="76" height="86" rx="6"/><rect x="640" y="72" width="52" height="118" rx="6"/>
+      <rect x="708" y="118" width="96" height="72" rx="6"/><rect x="820" y="88" width="58" height="102" rx="6"/>
+      <rect x="894" y="110" width="80" height="80" rx="6"/><rect x="990" y="78" width="48" height="112" rx="6"/>
+    </g>
+    <text x="46" y="58" fill="#fff" font-family="Outfit,sans-serif" font-size="30" font-weight="900">Bangalore campus</text>
+  </svg>
+  {% elif r.campus == 'Kochi' %}
+  <svg class="campus-art rise" viewBox="0 0 1120 190" role="img" aria-label="Kochi campus">
+    <defs><linearGradient id="bg-k" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0f766e"/><stop offset="1" stop-color="#58cc4a"/></linearGradient></defs>
+    <rect width="1120" height="190" rx="20" fill="url(#bg-k)"/>
+    <g fill="rgba(255,255,255,.18)">
+      <path d="M120 190V110l60-34 60 34v80z"/><path d="M300 190v-96l54-30 54 30v96z"/>
+      <path d="M700 190v-88l58-32 58 32v88z"/><path d="M880 190v-104l62-34 62 34v104z"/>
+      <path d="M470 150c34-30 74-30 108 0 34 30 74 30 108 0v40H470z"/>
+      <circle cx="524" cy="86" r="26"/><circle cx="612" cy="70" r="18"/>
+    </g>
+    <text x="46" y="58" fill="#fff" font-family="Outfit,sans-serif" font-size="30" font-weight="900">Kochi campus</text>
+  </svg>
+  {% endif %}
+
+  <!-- ── Outcome vs Impact ──────────────────────────────────────────── -->
+  <section class="brackets">
+    <div class="bracket bracket-outcome rise">
+      <div class="bracket-tag">Outcome · before</div>
+      <h3>Where you started</h3>
+      <div class="metric"><span>AI literacy</span><b data-count>{{ r.outcome.literacy if r.outcome.literacy is not none else '—' }}</b></div>
+      <div class="metric"><span>AI readiness</span><b data-count>{{ r.outcome.readiness if r.outcome.readiness is not none else '—' }}</b></div>
+      <div class="lift-row"><div class="lift"><i>Measured at</i><b>Baseline survey</b></div></div>
+    </div>
+    <div class="bracket bracket-impact rise" style="--d:90ms">
+      <div class="bracket-tag">Impact · after</div>
+      <h3>Where you reached</h3>
+      <div class="metric"><span>AI literacy</span><b data-count>{{ r.impact.literacy if r.impact.literacy is not none else '—' }}</b></div>
+      <div class="metric"><span>AI readiness</span><b data-count>{{ r.impact.readiness if r.impact.readiness is not none else '—' }}</b></div>
+      <div class="lift-row">
+        <div class="lift"><i>Literacy moved</i><b>{{ '%+0.2f' % r.lift.literacy if r.lift.literacy is not none else '—' }}</b></div>
+        <div class="lift"><i>Readiness moved</i><b>{{ '%+0.2f' % r.lift.readiness if r.lift.readiness is not none else '—' }}</b></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── The headline counts ────────────────────────────────────────── -->
+  <section class="tiles">
+    <div class="tile t-grape rise"><b data-count>{{ r.count }}</b><span>Finished both</span></div>
+    <div class="tile t-sun rise" style="--d:60ms"><b data-count>{{ pct }}%</b><span>Of everyone registered</span></div>
+    <div class="tile t-lime rise" style="--d:120ms"><b data-count>{{ r.orientation }}</b><span>Also did Deeksharambh</span></div>
+    <div class="tile t-sky rise" style="--d:180ms"><b data-count>{{ r.departments | length }}</b><span>Departments represented</span></div>
+    <div class="tile t-rose rise" style="--d:240ms"><b data-count>{{ r.levels.ug }}</b><span>UG · {{ r.levels.pg }} PG</span></div>
+  </section>
+
+  <!-- ── Department bars ────────────────────────────────────────────── -->
+  <section class="card rise">
+    <span class="section-kicker">Pick your people</span>
+    <h2 class="card-title">Every department, before and after</h2>
+    <p class="card-sub">
+      Tap a department to add it to the chart, tap again to drop it. Pick as many as you like,
+      or hit <b>All departments</b>. Only students who finished both surveys are counted, so a
+      department's number is the number of people it actually got through.
+    </p>
+
+    <div class="picker" id="picker"></div>
+    <div class="chart-box"><canvas id="dept-chart"></canvas></div>
+    <p class="picker-note" id="picker-note"></p>
+  </section>
+
+  <!-- ── Parents ────────────────────────────────────────────────────── -->
+  <section class="card rise">
+    <span class="section-kicker">From the post survey</span>
+    <h2 class="card-title">What your families do</h2>
+    <p class="card-sub">
+      Of the {{ r.count }} who finished both, {{ r.parents.answered }} told us what their parents do.
+      A student counts once per category, and a household with one salaried parent and one running a
+      business shows up in both — so these do not add up to {{ r.parents.answered }}, and shouldn't.
+    </p>
+    <div class="parents">
+      <div class="parent p-salaried"><b data-count>{{ r.parents.salaried }}</b><span>Salaried household</span>
+        <small>At least one parent in a salaried job</small></div>
+      <div class="parent p-entrepreneur"><b data-count>{{ r.parents.entrepreneur }}</b><span>Entrepreneur household</span>
+        <small>At least one parent running a business</small></div>
+      <div class="parent p-homemaker"><b data-count>{{ r.parents.homemaker }}</b><span>Homemaker at home</span>
+        <small>At least one parent keeping the house</small></div>
+    </div>
+  </section>
+
+  <!-- ── Roll call ──────────────────────────────────────────────────── -->
+  <section class="card rise">
+    <span class="section-kicker">Take a bow</span>
+    <h2 class="card-title">The {{ r.count }} who saw it through</h2>
+    <p class="card-sub">Everyone who filled both surveys. Newest first.</p>
+    <div class="roll" id="roll"></div>
+    {% if r.praise | length > 60 %}
+    <button class="roll-more" id="roll-more" type="button">Show all {{ r.praise | length }}</button>
+    {% endif %}
+  </section>
+
+  <p class="foot">
+    {{ r.campus }} · generated {{ generated_at }}<br>
+    Office of Academics · JAIN (Deemed-to-be University)
+  </p>
+</main>
+
+<script>
+const REPORT = {{ report | tojson }};
+
+/* ── Movement ───────────────────────────────────────────────────────── */
+const STILL = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+function countUp(el) {
+  const raw = el.textContent.trim();
+  const m = /^([+-]?\d[\d,]*)(\.\d+)?(%?)$/.exec(raw);
+  if (!m) return;
+  const target = parseFloat(raw.replace(/[,%]/g, ''));
+  const decimals = m[2] ? m[2].length - 1 : 0;
+  const suffix = m[3] || '';
+  if (STILL || !target) return;
+  const started = performance.now(), span = 900;
+  const tick = now => {
+    const t = Math.min((now - started) / span, 1);
+    const eased = 1 - Math.pow(1 - t, 3);
+    el.textContent = (target * eased).toFixed(decimals) + suffix;
+    if (t < 1) requestAnimationFrame(tick); else el.textContent = raw;
+  };
+  requestAnimationFrame(tick);
+}
+
+const io = STILL ? null : new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (!entry.isIntersecting) return;
+    entry.target.classList.add('in');
+    entry.target.querySelectorAll('[data-count]').forEach(countUp);
+    io.unobserve(entry.target);
+  });
+}, { threshold: .12, rootMargin: '0px 0px -6% 0px' });
+
+document.querySelectorAll('.rise').forEach(el => io ? io.observe(el) : el.classList.add('in'));
+document.querySelectorAll('.hero [data-count]').forEach(countUp);
+
+/* ── Department picker and chart ────────────────────────────────────── */
+const DEPTS = REPORT.departments;
+const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c =>
+  ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+// Start with the six biggest, so the chart says something before a tap.
+let chosen = new Set(DEPTS.slice(0, 6).map(d => d.dept));
+let chart = null;
+
+function buildPicker() {
+  const host = document.getElementById('picker');
+  const all = chosen.size === DEPTS.length;
+  host.innerHTML =
+    `<button class="pick pick-all ${all ? 'on' : ''}" data-all="1">All departments</button>` +
+    DEPTS.map(d => `
+      <button class="pick ${chosen.has(d.dept) ? 'on' : ''}" data-dept="${esc(d.dept)}">
+        ${esc(d.dept)} <small>${d.count}</small>
+      </button>`).join('');
+}
+
+function drawChart() {
+  const rows = DEPTS.filter(d => chosen.has(d.dept));
+  const labels = rows.map(d => d.dept);
+  const data = {
+    labels,
+    datasets: [
+      { label: 'Outcome · literacy before', data: rows.map(d => d.outcome.literacy),
+        backgroundColor: '#2ba7d9', borderRadius: 8, borderSkipped: false },
+      { label: 'Impact · literacy after', data: rows.map(d => d.impact.literacy),
+        backgroundColor: '#58cc4a', borderRadius: 8, borderSkipped: false },
+      { label: 'Outcome · readiness before', data: rows.map(d => d.outcome.readiness),
+        backgroundColor: '#6d28d9', borderRadius: 8, borderSkipped: false },
+      { label: 'Impact · readiness after', data: rows.map(d => d.impact.readiness),
+        backgroundColor: '#f5b731', borderRadius: 8, borderSkipped: false },
+    ],
+  };
+  const options = {
+    responsive: true, maintainAspectRatio: false,
+    animation: STILL ? false : { duration: 700, easing: 'easeOutCubic' },
+    plugins: {
+      legend: { labels: { font: { family: 'Outfit', size: 12, weight: '700' }, boxWidth: 12, boxHeight: 12, padding: 14 } },
+      tooltip: {
+        backgroundColor: 'rgba(23,17,10,.94)', padding: 11, cornerRadius: 10,
+        titleFont: { family: 'Outfit', weight: '800' }, bodyFont: { family: 'Outfit' },
+      },
+    },
+    scales: {
+      x: { grid: { display: false }, ticks: { font: { family: 'Outfit', size: 11, weight: '700' }, maxRotation: 40, minRotation: 0 } },
+      y: { beginAtZero: true, suggestedMax: 5, grid: { color: '#ece0cc' },
+           ticks: { font: { family: 'Outfit', size: 11 }, stepSize: 1 } },
+    },
+  };
+  if (chart) { chart.data = data; chart.options = options; chart.update(); }
+  else chart = new Chart(document.getElementById('dept-chart'), { type: 'bar', data, options });
+
+  const people = rows.reduce((sum, d) => sum + d.count, 0);
+  document.getElementById('picker-note').textContent = rows.length
+    ? `Showing ${rows.length} department${rows.length > 1 ? 's' : ''} · ${people} students who finished both. Scores are out of 5.`
+    : 'Nothing picked — tap a department above.';
+}
+
+document.getElementById('picker').addEventListener('click', ev => {
+  const btn = ev.target.closest('button');
+  if (!btn) return;
+  if (btn.dataset.all) {
+    chosen = chosen.size === DEPTS.length ? new Set() : new Set(DEPTS.map(d => d.dept));
+  } else {
+    const dept = btn.dataset.dept;
+    chosen.has(dept) ? chosen.delete(dept) : chosen.add(dept);
+  }
+  buildPicker();
+  drawChart();
+});
+
+buildPicker();
+drawChart();
+
+/* ── Roll call ──────────────────────────────────────────────────────── */
+const HUES = ['#6d28d9', '#2ba7d9', '#58cc4a', '#f5b731', '#f0567a', '#b45309'];
+const roll = document.getElementById('roll');
+const more = document.getElementById('roll-more');
+let showingAll = false;
+
+function initials(name) {
+  return (name || '?').trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase() || '?';
+}
+function drawRoll() {
+  const list = showingAll ? REPORT.praise : REPORT.praise.slice(0, 60);
+  roll.innerHTML = list.map((p, i) => `
+    <span class="name-chip">
+      <i style="background:${HUES[i % HUES.length]}">${esc(initials(p.name))}</i>
+      ${esc(p.name)} <u>${esc(p.dept)}</u>
+    </span>`).join('');
+}
+if (more) {
+  more.addEventListener('click', () => {
+    showingAll = !showingAll;
+    more.textContent = showingAll ? 'Show fewer' : `Show all ${REPORT.praise.length}`;
+    drawRoll();
+  });
+}
+drawRoll();
+</script>
+</body>
+</html>

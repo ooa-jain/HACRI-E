@@ -254,6 +254,24 @@
           </div>
         </div>
 
+        <!-- The one link that goes out to students and parents. -->
+        <div class="card space-y-3 mt-5">
+          <div class="panel-head">
+            <div>
+              <div class="h-card">Share the impact page</div>
+              <div class="sub">
+                A public page counting only the students who finished both surveys — before and
+                after scores, every department as a bar chart, orientation and family background,
+                and everyone who saw it through by name. No login needed.
+              </div>
+            </div>
+            <div class="panel-actions">
+              <a id="vibe-open" href="#" target="_blank" rel="noopener" class="btn btn-primary">Open</a>
+            </div>
+          </div>
+          <div id="vibe-links" class="space-y-2"></div>
+        </div>
+
         <!-- Cohort renders, unchanged in substance. -->
         <div class="card space-y-3 mt-5">
           <div class="panel-head">
@@ -1624,6 +1642,27 @@ function renderStudents() {
        </div>`,
     ], 'No students match these filters');
 }
+
+// ── The shareable impact page ────────────────────────────────────────────
+async function loadVibeLinks() {
+  const host = $('vibe-links');
+  if (!host) return;
+  try {
+    const d = await api('/admin/api/survey/impact-links');
+    const open = $('vibe-open');
+    if (open && d.links.length) open.href = d.links[0].url;
+    host.innerHTML = d.links.map(l => `
+      <div class="flex flex-col sm:flex-row sm:items-center gap-2">
+        <span class="text-xs font-bold text-slate-700 sm:w-32 shrink-0">${e(l.campus)}</span>
+        <input readonly class="field link flex-1" value="${e(l.url)}" onclick="this.select()">
+        <button class="btn btn-soft" onclick="copy('${e(l.url)}')">Copy</button>
+        <a href="${e(l.url)}" target="_blank" rel="noopener" class="btn btn-primary">Open</a>
+      </div>`).join('');
+  } catch (err) {
+    host.innerHTML = '<div class="text-xs text-rose-500">Could not build the impact links</div>';
+  }
+}
+
 
 // ── People rows ─────────────────────────────────────────────────────────
 // A stable colour per person, so the same student keeps the same avatar.
@@ -3128,6 +3167,7 @@ document.addEventListener('keydown', ev => {
 });
 
 buildNav();
+if (SECTION === 'overview') loadVibeLinks();
 if (SECTION === 'settings') buildToggles();
 loadFlags();
 loadUsers();
