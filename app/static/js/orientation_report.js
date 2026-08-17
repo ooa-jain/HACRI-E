@@ -133,6 +133,121 @@
       </div>`;
   }
 
+  // ── Charts ────────────────────────────────────────────────────────────────
+  //
+  // The distributions are drawn by Chart.js, the same library and the same
+  // axis language the impact report uses, so the two pages plot a count the
+  // same way: a measured y axis, gridlines, a labelled x axis and a tooltip
+  // that names the number. Hand-drawn CSS columns gave a two-pixel sliver for
+  // every small bar and floated it against nothing, which is what made the
+  // vibe strip unreadable.
+  //
+  // A canvas cannot be drawn on before it is in the document, so building the
+  // markup only queues the chart; `paintCharts` instantiates the queue once
+  // the HTML has been inserted. If Chart.js is not on the page at all the
+  // builder returns the old CSS column strip instead, so the renderer still
+  // works standalone.
+
+  const STILL = !!(global.matchMedia && global.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  const CHART_FONT = 'Outfit, system-ui, sans-serif';
+  const GRID = '#ece3d4';
+
+  const TOOLTIP = {
+    backgroundColor: 'rgba(23,17,10,.94)',
+    padding: 11,
+    cornerRadius: 10,
+    displayColors: false,
+    titleFont: { family: CHART_FONT, size: 12, weight: '800' },
+    bodyFont: { family: CHART_FONT, size: 12 },
+  };
+
+  let queued = [];
+  let seq = 0;
+
+  /** Queue a chart and return the markup that holds it. */
+  function chart(config, options) {
+    const o = options || {};
+    if (!global.Chart) return o.fallback || '';
+    const id = 'ori-chart-' + (++seq);
+    queued.push({ id: id, config: config });
+    return `<div class="ori-chart" style="height:${o.height || 180}px">
+        <canvas data-ori-chart="${id}"></canvas>
+      </div>`;
+  }
+
+  /** Draw everything queued while `host` was being built, and drop the old. */
+  function paintCharts(host) {
+    (host.oriCharts || []).forEach(c => { try { c.destroy(); } catch (err) { /* gone already */ } });
+    host.oriCharts = [];
+    const specs = queued;
+    queued = [];
+    if (!global.Chart) return;
+    specs.forEach(spec => {
+      const canvas = host.querySelector(`canvas[data-ori-chart="${spec.id}"]`);
+      if (canvas) host.oriCharts.push(new global.Chart(canvas, spec.config));
+    });
+  }
+
+  /** A count-per-answer column chart. `dark` puts it on the hero's gradient. */
+  function countChart(options, colours, opts) {
+    const o = opts || {};
+    const counts = options.map(x => x.count || 0);
+    const answered = counts.reduce((sum, n) => sum + n, 0);
+    const ink = o.dark ? 'rgba(255,255,255,.82)' : '#7c7266';
+    const grid = o.dark ? 'rgba(255,255,255,.15)' : GRID;
+
+    return {
+      type: 'bar',
+      data: {
+        labels: options.map(x => x.label),
+        datasets: [{
+          label: 'Students',
+          data: counts,
+          backgroundColor: colours,
+          borderRadius: 7,
+          borderSkipped: false,
+          maxBarThickness: 54,
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: STILL ? false : { duration: 650, easing: 'easeOutCubic' },
+        layout: { padding: { top: 4 } },
+        plugins: {
+          legend: { display: false },
+          tooltip: Object.assign({}, TOOLTIP, {
+            callbacks: {
+              title: items => (o.title ? o.title(items[0].label) : items[0].label),
+              label: item => {
+                const n = item.parsed.y;
+                const share = answered ? Math.round(100 * n / answered) : 0;
+                return `${n} student${n === 1 ? '' : 's'} · ${share}% of those who answered`;
+              },
+            },
+          }),
+        },
+        scales: {
+          x: {
+            grid: { display: false },
+            border: { color: o.dark ? 'rgba(255,255,255,.3)' : GRID },
+            ticks: { color: ink, font: { family: CHART_FONT, size: 11, weight: '700' } },
+          },
+          y: {
+            beginAtZero: true,
+            grid: { color: grid, drawTicks: false },
+            border: { display: false },
+            // Whole students only, and few enough labels that the axis stays quiet.
+            ticks: {
+              color: ink, font: { family: CHART_FONT, size: 10.5 },
+              precision: 0, maxTicksLimit: 5, padding: 6,
+            },
+          },
+        },
+      },
+    };
+  }
+
   // ── Big components ────────────────────────────────────────────────────────
 
   /** The gradient headline: score, mood, and how the ten points were spread. */
@@ -143,16 +258,13 @@
     const top = vibeQ ? Math.max(1, ...vibeQ.options.map(o => o.count)) : 1;
 
     const strip = vibeQ ? `
-      <div class="ori-strip">
-        ${vibeQ.options.map(o => `
-          <div class="ori-strip-col" title="${o.count} student(s) rated ${esc(o.label)}/10">
-            <div class="ori-strip-bar"
-                 style="height:${Math.max(2, Math.round(100 * o.count / top))}%;background:${mood(Number(o.label))[2]}"></div>
-          </div>`).join('')}
-      </div>
-      <div class="ori-strip-axis">
-        ${vibeQ.options.map(o => `<span>${esc(o.label)}</span>`).join('')}
-      </div>
+      <div class="ori-strip-title">How the ten points were spread</div>
+      ${chart(
+        countChart(vibeQ.options, vibeQ.options.map(o => mood(Number(o.label))[2]), {
+          dark: true,
+          title: label => `Rated ${label} out of 10`,
+        }),
+        { height: 172, fallback: legacyStrip(vibeQ, top) })}
       <div class="ori-strip-note">1 — I wanted to leave · 10 — I wish it never ended</div>` : '';
 
     const chip = (value, label) =>
@@ -163,7 +275,7 @@
         <div class="ori-hero-score">
           <div class="ori-hero-kicker">Overall vibe of the students</div>
           <div class="ori-hero-row">
-            <div class="ori-hero-emoji">${emoji}</div>
+            ${emoji ? `<div class="ori-hero-emoji">${emoji}</div>` : ''}
             <div>
               <div class="ori-hero-value">${num(h.vibe, 1)}<span>/ 10</span></div>
               <div class="ori-hero-word">${esc(word)}</div>
@@ -259,17 +371,17 @@
         ${head}
         <div class="ori-q-sub">${q.answered} answered · average ${num(q.avg, 2)} / 10 · NPS ${num(q.nps, 0)}</div>
         <div class="ori-split3">
-          <div class="ori-mini" style="--tone:#059669"><b>${q.promoters}</b><span>Promoters 9–10</span></div>
-          <div class="ori-mini" style="--tone:#f59e0b"><b>${q.passives}</b><span>Passives 7–8</span></div>
-          <div class="ori-mini" style="--tone:#e11d48"><b>${q.detractors}</b><span>Detractors 0–6</span></div>
+          <div class="ori-mini" style="--tone:#15803d"><b>${q.promoters}</b><span>Promoters 9–10</span></div>
+          <div class="ori-mini" style="--tone:#eab308"><b>${q.passives}</b><span>Passives 7–8</span></div>
+          <div class="ori-mini" style="--tone:#c2410c"><b>${q.detractors}</b><span>Detractors 0–6</span></div>
         </div>
-        ${scaleStrip(q, 0)}
+        ${scaleStrip(q)}
       </div>`;
     }
     if (q.kind === 'scale') {
       return `<div class="ori-q">
         ${head}<div class="ori-q-sub">${q.answered} answered · average ${num(q.avg, 2)} / ${q.max}</div>
-        ${scaleStrip(q, 1)}
+        ${scaleStrip(q)}
       </div>`;
     }
     const suffix = q.kind === 'multi' ? ` · ${q.picks} selections` : '';
@@ -279,15 +391,40 @@
     </div>`;
   }
 
-  /** A 1..max distribution drawn as a coloured column strip. */
-  function scaleStrip(q, from) {
+  /** A 1..max distribution, plotted against a counted axis. */
+  function scaleStrip(q) {
+    const scale = q.max || 10;
+    const colours = q.options.map(o => mood((Number(o.label) / scale) * 10)[2]);
+    return chart(
+      countChart(q.options, colours, { title: label => `Answered ${label} of ${scale}` }),
+      { height: 168, fallback: legacyScaleStrip(q) });
+  }
+
+  // The CSS column strips, kept for the case where Chart.js never loaded:
+  // a thin coloured column is worse than a plotted axis, but better than a
+  // blank space where the distribution should be.
+
+  function legacyStrip(q, top) {
+    return `
+      <div class="ori-strip">
+        ${q.options.map(o => `
+          <div class="ori-strip-col" title="${o.count} student(s) rated ${esc(o.label)}/10">
+            <div class="ori-strip-bar"
+                 style="height:${Math.max(2, Math.round(100 * o.count / top))}%;background:${mood(Number(o.label))[2]}"></div>
+          </div>`).join('')}
+      </div>
+      <div class="ori-strip-axis">
+        ${q.options.map(o => `<span>${esc(o.label)}</span>`).join('')}
+      </div>`;
+  }
+
+  function legacyScaleStrip(q) {
     const top = Math.max(1, ...q.options.map(o => o.count));
     const scale = q.max || 10;
     return `
       <div class="ori-scale">
         ${q.options.map(o => {
-          const score = Number(o.label);
-          const tone = mood((score / scale) * 10)[2];
+          const tone = mood((Number(o.label) / scale) * 10)[2];
           return `<div class="ori-scale-col" title="${o.count} · ${num(o.pct, 0)}%">
             <div class="ori-scale-count">${o.count || ''}</div>
             <div class="ori-scale-track">
@@ -346,17 +483,24 @@
 
   function renderReport(host, report) {
     if (!host) return;
+    queued = [];
     if (!report || !report.count) {
+      paintCharts(host);
       host.innerHTML = '<div class="ori-card ori-empty-card">No orientation responses for this selection yet.</div>';
       return;
     }
-    host.innerHTML =
+    const markup =
       hero(report) +
       tiles(report) +
       `<div class="ori-grid-2-wide">${npsCard(report)}${whoAnswered(report)}</div>` +
       highlightPanels(report) +
       sectionNav(report) +
       sections(report);
+
+    // The markup goes in first: the charts queued while building it need
+    // their canvases to be in the document before they can be drawn.
+    host.innerHTML = markup;
+    paintCharts(host);
   }
 
   /** The department leaderboard. `onPick` gets the department name, if given. */

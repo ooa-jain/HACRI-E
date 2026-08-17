@@ -21,7 +21,10 @@
 }
 .ori-card-title { font-size: 14px; font-weight: 800; color: var(--ink); }
 .ori-card-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
-.ori-card-split { display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
+/* The split card sits beside a taller neighbour in a grid row, so its content
+   starts at the top rather than floating in the middle of the empty height. */
+.ori-card-split { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
+.ori-card-split > :first-child { flex: 1; min-width: 200px; }
 .ori-empty { font-size: 12px; color: #a89e90; padding: 6px 0; }
 .ori-empty-card { text-align: center; color: #a89e90; padding: 34px 20px; font-size: 13px; }
 
@@ -60,6 +63,20 @@
   font-size: 13px; font-weight: 800; letter-spacing: 1.4px;
   text-transform: uppercase; color: var(--mood); margin-top: 6px;
 }
+.ori-strip-title {
+  font-size: 10.5px; font-weight: 800; letter-spacing: 1.2px;
+  text-transform: uppercase; color: rgba(255, 255, 255, .62); margin-bottom: 8px;
+}
+.ori-strip-note { font-size: 10.5px; color: rgba(255, 255, 255, .55); margin-top: 8px; }
+
+/* ── Charts ──────────────────────────────────────────────────────────────
+   Chart.js needs a sized box to draw into: the height comes from the
+   renderer, the width from whatever column the chart lands in. */
+.ori-chart { position: relative; width: 100%; }
+.ori-chart canvas { width: 100% !important; height: 100% !important; display: block; }
+.ori-q .ori-chart { margin-top: 4px; }
+
+/* The CSS columns below only appear when Chart.js could not be loaded. */
 .ori-strip { display: flex; align-items: flex-end; gap: 4px; height: 84px; }
 .ori-strip-col { flex: 1; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; }
 .ori-strip-bar { width: 100%; border-radius: 6px 6px 0 0; }
@@ -67,7 +84,6 @@
 .ori-strip-axis span {
   flex: 1; text-align: center; font-size: 9.5px; font-weight: 700; color: rgba(255, 255, 255, .7);
 }
-.ori-strip-note { font-size: 10px; color: rgba(255, 255, 255, .55); margin-top: 5px; }
 .ori-hero-chips { display: grid; grid-template-columns: repeat(2, minmax(84px, 1fr)); gap: 8px; }
 .ori-chip {
   background: rgba(255, 255, 255, .12);
@@ -178,6 +194,7 @@
 .ori-mini b { display: block; font-size: 16px; font-weight: 800; color: var(--tone); }
 .ori-mini span { display: block; font-size: 9.5px; font-weight: 700; color: var(--muted); margin-top: 2px; }
 
+/* Fallback for a question's distribution, used only without Chart.js. */
 .ori-scale { display: flex; align-items: flex-end; gap: 4px; }
 .ori-scale-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; }
 .ori-scale-count { font-size: 9.5px; font-weight: 800; color: #5c5347; height: 12px; }

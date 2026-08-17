@@ -7,6 +7,9 @@
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{{ asset('/static/css/orientation_report.css') }}">
 <link rel="stylesheet" href="{{ asset('/static/css/report_shell.css') }}">
+<!-- The same charting library the impact report uses, so a distribution is
+     plotted the same way on both pages. -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script defer src="{{ asset('/static/js/report_motion.js') }}"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0 }
