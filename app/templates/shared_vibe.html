@@ -44,7 +44,10 @@ body {
   padding: 54px 20px 96px;
   text-align: center;
   color: #fff;
-  background: linear-gradient(150deg, #2b1055 0%, var(--grape) 45%, #b429a5 100%);
+  background:
+    radial-gradient(120% 90% at 82% 8%, rgba(245,183,49,.20) 0%, transparent 55%),
+    radial-gradient(90% 80% at 12% 96%, rgba(88,204,74,.16) 0%, transparent 58%),
+    linear-gradient(168deg, #1b1330 0%, #2f1b57 52%, #3f2168 100%);
 }
 .hero::after {
   content: '';
@@ -79,6 +82,60 @@ body {
   -webkit-background-clip: text; background-clip: text; color: transparent;
 }
 .hero-big-label { font-size: 13px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: rgba(255,255,255,.7) }
+
+/* The two populations, said plainly under the headline number. */
+.hero-split {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px; max-width: 660px; margin: 26px auto 0;
+}
+.hero-half {
+  background: rgba(255,255,255,.09);
+  border: 1px solid rgba(255,255,255,.16);
+  border-radius: 18px; padding: 15px 16px; text-align: left;
+}
+.hero-half b { display: block; font-size: 30px; font-weight: 900; letter-spacing: -1px; line-height: 1 }
+.hero-half span { display: block; font-size: 13px; font-weight: 700; margin-top: 5px; color: rgba(255,255,255,.9) }
+.hero-half i { display: block; font-style: normal; font-size: 11.5px; margin-top: 5px; color: rgba(255,255,255,.55) }
+
+/* ── The Outcome / Impact switch ─────────────────────────────────────── */
+.switch {
+  display: inline-flex; gap: 4px; padding: 5px;
+  border-radius: 999px; background: var(--paper);
+  border: 2px solid var(--ink); box-shadow: 5px 5px 0 rgba(23,17,10,.09);
+}
+.switch button {
+  border: none; background: none; cursor: pointer;
+  font: inherit; font-size: 14px; font-weight: 800;
+  padding: 10px 22px; border-radius: 999px; color: var(--muted);
+  transition: background .16s ease, color .16s ease;
+}
+.switch button.on { background: var(--ink); color: #fff }
+.switch-wrap { display: flex; justify-content: center; margin: 26px 0 4px }
+.view[hidden] { display: none }
+
+/* The quadrant chart and its legend. */
+.quad-box { position: relative; height: 460px; margin-top: 18px }
+.quad-legend { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 14px; font-size: 12.5px; font-weight: 600; color: var(--ink-soft) }
+.quad-legend i { display: inline-block; width: 12px; height: 12px; border-radius: 4px; margin-right: 6px; vertical-align: -1px }
+.move-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-top: 16px }
+.move {
+  border-radius: 16px; padding: 14px 16px;
+  background: var(--cream); border: 2px solid var(--ink);
+}
+.move b { display: block; font-size: 26px; font-weight: 900; letter-spacing: -1px }
+.move span { display: block; font-size: 12px; font-weight: 700; color: var(--muted); margin-top: 4px }
+
+/* Deeksharambh, beside the AI figures. */
+.deeksha { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; margin-top: 16px }
+.deeksha-card {
+  border-radius: 20px; padding: 20px; color: #fff;
+  background: linear-gradient(140deg, #7c2d92, #b429a5);
+}
+.deeksha-card.alt { background: linear-gradient(140deg, #b45309, var(--sun)) }
+.deeksha-card b { display: block; font-size: 40px; font-weight: 900; letter-spacing: -1.5px; line-height: 1 }
+.deeksha-card b small { font-size: 16px; font-weight: 700; opacity: .7 }
+.deeksha-card span { display: block; font-size: 13px; font-weight: 700; margin-top: 6px }
+.deeksha-card small.note { display: block; font-size: 11.5px; opacity: .78; margin-top: 8px }
 
 /* Campus switch, right in the hero. */
 .campus-row { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 26px }
@@ -224,13 +281,21 @@ body {
 <header class="hero">
   <span class="hero-pill">Deeksharambh 2026 · JAIN University</span>
   <h1>We asked. <em>You answered.</em><br>Here's what changed.</h1>
-  <div class="hero-big" data-count>{{ r.count }}</div>
-  <div class="hero-big-label">students finished both surveys</div>
-  <p style="margin-top:14px">
-    Every number here comes from the {{ r.count }} of you who filled the baseline
-    <strong>and</strong> came back for the post survey. If you only did one, you're not in
-    these figures — that's the only way "before" and "after" mean the same people.
-  </p>
+  <div class="hero-big" data-count>{{ r.registered_total }}</div>
+  <div class="hero-big-label">students registered so far</div>
+
+  <div class="hero-split">
+    <div class="hero-half">
+      <b data-count>{{ r.outcome_count }}</b>
+      <span>filled the baseline</span>
+      <i>Outcome is measured over all of them</i>
+    </div>
+    <div class="hero-half">
+      <b data-count>{{ r.count }}</b>
+      <span>came back for the post survey</span>
+      <i>Impact needs both ends, so it counts only these</i>
+    </div>
+  </div>
 
   <div class="campus-row">
     <a class="campus-chip {{ 'on' if not campus }}" href="/shared/impact?campus=&token={{ all_token }}">
@@ -281,27 +346,6 @@ body {
   </svg>
   {% endif %}
 
-  <!-- ── Outcome vs Impact ──────────────────────────────────────────── -->
-  <section class="brackets">
-    <div class="bracket bracket-outcome rise">
-      <div class="bracket-tag">Outcome · before</div>
-      <h3>Where you started</h3>
-      <div class="metric"><span>AI literacy</span><b data-count>{{ r.outcome.literacy if r.outcome.literacy is not none else '—' }}</b></div>
-      <div class="metric"><span>AI readiness</span><b data-count>{{ r.outcome.readiness if r.outcome.readiness is not none else '—' }}</b></div>
-      <div class="lift-row"><div class="lift"><i>Measured at</i><b>Baseline survey</b></div></div>
-    </div>
-    <div class="bracket bracket-impact rise" style="--d:90ms">
-      <div class="bracket-tag">Impact · after</div>
-      <h3>Where you reached</h3>
-      <div class="metric"><span>AI literacy</span><b data-count>{{ r.impact.literacy if r.impact.literacy is not none else '—' }}</b></div>
-      <div class="metric"><span>AI readiness</span><b data-count>{{ r.impact.readiness if r.impact.readiness is not none else '—' }}</b></div>
-      <div class="lift-row">
-        <div class="lift"><i>Literacy moved</i><b>{{ '%+0.2f' % r.lift.literacy if r.lift.literacy is not none else '—' }}</b></div>
-        <div class="lift"><i>Readiness moved</i><b>{{ '%+0.2f' % r.lift.readiness if r.lift.readiness is not none else '—' }}</b></div>
-      </div>
-    </div>
-  </section>
-
   <!-- ── The headline counts ────────────────────────────────────────── -->
   <section class="tiles">
     <div class="tile t-grape rise"><b data-count>{{ r.count }}</b><span>Finished both</span></div>
@@ -311,20 +355,139 @@ body {
     <div class="tile t-rose rise" style="--d:240ms"><b data-count>{{ r.levels.ug }}</b><span>UG · {{ r.levels.pg }} PG</span></div>
   </section>
 
-  <!-- ── Department bars ────────────────────────────────────────────── -->
-  <section class="card rise">
-    <span class="section-kicker">Pick your people</span>
-    <h2 class="card-title">Every department, before and after</h2>
-    <p class="card-sub">
-      Tap a department to add it to the chart, tap again to drop it. Pick as many as you like,
-      or hit <b>All departments</b>. Only students who finished both surveys are counted, so a
-      department's number is the number of people it actually got through.
-    </p>
 
-    <div class="picker" id="picker"></div>
-    <div class="chart-box"><canvas id="dept-chart"></canvas></div>
-    <p class="picker-note" id="picker-note"></p>
-  </section>
+  <!-- ── The Outcome / Impact switch ─────────────────────────────────── -->
+  <div class="switch-wrap rise">
+    <div class="switch" id="switch">
+      <button type="button" data-view="outcome" class="on">Outcome</button>
+      <button type="button" data-view="impact">Impact</button>
+    </div>
+  </div>
+
+  <!-- OUTCOME: the baseline, over everyone who filled it. -->
+  <div class="view" id="view-outcome">
+    <section class="brackets rise">
+      <div class="bracket bracket-outcome">
+        <div class="bracket-tag">Outcome · the baseline</div>
+        <h3>Where you started</h3>
+        <div class="metric"><span>AI literacy</span><b>{{ r.outcome.literacy if r.outcome.literacy is not none else '—' }}</b></div>
+        <div class="metric"><span>AI readiness</span><b>{{ r.outcome.readiness if r.outcome.readiness is not none else '—' }}</b></div>
+        <div class="lift-row">
+          <div class="lift"><i>Measured over</i><b>{{ r.outcome_count }} students</b></div>
+          <div class="lift"><i>Out of</i><b>{{ r.registered_total }} registered</b></div>
+        </div>
+      </div>
+      <div class="bracket" style="background:linear-gradient(140deg,#3f2168,#6d28d9)">
+        <div class="bracket-tag">Who this is</div>
+        <h3>The whole baseline cohort</h3>
+        <p style="font-size:14px;line-height:1.65;opacity:.86">
+          Outcome counts every one of the {{ r.outcome_count }} students who filled the baseline —
+          not only the ones who came back later. The baseline stands on its own, and narrowing it
+          to the returners would throw most of your answers away.
+        </p>
+      </div>
+    </section>
+
+    <section class="card rise" style="margin-top:18px">
+      <span class="section-kicker">Pick your people</span>
+      <h2 class="card-title">Every department at baseline</h2>
+      <p class="card-sub">
+        Where each department started. Tap to add or drop one — pick as many as you like. Counts
+        are distinct students who filled the baseline.
+      </p>
+      <div class="picker" id="picker-outcome"></div>
+      <div class="chart-box"><canvas id="chart-outcome"></canvas></div>
+      <p class="picker-note" id="note-outcome"></p>
+    </section>
+  </div>
+
+  <!-- IMPACT: the move, over students who did both. -->
+  <div class="view" id="view-impact" hidden>
+    <section class="brackets rise">
+      <div class="bracket bracket-outcome">
+        <div class="bracket-tag">Before</div>
+        <h3>Where these {{ r.count }} started</h3>
+        <div class="metric"><span>AI literacy</span><b>{{ r.impact_before.literacy if r.impact_before.literacy is not none else '—' }}</b></div>
+        <div class="metric"><span>AI readiness</span><b>{{ r.impact_before.readiness if r.impact_before.readiness is not none else '—' }}</b></div>
+        <div class="lift-row"><div class="lift"><i>The same people</i><b>measured twice</b></div></div>
+      </div>
+      <div class="bracket bracket-impact">
+        <div class="bracket-tag">After</div>
+        <h3>Where they reached</h3>
+        <div class="metric"><span>AI literacy</span><b>{{ r.impact.literacy if r.impact.literacy is not none else '—' }}</b></div>
+        <div class="metric"><span>AI readiness</span><b>{{ r.impact.readiness if r.impact.readiness is not none else '—' }}</b></div>
+        <div class="lift-row">
+          <div class="lift"><i>Literacy moved</i><b>{{ '%+0.2f' % r.lift.literacy if r.lift.literacy is not none else '—' }}</b></div>
+          <div class="lift"><i>Readiness moved</i><b>{{ '%+0.2f' % r.lift.readiness if r.lift.readiness is not none else '—' }}</b></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card rise" style="margin-top:18px">
+      <span class="section-kicker">Two things at once</span>
+      <h2 class="card-title">Deeksharambh vibe, and what the AI survey moved</h2>
+      <p class="card-sub">
+        The orientation score and the AI score, from the same {{ r.count }} students — how the week
+        felt, beside what it shifted.
+      </p>
+      <div class="deeksha">
+        <div class="deeksha-card">
+          <b>{{ r.deeksharambh.vibe if r.deeksharambh.vibe is not none else '—' }}<small> / 10</small></b>
+          <span>Deeksharambh vibe</span>
+          <small class="note">{{ r.deeksharambh.answered }} of them rated the orientation</small>
+        </div>
+        <div class="deeksha-card alt">
+          <b>{{ r.deeksharambh.belonging if r.deeksharambh.belonging is not none else '—' }}<small> / 10</small></b>
+          <span>I belong at JAIN</span>
+          <small class="note">From the same orientation form</small>
+        </div>
+        <div class="deeksha-card" style="background:linear-gradient(140deg,#15803d,#58cc4a)">
+          <b>{{ '%+0.2f' % r.lift.literacy if r.lift.literacy is not none else '—' }}</b>
+          <span>AI literacy moved</span>
+          <small class="note">Baseline to post survey, out of 5</small>
+        </div>
+        <div class="deeksha-card" style="background:linear-gradient(140deg,#1d4ed8,#2ba7d9)">
+          <b>{{ r.orientation }}</b>
+          <span>Did Deeksharambh too</span>
+          <small class="note">Of the {{ r.count }} who finished both</small>
+        </div>
+      </div>
+    </section>
+
+    <section class="card rise" style="margin-top:18px">
+      <span class="section-kicker">Every single student</span>
+      <h2 class="card-title">Where everyone started, and where they reached</h2>
+      <p class="card-sub">
+        One line per student: the faint dot is the baseline, the bright dot is the post survey.
+        Green means they moved up, rust means they slipped. Literacy runs across, readiness up.
+      </p>
+      <div class="quad-box"><canvas id="chart-quadrant"></canvas></div>
+      <div class="quad-legend">
+        <span><i style="background:#8d8378"></i>Baseline</span>
+        <span><i style="background:#15803d"></i>Post survey</span>
+        <span><i style="background:#58cc4a"></i>Moved up</span>
+        <span><i style="background:#c2410c"></i>Slipped</span>
+      </div>
+      <div class="move-row">
+        <div class="move"><b style="color:#15803d">{{ r.movement.gained }}</b><span>Moved up</span></div>
+        <div class="move"><b style="color:#7d7060">{{ r.movement.held }}</b><span>Held steady</span></div>
+        <div class="move"><b style="color:#c2410c">{{ r.movement.slipped }}</b><span>Slipped back</span></div>
+        <div class="move"><b>{{ r.movement.points | length }}</b><span>Students plotted</span></div>
+      </div>
+    </section>
+
+    <section class="card rise" style="margin-top:18px">
+      <span class="section-kicker">Pick your people</span>
+      <h2 class="card-title">Every department, before and after</h2>
+      <p class="card-sub">
+        Tap a department to add it, tap again to drop it. Only students who finished both surveys
+        are counted, so a department's number is the number of people it actually got through.
+      </p>
+      <div class="picker" id="picker-impact"></div>
+      <div class="chart-box"><canvas id="chart-impact"></canvas></div>
+      <p class="picker-note" id="note-impact"></p>
+    </section>
+  </div>
 
   <!-- ── Parents ────────────────────────────────────────────────────── -->
   <section class="card rise">
@@ -398,82 +561,237 @@ const io = STILL ? null : new IntersectionObserver((entries) => {
 document.querySelectorAll('.rise').forEach(el => io ? io.observe(el) : el.classList.add('in'));
 document.querySelectorAll('.hero [data-count]').forEach(countUp);
 
-/* ── Department picker and chart ────────────────────────────────────── */
-const DEPTS = REPORT.departments;
+/* ── Department pickers ─────────────────────────────────────────────────
+   Two of them — one per view — built from the same factory so Outcome and
+   Impact behave identically. Each keeps its own selection. */
 const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c =>
   ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
-// Start with the six biggest, so the chart says something before a tap.
-let chosen = new Set(DEPTS.slice(0, 6).map(d => d.dept));
-let chart = null;
+const AXIS = {
+  grid: '#ece0cc',
+  font: { family: 'Outfit', size: 11, weight: '700' },
+};
 
-function buildPicker() {
-  const host = document.getElementById('picker');
-  const all = chosen.size === DEPTS.length;
-  host.innerHTML =
-    `<button class="pick pick-all ${all ? 'on' : ''}" data-all="1">All departments</button>` +
-    DEPTS.map(d => `
-      <button class="pick ${chosen.has(d.dept) ? 'on' : ''}" data-dept="${esc(d.dept)}">
-        ${esc(d.dept)} <small>${d.count}</small>
-      </button>`).join('');
-}
+function makePicker({ rows, pickerId, canvasId, noteId, datasets }) {
+  const host = document.getElementById(pickerId);
+  const note = document.getElementById(noteId);
+  if (!host || !rows.length) return { draw() {} };
 
-function drawChart() {
-  const rows = DEPTS.filter(d => chosen.has(d.dept));
-  const labels = rows.map(d => d.dept);
-  const data = {
-    labels,
-    datasets: [
-      { label: 'Outcome · literacy before', data: rows.map(d => d.outcome.literacy),
-        backgroundColor: '#2ba7d9', borderRadius: 8, borderSkipped: false },
-      { label: 'Impact · literacy after', data: rows.map(d => d.impact.literacy),
-        backgroundColor: '#58cc4a', borderRadius: 8, borderSkipped: false },
-      { label: 'Outcome · readiness before', data: rows.map(d => d.outcome.readiness),
-        backgroundColor: '#6d28d9', borderRadius: 8, borderSkipped: false },
-      { label: 'Impact · readiness after', data: rows.map(d => d.impact.readiness),
-        backgroundColor: '#f5b731', borderRadius: 8, borderSkipped: false },
-    ],
-  };
-  const options = {
-    responsive: true, maintainAspectRatio: false,
-    animation: STILL ? false : { duration: 700, easing: 'easeOutCubic' },
-    plugins: {
-      legend: { labels: { font: { family: 'Outfit', size: 12, weight: '700' }, boxWidth: 12, boxHeight: 12, padding: 14 } },
-      tooltip: {
-        backgroundColor: 'rgba(23,17,10,.94)', padding: 11, cornerRadius: 10,
-        titleFont: { family: 'Outfit', weight: '800' }, bodyFont: { family: 'Outfit' },
-      },
-    },
-    scales: {
-      x: { grid: { display: false }, ticks: { font: { family: 'Outfit', size: 11, weight: '700' }, maxRotation: 40, minRotation: 0 } },
-      y: { beginAtZero: true, suggestedMax: 5, grid: { color: '#ece0cc' },
-           ticks: { font: { family: 'Outfit', size: 11 }, stepSize: 1 } },
-    },
-  };
-  if (chart) { chart.data = data; chart.options = options; chart.update(); }
-  else chart = new Chart(document.getElementById('dept-chart'), { type: 'bar', data, options });
+  // The six biggest to begin with, so the chart says something before a tap.
+  let chosen = new Set(rows.slice(0, 6).map(d => d.dept));
+  let chart = null;
 
-  const people = rows.reduce((sum, d) => sum + d.count, 0);
-  document.getElementById('picker-note').textContent = rows.length
-    ? `Showing ${rows.length} department${rows.length > 1 ? 's' : ''} · ${people} students who finished both. Scores are out of 5.`
-    : 'Nothing picked — tap a department above.';
-}
-
-document.getElementById('picker').addEventListener('click', ev => {
-  const btn = ev.target.closest('button');
-  if (!btn) return;
-  if (btn.dataset.all) {
-    chosen = chosen.size === DEPTS.length ? new Set() : new Set(DEPTS.map(d => d.dept));
-  } else {
-    const dept = btn.dataset.dept;
-    chosen.has(dept) ? chosen.delete(dept) : chosen.add(dept);
+  function paintPicker() {
+    const all = chosen.size === rows.length;
+    host.innerHTML =
+      `<button class="pick pick-all ${all ? 'on' : ''}" data-all="1">All departments</button>` +
+      rows.map(d => `
+        <button class="pick ${chosen.has(d.dept) ? 'on' : ''}" data-dept="${esc(d.dept)}">
+          ${esc(d.dept)} <small>${d.count}</small>
+        </button>`).join('');
   }
-  buildPicker();
-  drawChart();
+
+  function draw() {
+    const picked = rows.filter(d => chosen.has(d.dept));
+    const data = { labels: picked.map(d => d.dept), datasets: datasets(picked) };
+    const options = {
+      responsive: true, maintainAspectRatio: false,
+      animation: STILL ? false : { duration: 650, easing: 'easeOutCubic' },
+      plugins: {
+        legend: { labels: { font: { family: 'Outfit', size: 12, weight: '700' },
+                            boxWidth: 12, boxHeight: 12, padding: 14 } },
+        tooltip: { backgroundColor: 'rgba(23,17,10,.94)', padding: 11, cornerRadius: 10,
+                   titleFont: { family: 'Outfit', weight: '800' }, bodyFont: { family: 'Outfit' } },
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: AXIS.font, maxRotation: 40 } },
+        y: { beginAtZero: true, suggestedMax: 5, grid: { color: AXIS.grid },
+             ticks: { font: { family: 'Outfit', size: 11 }, stepSize: 1 } },
+      },
+    };
+    if (chart) { chart.data = data; chart.options = options; chart.update(); }
+    else chart = new Chart(document.getElementById(canvasId), { type: 'bar', data, options });
+
+    const people = picked.reduce((sum, d) => sum + d.count, 0);
+    if (note) note.textContent = picked.length
+      ? `Showing ${picked.length} department${picked.length > 1 ? 's' : ''} · ${people} students. Scores are out of 5.`
+      : 'Nothing picked — tap a department above.';
+  }
+
+  host.addEventListener('click', ev => {
+    const btn = ev.target.closest('button');
+    if (!btn) return;
+    if (btn.dataset.all) {
+      chosen = chosen.size === rows.length ? new Set() : new Set(rows.map(d => d.dept));
+    } else {
+      const dept = btn.dataset.dept;
+      chosen.has(dept) ? chosen.delete(dept) : chosen.add(dept);
+    }
+    paintPicker();
+    draw();
+  });
+
+  paintPicker();
+  return { draw };
+}
+
+const bar = (label, colour, pick) => ({
+  label, backgroundColor: colour, borderRadius: 8, borderSkipped: false,
+  data: pick,
 });
 
-buildPicker();
-drawChart();
+const outcomePicker = makePicker({
+  rows: REPORT.outcome_departments, pickerId: 'picker-outcome',
+  canvasId: 'chart-outcome', noteId: 'note-outcome',
+  datasets: picked => [
+    bar('AI literacy at baseline', '#2ba7d9', picked.map(d => d.outcome.literacy)),
+    bar('AI readiness at baseline', '#6d28d9', picked.map(d => d.outcome.readiness)),
+  ],
+});
+
+const impactPicker = makePicker({
+  rows: REPORT.departments, pickerId: 'picker-impact',
+  canvasId: 'chart-impact', noteId: 'note-impact',
+  datasets: picked => [
+    bar('Literacy before', '#2ba7d9', picked.map(d => d.outcome.literacy)),
+    bar('Literacy after',  '#58cc4a', picked.map(d => d.impact.literacy)),
+    bar('Readiness before', '#6d28d9', picked.map(d => d.outcome.readiness)),
+    bar('Readiness after',  '#f5b731', picked.map(d => d.impact.readiness)),
+  ],
+});
+
+/* ── The quadrant ───────────────────────────────────────────────────────
+   Every student twice: where they started, where they reached, and the line
+   between. The quadrant bands are painted underneath by a small plugin, so
+   the four corners are readable without a legend. */
+const MOVES = REPORT.movement.points;
+let quadrantChart = null;
+
+const quadrantBands = {
+  id: 'quadrantBands',
+  beforeDatasetsDraw(chart) {
+    const { ctx, chartArea, scales } = chart;
+    if (!chartArea) return;
+    const mx = scales.x.getPixelForValue(3);
+    const my = scales.y.getPixelForValue(3);
+
+    // The four bands, so the corners read without a legend.
+    const bands = [
+      [chartArea.left, chartArea.top, mx - chartArea.left, my - chartArea.top,
+       'rgba(245,183,49,.13)', 'Q2 · AI Enthusiast', 'Lower literacy · higher readiness'],
+      [mx, chartArea.top, chartArea.right - mx, my - chartArea.top,
+       'rgba(88,204,74,.15)', 'Q1 · AI Champion', 'Higher literacy · higher readiness'],
+      [chartArea.left, my, mx - chartArea.left, chartArea.bottom - my,
+       'rgba(194,65,12,.10)', 'Q3 · Getting started', 'Lower on both'],
+      [mx, my, chartArea.right - mx, chartArea.bottom - my,
+       'rgba(43,167,217,.11)', 'Q4 · Quietly capable', 'Higher literacy · lower readiness'],
+    ];
+    ctx.save();
+    bands.forEach(([x, y, w, h, fill, title, sub]) => {
+      ctx.fillStyle = fill;
+      ctx.fillRect(x, y, w, h);
+      ctx.fillStyle = 'rgba(23,17,10,.62)';
+      ctx.font = '800 12px Outfit, sans-serif';
+      ctx.fillText(title, x + 12, y + 22);
+      ctx.fillStyle = 'rgba(23,17,10,.42)';
+      ctx.font = '600 10.5px Outfit, sans-serif';
+      ctx.fillText(sub, x + 12, y + 38);
+    });
+    ctx.strokeStyle = 'rgba(23,17,10,.22)';
+    ctx.setLineDash([5, 5]);
+    ctx.beginPath();
+    ctx.moveTo(mx, chartArea.top); ctx.lineTo(mx, chartArea.bottom);
+    ctx.moveTo(chartArea.left, my); ctx.lineTo(chartArea.right, my);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Each student's move, drawn straight onto the canvas. A line dataset
+    // would need a null between every pair to break the path, and nulls on a
+    // linear axis break the scale's min/max — this is also far cheaper.
+    ctx.lineWidth = 1.1;
+    [[false, 'rgba(194,65,12,.42)'], [true, 'rgba(88,204,74,.46)']].forEach(([up, colour]) => {
+      ctx.strokeStyle = colour;
+      ctx.beginPath();
+      MOVES.forEach(m => {
+        if (!!m.up !== up) return;
+        ctx.moveTo(scales.x.getPixelForValue(m.x0), scales.y.getPixelForValue(m.y0));
+        ctx.lineTo(scales.x.getPixelForValue(m.x1), scales.y.getPixelForValue(m.y1));
+      });
+      ctx.stroke();
+    });
+    ctx.restore();
+  },
+};
+
+function drawQuadrant() {
+  const canvas = document.getElementById('chart-quadrant');
+  if (!canvas || quadrantChart || !MOVES.length) return;
+
+  quadrantChart = new Chart(canvas, {
+    type: 'scatter',
+    data: {
+      datasets: [
+        { label: 'Baseline', pointRadius: 3, pointHoverRadius: 6,
+          data: MOVES.map(p => ({ x: p.x0, y: p.y0 })),
+          backgroundColor: 'rgba(141,131,120,.7)' },
+        { label: 'Post survey', pointRadius: 3.6, pointHoverRadius: 6,
+          data: MOVES.map(p => ({ x: p.x1, y: p.y1 })),
+          backgroundColor: 'rgba(21,128,61,.85)' },
+      ],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      animation: STILL || MOVES.length > 400 ? false : { duration: 600 },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: 'rgba(23,17,10,.94)', padding: 10, cornerRadius: 10,
+          titleFont: { family: 'Outfit', weight: '800' }, bodyFont: { family: 'Outfit' },
+          callbacks: {
+            label: item => `${item.dataset.label}: literacy ${item.parsed.x.toFixed(2)}, readiness ${item.parsed.y.toFixed(2)}`,
+          },
+        },
+      },
+      scales: {
+        x: { min: 1, max: 5, title: { display: true, text: 'AI Literacy — do I understand AI?',
+             font: { family: 'Outfit', size: 12, weight: '800' }, color: '#4a3f31' },
+             grid: { color: AXIS.grid }, ticks: { font: { family: 'Outfit', size: 11 } } },
+        y: { min: 1, max: 5, title: { display: true, text: 'AI Readiness — am I ready to use AI?',
+             font: { family: 'Outfit', size: 12, weight: '800' }, color: '#4a3f31' },
+             grid: { color: AXIS.grid }, ticks: { font: { family: 'Outfit', size: 11 } } },
+      },
+    },
+    plugins: [quadrantBands],
+  });
+}
+
+/* ── The switch ─────────────────────────────────────────────────────────
+   Charts sized inside a hidden panel come out zero-width, so each view draws
+   the first time it is actually shown. */
+const drawn = { outcome: false, impact: false };
+
+function showView(name) {
+  document.querySelectorAll('#switch button').forEach(b =>
+    b.classList.toggle('on', b.dataset.view === name));
+  document.getElementById('view-outcome').hidden = name !== 'outcome';
+  document.getElementById('view-impact').hidden = name !== 'impact';
+
+  if (!drawn[name]) {
+    drawn[name] = true;
+    if (name === 'outcome') outcomePicker.draw();
+    else { impactPicker.draw(); drawQuadrant(); }
+  }
+  // A view revealed after its cards were already observed would stay faded.
+  document.getElementById('view-' + name)
+    .querySelectorAll('.rise').forEach(el => el.classList.add('in'));
+}
+
+document.getElementById('switch').addEventListener('click', ev => {
+  const btn = ev.target.closest('button');
+  if (btn) showView(btn.dataset.view);
+});
+
+showView('outcome');
 
 /* ── Roll call ──────────────────────────────────────────────────────── */
 const HUES = ['#6d28d9', '#2ba7d9', '#58cc4a', '#f5b731', '#f0567a', '#b45309'];

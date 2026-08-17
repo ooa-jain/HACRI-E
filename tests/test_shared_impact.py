@@ -156,7 +156,10 @@ async def test_the_page_names_the_people_it_counted(client: AsyncClient):
     r = await client.get(f"/shared/impact?token={_token()}")
     assert r.status_code == 200
     body = r.text
-    assert "students finished both surveys" in body
+    # The hero opens on the whole cohort, then names the two populations it
+    # measures over.
+    assert "students registered so far" in body
+    assert "came back for the post survey" in body
     assert "Both1" in body and "Both2" in body
     assert "Preonly" not in body
 
@@ -172,3 +175,44 @@ async def test_outcome_and_impact_are_scored_separately(client: AsyncClient):
     assert report["outcome"]["literacy"] == 3
     assert report["impact"]["literacy"] == 4
     assert report["lift"]["literacy"] == 1
+
+
+@pytest.mark.asyncio
+async def test_outcome_counts_more_people_than_impact(client: AsyncClient):
+    await _seed()
+    from app.vibe_report import vibe_report
+
+    report = await vibe_report()
+    # Outcome describes everyone who filled the baseline; Impact only those
+    # who came back. Four filled the baseline, three returned.
+    assert report["outcome_count"] == 4
+    assert report["count"] == 3
+    assert report["outcome_count"] > report["count"]
+
+    # And the baseline departments cover the wider group.
+    outcome_counts = {d["dept"]: d["count"] for d in report["outcome_departments"]}
+    assert outcome_counts == {DESIGN: 2, LAW: 2}
+
+
+@pytest.mark.asyncio
+async def test_the_movement_plots_one_pair_per_student(client: AsyncClient):
+    await _seed()
+    from app.vibe_report import vibe_report
+
+    move = (await vibe_report())["movement"]
+    assert len(move["points"]) == 3
+    # Every seeded student answered 3 at baseline and 4 after, so all moved up.
+    assert move["gained"] == 3
+    assert move["held"] == 0 and move["slipped"] == 0
+    for p in move["points"]:
+        assert p["x1"] > p["x0"] and p["up"] is True
+
+
+@pytest.mark.asyncio
+async def test_registered_total_is_everyone_on_the_portal(client: AsyncClient):
+    await _seed()
+    from app.vibe_report import vibe_report
+
+    # Unaffected by the campus scope: it is the headline the page opens with.
+    assert (await vibe_report())["registered_total"] == 5
+    assert (await vibe_report(campus="Kochi"))["registered_total"] == 5
