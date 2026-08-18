@@ -164,13 +164,6 @@ name no student.
 | Orientation page | `/shared/orientation?campus=…&token=…` | that campus's full analysis, with a department picker |
 | Orientation → **Departments** | `/shared/orientation?campus=…&dept=…&token=…` | one department's own report, and nothing else |
 
-Both wear the same look: a near-white ground, white cards with hairline
-borders, small uppercase micro-labels over large tight-set numerals, and one
-warm coral accent on the chrome. Colour is spent only where it means
-something — the mood ramp (green through amber to coral) on vibe figures, and
-the status pill on each department row, which tints itself from the mood it is
-printing.
-
 A department link is signed for that department alone: the token is minted from
 campus **and** department, so editing `dept=` in the URL closes the page rather
 than opening the neighbouring department. The department picker becomes a
