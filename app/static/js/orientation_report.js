@@ -23,33 +23,42 @@
   const num = (v, digits = 1) =>
     (v === null || v === undefined) ? '—' : Number(v).toFixed(digits);
 
-  /** What an average out of ten actually feels like. */
+  /** What an average out of ten actually feels like.
+   *
+   * A muted ramp — green through amber to coral — so a warm cohort and a cold
+   * one are still told apart at a glance without the page shouting. */
   const MOODS = [
-    [9, 'Buzzing',        '🤩', '#059669'],
-    [8, 'Loving it',      '😍', '#16a34a'],
-    [7, 'Good vibes',     '😄', '#84cc16'],
-    [6, 'Warming up',     '🙂', '#facc15'],
-    [5, 'Mixed feelings', '😐', '#f97316'],
-    [0, 'Needs a lift',   '😕', '#e11d48'],
+    [9, 'Buzzing',        '🤩', '#1f9e63'],
+    [8, 'Loving it',      '😍', '#46a85b'],
+    [7, 'Good vibes',     '😄', '#7faf4c'],
+    [6, 'Warming up',     '🙂', '#e0a52e'],
+    [5, 'Mixed feelings', '😐', '#e5813c'],
+    [0, 'Needs a lift',   '😕', '#e0524d'],
   ];
   const mood = avg => (avg === null || avg === undefined)
-    ? ['No answers yet', '🫥', '#94a3b8']
+    ? ['No answers yet', '🫥', '#a8adb6']
     : (MOODS.find(m => avg >= m[0]) || MOODS[MOODS.length - 1]).slice(1);
 
-  // Section accents, cycled so each section reads as its own chapter.
-  const ACCENTS = ['#2563eb', '#0d9488', '#7c3aed', '#e11d48', '#f59e0b',
-                   '#0ea5e9', '#16a34a', '#db2777', '#4f46e5'];
+  // Section accents, cycled so each section reads as its own chapter. Coral
+  // leads; the rest are its supporting cast, all at the same low volume.
+  const ACCENTS = ['#f0524b', '#2f9e8f', '#6f6bd8', '#e0913a', '#3b82c4',
+                   '#2e9e5b', '#c2549b', '#5b6b8c', '#d1664e'];
 
   const PANELS = [
-    ['impactful',  '🏆 Sessions that landed',   '#059669'],
-    ['needs_work', '🛠️ Sessions needing work',  '#e11d48'],
-    ['stressors',  '😰 Biggest stressors',      '#f59e0b'],
-    ['keep',       '👍 Keep next year',         '#2563eb'],
-    ['stop',       '🚫 Stop next year',         '#9f1239'],
-    ['introduce',  '✨ Introduce next year',    '#7c3aed'],
+    ['impactful',  '🏆 Sessions that landed',   '#2e9e5b'],
+    ['needs_work', '🛠️ Sessions needing work',  '#f0524b'],
+    ['stressors',  '😰 Biggest stressors',      '#e0913a'],
+    ['keep',       '👍 Keep next year',         '#3b82c4'],
+    ['stop',       '🚫 Stop next year',         '#b03a5b'],
+    ['introduce',  '✨ Introduce next year',    '#6f6bd8'],
   ];
 
   const MEDALS = ['🥇', '🥈', '🥉'];
+
+  // The one warm accent the chrome is built on, and the grey that stands in
+  // for a score nobody gave — a coloured stub would read as a real answer.
+  const ACCENT = '#f0524b';
+  const EMPTY  = '#eceef2';
 
   // ── Small building blocks ─────────────────────────────────────────────────
 
@@ -111,7 +120,7 @@
     return `
       <div class="ori-ring">
         <svg viewBox="0 0 ${size} ${size}" width="${size}" height="${size}">
-          <circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="#eef2f7" stroke-width="16"></circle>
+          <circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="#f1f2f5" stroke-width="16"></circle>
           ${arcs}
         </svg>
         <div class="ori-ring-centre">
@@ -149,7 +158,8 @@
         ${vibeQ.options.map(o => `
           <div class="ori-strip-col" title="${o.count} student(s) rated ${esc(o.label)}/10">
             <div class="ori-strip-bar"
-                 style="height:${Math.max(2, Math.round(100 * o.count / top))}%;background:${mood(Number(o.label))[2]}"></div>
+                 style="height:${Math.max(2, Math.round(100 * o.count / top))}%;background:${
+                   o.count ? mood(Number(o.label))[2] : EMPTY}"></div>
           </div>`).join('')}
       </div>
       <div class="ori-strip-axis">
@@ -193,13 +203,13 @@
   function tiles(report) {
     const h = report.headline, c = report.coverage || {};
     return `<div class="ori-tiles">
-      ${tile(report.count, 'Responses', '#0f172a', null)}
-      ${tile(num(c.pct, 0) + '%', 'Response rate', '#0d9488', c.pct)}
+      ${tile(report.count, 'Responses', ACCENT, null)}
+      ${tile(num(c.pct, 0) + '%', 'Response rate', '#2f9e8f', c.pct)}
       ${tile(num(h.vibe, 1), 'Vibe / 10', mood(h.vibe)[2], h.vibe === null ? 0 : h.vibe * 10)}
-      ${tile(h.nps === null || h.nps === undefined ? '—' : num(h.nps, 0), 'NPS', '#4f46e5',
+      ${tile(h.nps === null || h.nps === undefined ? '—' : num(h.nps, 0), 'NPS', '#6f6bd8',
              h.nps === null || h.nps === undefined ? 0 : (h.nps + 100) / 2)}
-      ${tile(num(h.belonging, 1), 'Belonging / 10', '#0ea5e9', h.belonging === null ? 0 : h.belonging * 10)}
-      ${tile(num(h.bridge, 1), 'Bridge course / 5', '#f59e0b', h.bridge === null ? 0 : h.bridge * 20)}
+      ${tile(num(h.belonging, 1), 'Belonging / 10', '#3b82c4', h.belonging === null ? 0 : h.belonging * 10)}
+      ${tile(num(h.bridge, 1), 'Bridge course / 5', '#e0913a', h.bridge === null ? 0 : h.bridge * 20)}
     </div>`;
   }
 
@@ -208,9 +218,9 @@
     const h = report.headline;
     const q = questionOf(report, 'q34') || h;
     const segs = [
-      { value: q.promoters || 0,  colour: '#059669', label: 'Promoters 9–10' },
-      { value: q.passives || 0,   colour: '#facc15', label: 'Passives 7–8' },
-      { value: q.detractors || 0, colour: '#e11d48', label: 'Detractors 0–6' },
+      { value: q.promoters || 0,  colour: '#2e9e5b', label: 'Promoters 9–10' },
+      { value: q.passives || 0,   colour: '#e9b949', label: 'Passives 7–8' },
+      { value: q.detractors || 0, colour: '#e0524d', label: 'Detractors 0–6' },
     ];
     const total = segs.reduce((s, x) => s + x.value, 0);
     return `
@@ -261,9 +271,9 @@
         ${head}
         <div class="ori-q-sub">${q.answered} answered · average ${num(q.avg, 2)} / 10 · NPS ${num(q.nps, 0)}</div>
         <div class="ori-split3">
-          <div class="ori-mini" style="--tone:#059669"><b>${q.promoters}</b><span>Promoters 9–10</span></div>
-          <div class="ori-mini" style="--tone:#f59e0b"><b>${q.passives}</b><span>Passives 7–8</span></div>
-          <div class="ori-mini" style="--tone:#e11d48"><b>${q.detractors}</b><span>Detractors 0–6</span></div>
+          <div class="ori-mini" style="--tone:#2e9e5b"><b>${q.promoters}</b><span>Promoters 9–10</span></div>
+          <div class="ori-mini" style="--tone:#e0913a"><b>${q.passives}</b><span>Passives 7–8</span></div>
+          <div class="ori-mini" style="--tone:#e0524d"><b>${q.detractors}</b><span>Detractors 0–6</span></div>
         </div>
         ${scaleStrip(q, 0)}
       </div>`;
@@ -293,7 +303,8 @@
           return `<div class="ori-scale-col" title="${o.count} · ${num(o.pct, 0)}%">
             <div class="ori-scale-count">${o.count || ''}</div>
             <div class="ori-scale-track">
-              <div class="ori-scale-bar" style="height:${Math.max(2, Math.round(100 * o.count / top))}%;background:${tone}"></div>
+              <div class="ori-scale-bar" style="height:${Math.max(2, Math.round(100 * o.count / top))}%;background:${
+                o.count ? tone : EMPTY}"></div>
             </div>
             <div class="ori-scale-label">${esc(o.label)}</div>
           </div>`;
@@ -339,7 +350,7 @@
         <div class="ori-bars">
           ${rows.map(r => bar(
             { label: r.dept, count: r.count, pct: r.pct, width: 100 * r.count / top },
-            '#2563eb')).join('')}
+            ACCENT)).join('')}
         </div>
       </div>`;
   }
