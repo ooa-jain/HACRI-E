@@ -153,6 +153,73 @@ their department. Single-department exports carry the student sheet only.
 Each department's analysis link is independently shareable — hand a single
 department its own link without exposing the rest.
 
+### Deeksharambh report links (campus, and one per department)
+
+The **Orientation** page hands out read-only links to the same orientation
+report the admin reads. They need no login, show aggregate figures only, and
+name no student.
+
+| Where | Link | Opens |
+|---|---|---|
+| Orientation page | `/shared/orientation?campus=…&token=…` | that campus's full analysis, with a department picker |
+| Orientation → **Departments** | `/shared/orientation?campus=…&dept=…&token=…` | one department's own report, and nothing else |
+
+Both wear the same look: a near-white ground, white cards with hairline
+borders, small uppercase micro-labels over large tight-set numerals, and one
+warm coral accent on the chrome. Colour is spent only where it means
+something — the mood ramp (green through amber to coral) on vibe figures, and
+the status pill on each department row, which tints itself from the mood it is
+printing.
+
+A department link is signed for that department alone: the token is minted from
+campus **and** department, so editing `dept=` in the URL closes the page rather
+than opening the neighbouring department. The department picker becomes a
+label, the leaderboard naming every other department is replaced by that
+department's **vibe scorecard** — its rank on vibe, its reply and pending
+counts, and vibe / recommendation / belonging / will-succeed / bridge-course
+each marked against the campus average — and the slide deck downloads scoped
+the same way.
+
+The **Departments** tab lists every department with its counts and vibe next to
+its link, with a filter box, so the right one is quick to find and obviously
+worth sending (or not, when only two students have answered). **Copy share
+link** at the top of the report follows what is on screen: the department when
+the top-bar department filter is set, the campus otherwise.
+
+Campus links handed out earlier keep working unchanged.
+
+### The Deeksharambh deck
+
+Every orientation report — the admin's, the campus share link's, a department
+share link's — downloads as the same `.pptx`, built to the house design of the
+printed *Student Experience Analysis Report*: a mint ground with a white panel
+on it, navy serif headings centred and underlined, a section kicker above each
+one, teal meters for the averages, and a department-wise chart with the
+observations listed beside it.
+
+| Slide | What it carries |
+|---|---|
+| Cover | Title, scope, response count, and the overall vibe with its mood word |
+| Response overview | Total responses, the campus split with UG/PG, and the departments answering most and least |
+| Department wise — who has answered | Filled against still-pending, per department |
+| Section I — Program effectiveness | Vibe, belonging, confidence and recommendation as meters, with the answer most students actually chose |
+| Section I — department wise | Vibe, belonging and confidence, department by department |
+| Section II — Academic foundation | Bridge Course confidence, readiness for classes, and the areas that helped |
+| Section II — department wise | Bridge Course confidence, department by department |
+| Section III — Engagement and networking | The three sessions with the biggest impact, and the recommendation picture |
+| Section III — department wise | Promoters against detractors, as a share of that department's own answers |
+| What to keep, what to fix | The loudest answers on both sides |
+| Score by score | The 1–10 distribution and the NPS ring |
+| Section IV — Aspirations and growth | Most helpful aspects, top expectations, and the closing figures |
+| Department scoreboard | Every department's numbers in one table |
+| In one line | The sentence to quote |
+
+The observations beside each chart are composed from the same figures the
+charts draw — the highest and lowest department, the cohort average, who
+answered most — and never from anything else. Where the deck reports a
+single-choice question it quotes the answer students actually gave ("Yes,
+mostly (64%)") rather than bucketing wordings into a yes.
+
 ### Mailing a report
 
 Every directory row has an **✉️ Mail** button on each of its two lines, and each

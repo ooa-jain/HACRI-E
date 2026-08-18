@@ -162,15 +162,16 @@ async def test_the_renderer_and_its_stylesheet_are_served(client):
         assert len(r.content) > 1000
 
 
-# ── Department links ─────────────────────────────────────────────────────────
-#
-# Each department is sent its own link. It opens that department alone: the
-# report is theirs, the comparison is the campus average, and no other
-# department's scoreboard travels with it.
+# ── One link per department ──────────────────────────────────────────────────
+# The same report signed for a single department, so a head of department can
+# be sent theirs without it opening anybody else's.
+LAW = "Department of Law"
+COMMERCE = "Department of Commerce"
 
 
 def _dept_link(campus: str, dept: str) -> dict:
-    return {"campus": campus, "dept": dept, "token": get_orientation_token(campus, dept)}
+    return {"campus": campus, "dept": dept,
+            "token": get_orientation_token(campus, dept)}
 
 
 @pytest.mark.asyncio
@@ -182,71 +183,100 @@ async def test_admin_hands_out_one_link_per_department(app_with_mock):
         body = (await admin.get("/admin/api/orientation/dept-share-links",
                                 params={"campus": "Bangalore"})).json()
 
+        async with AsyncClient(transport=transport, base_url="http://test") as anon:
+            assert (await anon.get("/admin/api/orientation/dept-share-links")).status_code == 403
+
     assert body["campus"] == "Bangalore"
-    assert [row["dept"] for row in body["links"]] == [
-        "Department of Commerce", "Department of Law",
-    ]
-    for row in body["links"]:
-        assert "dept=" in row["url"] and "token=" in row["url"]
-    # A department's link is not its campus's link, nor its neighbour's.
-    tokens = {row["url"].split("token=")[1] for row in body["links"]}
+    # Ranked the way the leaderboard ranks them: best vibe first.
+    assert [row["dept"] for row in body["links"]] == [LAW, COMMERCE]
+
+    law = body["links"][0]
+    assert (law["filled"], law["eligible"], law["vibe"]) == (1, 1, 9.0)
+    assert law["url"].startswith("http://test/shared/orientation?")
+    # Every department gets its own token, and none of them is the campus one.
+    tokens = {row["url"].split("token=")[1].split("&")[0] for row in body["links"]}
     assert len(tokens) == 2
     assert get_orientation_token("Bangalore") not in tokens
 
-    async with AsyncClient(transport=transport, base_url="http://test") as anon:
-        r = await anon.get("/admin/api/orientation/dept-share-links")
-        assert r.status_code == 403
+
+@pytest.mark.asyncio
+async def test_a_department_link_opens_that_department(client):
+    await _seed()
+    link = _dept_link("Bangalore", LAW)
+
+    page = await client.get("/shared/orientation", params=link)
+    assert page.status_code == 200
+    assert LAW in page.text
+    assert "Vibe scorecard" in page.text
+
+    body = (await client.get("/shared/orientation/data", params=link)).json()
+    assert body["locked"] is True
+    assert body["dept"] == LAW
+    assert body["report"]["count"] == 1               # Asha, not Bilal
+    assert body["report"]["headline"]["vibe"] == 9.0
+
+    assert (await client.get("/shared/orientation/ppt", params=link)).status_code == 200
 
 
 @pytest.mark.asyncio
-async def test_a_department_link_opens_that_department_alone(client):
+async def test_a_department_link_names_no_other_department(client):
     await _seed()
-    params = _dept_link("Bangalore", "Department of Law")
+    body = (await client.get("/shared/orientation/data",
+                             params=_dept_link("Bangalore", LAW))).json()
 
-    page = await client.get("/shared/orientation", params=params)
-    assert page.status_code == 200
-    assert "Department of Law" in page.text
+    assert body["dept_options"] == [LAW]
+    assert [row["dept"] for row in body["departments"]["departments"]] == [LAW]
+    assert COMMERCE not in (await client.get(
+        "/shared/orientation/data", params=_dept_link("Bangalore", LAW))).text
 
-    body = (await client.get("/shared/orientation/data", params=params)).json()
-    assert body["locked"] is True
-    assert body["dept"] == "Department of Law"
-    assert body["report"]["count"] == 1                      # Asha only
-    assert body["report"]["headline"]["vibe"] == 9.0
-    # Its own row, and the campus average to read it against — nobody else's.
-    assert [d["dept"] for d in body["departments"]["departments"]] == ["Department of Law"]
-    assert body["departments"]["overall"]["filled"] == 2      # the whole campus
-    assert body["dept_options"] == ["Department of Law"]
 
-    deck = await client.get("/shared/orientation/ppt", params=params)
-    assert deck.status_code == 200
+@pytest.mark.asyncio
+async def test_the_scorecard_reads_the_department_against_its_campus(client):
+    await _seed()
+    card = (await client.get("/shared/orientation/data",
+                             params=_dept_link("Bangalore", LAW))).json()["scorecard"]
+
+    assert card["dept"] == LAW
+    assert (card["rank"], card["of"]) == (1, 2)       # best vibe of the two
+    assert card["department"]["filled"] == 1
+    assert card["campus_overall"]["filled"] == 2      # the campus it is judged against
+
+    metrics = {m["key"]: m for m in card["metrics"]}
+    # Law rated the week 9, the campus averaged 8 — a point above.
+    assert (metrics["vibe"]["value"], metrics["vibe"]["campus"]) == (9.0, 8.0)
+    assert metrics["vibe"]["delta"] == 1.0
+    # Both of Law's students would recommend JAIN; half the campus would not.
+    assert (metrics["nps"]["value"], metrics["nps"]["campus"]) == (100.0, 0.0)
+    # Nobody answered the bridge-course question, so it stays blank rather
+    # than reading as a zero.
+    assert metrics["bridge"]["value"] is None
+    assert metrics["bridge"]["delta"] is None
 
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("params", [
-    # Its own token pointed at the department next door.
-    {"campus": "Bangalore", "dept": "Department of Commerce",
-     "token": get_orientation_token("Bangalore", "Department of Law")},
-    # The same department, but on the campus it was not minted for.
-    {"campus": "Kochi", "dept": "Department of Law",
-     "token": get_orientation_token("Bangalore", "Department of Law")},
-    # A department token stripped back to the whole campus.
-    {"campus": "Bangalore", "token": get_orientation_token("Bangalore", "Department of Law")},
+    # One department's token must not open another's.
+    {**_dept_link("Bangalore", LAW), "dept": COMMERCE},
+    # Nor the whole campus.
+    {"campus": "Bangalore", "token": get_orientation_token("Bangalore", LAW)},
+    # Nor the same department on another campus.
+    {**_dept_link("Bangalore", LAW), "campus": "Kochi"},
 ])
-async def test_a_department_link_cannot_be_edited_into_another(client, params):
+async def test_a_department_token_unlocks_nothing_else(client, params):
     await _seed()
     for path in ("/shared/orientation", "/shared/orientation/data", "/shared/orientation/ppt"):
         assert (await client.get(path, params=params)).status_code == 403
 
 
 @pytest.mark.asyncio
-async def test_the_campus_link_still_filters_freely(client):
-    """The campus link keeps its picker: dept is a filter, not a lock."""
+async def test_a_campus_link_is_unchanged_by_all_this(client):
+    """The links already handed out keep working, and keep the run of the campus."""
     await _seed()
-    params = {**_link("Bangalore"), "dept": "Department of Commerce"}
-    body = (await client.get("/shared/orientation/data", params=params)).json()
+    body = (await client.get("/shared/orientation/data",
+                             params={**_link("Bangalore"), "dept": COMMERCE})).json()
 
     assert body["locked"] is False
+    assert "scorecard" not in body
     assert body["report"]["count"] == 1
-    assert {d["dept"] for d in body["departments"]["departments"]} == {
-        "Department of Law", "Department of Commerce",
-    }
+    # Free to look at any department, and at the leaderboard behind it.
+    assert {d["dept"] for d in body["departments"]["departments"]} == {LAW, COMMERCE}

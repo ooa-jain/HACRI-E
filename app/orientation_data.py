@@ -161,13 +161,78 @@ def department_rows(filled: list[dict], pending: list[dict]) -> list[dict]:
             "success": head["success"],
             "bridge": head["bridge"],
             "promoters": head["promoters"],
+            "passives": head["passives"],
             "detractors": head["detractors"],
+            # The denominator for the two above: promoters + passives +
+            # detractors, which is not the same as the department's response
+            # count — plenty of students skip the question.
+            "nps_answered": head["nps_answered"],
             "top_session": (top["impactful"][0]["label"] if top["impactful"] else ""),
             "top_stressor": (top["stressors"][0]["label"] if top["stressors"] else ""),
         })
 
     rows.sort(key=lambda r: (-(r["vibe"] or 0), -r["filled"], r["dept"].lower()))
     return rows
+
+
+# The five numbers that say how a cohort felt, in the order a reader wants
+# them: the vibe first, then whether they would say so out loud, then whether
+# they feel at home, whether they think they will make it, and whether the
+# academics landed.
+VIBE_METRICS: tuple[tuple[str, str, int | None], ...] = (
+    ("vibe",      "Overall vibe",     10),
+    ("nps",       "Would recommend",  None),
+    ("belonging", "Belonging",        10),
+    ("success",   "Will succeed",     10),
+    ("bridge",    "Bridge course",    5),
+)
+
+
+def department_scorecard(
+    filled: list[dict], pending: list[dict], dept: str, campus: str = "",
+) -> dict:
+    """One department's vibe, measured against the campus it sits in.
+
+    This is what a department-scoped share link opens with: where the
+    department stands among its peers, every headline number next to the campus
+    figure it should be read against, and the two things its own students were
+    loudest about. `filled` / `pending` are the whole campus — the department is
+    picked out here, because a rank means nothing without the rest of the field.
+    """
+    rows = department_rows(filled, pending)
+    ranked = [r for r in rows if r["vibe"] is not None]
+    mine = next((r for r in rows if r["dept"] == dept), None) or {
+        "dept": dept, "filled": 0, "pending": 0, "eligible": 0, "pct": 0.0,
+        "vibe": None, "nps": None, "belonging": None, "success": None,
+        "bridge": None, "promoters": 0, "detractors": 0,
+        "top_session": "", "top_stressor": "",
+    }
+    campus_head = summarize_orientation([r["data"] for r in filled])["headline"]
+
+    def compare(key: str, label: str, maximum: int | None) -> dict:
+        value, average = mine.get(key), campus_head.get(key)
+        return {
+            "key": key,
+            "label": label,
+            "max": maximum,
+            "value": value,
+            "campus": average,
+            "delta": (None if value is None or average is None
+                      else round(value - average, 1)),
+        }
+
+    return {
+        "dept": dept,
+        "campus": campus or ALL_CAMPUSES,
+        "rank": next((i + 1 for i, r in enumerate(ranked) if r["dept"] == dept), None),
+        "of": len(ranked),
+        "department": mine,
+        "campus_overall": {
+            **coverage_of(filled, pending),
+            **{key: campus_head.get(key) for key, _, _ in VIBE_METRICS},
+        },
+        "metrics": [compare(key, label, maximum) for key, label, maximum in VIBE_METRICS],
+    }
 
 
 def coverage_of(filled: list[dict], pending: list[dict]) -> dict:
@@ -226,6 +291,32 @@ def department_overview(filled: list[dict], pending: list[dict], campus: str = "
     }
 
 
+def campus_split(filled: list[dict], pending: list[dict]) -> list[dict]:
+    """Responses per campus, split UG / PG — the deck's opening slide.
+
+    Campuses nobody answered from are left out: an empty row on the overview
+    slide reads as a missing campus rather than a quiet one.
+    """
+    names = list(CAMPUSES) + [UNSPECIFIED_CAMPUS]
+    rows = []
+    for name in names:
+        answered = [r for r in filled if r["campus"] == name]
+        waiting = [p for p in pending if p["campus"] == name]
+        if not answered and not waiting:
+            continue
+        rows.append({
+            "campus": name,
+            "filled": len(answered),
+            "pending": len(waiting),
+            "eligible": len(answered) + len(waiting),
+            "ug": sum(1 for r in answered if (r["ug_or_pg"] or "ug").lower() == "ug"),
+            "pg": sum(1 for r in answered if (r["ug_or_pg"] or "ug").lower() == "pg"),
+            "departments": len({r["program"] for r in answered if r["program"] != "—"}),
+        })
+    rows.sort(key=lambda r: -r["filled"])
+    return rows
+
+
 async def deck_response(*, campus: str = "", dept: str = "", ug_or_pg: str = ""):
     """The orientation report as a downloadable .pptx, ready to return."""
     import io
@@ -238,9 +329,9 @@ async def deck_response(*, campus: str = "", dept: str = "", ug_or_pg: str = "")
     data = await orientation_dataset(campus=campus, dept=dept, ug_or_pg=ug_or_pg)
     filled, pending = data[FILLED], data[PENDING]
 
-    report = summarize_orientation([r["data"] for r in filled])
-    report["coverage"] = coverage_of(filled, pending)
-    report["departments"] = sorted({r["program"] for r in filled})
+    # The same report the dashboard draws — coverage, the department mix and
+    # the UG/PG split included, since the deck opens on all three.
+    report = build_report(filled, pending, campus)
 
     scope = dept or "All departments"
     if ug_or_pg:
@@ -254,6 +345,7 @@ async def deck_response(*, campus: str = "", dept: str = "", ug_or_pg: str = "")
         # A department-scoped deck compares nothing, so its scoreboard is just
         # that one department; the campus deck compares them all.
         departments=department_rows(filled, pending),
+        campuses=campus_split(filled, pending),
     )
 
     filename = f"Deeksharambh_2026_Orientation_{campus or 'All'}_{dept or 'All'}.pptx"

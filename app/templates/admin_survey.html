@@ -8,11 +8,14 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <!-- The orientation report draws itself; the same pair renders the public
      shared page, so both sides of the login look identical. -->
-<link rel="stylesheet" href="{{ asset('/static/css/admin_shell.css') }}">
-<link rel="stylesheet" href="{{ asset('/static/css/orientation_report.css') }}">
-<script src="{{ asset('/static/js/orientation_report.js') }}"></script>
-<link rel="stylesheet" href="{{ asset('/static/css/cohort_report.css') }}">
-<script src="{{ asset('/static/js/cohort_report.js') }}"></script>
+<!-- nginx serves /static/ with `expires 7d`, so the version marker is what
+     makes a restyle reach browsers that already hold the old sheet. Bump it
+     whenever the file it marks changes. -->
+<link rel="stylesheet" href="/static/css/admin_shell.css?v=2">
+<link rel="stylesheet" href="/static/css/orientation_report.css?v=4">
+<script src="/static/js/orientation_report.js?v=4"></script>
+<link rel="stylesheet" href="/static/css/cohort_report.css">
+<script src="/static/js/cohort_report.js"></script>
 <style>
   body { font-family: 'Inter', system-ui, sans-serif; }
   .panel { display: none; }
@@ -53,26 +56,60 @@
 </style>
 </head>
 <body class="h-full text-slate-800 antialiased admin-shell">
-<div class="min-h-screen flex flex-col">
+<div class="min-h-screen flex flex-col md:flex-row">
 
-  <!-- ══ TOP BAR ══════════════════════════════════════════════════════════
-       No rail: the sections live in the bar, and each one is its own page. -->
-  <header class="admin-bar sticky top-0 z-40">
-    <div class="bar-row">
-      <div class="bar-brand">
-        <span class="bar-word">JAIN <em>UNIVERSITY</em></span>
-        <span class="bar-kicker">AI Survey Admin</span>
+  <!-- ══ SIDEBAR ══════════════════════════════════════════════════════════ -->
+  <aside id="sidebar" class="fixed inset-y-0 left-0 w-60 bg-slate-900 text-slate-200 z-50 transition-transform duration-200 md:translate-x-0 -translate-x-full flex flex-col">
+    <div class="px-4 py-4 flex items-center gap-3 border-b border-white/5">
+      <div class="bg-white p-1.5 rounded-lg"><img src="/static/logo.png" alt="JAIN" class="h-7 w-auto" onerror="this.src='/static/logosmall.png'"></div>
+      <div class="mr-auto">
+        <div class="font-extrabold text-sm text-white">JAIN <span class="text-amber-400">UNIVERSITY</span></div>
+        <div class="text-[10px] text-slate-400">AI Survey Admin</div>
+      </div>
+      <button id="sidebar-close" onclick="closeSidebar()" title="Hide the menu"
+              aria-label="Hide the menu"
+              class="text-slate-400 hover:text-white text-lg px-1 rounded-md">&#10005;</button>
+    </div>
+
+    <nav id="nav" class="flex-1 px-3 py-2 space-y-0.5 overflow-y-auto"></nav>
+
+    <div class="px-3 pb-4 pt-3 space-y-2 border-t border-white/5">
+      <div class="who">
+        <span class="who-av">JU</span>
+        <div class="min-w-0">
+          <div class="who-name">Survey admin</div>
+          <div class="who-role" id="who-scope">All departments</div>
+        </div>
+      </div>
+      <a href="/admin/survey/logout" class="block text-center btn btn-rose w-full">Sign out</a>
+    </div>
+  </aside>
+
+  <!-- ══ MAIN ═════════════════════════════════════════════════════════════ -->
+  <div id="shell" class="md:ml-60 flex-1 flex flex-col min-h-screen">
+
+    <header class="admin-bar sticky top-0 z-40 px-4 md:px-6 py-3 flex flex-wrap items-center gap-3">
+      <button onclick="toggleSidebar()" class="md:hidden btn btn-soft">&#9776;</button>
+      <button id="sidebar-open" onclick="openSidebar()" class="btn btn-soft" title="Show the menu">&#9776;</button>
+      <div>
+        <div class="flex items-center gap-2">
+          <h1 id="page-title" class="text-sm font-bold text-slate-900">Overview</h1>
+          <!-- Whether students can reach the portal at all — worth seeing on
+               every page, not just Settings. -->
+          <span id="ov-flag" class="badge b-gray">…</span>
+        </div>
+        <p id="page-sub" class="text-xs text-slate-500">Cohort progress at a glance</p>
       </div>
 
       <!-- Global student lookup — searches everyone, ignoring the filters. -->
-      <div class="search-wrap" id="lookup-wrap">
+      <div class="search-wrap relative flex-1 min-w-[220px] max-w-md mx-auto" id="lookup-wrap">
         <svg class="search-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg>
         <input id="lookup" class="field w-full" autocomplete="off"
                placeholder="Find any student by name or email…"
                oninput="lookupTyped()" onkeydown="lookupKey(event)" onfocus="lookupTyped()">
         <span class="search-kbd">⌘K</span>
         <div id="lookup-results"
-             class="hidden absolute left-0 right-0 top-full mt-1 bg-white border rounded-xl shadow-lg z-50 overflow-hidden max-h-96 overflow-y-auto"></div>
+             class="hidden absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg z-50 overflow-hidden max-h-96 overflow-y-auto"></div>
       </div>
 
       <select id="level-filter" onchange="applyFilters()" class="field w-auto" title="Academic level">
@@ -87,51 +124,12 @@
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 11l5 5 5-5"/><path d="M4 20h16"/></svg>
         Export
       </button>
-      <a href="/admin/survey/logout" class="btn btn-soft">Sign out</a>
-    </div>
-
-    <!-- Every section, as a link to its own page. -->
-    <nav id="nav" class="bar-nav"></nav>
-  </header>
-
-  <div id="shell" class="flex-1 flex flex-col min-h-screen">
-
-    <div class="page-head">
-      <div class="flex items-center gap-2">
-        <h1 id="page-title">{{ page.title }}</h1>
-        <!-- Whether students can reach the portal at all — worth seeing on
-             every page, not just Settings. -->
-        <span id="ov-flag" class="badge b-gray">…</span>
-      </div>
-      <p id="page-sub">{{ page.sub }}</p>
-    </div>
+    </header>
 
     <main class="p-4 md:p-6 flex-1 space-y-5">
 
-      <!-- Shown only when the students request fails, so an empty dashboard is
-           never mistaken for an empty cohort. -->
-      <div id="load-error" class="hidden"></div>
-
       <!-- ── OVERVIEW ─────────────────────────────────────────────────── -->
-      {% if section == 'overview' %}
       <div class="panel on" id="p-overview">
-
-        <!-- Where the cohort stands, in a sentence, with the two things an
-             admin most often came here to do. -->
-        <section class="hero">
-          <div>
-            <h2 class="hero-title" id="hero-title">Welcome back</h2>
-            <p class="hero-sub" id="hero-sub">Loading the cohort…</p>
-            <div class="hero-actions">
-              <button class="btn btn-ink" onclick="show('emails')">Send reminders</button>
-              <button class="btn btn-cream" onclick="show('cohort')">Outcome &amp; impact</button>
-            </div>
-          </div>
-          <div class="hero-gauge">
-            <div class="hero-ring" id="hero-ring" style="--pct:0"><b id="hero-pct">—</b></div>
-            <div class="hero-gauge-label">of the cohort has finished both surveys</div>
-          </div>
-        </section>
 
         <!-- Hero figures. Each carries the last-7-days movement and a
              sparkline of the fortnight behind it, so a number is never shown
@@ -142,14 +140,9 @@
               <span class="kpi-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 20v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 20v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
               <span class="kpi-label">Registered</span>
             </div>
-            <div class="kpi-caption">Students on the portal</div>
-            <div class="kpi-body">
-              <div class="kpi-figure">
-                <div class="kpi-row"><b class="kpi-val" id="ov-total">—</b><span class="kpi-delta flat" id="ov-total-delta">—</span></div>
-              </div>
-              <div class="kpi-spark" id="ov-total-spark"></div>
-            </div>
-            <div class="kpi-foot" id="ov-total-foot"></div>
+            <div class="kpi-row"><b class="kpi-val" id="ov-total">—</b><span class="kpi-delta flat" id="ov-total-delta">—</span></div>
+            <div class="kpi-spark" id="ov-total-spark"></div>
+            <div class="kpi-foot" id="ov-total-foot">Students on the portal</div>
           </article>
 
           <article class="kpi">
@@ -157,14 +150,9 @@
               <span class="kpi-ico kpi-ico-blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 15l2 2 4-4"/></svg></span>
               <span class="kpi-label">Baseline done</span>
             </div>
-            <div class="kpi-caption">Outcome Survey 1 submitted</div>
-            <div class="kpi-body">
-              <div class="kpi-figure">
-                <div class="kpi-row"><b class="kpi-val" id="ov-pre">—</b><span class="kpi-delta flat" id="ov-pre-delta">—</span></div>
-              </div>
-              <div class="kpi-spark" id="ov-pre-spark"></div>
-            </div>
-            <div class="kpi-foot" id="ov-pre-foot"></div>
+            <div class="kpi-row"><b class="kpi-val" id="ov-pre">—</b><span class="kpi-delta flat" id="ov-pre-delta">—</span></div>
+            <div class="kpi-spark" id="ov-pre-spark"></div>
+            <div class="kpi-foot" id="ov-pre-foot">Outcome Survey 1 submitted</div>
           </article>
 
           <article class="kpi">
@@ -172,29 +160,19 @@
               <span class="kpi-ico kpi-ico-green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg></span>
               <span class="kpi-label">Post survey done</span>
             </div>
-            <div class="kpi-caption">Both surveys complete</div>
-            <div class="kpi-body">
-              <div class="kpi-figure">
-                <div class="kpi-row"><b class="kpi-val" id="ov-post">—</b><span class="kpi-delta flat" id="ov-post-delta">—</span></div>
-              </div>
-              <div class="kpi-spark" id="ov-post-spark"></div>
-            </div>
-            <div class="kpi-foot" id="ov-post-foot"></div>
+            <div class="kpi-row"><b class="kpi-val" id="ov-post">—</b><span class="kpi-delta flat" id="ov-post-delta">—</span></div>
+            <div class="kpi-spark" id="ov-post-spark"></div>
+            <div class="kpi-foot" id="ov-post-foot">Both surveys complete</div>
           </article>
 
-          <article class="kpi kpi-accent">
+          <article class="kpi">
             <div class="kpi-top">
               <span class="kpi-ico kpi-ico-gold"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg></span>
               <span class="kpi-label">Completion rate</span>
             </div>
-            <div class="kpi-caption">Share of the cohort finished</div>
-            <div class="kpi-body">
-              <div class="kpi-figure">
-                <div class="kpi-row"><b class="kpi-val" id="ov-rate">—</b><span class="kpi-delta flat" id="ov-rate-delta">—</span></div>
-              </div>
-              <div class="kpi-spark" id="ov-rate-spark"></div>
-            </div>
-            <div class="kpi-foot" id="ov-rate-foot"></div>
+            <div class="kpi-row"><b class="kpi-val" id="ov-rate">—</b><span class="kpi-delta flat" id="ov-rate-delta">—</span></div>
+            <div class="kpi-spark" id="ov-rate-spark"></div>
+            <div class="kpi-foot" id="ov-rate-foot">Share of the cohort finished</div>
           </article>
         </div>
 
@@ -242,7 +220,7 @@
               </div>
             </div>
             <div id="dept-rank"></div>
-            <button onclick="show('depts')" class="btn btn-soft w-full">See every department</button>
+            <button onclick="show('p-depts')" class="btn btn-soft w-full">See every department</button>
           </div>
 
           <div class="card space-y-3">
@@ -254,30 +232,12 @@
           </div>
         </div>
 
-        <!-- The one link that goes out to students and parents. -->
-        <div class="card space-y-3 mt-5">
-          <div class="panel-head">
-            <div>
-              <div class="h-card">Share the impact page</div>
-              <div class="sub">
-                A public page counting only the students who finished both surveys — before and
-                after scores, every department as a bar chart, orientation and family background,
-                and everyone who saw it through by name. No login needed.
-              </div>
-            </div>
-            <div class="panel-actions">
-              <a id="vibe-open" href="#" target="_blank" rel="noopener" class="btn btn-primary">Open</a>
-            </div>
-          </div>
-          <div id="vibe-links" class="space-y-2"></div>
-        </div>
-
         <!-- Cohort renders, unchanged in substance. -->
         <div class="card space-y-3 mt-5">
           <div class="panel-head">
             <div><div class="h-card">Cohort charts</div><div class="sub">Quadrant alignment, score spread and understanding change.</div></div>
             <div class="panel-actions">
-              <button onclick="show('cohort')" class="btn btn-soft">Outcome &amp; impact</button>
+              <button onclick="show('p-cohort')" class="btn btn-soft">Outcome &amp; impact</button>
               <a id="ov-ppt" href="/admin/survey/cohort-ppt" class="btn btn-dark">Download PPT</a>
               <button onclick="copyCohortShareLink()" class="btn btn-soft">Copy share link</button>
               <button onclick="refreshCharts()" class="btn btn-soft">Refresh</button>
@@ -290,18 +250,16 @@
           </div>
         </div>
       </div>
-      {% endif %}
 
       <!-- ── STUDENTS ─────────────────────────────────────────────────── -->
-      {% if section == 'students' %}
-      <div class="panel on" id="p-students">
+      <div class="panel" id="p-students">
         <div class="card space-y-4">
           <div class="flex flex-col lg:flex-row lg:items-center gap-3">
             <div class="flex flex-wrap gap-2 mr-auto" id="student-views">
-              <button class="tabbtn on" data-view="status"      onclick="setStudentView('status')">Status</button>
-              <button class="tabbtn"    data-view="duration"    onclick="setStudentView('duration')">Time taken</button>
-              <button class="tabbtn"    data-view="timeline"    onclick="setStudentView('timeline')">Timeline</button>
-              <button class="tabbtn"    data-view="orientation" onclick="setStudentView('orientation')">Orientation</button>
+              <button class="tabbtn on" data-view="status"      onclick="setStudentView('status')">👥 Status</button>
+              <button class="tabbtn"    data-view="duration"    onclick="setStudentView('duration')">⏱️ Time taken</button>
+              <button class="tabbtn"    data-view="timeline"    onclick="setStudentView('timeline')">⏳ Timeline</button>
+              <button class="tabbtn"    data-view="orientation" onclick="setStudentView('orientation')">🎓 Orientation</button>
             </div>
             <select id="status-filter" onchange="renderStudents()" class="field w-auto">
               <option value="">Any status</option>
@@ -314,29 +272,26 @@
               <option value="completed_after">Completed after mail</option>
               <option value="failed">Email failed</option>
             </select>
-            <input id="student-search" oninput="renderStudents()" class="field w-full lg:w-64" placeholder="Search name, email, department…">
-            <span id="student-count" class="result-count"></span>
+            <input id="student-search" oninput="renderStudents()" class="field w-full lg:w-64" placeholder="🔍 Search name, email, department…">
           </div>
 
           <div id="student-summary" class="grid grid-cols-2 sm:grid-cols-4 gap-3"></div>
           <div id="student-table"></div>
         </div>
       </div>
-      {% endif %}
 
       <!-- ── EMAILS ───────────────────────────────────────────────────── -->
-      {% if section == 'emails' %}
-      <div class="panel on" id="p-emails">
+      <div class="panel" id="p-emails">
         <div class="space-y-5">
           <div class="card space-y-4">
-            <div><div class="h-card">Send reminder emails</div>
+            <div><div class="h-card">🔔 Send reminder emails</div>
               <div class="sub">Pick who should get the mail. The department and level filters in the top bar decide the recipients.</div></div>
 
             <div class="flex flex-wrap gap-2" id="cohort-tabs">
-              <button class="tabbtn on" data-cohort="post-pending"     onclick="setCohort('post-pending')">Post survey pending</button>
-              <button class="tabbtn"    data-cohort="pre-pending"      onclick="setCohort('pre-pending')">Baseline pending</button>
-              <button class="tabbtn"    data-cohort="sent-not-clicked" onclick="setCohort('sent-not-clicked')">Sent, not clicked</button>
-              <button class="tabbtn"    data-cohort="all-pending"      onclick="setCohort('all-pending')">Everyone unfinished</button>
+              <button class="tabbtn on" data-cohort="post-pending"     onclick="setCohort('post-pending')">📝 Post survey pending</button>
+              <button class="tabbtn"    data-cohort="pre-pending"      onclick="setCohort('pre-pending')">📊 Baseline pending</button>
+              <button class="tabbtn"    data-cohort="sent-not-clicked" onclick="setCohort('sent-not-clicked')">⏳ Sent, not clicked</button>
+              <button class="tabbtn"    data-cohort="all-pending"      onclick="setCohort('all-pending')">👥 Everyone unfinished</button>
             </div>
 
             <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -344,14 +299,14 @@
                 <div class="text-xs font-bold text-amber-900">Recipients</div>
                 <div id="target-count" class="text-sm font-extrabold text-amber-700 mt-0.5">Counting…</div>
               </div>
-              <button id="btn-send" onclick="sendReminders(this)" class="btn btn-green">Send reminders</button>
+              <button id="btn-send" onclick="sendReminders(this)" class="btn btn-green">📧 Send reminders</button>
             </div>
 
             <div id="send-status" class="hidden"></div>
           </div>
 
           <div class="card space-y-4">
-            <div><div class="h-card">Write a mail yourself</div>
+            <div><div class="h-card">✍️ Write a mail yourself</div>
               <div class="sub">
                 Pick a department and we'll draft the subject and body around that department's post-survey link.
                 Edit it, then open it straight in Gmail — the sending is yours, so nothing goes out until you press
@@ -368,8 +323,8 @@
               <div>
                 <label class="lbl">Which link to include</label>
                 <select id="draft-kind" onchange="buildDraft()" class="field">
-                  <option value="post">Impact — post survey</option>
-                  <option value="pre">Outcome Survey 1 — baseline</option>
+                  <option value="post">📊 Impact — post survey</option>
+                  <option value="pre">📝 Outcome Survey 1 — baseline</option>
                 </select>
               </div>
               <div>
@@ -393,8 +348,8 @@
             </div>
 
             <div class="flex flex-wrap items-center gap-2">
-              <a id="draft-gmail" href="#" target="_blank" rel="noopener" class="btn btn-primary">Open in Gmail</a>
-              <a id="draft-mailto" href="#" class="btn btn-soft">Open in mail app</a>
+              <a id="draft-gmail" href="#" target="_blank" rel="noopener" class="btn btn-primary">✉️ Open in Gmail</a>
+              <a id="draft-mailto" href="#" class="btn btn-soft">📮 Open in mail app</a>
               <button class="btn btn-soft" onclick="copy($('draft-body').value)">Copy body</button>
               <button id="draft-copy-recipients" class="btn btn-green" onclick="copyRecipients()">
                 Copy recipients
@@ -405,7 +360,7 @@
           </div>
 
           <div class="card space-y-4">
-            <div><div class="h-card">Delivery tracking</div>
+            <div><div class="h-card">📧 Delivery tracking</div>
               <div class="sub">Department-wise reminder delivery, clicks, completions and unfinished drafts.</div></div>
 
             <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
@@ -421,14 +376,12 @@
           </div>
         </div>
       </div>
-      {% endif %}
 
       <!-- ── LINKS ────────────────────────────────────────────────────── -->
-      {% if section == 'links' %}
-      <div class="panel on" id="p-links">
+      <div class="panel" id="p-links">
         <div class="space-y-5">
           <div class="card space-y-4">
-            <div><div class="h-card">Overall department directory — one link for everything</div>
+            <div><div class="h-card">🏢 Overall department directory — one link for everything</div>
               <div class="sub">
                 A single shareable page listing every department with registered, baseline filled, post filled and
                 post pending counts, how the reminder mails landed (sent / clicked / filled after), and average
@@ -446,7 +399,7 @@
           </div>
 
           <div class="card space-y-4">
-            <div><div class="h-card">Department survey links</div>
+            <div><div class="h-card">🔗 Department survey links</div>
               <div class="sub">
                 Every department gets two links to hand out.
                 <b class="text-blue-700">Outcome Survey 1 — Baseline</b> opens the registration page with that
@@ -458,7 +411,7 @@
 
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
               <div class="bg-slate-900 text-white rounded-xl p-4 space-y-2">
-                <div class="text-xs font-bold text-sky-400">Outcome Survey 1 — any department</div>
+                <div class="text-xs font-bold text-sky-400">📝 Outcome Survey 1 — any department</div>
                 <div class="flex items-center gap-2">
                   <input id="all-pre-link" readonly class="field link flex-1 bg-slate-800 border-slate-700 text-slate-100">
                   <button class="btn btn-soft" onclick="copy(document.getElementById('all-pre-link').value)">Copy</button>
@@ -467,7 +420,7 @@
                 <div class="text-[11px] text-slate-400">The normal registration page — the student picks their own department.</div>
               </div>
               <div class="bg-slate-900 text-white rounded-xl p-4 space-y-2">
-                <div class="text-xs font-bold text-amber-400">Impact Post Survey — any department</div>
+                <div class="text-xs font-bold text-amber-400">📊 Impact Post Survey — any department</div>
                 <div class="flex items-center gap-2">
                   <input id="all-post-link" readonly class="field link flex-1 bg-slate-800 border-slate-700 text-slate-100">
                   <button class="btn btn-soft" onclick="copy(document.getElementById('all-post-link').value)">Copy</button>
@@ -478,57 +431,55 @@
             </div>
 
             <input id="link-search" oninput="renderPostLinks()" class="field"
-                   placeholder="Filter departments…">
+                   placeholder="🔍 Filter departments…">
             <div id="post-links-table"></div>
           </div>
 
           <div class="card space-y-4">
-            <div><div class="h-card">Public analysis links (all departments combined)</div>
+            <div><div class="h-card">📈 Public analysis links (all departments combined)</div>
               <div class="sub">Read-only report pages that can be shared outside the admin portal.</div></div>
 
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <div class="border border-slate-200 rounded-xl p-4 space-y-2">
-                <div class="text-xs font-bold text-teal-700">Baseline (pre) — overall report</div>
+                <div class="text-xs font-bold text-teal-700">📝 Baseline (pre) — overall report</div>
                 <div class="flex items-center gap-2">
                   <input id="overall-pre-link" readonly class="field link flex-1">
                   <button class="btn btn-soft" onclick="copy(document.getElementById('overall-pre-link').value)">Copy</button>
                 </div>
                 <div class="flex flex-wrap gap-2">
-                  <a id="overall-pre-view"  href="#" target="_blank" class="btn btn-primary">View</a>
-                  <a id="overall-pre-excel" href="#" class="btn btn-green">Excel</a>
-                  <a id="overall-pre-ppt"   href="#" class="btn btn-soft">PPT</a>
+                  <a id="overall-pre-view"  href="#" target="_blank" class="btn btn-primary">📈 View</a>
+                  <a id="overall-pre-excel" href="#" class="btn btn-green">📥 Excel</a>
+                  <a id="overall-pre-ppt"   href="#" class="btn btn-soft">📊 PPT</a>
                 </div>
               </div>
               <div class="border border-slate-200 rounded-xl p-4 space-y-2">
-                <div class="text-xs font-bold text-emerald-700">Post-workshop — overall report</div>
+                <div class="text-xs font-bold text-emerald-700">📊 Post-workshop — overall report</div>
                 <div class="flex items-center gap-2">
                   <input id="overall-post-link" readonly class="field link flex-1">
                   <button class="btn btn-soft" onclick="copy(document.getElementById('overall-post-link').value)">Copy</button>
                 </div>
                 <div class="flex flex-wrap gap-2">
-                  <a id="overall-post-view"  href="#" target="_blank" class="btn btn-primary">View</a>
-                  <a id="overall-post-excel" href="#" class="btn btn-green">Excel</a>
-                  <a id="overall-post-ppt"   href="#" class="btn btn-soft">PPT</a>
+                  <a id="overall-post-view"  href="#" target="_blank" class="btn btn-primary">📊 View</a>
+                  <a id="overall-post-excel" href="#" class="btn btn-green">📥 Excel</a>
+                  <a id="overall-post-ppt"   href="#" class="btn btn-soft">📊 PPT</a>
                 </div>
               </div>
             </div>
           </div>
 
           <div class="card space-y-3">
-            <div><div class="h-card">Student entry points</div><div class="sub">The links students use to begin.</div></div>
+            <div><div class="h-card">🎓 Student entry points</div><div class="sub">The links students use to begin.</div></div>
             <div id="entry-links" class="space-y-2"></div>
           </div>
         </div>
       </div>
-      {% endif %}
 
       <!-- ── DEPARTMENTS ──────────────────────────────────────────────── -->
-      {% if section == 'depts' %}
-      <div class="panel on" id="p-depts">
+      <div class="panel" id="p-depts">
         <div class="space-y-5">
           <div class="card">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-              <div><div class="h-card">Department scores</div>
+              <div><div class="h-card">🏢 Department scores</div>
                 <div class="sub">AI literacy and readiness, averaged per department.</div></div>
               <div class="flex gap-1 bg-slate-100 p-1 rounded-lg">
                 <button id="rank-pre"  class="tabbtn on" onclick="setRankType('pre')">Baseline</button>
@@ -548,22 +499,22 @@
 
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-4">
               <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-3">
-                <div class="text-[11px] font-extrabold text-emerald-800 uppercase">Highest literacy</div>
+                <div class="text-[11px] font-extrabold text-emerald-800 uppercase">🏆 Highest literacy</div>
                 <div id="rk-hi-lit" class="text-sm font-extrabold text-emerald-950 mt-1">…</div>
                 <div id="rk-hi-lit-s" class="text-xs font-bold text-emerald-700">—</div>
               </div>
               <div class="bg-rose-50 border border-rose-200 rounded-xl p-3">
-                <div class="text-[11px] font-extrabold text-rose-800 uppercase">Lowest literacy</div>
+                <div class="text-[11px] font-extrabold text-rose-800 uppercase">⚠️ Lowest literacy</div>
                 <div id="rk-lo-lit" class="text-sm font-extrabold text-rose-950 mt-1">…</div>
                 <div id="rk-lo-lit-s" class="text-xs font-bold text-rose-700">—</div>
               </div>
               <div class="bg-teal-50 border border-teal-200 rounded-xl p-3">
-                <div class="text-[11px] font-extrabold text-teal-800 uppercase">Highest readiness</div>
+                <div class="text-[11px] font-extrabold text-teal-800 uppercase">🚀 Highest readiness</div>
                 <div id="rk-hi-read" class="text-sm font-extrabold text-teal-950 mt-1">…</div>
                 <div id="rk-hi-read-s" class="text-xs font-bold text-teal-700">—</div>
               </div>
               <div class="bg-amber-50 border border-amber-200 rounded-xl p-3">
-                <div class="text-[11px] font-extrabold text-amber-800 uppercase">Lowest readiness</div>
+                <div class="text-[11px] font-extrabold text-amber-800 uppercase">📉 Lowest readiness</div>
                 <div id="rk-lo-read" class="text-sm font-extrabold text-amber-950 mt-1">…</div>
                 <div id="rk-lo-read-s" class="text-xs font-bold text-amber-700">—</div>
               </div>
@@ -571,21 +522,19 @@
           </div>
 
           <div class="card">
-            <div class="h-card mb-3">Literacy &amp; readiness by department</div>
+            <div class="h-card mb-3">📊 Literacy &amp; readiness by department</div>
             <div class="relative h-80"><canvas id="dept-bar-chart"></canvas></div>
           </div>
 
           <div class="card space-y-3">
-            <div class="h-card">All departments</div>
+            <div class="h-card">📋 All departments</div>
             <div id="dept-table"></div>
           </div>
         </div>
       </div>
-      {% endif %}
 
       <!-- ── COHORT: OUTCOME & IMPACT ─────────────────────────────────── -->
-      {% if section == 'cohort' %}
-      <div class="panel on" id="p-cohort">
+      <div class="panel" id="p-cohort">
         <div class="space-y-5">
           <div class="card space-y-4">
             <div class="flex flex-col lg:flex-row lg:items-center gap-3">
@@ -615,19 +564,32 @@
             </div>
             <div id="cohort-share-links" class="space-y-2"></div>
           </div>
+
+          <div class="card space-y-3">
+            <div class="panel-head">
+              <div>
+                <div class="h-card">🎓 Share the impact page</div>
+                <div class="sub">The page students and parents are sent: only the students who
+                  finished both surveys, where each of them reached, the Deeksharambh week beside
+                  the AI figures, and family background. No login needed.</div>
+              </div>
+              <div class="panel-actions">
+                <a id="vibe-open" href="#" target="_blank" rel="noopener" class="btn btn-primary">Open</a>
+              </div>
+            </div>
+            <div id="vibe-links" class="space-y-2"></div>
+          </div>
         </div>
       </div>
-      {% endif %}
 
       <!-- ── ORIENTATION ──────────────────────────────────────────────── -->
-      {% if section == 'orientation' %}
-      <div class="panel on" id="p-orientation">
+      <div class="panel" id="p-orientation">
         <div class="space-y-5">
 
           <!-- STEP 1 — pick a campus. Everything else opens from here. -->
           <div id="ori-picker" class="space-y-5">
             <div class="card">
-              <div class="h-card">Deeksharambh orientation report</div>
+              <div class="h-card">🎓 Deeksharambh orientation report</div>
               <div class="sub">Open a campus to read its orientation analysis, see exactly who filled the form, and mail them.
                 The department and level filters in the top bar apply here too.</div>
             </div>
@@ -637,7 +599,7 @@
 
             <div class="card space-y-3">
               <div>
-                <div class="h-card">Share the report</div>
+                <div class="h-card">🔗 Share the report</div>
                 <div class="sub">Anyone with one of these links can read that campus's full analysis and download the
                   deck — no admin login. Only the aggregate is shown, never a named student's answers.</div>
               </div>
@@ -651,17 +613,17 @@
               <div class="flex flex-col lg:flex-row lg:items-center gap-3">
                 <button onclick="closeOriCampus()" class="btn btn-soft">← All campuses</button>
                 <div class="mr-auto">
-                  <div class="h-card"><span id="ori-campus-name">—</span></div>
+                  <div class="h-card">📍 <span id="ori-campus-name">—</span></div>
                   <div class="sub" id="ori-campus-sub">—</div>
                 </div>
                 <div class="flex flex-wrap gap-2" id="ori-views">
-                  <button class="tabbtn on" data-view="analysis"    onclick="setOriView('analysis')">Result analysis</button>
-                  <button class="tabbtn"    data-view="departments" onclick="setOriView('departments')">Departments</button>
-                  <button class="tabbtn"    data-view="filled"      onclick="setOriView('filled')">Filled</button>
-                  <button class="tabbtn"    data-view="email"       onclick="setOriView('email')">Email</button>
+                  <button class="tabbtn on" data-view="analysis"    onclick="setOriView('analysis')">📊 Result analysis</button>
+                  <button class="tabbtn"    data-view="departments" onclick="setOriView('departments')">🏢 Departments</button>
+                  <button class="tabbtn"    data-view="filled"      onclick="setOriView('filled')">✅ Filled</button>
+                  <button class="tabbtn"    data-view="email"       onclick="setOriView('email')">📧 Email</button>
                 </div>
-                <a id="ori-ppt" href="#" class="btn btn-dark">Download PPT</a>
-                <button onclick="copyOriShareLink(this)" class="btn btn-soft">Copy share link</button>
+                <a id="ori-ppt" href="#" class="btn btn-dark">⬇️ Download PPT</a>
+                <button onclick="copyOriShareLink(this)" class="btn btn-soft">🔗 Copy share link</button>
               </div>
             </div>
 
@@ -675,7 +637,7 @@
               <div class="card space-y-3">
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div>
-                    <div class="h-card">Vibe, department by department</div>
+                    <div class="h-card">🏢 Vibe, department by department</div>
                     <div class="sub">Ranked by how the week actually felt. Click a department to read its own full analysis.</div>
                   </div>
                   <select id="ori-dept-metric" onchange="renderOriDepartments()" class="field w-auto">
@@ -689,8 +651,21 @@
                 <div id="ori-dept-bars" class="ori-depts"></div>
               </div>
               <div class="card space-y-3">
-                <div class="h-card">Department scoreboard</div>
+                <div class="h-card">📋 Department scoreboard</div>
                 <div id="ori-dept-scoreboard"></div>
+              </div>
+              <div class="card space-y-3">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <div class="h-card">🔗 One share link per department</div>
+                    <div class="sub">Hand a department its own Deeksharambh report — its vibe, its counts and every
+                      answer its own students gave, against the campus average. Opens without an admin login, names
+                      nobody, and cannot be edited to open another department's.</div>
+                  </div>
+                  <input id="ori-dept-link-search" oninput="renderOriDeptShareLinks()"
+                         class="field w-full sm:w-56" placeholder="🔍 Filter departments…">
+                </div>
+                <div id="ori-dept-share-links" class="space-y-2"></div>
               </div>
             </div>
 
@@ -699,14 +674,14 @@
               <div class="card space-y-4">
                 <div class="flex flex-col lg:flex-row lg:items-center gap-3">
                   <div class="mr-auto">
-                    <div class="h-card">Students who filled the orientation form</div>
+                    <div class="h-card">✅ Students who filled the orientation form</div>
                     <div class="sub">Click a row to open everything held about that student.</div>
                   </div>
                   <div class="flex flex-wrap gap-2" id="ori-groups">
-                    <button class="tabbtn on" data-group="filled"  onclick="setOriGroup('filled')">Filled</button>
-                    <button class="tabbtn"    data-group="pending" onclick="setOriGroup('pending')">Baseline done, orientation pending</button>
+                    <button class="tabbtn on" data-group="filled"  onclick="setOriGroup('filled')">✅ Filled</button>
+                    <button class="tabbtn"    data-group="pending" onclick="setOriGroup('pending')">⏳ Baseline done, orientation pending</button>
                   </div>
-                  <input id="ori-search" oninput="renderOriStudents()" class="field w-full lg:w-56" placeholder="Search name, email, department…">
+                  <input id="ori-search" oninput="renderOriStudents()" class="field w-full lg:w-56" placeholder="🔍 Search name, email, department…">
                 </div>
                 <div id="ori-student-table"></div>
               </div>
@@ -716,14 +691,14 @@
             <div id="ori-view-email" class="hidden space-y-5">
               <div class="card space-y-4">
                 <div>
-                  <div class="h-card">Mail this orientation cohort</div>
+                  <div class="h-card">📧 Mail this orientation cohort</div>
                   <div class="sub">Every student gets their own copy, addressed by name, with their personal survey link.
                     The mail goes out from the portal's mailbox — not from yours.</div>
                 </div>
 
                 <div class="flex flex-wrap gap-2" id="ori-mail-groups">
-                  <button class="tabbtn on" data-group="filled"  onclick="setOriMailGroup('filled')">Filled the orientation</button>
-                  <button class="tabbtn"    data-group="pending" onclick="setOriMailGroup('pending')">Baseline done, orientation pending</button>
+                  <button class="tabbtn on" data-group="filled"  onclick="setOriMailGroup('filled')">✅ Filled the orientation</button>
+                  <button class="tabbtn"    data-group="pending" onclick="setOriMailGroup('pending')">⏳ Baseline done, orientation pending</button>
                 </div>
 
                 <div class="bg-amber-50 border border-amber-200 rounded-xl p-4">
@@ -751,7 +726,7 @@
                 </div>
 
                 <div class="flex justify-end">
-                  <button id="ori-mail-send" onclick="sendOriMail(this)" class="btn btn-green">Send to this cohort</button>
+                  <button id="ori-mail-send" onclick="sendOriMail(this)" class="btn btn-green">📧 Send to this cohort</button>
                 </div>
                 <div id="ori-mail-status" class="hidden"></div>
               </div>
@@ -760,14 +735,12 @@
 
         </div>
       </div>
-      {% endif %}
 
       <!-- ── PARENTS ──────────────────────────────────────────────────── -->
-      {% if section == 'parents' %}
-      <div class="panel on" id="p-parents">
+      <div class="panel" id="p-parents">
         <div class="space-y-5">
           <div class="card">
-            <div class="h-card">‍‍Parental background</div>
+            <div class="h-card">👨‍👩‍👦 Parental background</div>
             <div class="sub">From the post survey. Follows the department and level filters above.</div>
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
               <div class="stat border-l-slate-800"><b id="bg-total">—</b><s>Respondents</s></div>
@@ -798,22 +771,20 @@
           </div>
         </div>
       </div>
-      {% endif %}
 
       <!-- ── CALENDAR ─────────────────────────────────────────────────── -->
-      {% if section == 'calendar' %}
-      <div class="panel on" id="p-calendar">
+      <div class="panel" id="p-calendar">
         <div class="space-y-5">
           <div class="card space-y-4">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
-              <div><div class="h-card">Submission calendar</div>
+              <div><div class="h-card">🗓️ Submission calendar</div>
                 <div class="sub">Click any date to see who filled the survey that day, department by department.</div></div>
               <div class="flex items-center gap-2">
                 <button onclick="changeMonth(-1)" class="btn btn-soft">◀</button>
                 <span id="cal-title" class="text-sm font-extrabold text-slate-900 px-1">—</span>
                 <button onclick="changeMonth(1)" class="btn btn-soft">▶</button>
                 <button onclick="calToday()" class="btn btn-primary">Today</button>
-                <button onclick="loadCalendar()" class="btn btn-soft inline-flex items-center gap-1.5" title="Refresh" aria-label="Refresh"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v6h-6"/></svg> Refresh</button>
+                <button onclick="loadCalendar()" class="btn btn-soft">🔄</button>
               </div>
             </div>
             <div class="grid grid-cols-7 gap-1 text-center text-[11px] font-bold text-slate-500 uppercase bg-slate-50 py-2 rounded-lg border border-slate-200">
@@ -831,17 +802,17 @@
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div class="card"><div class="text-[11px] font-extrabold text-teal-700 uppercase">First department to start</div>
+            <div class="card"><div class="text-[11px] font-extrabold text-teal-700 uppercase">🚀 First department to start</div>
               <div id="hl-start" class="text-sm font-extrabold mt-1">…</div><div id="hl-start-d" class="text-xs text-slate-500">—</div></div>
-            <div class="card"><div class="text-[11px] font-extrabold text-emerald-700 uppercase">Biggest single day</div>
+            <div class="card"><div class="text-[11px] font-extrabold text-emerald-700 uppercase">🏆 Biggest single day</div>
               <div id="hl-max" class="text-sm font-extrabold mt-1">…</div><div id="hl-max-d" class="text-xs text-slate-500">—</div></div>
-            <div class="card"><div class="text-[11px] font-extrabold text-rose-700 uppercase">Quietest single day</div>
+            <div class="card"><div class="text-[11px] font-extrabold text-rose-700 uppercase">📉 Quietest single day</div>
               <div id="hl-min" class="text-sm font-extrabold mt-1">…</div><div id="hl-min-d" class="text-xs text-slate-500">—</div></div>
           </div>
 
           <div class="card space-y-3">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div class="h-card">Daily submissions</div>
+              <div class="h-card">📈 Daily submissions</div>
               <select id="cal-dept" onchange="renderCalChart()" class="field w-auto max-w-xs">
                 <option value="Overall">All departments</option>
               </select>
@@ -849,24 +820,22 @@
             <div class="relative h-72"><canvas id="cal-chart"></canvas></div>
           </div>
 
-          <div class="card space-y-3"><div class="h-card">Department calendar summary</div><div id="cal-dept-table"></div></div>
-          <div class="card space-y-3"><div class="h-card">Day-by-day log</div><div id="cal-daily-table"></div></div>
+          <div class="card space-y-3"><div class="h-card">🏢 Department calendar summary</div><div id="cal-dept-table"></div></div>
+          <div class="card space-y-3"><div class="h-card">📅 Day-by-day log</div><div id="cal-daily-table"></div></div>
         </div>
       </div>
-      {% endif %}
 
       <!-- ── SETTINGS ─────────────────────────────────────────────────── -->
-      {% if section == 'settings' %}
-      <div class="panel on" id="p-settings">
+      <div class="panel" id="p-settings">
         <div class="max-w-2xl space-y-5">
           <div class="card space-y-1">
-            <div class="h-card">Portal settings</div>
+            <div class="h-card">⚙️ Portal settings</div>
             <div class="sub">Toggles save the moment you change them.</div>
             <div id="toggles" class="divide-y divide-slate-100 pt-2"></div>
           </div>
 
           <div class="card space-y-4">
-            <div><div class="h-card">Timing</div><div class="sub">How long students wait, and how often we chase them.</div></div>
+            <div><div class="h-card">⏳ Timing</div><div class="sub">How long students wait, and how often we chase them.</div></div>
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <label class="lbl">Post survey opens after (days)</label>
@@ -886,7 +855,6 @@
           </div>
         </div>
       </div>
-      {% endif %}
 
     </main>
   </div>
@@ -926,7 +894,7 @@
 <div id="export-modal" class="hidden fixed inset-0 bg-slate-950/60 z-50 flex items-center justify-center p-4">
   <div class="bg-white rounded-2xl max-w-md w-full p-5 space-y-4">
     <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-      <div class="h-card">Export cohort data</div>
+      <div class="h-card">📥 Export cohort data</div>
       <button onclick="closeExportModal()" class="btn btn-soft">✕</button>
     </div>
     <form method="GET" action="/admin/survey/export-cohort" class="space-y-4">
@@ -1069,48 +1037,31 @@ const navIcon = key =>
         stroke-linecap="round" stroke-linejoin="round">${ICONS[key] || ''}</svg>`;
 
 const PAGES = [
-  { id: 'overview',    icon: 'overview',    group: 'Monitor',  label: 'Overview' },
-  { id: 'students',    icon: 'students',    label: 'Students' },
-  { id: 'calendar',    icon: 'calendar',    label: 'Calendar' },
-  { id: 'emails',      icon: 'emails',      group: 'Outreach', label: 'Emails' },
-  { id: 'links',       icon: 'links',       label: 'Links' },
-  { id: 'depts',       icon: 'depts',       group: 'Analysis', label: 'Departments' },
-  { id: 'cohort',      icon: 'cohort',      label: 'Outcome & impact' },
-  { id: 'orientation', icon: 'orientation', label: 'Orientation' },
-  { id: 'parents',     icon: 'parents',     label: 'Parents' },
-  { id: 'settings',    icon: 'settings',    group: 'System',   label: 'Settings' },
+  { id: 'p-overview', icon: 'overview', group: 'Monitor', label: 'Overview',    title: 'Overview',            sub: 'Cohort progress at a glance' },
+  { id: 'p-students', icon: 'students', label: 'Students',    title: 'Students',            sub: 'Status, time taken, timeline and orientation replies', load: () => renderStudents() },
+  { id: 'p-calendar', icon: 'calendar', label: 'Calendar',    title: 'Calendar',            sub: 'When students filled the surveys', load: () => loadCalendar() },
+  { id: 'p-emails',   icon: 'emails', group: 'Outreach', label: 'Emails',      title: 'Emails',              sub: 'Send reminders, write your own mail, track delivery', load: () => { updateTargetCount(); initComposer(); loadEmailStats(); } },
+  { id: 'p-links',    icon: 'links',    label: 'Links',       title: 'Links',               sub: 'Department links for both surveys, plus shareable reports', load: () => loadLinks() },
+  { id: 'p-depts',    icon: 'depts', group: 'Analysis', label: 'Departments', title: 'Departments',         sub: 'Literacy and readiness averages per department', load: () => loadDepts() },
+  { id: 'p-cohort',   icon: 'cohort',   label: 'Outcome & impact', title: 'Outcome and impact', sub: 'Baseline, what changed after the workshop, and the journey between them', load: () => loadCohort() },
+  { id: 'p-orientation', icon: 'orientation', label: 'Orientation', title: 'Orientation report', sub: 'Campus-wise Deeksharambh analysis, who filled it, and mailing', load: () => loadOrientationPanel() },
+  { id: 'p-parents',  icon: 'parents',  label: 'Parents',     title: 'Parental background', sub: 'Occupations reported in the post survey', load: () => loadParents() },
+  { id: 'p-settings', icon: 'settings', group: 'System', label: 'Settings',    title: 'Settings',            sub: 'Gating, timing and automatic reminders' },
 ];
-
-// Which section this page is. Each one is served from its own URL, so the
-// browser's back button and a bookmark both work.
-const SECTION = {{ section | tojson }};
-
-/** What to load once the page is up — only this section's own data. */
-const LOADERS = {
-  students:    () => renderStudents(),
-  emails:      () => { updateTargetCount(); initComposer(); loadEmailStats(); },
-  links:       () => loadLinks(),
-  depts:       () => loadDepts(),
-  cohort:      () => loadCohort(),
-  orientation: () => loadOrientationPanel(),
-  parents:     () => loadParents(),
-  calendar:    () => loadCalendar(),
-};
 
 function buildNav() {
   $('nav').innerHTML = PAGES.map(p => `
-    <a href="/admin/survey/section/${p.id}" data-page="${p.id}"
-       class="nav-btn${p.id === SECTION ? ' on' : ''}">
+    ${p.group ? `<div class="nav-group">${e(p.group)}</div>` : ''}
+    <button data-page="${p.id}" onclick="show('${p.id}')"
+      class="nav-btn w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium">
       ${navIcon(p.icon)}<span>${e(p.label)}</span>
       <span class="nav-chip hidden" data-chip="${p.id}"></span>
-    </a>`).join('');
+    </button>`).join('');
+  markNav('p-overview');
 }
 
-/** Moving between sections is a page load now, not a panel swap. */
-function show(pageId) {
-  const id = pageId.replace(/^p-/, '');
-  if (id === SECTION) return;
-  location.href = '/admin/survey/section/' + id;
+function markNav(pageId) {
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.toggle('on', b.dataset.page === pageId));
 }
 
 /** Put a live count beside a nav row — used for students and pending mail. */
@@ -1119,6 +1070,36 @@ function navChip(pageId, value) {
   if (!chip) return;
   chip.textContent = value;
   chip.classList.toggle('hidden', !value);
+}
+
+function show(pageId) {
+  const page = PAGES.find(p => p.id === pageId);
+  document.querySelectorAll('.panel').forEach(p => p.classList.toggle('on', p.id === pageId));
+  markNav(pageId);
+  if (page) { $('page-title').textContent = page.title; $('page-sub').textContent = page.sub; }
+  if (window.innerWidth < 768) $('sidebar').classList.add('-translate-x-full');
+  if (page && page.load) page.load();
+}
+
+// The sidebar can be closed on any screen; the choice is remembered.
+function toggleSidebar() { $('sidebar').classList.toggle('-translate-x-full'); }
+
+function closeSidebar() {
+  document.body.classList.add('sidebar-closed');
+  $('sidebar').classList.add('-translate-x-full');
+  try { localStorage.setItem('hacri.sidebar', 'closed'); } catch (err) { /* private mode */ }
+}
+
+function openSidebar() {
+  document.body.classList.remove('sidebar-closed');
+  $('sidebar').classList.remove('-translate-x-full');
+  try { localStorage.setItem('hacri.sidebar', 'open'); } catch (err) { /* private mode */ }
+}
+
+function restoreSidebar() {
+  let saved = null;
+  try { saved = localStorage.getItem('hacri.sidebar'); } catch (err) { /* private mode */ }
+  if (saved === 'closed') closeSidebar();
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -1138,26 +1119,13 @@ function scopeLabel() {
 }
 
 async function loadUsers() {
-  const banner = $('load-error');
   try {
     users = await api('/admin/api/survey/users?' + filterParams());
-    if (banner) banner.classList.add('hidden');
     populateDepts();
     renderOverview();
     renderStudents();
     updateTargetCount();
-    if (SECTION === 'emails') { initComposer(); loadEmailStats(); }
-  } catch (err) {
-    // Swallowing this into the console left the dashboard showing dashes with
-    // no way to tell a failed request from an empty cohort. Say so on the page.
-    console.error(err);
-    if (!banner) return;
-    banner.classList.remove('hidden');
-    note(banner, 'err',
-      `<b>Could not load students.</b> ${e(err.message)} — the dashboard below is empty because ` +
-      `the request for <code>/admin/api/survey/users</code> did not come back. ` +
-      `<button class="btn btn-soft ml-2" onclick="loadUsers()">Try again</button>`);
-  }
+  } catch (err) { console.error(err); }
 }
 
 let deptsPopulated = false;
@@ -1174,10 +1142,12 @@ function populateDepts() {
 function applyFilters() {
   timeData = null;
   loadUsers();
-  if (SECTION === 'parents') loadParents();
-  if (SECTION === 'cohort') loadCohort();
-  if (SECTION === 'orientation') loadOrientationPanel();
-  if (SECTION === 'students' && studentView === 'duration') renderStudents();
+  const active = document.querySelector('.panel.on');
+  if (!active) return;
+  if (active.id === 'p-parents') loadParents();
+  if (active.id === 'p-cohort') loadCohort();
+  if (active.id === 'p-orientation') loadOrientationPanel();
+  if (active.id === 'p-students' && studentView === 'duration') renderStudents();
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -1188,8 +1158,7 @@ let trendChart = null;
 let trendDays = 30;
 let rankSort = 'rate';
 
-// `rate` draws on the filled accent tile, so it is white rather than a hue.
-const HUE = { total: '#3a2e1c', pre: '#b9862c', post: '#15803d', rate: '#ffffff' };
+const HUE = { total: '#0d2147', pre: '#2563eb', post: '#059669', rate: '#c9a84c' };
 
 /* ── Dates ─────────────────────────────────────────────────────────────
    Everything on this page is counted per local calendar day, keyed as
@@ -1310,7 +1279,6 @@ function setDelta(id, curr, prev, { unit = '', points = false } = {}) {
 }
 
 function renderOverview() {
-  if (!$('ov-total')) return;
   const total = users.length;
   const pre   = users.filter(u => u.status === 'pre_done' || u.status === 'post_done').length;
   const post  = users.filter(u => u.status === 'post_done').length;
@@ -1333,19 +1301,8 @@ function renderOverview() {
   const scope = scopeLabel();
   const whoScope = $('who-scope');
   if (whoScope) whoScope.textContent = scope;
-
-  // The banner says the same thing in a sentence.
-  const hour = new Date().getHours();
-  set('hero-title', (hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening') + ', Survey admin');
-  set('hero-sub', total
-    ? `${scope} · ${total.toLocaleString()} registered, ${pre.toLocaleString()} through the baseline and `
-      + `${post.toLocaleString()} finished. ${pendingPost.toLocaleString()} still owe the post survey.`
-    : 'No students registered under these filters yet.');
-  set('hero-pct', rate.toFixed(0) + '%');
-  const ring = $('hero-ring');
-  if (ring) ring.style.setProperty('--pct', rate.toFixed(1));
-  navChip('students', total ? total.toLocaleString() : '');
-  navChip('emails', pendingPost ? String(pendingPost) : '');
+  navChip('p-students', total ? total.toLocaleString() : '');
+  navChip('p-emails', pendingPost ? String(pendingPost) : '');
 
   // ── Week on week ──────────────────────────────────────────────────
   [
@@ -1379,7 +1336,7 @@ function renderOverview() {
   // ── Completion split ──────────────────────────────────────────────
   const pct = n => total > 0 ? ((n / total) * 100).toFixed(1) : '0.0';
   $('pie-legend').innerHTML = [
-    ['#15803d', 'Both done', post], ['#d9a441', 'Post pending', pendingPost], ['#c2410c', 'Baseline pending', pendingPre],
+    ['#059669', 'Both done', post], ['#f59e0b', 'Post pending', pendingPost], ['#ef4444', 'Baseline pending', pendingPre],
   ].map(([c, label, n]) => `
     <div class="flex items-center justify-between text-xs">
       <span class="flex items-center gap-1.5 text-slate-600"><span class="w-2.5 h-2.5 rounded-full" style="background:${c}"></span>${label}</span>
@@ -1392,7 +1349,7 @@ function renderOverview() {
     else pieChart = new Chart($('pie-chart').getContext('2d'), {
       type: 'doughnut',
       data: { labels: ['Both done', 'Post pending', 'Baseline pending'],
-              datasets: [{ data, backgroundColor: ['#15803d', '#d9a441', '#c2410c'], borderWidth: 3, borderColor: '#fffdf9' }] },
+              datasets: [{ data, backgroundColor: ['#059669', '#f59e0b', '#ef4444'], borderWidth: 3, borderColor: '#fff' }] },
       options: { responsive: true, maintainAspectRatio: false, cutout: '68%', plugins: { legend: { display: false } } },
     });
   }
@@ -1413,7 +1370,7 @@ function setTrendRange(days) {
 }
 
 function renderTrend() {
-  if (typeof Chart === 'undefined' || !$('trend-chart')) return;
+  if (typeof Chart === 'undefined') return;
   const days = lastDays(trendDays);
   const series = [
     ['Registered', 'created_at_iso', HUE.total],
@@ -1469,10 +1426,10 @@ function renderTrend() {
         },
         scales: {
           x: { grid: { display: false }, border: { display: false },
-               ticks: { color: '#a89e90', font: { size: 10 }, maxRotation: 0, autoSkipPadding: 24 } },
+               ticks: { color: '#98a2b3', font: { size: 10 }, maxRotation: 0, autoSkipPadding: 24 } },
           y: { beginAtZero: true, border: { display: false },
-               grid: { color: '#efe7d8' },
-               ticks: { color: '#a89e90', font: { size: 10 }, precision: 0, maxTicksLimit: 5 } },
+               grid: { color: '#eef0f4' },
+               ticks: { color: '#98a2b3', font: { size: 10 }, precision: 0, maxTicksLimit: 5 } },
         },
       },
     });
@@ -1609,7 +1566,6 @@ function statusMatches(u, f) {
 }
 
 function renderStudents() {
-  if (!$('student-table')) return;
   const q = ($('student-search').value || '').toLowerCase();
   if (studentView === 'orientation') return renderOrientation(q);
   if (studentView === 'duration')    return renderDurations(q);
@@ -1621,75 +1577,27 @@ function renderStudents() {
     ['Both done', rows.filter(u => u.status === 'post_done').length], ['Reminded', rows.filter(wasMailed).length],
   ]);
 
-  resultCount('student-count', rows.length, users.length);
-
   table('student-table',
     ['#', 'Student', 'Level', 'Department', 'Status', 'Orientation', 'Baseline at', 'Post at', 'Email activity', ''],
     rows, (u, i) => [
       i + 1,
-      personCell(u),
+      `<button onclick="openStudent('${e(u.email)}')" class="text-left hover:text-blue-700">
+         <div class="font-semibold text-slate-900">${e(u.name)}</div>
+         <div class="text-[11px] text-slate-500 link">${e(u.email)}</div>
+       </button>`,
       LEVEL[u.ug_or_pg] || 'UG',
       `<div class="text-slate-700">${e(u.program || '—')}</div><div class="text-[11px] text-slate-400">${e(u.education_type || '')}</div>`,
       statusBadge(u.status),
-      u.orientation_submitted ? '<span class="badge b-green">Filled</span>' : '<span class="badge b-gray">—</span>',
+      u.orientation_submitted ? '<span class="badge b-green">✓</span>' : '<span class="badge b-gray">—</span>',
       `<span class="text-slate-500 text-[11px]">${e(u.pre_at || '—')}</span>`,
       `<span class="text-slate-500 text-[11px]">${e(u.post_at || '—')}</span>`,
       emailActivity(u),
-      `<div class="row-actions">
-         ${u.status === 'post_done' ? `<a href="/results/${u.email_slug}" target="_blank" class="icon-btn" title="View results" aria-label="View results">${EYE_ICON}</a>
-           <button class="icon-btn" title="Mail results" aria-label="Mail results" onclick="sendResults(this,'${e(u.email)}')">${MAIL_ICON}</button>` : ''}
-         <button class="icon-btn danger" title="Delete student" aria-label="Delete student" onclick="deleteUser(this,'${e(u.email)}')">${BIN_ICON}</button>
+      `<div class="flex gap-1.5">
+         ${u.status === 'post_done' ? `<a href="/results/${u.email_slug}" target="_blank" class="btn-xs btn-primary">View</a>
+           <button class="btn-xs btn-green" onclick="sendResults(this,'${e(u.email)}')">Mail</button>` : ''}
+         <button class="btn-xs btn-rose" onclick="deleteUser(this,'${e(u.email)}')">🗑️</button>
        </div>`,
     ], 'No students match these filters');
-}
-
-// ── The shareable impact page ────────────────────────────────────────────
-async function loadVibeLinks() {
-  const host = $('vibe-links');
-  if (!host) return;
-  try {
-    const d = await api('/admin/api/survey/impact-links');
-    const open = $('vibe-open');
-    if (open && d.links.length) open.href = d.links[0].url;
-    host.innerHTML = d.links.map(l => `
-      <div class="flex flex-col sm:flex-row sm:items-center gap-2">
-        <span class="text-xs font-bold text-slate-700 sm:w-32 shrink-0">${e(l.campus)}</span>
-        <input readonly class="field link flex-1" value="${e(l.url)}" onclick="this.select()">
-        <button class="btn btn-soft" onclick="copy('${e(l.url)}')">Copy</button>
-        <a href="${e(l.url)}" target="_blank" rel="noopener" class="btn btn-primary">Open</a>
-      </div>`).join('');
-  } catch (err) {
-    host.innerHTML = '<div class="text-xs text-rose-500">Could not build the impact links</div>';
-  }
-}
-
-
-// ── People rows ─────────────────────────────────────────────────────────
-// A stable colour per person, so the same student keeps the same avatar.
-const AVATAR_HUES = ['#3a2e1c', '#b9862c', '#15803d', '#7a5f22', '#a16207',
-                     '#c2410c', '#4f6b3a', '#6b5b3e'];
-function avatarFor(name, email) {
-  const seed = (email || name || '?');
-  let h = 0;
-  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
-  const initials = (name || email || '?').trim().split(/\s+/)
-    .slice(0, 2).map(w => w[0]).join('').toUpperCase() || '?';
-  return `<span class="avatar" style="background:${AVATAR_HUES[h % AVATAR_HUES.length]}">${e(initials)}</span>`;
-}
-
-const MAIL_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5" width="19" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>';
-const EYE_ICON  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 12S5 5.5 12 5.5 22.5 12 22.5 12 19 18.5 12 18.5 1.5 12 1.5 12z"/><circle cx="12" cy="12" r="3"/></svg>';
-const BIN_ICON  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>';
-
-/** Name and address as one cell, the way a contact list shows a person. */
-function personCell(u) {
-  return `<button onclick="openStudent('${e(u.email)}')" class="cell-user">
-      ${avatarFor(u.name, u.email)}
-      <span>
-        <span class="cell-name">${e(u.name || '—')}</span>
-        <span class="cell-sub">${MAIL_ICON}${e(u.email)}</span>
-      </span>
-    </button>`;
 }
 
 function emailActivity(u) {
@@ -1700,12 +1608,6 @@ function emailActivity(u) {
   if (u.completed_after_reminder) bits.push('<div class="text-emerald-700 font-bold">Completed after mail ✓</div>');
   if (u.last_email_error) bits.push(`<div class="text-rose-600 font-semibold">Failed: ${e(u.last_email_error)}</div>`);
   return bits.length ? `<div class="text-[11px] leading-tight space-y-0.5">${bits.join('')}</div>` : '<span class="text-slate-400">—</span>';
-}
-
-/** "Showing 42 of 420 students" — the reference's result counter. */
-function resultCount(id, shown, total) {
-  const el = $(id);
-  if (el) el.innerHTML = `Showing <b>${shown}</b> of <b>${total}</b> students`;
 }
 
 function summary(pairs) {
@@ -1809,7 +1711,7 @@ async function deleteUser(btn, email) {
     if (!r.ok) throw new Error();
     toast('Student deleted');
     await loadUsers();
-  } catch (err) { toast('Could not delete student'); btn.disabled = false; btn.textContent = ''; }
+  } catch (err) { toast('Could not delete student'); btn.disabled = false; btn.textContent = '🗑️'; }
 }
 
 async function sendResults(btn, email) {
@@ -1965,10 +1867,10 @@ function renderStudent(s) {
 
   $('student-modal-body').innerHTML = `
     <div class="flex flex-wrap gap-2">
-      ${s.status === 'post_done' ? `<a href="/results/${s.email_slug}" target="_blank" class="btn btn-primary">View results</a>
-        <button class="btn btn-green" onclick="sendResults(this,'${e(s.email)}')">Email results</button>` : ''}
-      <button class="btn btn-soft" onclick="jumpToStudent('${e(s.email)}')">Show in students table</button>
-      <button class="btn btn-rose ml-auto" onclick="deleteUser(this,'${e(s.email)}'); closeStudent();">Delete</button>
+      ${s.status === 'post_done' ? `<a href="/results/${s.email_slug}" target="_blank" class="btn btn-primary">👁️ View results</a>
+        <button class="btn btn-green" onclick="sendResults(this,'${e(s.email)}')">📧 Email results</button>` : ''}
+      <button class="btn btn-soft" onclick="jumpToStudent('${e(s.email)}')">🔎 Show in students table</button>
+      <button class="btn btn-rose ml-auto" onclick="deleteUser(this,'${e(s.email)}'); closeStudent();">🗑️ Delete</button>
     </div>
 
     <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
@@ -1986,9 +1888,9 @@ function renderStudent(s) {
       <div class="card"><div class="h-card mb-2">Email activity</div><div class="text-xs">${mail}</div></div>
     </div>
 
-    ${answers('Outcome Survey 1 — Baseline answers', s.pre_sections)}
-    ${answers('Impact — Post survey answers', s.post_sections)}
-    ${ori.length ? `<div class="card space-y-2"><div class="h-card">Orientation answers</div>
+    ${answers('📝 Outcome Survey 1 — Baseline answers', s.pre_sections)}
+    ${answers('📊 Impact — Post survey answers', s.post_sections)}
+    ${ori.length ? `<div class="card space-y-2"><div class="h-card">🎓 Orientation answers</div>
       <div class="text-xs space-y-1">${ori.map(([k, v]) => `
         <div class="flex gap-3 py-1 border-b border-slate-50 last:border-0">
           <span class="text-slate-500 w-1/2 shrink-0">${e(k)}</span>
@@ -2007,7 +1909,7 @@ function jumpToStudent(email) {
   $('status-filter').value = '';
   setStudentView('status');
   $('student-search').value = email;
-  show('students');
+  show('p-students');
   renderStudents();
 }
 
@@ -2030,7 +1932,6 @@ function setCohort(name) {
 }
 
 function updateTargetCount() {
-  if (!$('target-count')) return;
   const c = COHORTS[cohort];
   const n = users.filter(c.match).length;
   $('target-count').innerHTML = `<span class="text-lg">${n} students</span> — ${e(c.label)} · ${e(scopeLabel())}`;
@@ -2259,13 +2160,12 @@ async function loadLinks() {
   tableBusy('post-links-table', 'Loading department links…');
   try {
     linkData = await api('/admin/api/survey/post-links');
-    const put = (id, prop, value) => { const el = $(id); if (el) el[prop] = value; };
-    put('all-post-link', 'value', linkData.all_url);
-    put('all-post-open', 'href',  linkData.all_url);
-    put('all-pre-link',  'value', linkData.pre_all_url);
-    put('all-pre-open',  'href',  linkData.pre_all_url);
-    put('directory-link', 'value', linkData.directory_url);
-    put('directory-open', 'href',  linkData.directory_url);
+    $('all-post-link').value  = linkData.all_url;
+    $('all-post-open').href   = linkData.all_url;
+    $('all-pre-link').value   = linkData.pre_all_url;
+    $('all-pre-open').href    = linkData.pre_all_url;
+    $('directory-link').value = linkData.directory_url;
+    $('directory-open').href  = linkData.directory_url;
     renderPostLinks();
   } catch (err) { tableBusy('post-links-table', 'Could not load department links'); }
 
@@ -2275,11 +2175,10 @@ async function loadLinks() {
 
 /** The handful of links students and staff start from. */
 function renderEntryLinks() {
-  if (!$('entry-links')) return;
   $('entry-links').innerHTML = [
-    ['Survey home (registration)', location.origin + '/'],
-    ['Deeksharambh orientation', {{ (orientation_share_url or '') | tojson }}],
-    ['Overall department directory', (linkData && linkData.directory_url) || ''],
+    ['🏠 Survey home (registration)', location.origin + '/'],
+    ['🎓 Deeksharambh orientation', {{ (orientation_share_url or '') | tojson }}],
+    ['🌐 Overall department directory', (linkData && linkData.directory_url) || ''],
   ].filter(([, url]) => !!url).map(([label, url]) => `
     <div class="flex items-center gap-2">
       <span class="text-xs font-semibold text-slate-700 w-56 shrink-0">${label}</span>
@@ -2304,7 +2203,7 @@ function renderPostLinks() {
 
   table('post-links-table',
     ['#', 'Department', 'Registered', 'Baseline done', 'Post done', 'Post pending',
-     'Outcome Survey 1 — Baseline', 'Impact — Post Survey', ''],
+     '📝 Outcome Survey 1 — Baseline', '📊 Impact — Post Survey', ''],
     rows, (row, i) => [
       i + 1,
       `<span class="font-semibold text-slate-900">${e(row.dept)}</span>`,
@@ -2351,9 +2250,7 @@ function setRankType(type) {
 }
 
 function renderDepts() {
-  // loadLinks() calls loadDepts() for the report links, so this runs on a page
-  // without the departments panel.
-  if (!deptData || !$('dept-table')) return;
+  if (!deptData) return;
   const ov = deptData.overall || {}, depts = deptData.departments || [];
 
   const set = (id, v) => { const el = $(id); if (el) el.textContent = v; };
@@ -2405,7 +2302,6 @@ function renderDepts() {
 }
 
 function renderRankings() {
-  if (!$('rk-hi-lit')) return;
   const r = deptData.rankings || {};
   const lit  = rankType === 'post' ? r.lit_post  : r.lit_pre;
   const read = rankType === 'post' ? r.read_post : r.read_pre;
@@ -2448,7 +2344,7 @@ function renderDeptChart(depts) {
 function viewDept(dept) {
   $('dept-filter').value = dept;
   applyFilters();
-  show('students');
+  show('p-students');
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -2472,9 +2368,9 @@ async function loadCohort() {
   const host = $('cohort-host');
   host.innerHTML = '<div class="coh-card coh-empty-card">Loading the outcome and impact report…</div>';
   $('cohort-ppt').href = '/admin/survey/cohort-ppt?' + cohortParams();
-  const ppt = $('ov-ppt');
-  if (ppt) ppt.href = '/admin/survey/cohort-ppt?' + cohortParams();
+  $('ov-ppt').href = '/admin/survey/cohort-ppt?' + cohortParams();
   if (!cohortShareLinks) loadCohortShareLinks();
+  loadVibeLinks();
 
   let d;
   try { d = await api('/admin/api/cohort?' + cohortParams()); }
@@ -2516,6 +2412,27 @@ async function loadCohortShareLinks() {
     </div>`).join('');
 }
 
+// ── The shareable impact page ────────────────────────────────────────────
+async function loadVibeLinks() {
+  const host = $('vibe-links');
+  if (!host) return;
+  try {
+    const d = await api('/admin/api/survey/impact-links');
+    const open = $('vibe-open');
+    if (open && d.links.length) open.href = d.links[0].url;
+    host.innerHTML = d.links.map(l => `
+      <div class="flex flex-col sm:flex-row sm:items-center gap-2">
+        <span class="text-xs font-bold text-slate-700 sm:w-32 shrink-0">${e(l.campus)}</span>
+        <input readonly class="field link flex-1" value="${e(l.url)}" onclick="this.select()">
+        <button class="btn btn-soft" onclick="copy('${e(l.url)}')">Copy</button>
+        <a href="${e(l.url)}" target="_blank" rel="noopener" class="btn btn-primary">Open</a>
+      </div>`).join('');
+  } catch (err) {
+    host.innerHTML = '<div class="text-xs text-rose-500">Could not build the impact links</div>';
+  }
+}
+
+
 /** Copy the link for whichever campus the report is scoped to. */
 async function copyCohortShareLink() {
   if (!cohortShareLinks) await loadCohortShareLinks();
@@ -2553,6 +2470,7 @@ function closeOriCampus() {
   oriOpen = false;
   oriCampus = '';
   oriDeptData = null;
+  oriDeptLinks = null;
   $('ori-report').classList.add('hidden');
   $('ori-picker').classList.remove('hidden');
   loadOriCampuses();
@@ -2574,7 +2492,7 @@ async function loadOriCampuses() {
       class="card text-left hover:border-blue-400 hover:shadow-md transition w-full">
       <div class="flex items-start justify-between gap-3">
         <div>
-          <div class="text-base font-extrabold text-slate-900">${e(c.campus)}</div>
+          <div class="text-base font-extrabold text-slate-900">📍 ${e(c.campus)}</div>
           <div class="sub">${c.filled} of ${c.eligible} eligible students have filled it${c.last_at ? ' · last on ' + e(c.last_at) : ''}</div>
         </div>
         <span class="btn ${accent}">View report →</span>
@@ -2607,25 +2525,91 @@ async function loadOriShareLinks() {
   }
   host.innerHTML = oriShareLinks.map(l => `
     <div class="flex flex-col sm:flex-row sm:items-center gap-2">
-      <span class="text-xs font-bold text-slate-700 sm:w-32 shrink-0">${e(l.campus)}</span>
+      <span class="text-xs font-bold text-slate-700 sm:w-32 shrink-0">📍 ${e(l.campus)}</span>
       <input readonly class="field link flex-1" value="${e(l.url)}" onclick="this.select()">
       <button class="btn btn-soft" onclick="copy('${e(l.url)}')">Copy</button>
       <a href="${e(l.url)}" target="_blank" rel="noopener" class="btn btn-primary">Open</a>
     </div>`).join('');
 }
 
-/** Copy the link for whichever campus is open. */
-function copyOriShareLink(btn) {
+/** Copy the link for what is actually on screen — this department, or the campus. */
+async function copyOriShareLink(btn) {
+  const dept = deptFilter();
+  if (dept) {
+    const row = (await fetchOriDeptLinks()).find(l => l.dept === dept);
+    if (!row) return toast('No orientation replies from ' + dept + ' yet');
+    return copy(row.url);
+  }
   const wanted = oriCampus || 'All campuses';
   const row = (oriShareLinks || []).find(l => l.campus === wanted);
   if (!row) return toast('Share link not ready yet — reopen this page');
   copy(row.url);
 }
 
+// ── One link per department ─────────────────────────────────────────────
+// Same report, narrowed to a single department and signed for it alone, so a
+// head of department can be sent theirs without it opening anybody else's.
+let oriDeptLinks       = null;
+let oriDeptLinksCampus = null;   // which campus the cache belongs to
+
+async function fetchOriDeptLinks() {
+  if (oriDeptLinks && oriDeptLinksCampus === oriCampus) return oriDeptLinks;
+  try {
+    const d = await api('/admin/api/orientation/dept-share-links?' +
+      new URLSearchParams({ campus: oriCampus }));
+    oriDeptLinks = d.links;
+    oriDeptLinksCampus = oriCampus;
+  } catch (err) { return []; }
+  return oriDeptLinks;
+}
+
+async function loadOriDeptShareLinks() {
+  const host = $('ori-dept-share-links');
+  if (!host) return;
+  if (!(oriDeptLinks && oriDeptLinksCampus === oriCampus)) {
+    host.innerHTML = '<div class="text-xs text-slate-400">Building the department links…</div>';
+  }
+  await fetchOriDeptLinks();
+  if (!oriDeptLinks) {
+    host.innerHTML = '<div class="text-xs text-rose-500">Could not build the department links</div>';
+    return;
+  }
+  renderOriDeptShareLinks();
+}
+
+function renderOriDeptShareLinks() {
+  const host = $('ori-dept-share-links');
+  if (!host || !oriDeptLinks) return;
+  const q = ($('ori-dept-link-search').value || '').toLowerCase();
+  const rows = oriDeptLinks.filter(l => l.dept.toLowerCase().includes(q));
+
+  if (!rows.length) {
+    host.innerHTML = '<div class="text-xs text-slate-400">No department has answered here yet.</div>';
+    return;
+  }
+  host.innerHTML = rows.map(l => `
+    <div class="flex flex-col lg:flex-row lg:items-center gap-2 border border-slate-200 rounded-xl p-3">
+      <div class="lg:w-72 shrink-0">
+        <div class="text-xs font-extrabold text-slate-900">🏢 ${e(l.dept)}</div>
+        <div class="text-[11px] text-slate-500 mt-0.5">
+          ${l.filled} of ${l.eligible} answered (${oriNum(l.pct, 0)}%) ·
+          vibe <b style="color:${oriMood(l.vibe)[2]}">${oriNum(l.vibe, 1)}</b>/10 ·
+          NPS ${l.nps === null || l.nps === undefined ? '—' : oriNum(l.nps, 0)}
+        </div>
+      </div>
+      <input readonly class="field link flex-1" value="${e(l.url)}" onclick="this.select()">
+      <div class="flex gap-2">
+        <button class="btn btn-soft" onclick="copy('${e(l.url)}')">Copy</button>
+        <a href="${e(l.url)}" target="_blank" rel="noopener" class="btn btn-primary">Open</a>
+      </div>
+    </div>`).join('');
+}
+
 function openOriCampus(campus) {
   oriOpen = true;
   oriCampus = campus === 'All campuses' ? '' : campus;
   oriDeptData = null;
+  oriDeptLinks = null;
   $('ori-campus-name').textContent = campus;
   $('ori-picker').classList.add('hidden');
   $('ori-report').classList.remove('hidden');
@@ -2681,6 +2665,7 @@ async function loadOriDepartments() {
   } catch (err) {
     $('ori-dept-bars').innerHTML = '<div class="ori-card ori-empty-card">Could not load the department analysis</div>';
   }
+  loadOriDeptShareLinks();
 }
 
 function renderOriDepartments() {
@@ -3047,7 +3032,7 @@ function renderCalChart() {
 
 function openDateModal(date) {
   const info = (calData && calData.by_date) ? calData.by_date[date] : null;
-  $('date-modal-title').textContent = `Submissions on ${date}`;
+  $('date-modal-title').textContent = `📅 Submissions on ${date}`;
   const total = info ? info.total : 0;
   $('dm-total').textContent = total;
   $('dm-pre').textContent   = info ? info.pre : 0;
@@ -3086,12 +3071,12 @@ function closeDateModal() { $('date-modal').classList.add('hidden'); }
 //  Settings
 // ═══════════════════════════════════════════════════════════════════════
 const TOGGLES = [
-  ['survey_enabled',        'Portal open',        'Turn the whole site on or off. When off students see the closed page.'],
-  ['pre_survey_enabled',    'Baseline survey',     'When off, students skip the baseline and go straight on.'],
-  ['orientation_enabled',   'Deeksharambh',        'When off, the orientation form is hidden.'],
-  ['post_survey_enabled',   'Post survey',         'When off, only invited students (reminder or department link) can fill it.'],
-  ['auto_reminders_enabled','Automatic reminders', 'Email pending students on the schedule below until they finish.'],
-  ['test_mode_enabled',     'Test mode',           'Skips answer validation. For demos only — leave off in production.'],
+  ['survey_enabled',        '🛡️ Portal open',        'Turn the whole site on or off. When off students see the closed page.'],
+  ['pre_survey_enabled',    '📝 Baseline survey',     'When off, students skip the baseline and go straight on.'],
+  ['orientation_enabled',   '🎓 Deeksharambh',        'When off, the orientation form is hidden.'],
+  ['post_survey_enabled',   '📊 Post survey',         'When off, only invited students (reminder or department link) can fill it.'],
+  ['auto_reminders_enabled','📧 Automatic reminders', 'Email pending students on the schedule below until they finish.'],
+  ['test_mode_enabled',     '🛠️ Test mode',           'Skips answer validation. For demos only — leave off in production.'],
 ];
 
 function buildToggles() {
@@ -3107,11 +3092,9 @@ async function loadFlags() {
   try {
     const f = await api('/admin/api/flags');
     TOGGLES.forEach(([key]) => { const el = $('tog-' + key); if (el) el.checked = !!f[key]; });
-    // The timing inputs are on the settings page; the pill is on every page.
-    const setInput = (id, value) => { const el = $(id); if (el) el.value = value; };
-    setInput('inp-post-delay', num(f.post_delay_days, 0));
-    setInput('inp-rem-delay',  num(f.auto_reminder_delay_days, 5));
-    setInput('inp-rem-repeat', num(f.auto_reminder_repeat_days, 1));
+    $('inp-post-delay').value  = num(f.post_delay_days, 0);
+    $('inp-rem-delay').value   = num(f.auto_reminder_delay_days, 5);
+    $('inp-rem-repeat').value  = num(f.auto_reminder_repeat_days, 1);
     const pill = $('ov-flag');
     pill.className = 'badge ' + (f.survey_enabled ? 'b-green' : 'b-rose');
     pill.textContent = f.survey_enabled ? '● Portal open' : '● Portal offline';
@@ -3167,13 +3150,10 @@ document.addEventListener('keydown', ev => {
 });
 
 buildNav();
-if (SECTION === 'overview') loadVibeLinks();
-if (SECTION === 'settings') buildToggles();
+restoreSidebar();
+buildToggles();
 loadFlags();
 loadUsers();
-// Sections that fetch their own data do it once the page is up; the rest
-// are filled by loadUsers().
-if (LOADERS[SECTION] && SECTION !== 'students' && SECTION !== 'emails') LOADERS[SECTION]();
 </script>
 </body>
 </html>

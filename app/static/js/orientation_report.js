@@ -10,7 +10,8 @@
  *
  *   OrientationReport.renderReport(hostEl, report)
  *   OrientationReport.renderDepartments(hostEl, overview, { onPick })
- *   OrientationReport.mood(avg) -> [word, '', colour]
+ *   OrientationReport.renderScorecard(hostEl, scorecard)
+ *   OrientationReport.mood(avg) -> [word, emoji, colour]
  */
 (function (global) {
   'use strict';
@@ -22,32 +23,42 @@
   const num = (v, digits = 1) =>
     (v === null || v === undefined) ? '—' : Number(v).toFixed(digits);
 
-  /** What an average out of ten actually feels like. */
+  /** What an average out of ten actually feels like.
+   *
+   * A muted ramp — green through amber to coral — so a warm cohort and a cold
+   * one are still told apart at a glance without the page shouting. */
   const MOODS = [
-    [9, 'Buzzing',        '', '#15803d'],
-    [8, 'Loving it',      '', '#3f9142'],
-    [7, 'Good vibes',     '', '#a3a821'],
-    [6, 'Warming up',     '', '#eab308'],
-    [5, 'Mixed feelings', '', '#d97706'],
-    [0, 'Needs a lift',   '', '#c2410c'],
+    [9, 'Buzzing',        '🤩', '#1f9e63'],
+    [8, 'Loving it',      '😍', '#46a85b'],
+    [7, 'Good vibes',     '😄', '#7faf4c'],
+    [6, 'Warming up',     '🙂', '#e0a52e'],
+    [5, 'Mixed feelings', '😐', '#e5813c'],
+    [0, 'Needs a lift',   '😕', '#e0524d'],
   ];
   const mood = avg => (avg === null || avg === undefined)
-    ? ['No answers yet', '', '#a89e90']
+    ? ['No answers yet', '🫥', '#a8adb6']
     : (MOODS.find(m => avg >= m[0]) || MOODS[MOODS.length - 1]).slice(1);
 
-  // Section accents, cycled so each section reads as its own chapter.
-  const ACCENTS = ['#b9862c', '#15803d', '#8a6320', '#c2410c', '#d9a441',
-                   '#c8a96a', '#3f9142', '#a8532a', '#6b5b3e'];
+  // Section accents, cycled so each section reads as its own chapter. Coral
+  // leads; the rest are its supporting cast, all at the same low volume.
+  const ACCENTS = ['#f0524b', '#2f9e8f', '#6f6bd8', '#e0913a', '#3b82c4',
+                   '#2e9e5b', '#c2549b', '#5b6b8c', '#d1664e'];
 
   const PANELS = [
-    ['impactful',  'Sessions that landed',   '#15803d'],
-    ['needs_work', 'Sessions needing work',  '#c2410c'],
-    ['stressors',  'Biggest stressors',      '#d9a441'],
-    ['keep',       'Keep next year',         '#b9862c'],
-    ['stop',       'Stop next year',         '#992d12'],
-    ['introduce',  'Introduce next year',    '#8a6320'],
+    ['impactful',  '🏆 Sessions that landed',   '#2e9e5b'],
+    ['needs_work', '🛠️ Sessions needing work',  '#f0524b'],
+    ['stressors',  '😰 Biggest stressors',      '#e0913a'],
+    ['keep',       '👍 Keep next year',         '#3b82c4'],
+    ['stop',       '🚫 Stop next year',         '#b03a5b'],
+    ['introduce',  '✨ Introduce next year',    '#6f6bd8'],
   ];
 
+  const MEDALS = ['🥇', '🥈', '🥉'];
+
+  // The one warm accent the chrome is built on, and the grey that stands in
+  // for a score nobody gave — a coloured stub would read as a real answer.
+  const ACCENT = '#f0524b';
+  const EMPTY  = '#eceef2';
 
   // ── Small building blocks ─────────────────────────────────────────────────
 
@@ -81,7 +92,7 @@
     return options.slice(0, limit).map((o, i) => `
       <div class="ori-rank">
         <div class="ori-rank-badge" style="${i < 3 ? '' : `background:${tone}1a;color:${tone}`}">
-          ${i + 1}
+          ${i < 3 ? MEDALS[i] : i + 1}
         </div>
         <div class="ori-rank-body">
           <div class="ori-rank-label">${esc(o.label)}</div>
@@ -109,7 +120,7 @@
     return `
       <div class="ori-ring">
         <svg viewBox="0 0 ${size} ${size}" width="${size}" height="${size}">
-          <circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="#f0eade" stroke-width="16"></circle>
+          <circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="#f1f2f5" stroke-width="16"></circle>
           ${arcs}
         </svg>
         <div class="ori-ring-centre">
@@ -135,22 +146,19 @@
 
   // ── Charts ────────────────────────────────────────────────────────────────
   //
-  // The distributions are drawn by Chart.js, the same library and the same
-  // axis language the impact report uses, so the two pages plot a count the
-  // same way: a measured y axis, gridlines, a labelled x axis and a tooltip
-  // that names the number. Hand-drawn CSS columns gave a two-pixel sliver for
-  // every small bar and floated it against nothing, which is what made the
-  // vibe strip unreadable.
+  // The distributions are drawn by Chart.js, so a count is plotted against a
+  // measured axis: gridlines, labels attached to their own columns, and a
+  // tooltip that names the students behind each bar. Hand-drawn CSS columns
+  // gave a two-pixel sliver for every small bar and floated it against
+  // nothing, which is what made the vibe strip unreadable.
   //
   // A canvas cannot be drawn on before it is in the document, so building the
   // markup only queues the chart; `paintCharts` instantiates the queue once
-  // the HTML has been inserted. If Chart.js is not on the page at all the
-  // builder returns the old CSS column strip instead, so the renderer still
-  // works standalone.
+  // the HTML has been inserted. Without Chart.js on the page the builder
+  // returns the CSS column strip instead, so the renderer still works alone.
 
   const STILL = !!(global.matchMedia && global.matchMedia('(prefers-reduced-motion: reduce)').matches);
   const CHART_FONT = 'Outfit, system-ui, sans-serif';
-  const GRID = '#ece3d4';
 
   const TOOLTIP = {
     backgroundColor: 'rgba(23,17,10,.94)',
@@ -194,7 +202,7 @@
     const counts = options.map(x => x.count || 0);
     const answered = counts.reduce((sum, n) => sum + n, 0);
     const ink = o.dark ? 'rgba(255,255,255,.82)' : '#7c7266';
-    const grid = o.dark ? 'rgba(255,255,255,.15)' : GRID;
+    const grid = o.dark ? 'rgba(255,255,255,.15)' : '#ece3d4';
 
     return {
       type: 'bar',
@@ -230,7 +238,7 @@
         scales: {
           x: {
             grid: { display: false },
-            border: { color: o.dark ? 'rgba(255,255,255,.3)' : GRID },
+            border: { color: o.dark ? 'rgba(255,255,255,.3)' : '#ece3d4' },
             ticks: { color: ink, font: { family: CHART_FONT, size: 11, weight: '700' } },
           },
           y: {
@@ -260,10 +268,9 @@
     const strip = vibeQ ? `
       <div class="ori-strip-title">How the ten points were spread</div>
       ${chart(
-        countChart(vibeQ.options, vibeQ.options.map(o => mood(Number(o.label))[2]), {
-          dark: true,
-          title: label => `Rated ${label} out of 10`,
-        }),
+        countChart(vibeQ.options,
+                   vibeQ.options.map(o => (o.count ? mood(Number(o.label))[2] : EMPTY)),
+                   { title: label => `Rated ${label} out of 10` }),
         { height: 172, fallback: legacyStrip(vibeQ, top) })}
       <div class="ori-strip-note">1 — I wanted to leave · 10 — I wish it never ended</div>` : '';
 
@@ -275,7 +282,7 @@
         <div class="ori-hero-score">
           <div class="ori-hero-kicker">Overall vibe of the students</div>
           <div class="ori-hero-row">
-            ${emoji ? `<div class="ori-hero-emoji">${emoji}</div>` : ''}
+            <div class="ori-hero-emoji">${emoji}</div>
             <div>
               <div class="ori-hero-value">${num(h.vibe, 1)}<span>/ 10</span></div>
               <div class="ori-hero-word">${esc(word)}</div>
@@ -303,13 +310,13 @@
   function tiles(report) {
     const h = report.headline, c = report.coverage || {};
     return `<div class="ori-tiles">
-      ${tile(report.count, 'Responses', '#1c1917', null)}
-      ${tile(num(c.pct, 0) + '%', 'Response rate', '#15803d', c.pct)}
+      ${tile(report.count, 'Responses', ACCENT, null)}
+      ${tile(num(c.pct, 0) + '%', 'Response rate', '#2f9e8f', c.pct)}
       ${tile(num(h.vibe, 1), 'Vibe / 10', mood(h.vibe)[2], h.vibe === null ? 0 : h.vibe * 10)}
-      ${tile(h.nps === null || h.nps === undefined ? '—' : num(h.nps, 0), 'NPS', '#6b5b3e',
+      ${tile(h.nps === null || h.nps === undefined ? '—' : num(h.nps, 0), 'NPS', '#6f6bd8',
              h.nps === null || h.nps === undefined ? 0 : (h.nps + 100) / 2)}
-      ${tile(num(h.belonging, 1), 'Belonging / 10', '#c8a96a', h.belonging === null ? 0 : h.belonging * 10)}
-      ${tile(num(h.bridge, 1), 'Bridge course / 5', '#d9a441', h.bridge === null ? 0 : h.bridge * 20)}
+      ${tile(num(h.belonging, 1), 'Belonging / 10', '#3b82c4', h.belonging === null ? 0 : h.belonging * 10)}
+      ${tile(num(h.bridge, 1), 'Bridge course / 5', '#e0913a', h.bridge === null ? 0 : h.bridge * 20)}
     </div>`;
   }
 
@@ -318,15 +325,15 @@
     const h = report.headline;
     const q = questionOf(report, 'q34') || h;
     const segs = [
-      { value: q.promoters || 0,  colour: '#15803d', label: 'Promoters 9–10' },
-      { value: q.passives || 0,   colour: '#eab308', label: 'Passives 7–8' },
-      { value: q.detractors || 0, colour: '#c2410c', label: 'Detractors 0–6' },
+      { value: q.promoters || 0,  colour: '#2e9e5b', label: 'Promoters 9–10' },
+      { value: q.passives || 0,   colour: '#e9b949', label: 'Passives 7–8' },
+      { value: q.detractors || 0, colour: '#e0524d', label: 'Detractors 0–6' },
     ];
     const total = segs.reduce((s, x) => s + x.value, 0);
     return `
       <div class="ori-card ori-card-split">
         <div>
-          <div class="ori-card-title">Would they recommend JAIN?</div>
+          <div class="ori-card-title">💬 Would they recommend JAIN?</div>
           <div class="ori-card-sub">${total} answered · average ${num(h.nps_avg, 2)} / 10</div>
           <div class="ori-legend">
             ${segs.map(s => `
@@ -371,9 +378,9 @@
         ${head}
         <div class="ori-q-sub">${q.answered} answered · average ${num(q.avg, 2)} / 10 · NPS ${num(q.nps, 0)}</div>
         <div class="ori-split3">
-          <div class="ori-mini" style="--tone:#15803d"><b>${q.promoters}</b><span>Promoters 9–10</span></div>
-          <div class="ori-mini" style="--tone:#eab308"><b>${q.passives}</b><span>Passives 7–8</span></div>
-          <div class="ori-mini" style="--tone:#c2410c"><b>${q.detractors}</b><span>Detractors 0–6</span></div>
+          <div class="ori-mini" style="--tone:#2e9e5b"><b>${q.promoters}</b><span>Promoters 9–10</span></div>
+          <div class="ori-mini" style="--tone:#e0913a"><b>${q.passives}</b><span>Passives 7–8</span></div>
+          <div class="ori-mini" style="--tone:#e0524d"><b>${q.detractors}</b><span>Detractors 0–6</span></div>
         </div>
         ${scaleStrip(q)}
       </div>`;
@@ -394,15 +401,16 @@
   /** A 1..max distribution, plotted against a counted axis. */
   function scaleStrip(q) {
     const scale = q.max || 10;
-    const colours = q.options.map(o => mood((Number(o.label) / scale) * 10)[2]);
+    const colours = q.options.map(o =>
+      (o.count ? mood((Number(o.label) / scale) * 10)[2] : EMPTY));
     return chart(
       countChart(q.options, colours, { title: label => `Answered ${label} of ${scale}` }),
       { height: 168, fallback: legacyScaleStrip(q) });
   }
 
-  // The CSS column strips, kept for the case where Chart.js never loaded:
-  // a thin coloured column is worse than a plotted axis, but better than a
-  // blank space where the distribution should be.
+  // The CSS column strips, kept for the case where Chart.js never loaded: a
+  // thin coloured column is worse than a plotted axis, but better than a blank
+  // space where the distribution should be.
 
   function legacyStrip(q, top) {
     return `
@@ -410,7 +418,8 @@
         ${q.options.map(o => `
           <div class="ori-strip-col" title="${o.count} student(s) rated ${esc(o.label)}/10">
             <div class="ori-strip-bar"
-                 style="height:${Math.max(2, Math.round(100 * o.count / top))}%;background:${mood(Number(o.label))[2]}"></div>
+                 style="height:${Math.max(2, Math.round(100 * o.count / top))}%;background:${
+                   o.count ? mood(Number(o.label))[2] : EMPTY}"></div>
           </div>`).join('')}
       </div>
       <div class="ori-strip-axis">
@@ -428,7 +437,8 @@
           return `<div class="ori-scale-col" title="${o.count} · ${num(o.pct, 0)}%">
             <div class="ori-scale-count">${o.count || ''}</div>
             <div class="ori-scale-track">
-              <div class="ori-scale-bar" style="height:${Math.max(2, Math.round(100 * o.count / top))}%;background:${tone}"></div>
+              <div class="ori-scale-bar" style="height:${Math.max(2, Math.round(100 * o.count / top))}%;background:${
+                o.count ? tone : EMPTY}"></div>
             </div>
             <div class="ori-scale-label">${esc(o.label)}</div>
           </div>`;
@@ -466,7 +476,7 @@
     const top = Math.max(1, ...rows.map(r => r.count));
     return `
       <div class="ori-card">
-        <div class="ori-card-title">Who answered</div>
+        <div class="ori-card-title">🏢 Who answered</div>
         <div class="ori-card-sub">${rows.length} department${rows.length === 1 ? '' : 's'}${
           (report.levels || []).length
             ? ' · ' + report.levels.map(l => `${l.count} ${esc(l.level)}`).join(' · ')
@@ -474,9 +484,99 @@
         <div class="ori-bars">
           ${rows.map(r => bar(
             { label: r.dept, count: r.count, pct: r.pct, width: 100 * r.count / top },
-            '#b9862c')).join('')}
+            ACCENT)).join('')}
         </div>
       </div>`;
+  }
+
+  // ── Department scorecard ──────────────────────────────────────────────────
+  // What a department-scoped share link opens with: this department's vibe,
+  // its counts, and every headline number against the campus average.
+
+  const ORDINALS = ['th', 'st', 'nd', 'rd'];
+  const ordinal = n => n + (ORDINALS[(n % 100 - 20) % 10] || ORDINALS[n % 100] || ORDINALS[0]);
+
+  /** Where a headline number sits on a 0-100 track of its own scale. */
+  const share = (metric, value) => (value === null || value === undefined) ? 0
+    : Math.max(0, Math.min(100, metric.key === 'nps'
+        ? (value + 100) / 2
+        : (value / (metric.max || 10)) * 100));
+
+  const reading = (metric, value) => (value === null || value === undefined) ? '—'
+    : metric.key === 'nps' ? (value > 0 ? '+' : '') + num(value, 0) : num(value, 1);
+
+  /** One metric: this department's figure, with the campus average marked on it. */
+  function metricCard(metric) {
+    const delta = metric.delta;
+    const tone = delta === null || delta === undefined ? 'flat'
+      : delta > 0.05 ? 'up' : delta < -0.05 ? 'down' : 'flat';
+    const sign = delta > 0 ? '+' : '';
+    return `
+      <div class="ori-metric">
+        <div class="ori-metric-label">${esc(metric.label)}</div>
+        <div class="ori-metric-value">${reading(metric, metric.value)}${
+          metric.max ? `<span>/ ${metric.max}</span>` : ''}</div>
+        <div class="ori-metric-track">
+          <div class="ori-metric-fill" style="width:${share(metric, metric.value)}%"></div>
+          ${metric.campus === null || metric.campus === undefined ? '' :
+            `<i class="ori-metric-mark" style="left:${share(metric, metric.campus)}%"
+                title="Campus average"></i>`}
+        </div>
+        <div class="ori-metric-foot">
+          <span>campus ${reading(metric, metric.campus)}</span>
+          <b class="ori-delta ori-delta-${tone}">${
+            delta === null || delta === undefined ? '—' : sign + num(delta, 1)}</b>
+        </div>
+      </div>`;
+  }
+
+  function scorecard(card) {
+    const d = card.department || {};
+    const [word, emoji, colour] = mood(d.vibe);
+    const chip = (value, label) =>
+      `<div class="ori-chip"><b>${esc(value)}</b><span>${esc(label)}</span></div>`;
+
+    const rank = card.rank ? `
+      <div class="ori-score-rank">
+        <b>${card.rank <= 3 ? MEDALS[card.rank - 1] : '#' + card.rank}</b>
+        <span>${esc(ordinal(card.rank))} of ${card.of} on vibe</span>
+      </div>` : '';
+
+    const note = (icon, label, value) => value ? `
+      <div class="ori-score-note">
+        <span class="ori-score-note-label">${icon} ${esc(label)}</span>
+        <b>${esc(value)}</b>
+      </div>` : '';
+
+    return `
+      <section class="ori-score" style="--mood:${colour}">
+        <div class="ori-score-head">
+          <div class="ori-score-face">${emoji}</div>
+          <div class="ori-score-id">
+            <div class="ori-score-kicker">Deeksharambh 2026 · ${esc(card.campus)}</div>
+            <div class="ori-score-name">${esc(card.dept)}</div>
+            <div class="ori-score-word">${esc(word)} · ${num(d.vibe, 1)} / 10 overall vibe</div>
+          </div>
+          ${rank}
+        </div>
+        <div class="ori-hero-chips ori-score-chips">
+          ${chip(d.filled, 'Replies')}
+          ${chip(d.pending, 'Still pending')}
+          ${chip(d.eligible, 'Eligible')}
+          ${chip(num(d.pct, 0) + '%', 'Answered')}
+        </div>
+        <div class="ori-score-grid">${(card.metrics || []).map(metricCard).join('')}</div>
+        <div class="ori-score-notes">
+          ${note('🏆', 'Loudest praise', d.top_session)}
+          ${note('😰', 'Biggest stressor', d.top_stressor)}
+        </div>
+        <div class="ori-score-foot">
+          Bars are this department; the tick on each bar is the
+          ${esc(card.campus)} average
+          (${card.campus_overall ? card.campus_overall.filled : 0} replies from
+          ${card.campus_overall ? card.campus_overall.eligible : 0} students).
+        </div>
+      </section>`;
   }
 
   // ── Public API ────────────────────────────────────────────────────────────
@@ -497,8 +597,8 @@
       sectionNav(report) +
       sections(report);
 
-    // The markup goes in first: the charts queued while building it need
-    // their canvases to be in the document before they can be drawn.
+    // The markup goes in first: the charts queued while building it need their
+    // canvases to be in the document before they can be drawn.
     host.innerHTML = markup;
     paintCharts(host);
   }
@@ -537,7 +637,7 @@
       return `
         <${tag} ${clickable ? 'type="button"' : ''}
           class="ori-dept${clickable ? ' ori-dept-click' : ''}" data-dept="${esc(r.dept)}">
-          <div class="ori-dept-rank">${i + 1}</div>
+          <div class="ori-dept-rank">${i < 3 ? MEDALS[i] : i + 1}</div>
           <div class="ori-dept-face">${emoji}</div>
           <div class="ori-dept-body">
             <div class="ori-dept-head">
@@ -569,8 +669,18 @@
     }
   }
 
+  /** One department's card, for a link that opens only that department. */
+  function renderScorecard(host, card) {
+    if (!host) return;
+    if (!card || !card.dept) {
+      host.innerHTML = '<div class="ori-card ori-empty-card">No scorecard for this department yet.</div>';
+      return;
+    }
+    host.innerHTML = scorecard(card);
+  }
+
   global.OrientationReport = {
-    renderReport, renderDepartments, mood, esc, num, bars, podium, ring, tile,
-    ACCENTS,
+    renderReport, renderDepartments, renderScorecard, mood, esc, num, bars,
+    podium, ring, tile, ACCENTS,
   };
 })(window);

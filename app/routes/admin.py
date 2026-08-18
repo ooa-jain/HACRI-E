@@ -229,49 +229,19 @@ async def survey_logout():
     _del_cookie(r, _SURVEY_COOKIE)
     return r
 
-# Each admin section is its own page rather than a panel in one long document:
-# the browser's back button works, a section can be bookmarked or linked, and
-# a page only carries the markup for what it shows.
-SURVEY_SECTIONS = {
-    "overview":    ("Overview", "Cohort progress at a glance"),
-    "students":    ("Students", "Status, time taken, timeline and orientation replies"),
-    "emails":      ("Emails", "Send reminders, write your own mail, track delivery"),
-    "links":       ("Links", "Department links for both surveys, plus shareable reports"),
-    "depts":       ("Departments", "Literacy and readiness averages per department"),
-    "cohort":      ("Outcome and impact", "Baseline, what changed after the workshop, and the journey between them"),
-    "orientation": ("Orientation report", "Campus-wise Deeksharambh analysis, who filled it, and mailing"),
-    "parents":     ("Parental background", "Occupations reported in the post survey"),
-    "calendar":    ("Calendar", "When students filled the surveys"),
-    "settings":    ("Settings", "Gating, timing and automatic reminders"),
-}
-
-
-async def _render_survey_section(request: Request, section: str) -> HTMLResponse:
+@router.get("/admin/survey", response_class=HTMLResponse)
+async def survey_dashboard(request: Request):
     if not _is_survey_admin(request):
         return RedirectResponse(url="/admin/login", status_code=303)
-    if section not in SURVEY_SECTIONS:
-        return RedirectResponse(url="/admin/survey", status_code=303)
-    title, sub = SURVEY_SECTIONS[section]
     flags = await get_all_flags()
     public_url = str(settings.public_base_url).rstrip('/')
+    orientation_share_url = f"{public_url}/deeksharambh"
     return request.app.state.templates.TemplateResponse(
         request, "admin_survey.html", {
             "flags": flags,
-            "orientation_share_url": f"{public_url}/deeksharambh",
-            "section": section,
-            "page": {"title": title, "sub": sub},
+            "orientation_share_url": orientation_share_url
         },
     )
-
-
-@router.get("/admin/survey", response_class=HTMLResponse)
-async def survey_dashboard(request: Request):
-    return await _render_survey_section(request, "overview")
-
-
-@router.get("/admin/survey/section/{section}", response_class=HTMLResponse)
-async def survey_dashboard_section(request: Request, section: str):
-    return await _render_survey_section(request, section)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -965,21 +935,30 @@ async def api_orientation_share_links(request: Request):
 
 
 @router.get("/admin/api/orientation/dept-share-links")
-async def api_orientation_dept_share_links(request: Request, campus: str = Query(default="")):
-    """One orientation link per department, for sending to each department.
+async def api_orientation_dept_share_links(
+    request: Request,
+    campus: str = Query(default=""),
+):
+    """One copyable link per department, for the campus that is open.
 
-    Each link carries its own token and opens that department alone, so a head
-    of department sees their students' week and nobody else's.
+    Each carries a token minted for that department alone, so a head of
+    department can be handed their own Deeksharambh report without it opening
+    anybody else's. Counts and vibe ride along so the list says which links are
+    worth sending — a department with two replies is not a report yet.
     """
     if not _is_survey_admin(request):
         raise HTTPException(status_code=403)
 
-    from app.orientation_data import ALL_CAMPUSES, department_rows, orientation_dataset
+    from app.orientation_data import (
+        ALL_CAMPUSES, department_rows, orientation_dataset,
+    )
     from app.routes.shared_analysis import orientation_share_url
 
     base = str(request.base_url).rstrip("/")
+    # Campus-wide on purpose: the link carries no level filter, so counting
+    # only UG here would promise a figure the link itself would not show.
     data = await orientation_dataset(campus=campus)
-    rows = [r for r in department_rows(data["filled"], data["pending"]) if r["dept"] != "—"]
+    rows = department_rows(data["filled"], data["pending"])
 
     return JSONResponse({
         "campus": campus or ALL_CAMPUSES,
@@ -987,12 +966,15 @@ async def api_orientation_dept_share_links(request: Request, campus: str = Query
             {
                 "dept": row["dept"],
                 "filled": row["filled"],
+                "pending": row["pending"],
                 "eligible": row["eligible"],
                 "pct": row["pct"],
                 "vibe": row["vibe"],
+                "nps": row["nps"],
+                "belonging": row["belonging"],
                 "url": orientation_share_url(base, campus, row["dept"]),
             }
-            for row in sorted(rows, key=lambda r: r["dept"].lower())
+            for row in rows if row["dept"] and row["dept"] != "—"
         ],
     })
 
