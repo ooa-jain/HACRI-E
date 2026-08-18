@@ -286,7 +286,6 @@ body {
 .parent small { display: block; font-size: 11.5px; opacity: .75; margin-top: 8px }
 .p-salaried { background: linear-gradient(140deg, #1d4ed8, var(--sky)) }
 .p-entrepreneur { background: linear-gradient(140deg, #b45309, var(--sun)) }
-.p-homemaker { background: linear-gradient(140deg, #7c2d92, var(--grape)) }
 
 /* ── Roll call ────────────────────────────────────────────────────────── */
 .roll { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 16px }
@@ -587,17 +586,6 @@ body {
       <div class="move-row" id="move-row-quadrant"></div>
     </section>
 
-    <section class="card rise" style="margin-top:18px">
-      <span class="section-kicker">Pick your people</span>
-      <h2 class="card-title">Every department, before and after</h2>
-      <p class="card-sub">
-        Tap a department to add it, tap again to drop it. Only students who finished both surveys
-        are counted, so a department's number is the number of people it actually got through.
-      </p>
-      <div class="picker" id="picker-impact"></div>
-      <div class="chart-box"><canvas id="chart-impact"></canvas></div>
-      <p class="picker-note" id="note-impact"></p>
-    </section>
   </div>
 
   <!-- ── Parents ────────────────────────────────────────────────────── -->
@@ -614,8 +602,6 @@ body {
         <small>At least one parent in a salaried job</small></div>
       <div class="parent p-entrepreneur"><b data-count>{{ r.parents.entrepreneur }}</b><span>Entrepreneur household</span>
         <small>At least one parent running a business</small></div>
-      <div class="parent p-homemaker"><b data-count>{{ r.parents.homemaker }}</b><span>Homemaker at home</span>
-        <small>At least one parent keeping the house</small></div>
     </div>
   </section>
 
@@ -767,17 +753,6 @@ const outcomePicker = makePicker({
   datasets: picked => [
     bar('AI literacy at baseline', '#2ba7d9', picked.map(d => d.outcome.literacy)),
     bar('AI readiness at baseline', '#6d28d9', picked.map(d => d.outcome.readiness)),
-  ],
-});
-
-const impactPicker = makePicker({
-  rows: REPORT.departments, pickerId: 'picker-impact',
-  canvasId: 'chart-impact', noteId: 'note-impact',
-  datasets: picked => [
-    bar('Literacy before', '#2ba7d9', picked.map(d => d.outcome.literacy)),
-    bar('Literacy after',  '#58cc4a', picked.map(d => d.impact.literacy)),
-    bar('Readiness before', '#6d28d9', picked.map(d => d.outcome.readiness)),
-    bar('Readiness after',  '#f5b731', picked.map(d => d.impact.readiness)),
   ],
 });
 
@@ -1086,7 +1061,7 @@ function showView(name) {
   if (!drawn[name]) {
     drawn[name] = true;
     if (name === 'outcome') outcomePicker.draw();
-    else { impactPicker.draw(); paintQuadPicker(); drawQuadrant(); drawVibe(); }
+    else { paintQuadPicker(); drawQuadrant(); drawVibe(); }
   }
   // A view revealed after its cards were already observed would stay faded.
   document.getElementById('view-' + name)
