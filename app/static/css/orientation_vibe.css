@@ -80,6 +80,14 @@
   display: block; font-size: 12px; font-weight: 700; color: var(--muted);
   text-transform: uppercase; letter-spacing: .6px; margin-top: 7px;
 }
+/* The counter sits inside the value, so it keeps the value's size, not the
+   label's — the label rule above would otherwise shrink it to 12px. */
+.ov-tile b span, .ov-hero-big span, .ov-score-big b span {
+  display: inline; font-size: inherit; font-weight: inherit; color: inherit;
+  letter-spacing: inherit; text-transform: none; margin: 0;
+  /* The mood pill beside it is also a span — its chrome must not follow. */
+  background: none; padding: 0; border-radius: 0;
+}
 .ov-meter { height: 8px; border-radius: 999px; background: var(--cream); border: 1px solid var(--line); margin-top: 10px; overflow: hidden; }
 .ov-meter i { display: block; height: 100%; width: 0; background: var(--tone); transition: width .9s cubic-bezier(.2,.8,.3,1); }
 
@@ -176,4 +184,119 @@ button.ov-dept:focus-visible { outline: 3px solid var(--grape); outline-offset: 
 @media print {
   .ov-rise { opacity: 1 !important; transform: none !important; }
   .ov-card, .ov-tile, .ov-panel, .ov-dept { box-shadow: none; break-inside: avoid; }
+}
+
+/* ── Hero ─────────────────────────────────────────────────────────────────
+   The one number the page is about, on the dark ground the impact page opens
+   with, and beside it the distribution that number came from. */
+.ov-hero {
+  --mood: var(--lime);
+  display: grid;
+  grid-template-columns: minmax(240px, 360px) minmax(280px, 1fr);
+  gap: 26px;
+  align-items: center;
+  padding: 30px;
+  border-radius: var(--radius);
+  color: #fff;
+  border: 2px solid var(--ink);
+  box-shadow: 6px 6px 0 rgba(23, 17, 10, .18);
+  background:
+    radial-gradient(120% 90% at 88% 6%, rgba(245, 183, 49, .22) 0%, transparent 56%),
+    radial-gradient(90% 80% at 8% 96%, rgba(88, 204, 74, .18) 0%, transparent 58%),
+    linear-gradient(168deg, #1b1330 0%, #2f1b57 52%, #3f2168 100%);
+}
+.ov-hero-kicker {
+  font-size: 11px; font-weight: 800; letter-spacing: 1.6px;
+  text-transform: uppercase; color: rgba(255, 255, 255, .62);
+}
+.ov-hero-big {
+  font-size: clamp(58px, 11vw, 96px); font-weight: 900; letter-spacing: -4px; line-height: .95;
+  margin: 8px 0 2px;
+  background: linear-gradient(100deg, var(--sun), #ffe9a8 42%, var(--lime));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.ov-hero-big small {
+  font-size: 22px; font-weight: 700; letter-spacing: -.5px; margin-left: 8px;
+  -webkit-text-fill-color: rgba(255, 255, 255, .5); color: rgba(255, 255, 255, .5);
+}
+.ov-hero-mood {
+  display: inline-block; padding: 5px 14px; border-radius: 999px;
+  font-size: 12px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase;
+  color: var(--ink); background: var(--mood);
+}
+.ov-hero-split { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-top: 22px; }
+.ov-half {
+  background: rgba(255, 255, 255, .09);
+  border: 1px solid rgba(255, 255, 255, .18);
+  border-radius: 16px; padding: 14px 15px;
+}
+.ov-half b { display: block; font-size: 27px; font-weight: 900; letter-spacing: -1px; line-height: 1; }
+.ov-half span { display: block; font-size: 12.5px; font-weight: 700; margin-top: 5px; }
+.ov-half i { display: block; font-style: normal; font-size: 11.5px; margin-top: 4px; color: rgba(255, 255, 255, .55); }
+.ov-hero-panel { min-width: 0; }
+.ov-hero-note { font-size: 11.5px; color: rgba(255, 255, 255, .55); margin-top: 8px; }
+
+/* ── Two-up ───────────────────────────────────────────────────────────── */
+.ov-two { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 18px; }
+.ov-two > * { margin-top: 0 !important; }
+
+/* ── Section jumps ────────────────────────────────────────────────────── */
+.ov-nav { display: flex; flex-wrap: wrap; gap: 9px; }
+.ov-nav-chip {
+  --tone: var(--grape);
+  padding: 8px 15px; border-radius: 999px; text-decoration: none;
+  border: 2px solid var(--ink); background: var(--paper); color: var(--ink);
+  font-size: 12.5px; font-weight: 700;
+  transition: transform .14s ease, background .14s ease, color .14s ease;
+}
+.ov-nav-chip:hover { transform: translateY(-2px); background: var(--tone); color: #fff; }
+
+/* ── Department scorecard ─────────────────────────────────────────────── */
+.ov-scorecard { border-top: 10px solid var(--tone, var(--grape)); }
+.ov-score-head {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+  gap: 20px; margin-top: 18px;
+}
+.ov-score-big b {
+  display: block; font-size: 62px; font-weight: 900; letter-spacing: -3px; line-height: 1;
+  color: var(--tone, var(--grape));
+}
+.ov-score-big b small { font-size: 20px; font-weight: 700; color: var(--muted); letter-spacing: 0; margin-left: 6px; }
+.ov-score-big span {
+  display: inline-block; margin-top: 8px; padding: 4px 12px; border-radius: 999px;
+  font-size: 11.5px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase;
+  color: #fff; background: var(--tone, var(--grape));
+}
+.ov-score-facts { display: flex; flex-wrap: wrap; gap: 12px; }
+.ov-score-facts > div {
+  background: var(--cream); border: 2px solid var(--ink); border-radius: 16px;
+  padding: 12px 16px; min-width: 96px;
+}
+.ov-score-facts b { display: block; font-size: 24px; font-weight: 900; letter-spacing: -1px; line-height: 1; }
+.ov-score-facts span {
+  display: block; font-size: 10.5px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .7px; color: var(--muted); margin-top: 5px;
+}
+.ov-metrics { margin-top: 22px; display: grid; gap: 18px; }
+.ov-metric-value { font-size: 15px; font-weight: 900; letter-spacing: -.5px; flex-shrink: 0; }
+.ov-metric-value small { font-size: 11.5px; font-weight: 700; color: var(--muted); }
+/* The campus average, ticked onto the department's own bar. */
+.ov-metric .ov-track { position: relative; overflow: visible; }
+.ov-metric .ov-track i { border-radius: 999px; }
+.ov-metric .ov-track u {
+  position: absolute; top: -4px; bottom: -4px; width: 3px; margin-left: -1.5px;
+  background: var(--ink); border-radius: 2px;
+}
+.ov-metric-note { font-size: 11.5px; font-weight: 700; color: var(--muted); margin-top: 6px; }
+.ov-metric-note.up { color: #2f8f2a; }
+.ov-metric-note.down { color: var(--rust); }
+.ov-score-words { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-top: 22px; }
+.ov-score-words .ov-cell span {
+  font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .8px; color: var(--muted);
+}
+.ov-quote { display: block; font-size: 17px; font-weight: 800; letter-spacing: -.3px; margin-top: 6px; color: var(--ink); }
+
+@media (max-width: 860px) {
+  .ov-hero { grid-template-columns: 1fr; padding: 22px; }
+  .ov-score-head { gap: 14px; }
 }

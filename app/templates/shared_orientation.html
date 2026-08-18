@@ -5,134 +5,146 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Deeksharambh 2026 Orientation Report — {{ scope_label }} — JAIN University</title>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/static/css/orientation_report.css?v=4">
+<link rel="stylesheet" href="/static/css/orientation_vibe.css?v=1">
 <!-- The same charting library the impact report uses, so a distribution is
      plotted the same way on both pages. -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
-  /* The page around the report: a quiet near-white ground, a white nav strip,
-     a large page title, and one warm coral accent on the primary action. The
-     report itself is styled by orientation_report.css. */
+  /* The page around the report. The public Deeksharambh link goes to students,
+     parents and heads of department, so it wears the impact page's design:
+     cream ground, ink outlines, hard offset shadows, one loud thing at a time.
+     The report inside it is drawn by orientation_vibe.css. The admin console
+     keeps its own analytics look — same numbers, different room. */
   * { box-sizing: border-box; margin: 0; padding: 0 }
+  :root {
+    --ink: #17110a; --ink-soft: #4a3f31; --muted: #7d7060;
+    --paper: #fffdf8; --cream: #fbf4e6; --line: #ece0cc;
+    --grape: #6d28d9; --sun: #f5b731; --lime: #58cc4a;
+  }
   body {
     font-family: 'Outfit', system-ui, sans-serif;
-    background: #f7f8fa; color: #15181e;
-    padding: 20px 18px 64px;
+    background: var(--cream); color: var(--ink);
     -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
   }
-  .wrap { max-width: 1240px; margin: 0 auto }
+  .wrap { max-width: 1240px; margin: 0 auto; padding: 0 18px 64px }
 
-  /* ── Nav strip ─────────────────────────────────────────────────────── */
-  .nav {
-    background: #fff; border: 1px solid #ecedf1; border-radius: 16px;
-    padding: 11px 16px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
-    box-shadow: 0 1px 2px rgba(16,24,40,.04);
+  /* ── Cover band ────────────────────────────────────────────────────── */
+  .cover {
+    position: relative; overflow: hidden;
+    margin: 0 -18px 0; padding: 26px 24px 74px;
+    color: #fff;
+    background:
+      radial-gradient(120% 90% at 84% 6%, rgba(245,183,49,.20) 0%, transparent 55%),
+      radial-gradient(90% 80% at 10% 96%, rgba(88,204,74,.16) 0%, transparent 58%),
+      linear-gradient(168deg, #1b1330 0%, #2f1b57 52%, #3f2168 100%);
   }
-  .nav .logo { line-height: 0 }
-  .nav .logo img { height: 30px; width: auto }
-  .nav .brand {
-    font-size: 12.5px; font-weight: 700; letter-spacing: -.1px; color: #15181e;
-    padding-left: 14px; border-left: 1px solid #ecedf1;
+  .cover::after {
+    content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 54px;
+    background: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 60' preserveAspectRatio='none'%3E%3Cpath d='M0 34c190 26 350-18 540-10s310 32 500 22 260-32 400-18v32H0z' fill='%23fbf4e6'/%3E%3C/svg%3E") bottom/100% 100% no-repeat;
+    pointer-events: none;
   }
-  .nav .brand s { display: block; text-decoration: none; font-size: 10.5px; font-weight: 500; color: #8b9099; margin-top: 1px }
+  .cover > * { position: relative; z-index: 1 }
+  .cover-inner { max-width: 1204px; margin: 0 auto }
+  .nav { display: flex; align-items: center; gap: 14px; flex-wrap: wrap }
+  .nav .logo { background: #fff; border-radius: 12px; padding: 7px; line-height: 0 }
+  .nav .logo img { height: 32px; width: auto }
+  .nav .brand { font-size: 13px; font-weight: 800; letter-spacing: -.1px }
+  .nav .brand s { display: block; text-decoration: none; font-size: 11px; font-weight: 500; color: rgba(255,255,255,.6); margin-top: 2px }
   .nav .grow { flex: 1 }
   .pill {
     display: inline-flex; align-items: center; gap: 6px;
-    background: #fdeceb; border: 1px solid rgba(240,82,75,.22); color: #c8322c;
-    border-radius: 999px; padding: 5px 12px;
-    font-size: 9.5px; font-weight: 700; letter-spacing: .9px; text-transform: uppercase;
+    background: rgba(255,255,255,.16); border: 1px solid rgba(255,255,255,.3);
+    border-radius: 999px; padding: 6px 15px;
+    font-size: 10.5px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase;
   }
-
-  /* ── Page title ────────────────────────────────────────────────────── */
-  .pagehead {
-    display: flex; align-items: flex-end; justify-content: space-between;
-    gap: 16px; flex-wrap: wrap; margin: 26px 4px 18px;
-  }
-  .pagehead h1 { font-size: 30px; font-weight: 800; letter-spacing: -1.1px }
-  .pagehead p { font-size: 12.5px; color: #8b9099; margin-top: 5px }
-  .actions { display: flex; gap: 8px; flex-wrap: wrap }
+  .pagehead { margin-top: 30px }
+  .pagehead h1 { font-size: clamp(30px, 5.4vw, 52px); font-weight: 900; letter-spacing: -1.8px; line-height: 1.04 }
+  .pagehead p { font-size: 14px; color: rgba(255,255,255,.72); margin-top: 8px; max-width: 60ch }
 
   /* ── Controls ──────────────────────────────────────────────────────── */
-  .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 16px }
-  /* Segmented control: one quiet container, the live tab lifted out of it. */
-  .tabs { display: inline-flex; gap: 3px; background: #eff0f4; border-radius: 12px; padding: 3px }
+  .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 22px 0 20px }
+  .tabs {
+    display: inline-flex; gap: 4px; padding: 5px; border-radius: 999px;
+    background: var(--paper); border: 2px solid var(--ink); box-shadow: 5px 5px 0 rgba(23,17,10,.09);
+  }
   .tab {
-    font-size: 12px; font-weight: 600; padding: 7px 14px; border-radius: 10px;
-    background: transparent; color: #6b717b; border: none; cursor: pointer;
-    font-family: inherit; transition: background .15s, color .15s;
+    border: none; background: none; cursor: pointer; font: inherit;
+    font-size: 13px; font-weight: 800; padding: 9px 18px; border-radius: 999px; color: var(--muted);
+    transition: background .16s ease, color .16s ease;
   }
-  .tab:hover { color: #15181e }
-  .tab.on { background: #fff; color: #15181e; box-shadow: 0 1px 2px rgba(16,24,40,.07) }
-  .field {
-    padding: 8px 12px; border: 1px solid #e3e5ea; border-radius: 11px;
-    font-size: 12px; font-family: inherit; background: #fff; color: #15181e;
+  .tab:hover { color: var(--ink) }
+  .tab.on { background: var(--ink); color: #fff }
+  .field, .scope {
+    padding: 9px 14px; border: 2px solid var(--ink); border-radius: 999px;
+    font-size: 12.5px; font-weight: 700; font-family: inherit;
+    background: var(--paper); color: var(--ink);
   }
-  .scope {
-    display: inline-flex; align-items: center; gap: 7px;
-    background: #fff; border: 1px solid #e3e5ea; border-radius: 11px; padding: 8px 13px;
-    font-size: 12px; font-weight: 600; color: #3d434d;
-  }
+  .scope { display: inline-flex; align-items: center; gap: 7px; background: var(--cream) }
   .btn {
-    font-size: 12px; font-weight: 600; padding: 9px 15px; border-radius: 11px;
-    border: 1px solid transparent; cursor: pointer; text-decoration: none;
-    display: inline-block; font-family: inherit;
+    font-size: 13px; font-weight: 800; padding: 10px 18px; border-radius: 999px;
+    border: 2px solid var(--ink); cursor: pointer; text-decoration: none;
+    display: inline-block; font-family: inherit; background: var(--paper); color: var(--ink);
+    transition: transform .14s ease, box-shadow .14s ease;
   }
-  .btn-primary { background: #f0524b; color: #fff; box-shadow: 0 1px 2px rgba(240,82,75,.28) }
-  .btn-primary:hover { background: #e0463f }
-  .btn-soft { background: #fff; color: #3d434d; border-color: #e3e5ea }
-  .btn-soft:hover { border-color: #d2d5dc }
+  .btn:hover { transform: translate(-1px, -1px); box-shadow: 4px 4px 0 rgba(23,17,10,.14) }
+  .btn-primary { background: var(--sun) }
   .spacer { flex: 1 }
 
-  .loading { text-align: center; padding: 64px 20px; color: #a8adb6; font-size: 13px }
+  .loading { text-align: center; padding: 64px 20px; color: var(--muted); font-size: 14px; font-weight: 700 }
   footer {
-    text-align: center; margin-top: 36px; font-size: 11px; color: #a8adb6; line-height: 1.8;
+    text-align: center; margin-top: 40px; font-size: 12px; color: var(--muted); line-height: 1.8;
   }
   @media print {
-    body { padding: 0; background: #fff }
-    .toolbar, .actions, .nav .pill { display: none }
+    .toolbar, .pill, .btn { display: none }
+    .cover { color: #17110a; background: none; padding: 0 0 12px }
+    .cover::after { display: none }
+    .pagehead p { color: #4a3f31 }
+    body { background: #fff }
   }
 </style>
 </head>
 <body>
-<div class="wrap">
 
-  <header class="nav">
-    <div class="logo"><img src="/static/logo.png" alt="JAIN University" onerror="this.src='/static/logosmall.png'"></div>
-    <div class="brand">Deeksharambh 2026<s>Office of Academics · JAIN (Deemed-to-be University)</s></div>
-    <span class="grow"></span>
-    <span class="pill">{% if locked %}✦ Department report{% else %}✦ Shared report{% endif %}</span>
+  <header class="cover">
+    <div class="cover-inner">
+      <div class="nav">
+        <div class="logo"><img src="/static/logo.png" alt="JAIN University" onerror="this.src='/static/logosmall.png'"></div>
+        <div class="brand">Deeksharambh 2026<s>Office of Academics · JAIN (Deemed-to-be University)</s></div>
+        <span class="grow"></span>
+        <span class="pill">{% if locked %}Department report{% else %}Shared report{% endif %}</span>
+      </div>
+      <div class="pagehead">
+        <h1>{% if locked %}{{ dept }}{% else %}How the first week actually felt{% endif %}</h1>
+        <p id="subtitle">{{ campus_label }} · the students' own account of Deeksharambh 2026</p>
+      </div>
+    </div>
   </header>
 
-  <div class="pagehead">
-    <div>
-      <h1>{% if locked %}{{ dept }}{% else %}Orientation Report{% endif %}</h1>
-      <p id="subtitle">📍 {{ campus_label }} · how the first week actually felt</p>
-    </div>
-    <div class="actions">
-      <button class="btn btn-soft" onclick="window.print()">🖨️ Print</button>
-      <a id="ppt" class="btn btn-primary" href="#">⬇️ Download the deck</a>
-    </div>
-  </div>
+<div class="wrap">
 
   <div class="toolbar">
     <div class="tabs">
-      <button class="tab on" data-view="report"      onclick="showView('report')">📊 Result analysis</button>
+      <button class="tab on" data-view="report"      onclick="showView('report')">Result analysis</button>
       <button class="tab"    data-view="departments" onclick="showView('departments')">
-        {% if locked %}🏆 Vibe scorecard{% else %}🏢 Departments{% endif %}</button>
+        {% if locked %}Vibe scorecard{% else %}Departments{% endif %}</button>
     </div>
     {% if locked %}
-      <span class="scope">🏢 {{ dept }}</span>
+      <span class="scope">{{ dept }}</span>
       <input type="hidden" id="dept" value="{{ dept }}">
     {% else %}
       <select id="dept" class="field" onchange="reload()">
         <option value="">All departments</option>
       </select>
     {% endif %}
+    <span class="spacer"></span>
+    <button class="btn" onclick="window.print()">Print</button>
+    <a id="ppt" class="btn btn-primary" href="#">Download the deck</a>
   </div>
 
   <div id="loading" class="loading">Loading the orientation report…</div>
-  <div id="report" class="ori-report" hidden></div>
-  <div id="departments" class="ori-report ori-depts" hidden></div>
+  <div id="report" class="ov" hidden></div>
+  <div id="departments" class="ov" hidden></div>
 
   <footer>
     Deeksharambh 2026 · JAIN (Deemed-to-be University) · Office of Academics<br>
@@ -141,7 +153,7 @@
   </footer>
 </div>
 
-<script src="/static/js/orientation_report.js?v=4"></script>
+<script src="/static/js/orientation_vibe.js?v=1"></script>
 <script>
 const CAMPUS = {{ campus | tojson }};
 const TOKEN  = {{ token  | tojson }};
@@ -182,25 +194,25 @@ async function reload() {
   if (!deptsFilled) {
     dept.innerHTML = '<option value="">All departments</option>' +
       data.dept_options.map(d =>
-        `<option value="${OrientationReport.esc(d)}">${OrientationReport.esc(d)}</option>`).join('');
+        `<option value="${OrientationVibe.esc(d)}">${OrientationVibe.esc(d)}</option>`).join('');
     deptsFilled = true;
   }
 
   // The heading already names the department on a department link, so the
   // line under it carries the campus and the count instead.
   document.getElementById('subtitle').textContent =
-    `📍 ${data.campus}${data.dept && !LOCKED ? ' · ' + data.dept : ''} · ` +
+    `${data.campus}${data.dept && !LOCKED ? ' · ' + data.dept : ''} · ` +
     `${data.report.coverage.filled} of ${data.report.coverage.eligible} students answered`;
   document.getElementById('generated').textContent = 'Generated ' + data.generated_at + '.';
   document.getElementById('ppt').href = '/shared/orientation/ppt?' + params();
 
-  OrientationReport.renderReport(document.getElementById('report'), data.report);
+  OrientationVibe.renderReport(document.getElementById('report'), data.report);
   // A department link compares itself with its campus; a campus link ranks
   // every department against every other.
   if (LOCKED) {
-    OrientationReport.renderScorecard(document.getElementById('departments'), data.scorecard);
+    OrientationVibe.renderScorecard(document.getElementById('departments'), data.scorecard);
   } else {
-    OrientationReport.renderDepartments(document.getElementById('departments'), data.departments);
+    OrientationVibe.renderDepartments(document.getElementById('departments'), data.departments);
   }
 
   loading.hidden = true;

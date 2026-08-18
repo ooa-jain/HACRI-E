@@ -156,10 +156,29 @@ async def test_the_deck_downloads_from_the_shared_link(client):
 
 @pytest.mark.asyncio
 async def test_the_renderer_and_its_stylesheet_are_served(client):
-    for path in ("/static/js/orientation_report.js", "/static/css/orientation_report.css"):
+    for path in ("/static/js/orientation_report.js", "/static/css/orientation_report.css",
+                 "/static/js/orientation_vibe.js", "/static/css/orientation_vibe.css"):
         r = await client.get(path)
         assert r.status_code == 200
         assert len(r.content) > 1000
+
+
+@pytest.mark.asyncio
+async def test_the_shared_page_wears_the_public_design(client):
+    """Two audiences, two renderers.
+
+    The shared link goes to students, parents and heads of department, so it
+    loads the public renderer. The admin console keeps the analytics one — the
+    same payload drawn for a different room.
+    """
+    await _seed()
+    page = (await client.get("/shared/orientation", params=_link("Bangalore"))).text
+
+    assert "orientation_vibe.js" in page
+    assert "orientation_vibe.css" in page
+    assert "orientation_report.js" not in page
+    # Chart.js has to be there or every distribution falls back to nothing.
+    assert "chart.js" in page
 
 
 # ── One link per department ──────────────────────────────────────────────────
