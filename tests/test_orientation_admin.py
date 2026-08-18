@@ -240,10 +240,15 @@ async def test_ppt_download_is_a_real_deck(client):
         for slide in deck.slides for shape in slide.shapes
         if shape.has_text_frame
     )
-    assert "Orientation Experience Report" in words
+    assert "Student Experience Analysis Report" in words
     assert "Bangalore" in words
     assert "8.0 / 10" in words          # the cohort's average vibe, on the cover
     assert "Loving it".upper() in words.upper()
+    # The deck follows the printed report's running order.
+    for section in ("Section I", "Section II", "Section III", "Section IV"):
+        assert section in words
+    assert "RESPONSE OVERVIEW" in words
+    assert "Department Scoreboard" in words
 
 
 @pytest.mark.asyncio
@@ -285,14 +290,14 @@ def test_chart_labels_drop_emoji_and_trim():
 
 def test_charts_write_pngs_even_with_no_answers(tmp_path):
     from app.orientation_charts import (
-        plot_dept_vibe, plot_nps_ring, plot_response_rate, plot_top_options,
+        plot_dept_series, plot_nps_ring, plot_response_rate, plot_top_options,
         plot_vibe_hero,
     )
 
     for name, fn, args in [
         ("vibe", plot_vibe_hero, ({"options": [], "avg": None},)),
         ("nps", plot_nps_ring, ({"promoters": 0, "passives": 0, "detractors": 0},)),
-        ("dept", plot_dept_vibe, ([],)),
+        ("dept", plot_dept_series, ([], [("vibe", "Overall vibe")])),
         ("rate", plot_response_rate, ([],)),
     ]:
         out = fn(*args, tmp_path / f"{name}.png")
@@ -395,3 +400,43 @@ async def test_mail_body_becomes_paragraphs_and_carries_a_resume_link():
     assert "Bangalore" in html
     assert text.startswith("Dear Asha,")
     assert "Open my survey: http://test/resume/abc?src=reminder" in text
+
+
+# ── What the deck is built from ──────────────────────────────────────────────
+@pytest.mark.asyncio
+async def test_campus_split_counts_ug_and_pg_per_campus(app_with_mock):
+    """The deck's opening slide: who answered, campus by campus."""
+    await _seed()
+    from app.orientation_data import campus_split, orientation_dataset
+
+    data = await orientation_dataset()
+    rows = {r["campus"]: r for r in campus_split(data["filled"], data["pending"])}
+
+    assert rows["Bangalore"]["filled"] == 2          # Asha and Bilal
+    assert rows["Bangalore"]["pending"] == 1         # Dev owes the form
+    assert rows["Bangalore"]["ug"] == 2 and rows["Bangalore"]["pg"] == 0
+    assert rows["Bangalore"]["departments"] == 2
+    assert rows["Kochi"]["filled"] == 1
+    # Esha never finished the baseline, so she is in neither column.
+    assert sum(r["eligible"] for r in rows.values()) == 4
+
+
+@pytest.mark.asyncio
+async def test_department_rows_carry_the_nps_denominator(app_with_mock):
+    """Promoters mean nothing without the count they are a share of.
+
+    A department where one student answered warmly and nobody coldly is not a
+    department where 100% are promoters — it is one where one student answered.
+    """
+    await _seed()
+    from app.orientation_data import department_rows, orientation_dataset
+
+    data = await orientation_dataset(campus="Bangalore")
+    rows = {r["dept"]: r for r in department_rows(data["filled"], data["pending"])}
+
+    law = rows["Department of Law"]
+    assert law["promoters"] == 1 and law["detractors"] == 0
+    assert law["nps_answered"] == 1          # Asha; Dev never answered
+    commerce = rows["Department of Commerce"]
+    assert commerce["detractors"] == 1 and commerce["nps_answered"] == 1
+

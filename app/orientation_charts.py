@@ -1,10 +1,10 @@
 """
 orientation_charts.py — the picture half of the Deeksharambh report.
 
-These are deliberately louder than the HACRI-E score charts: the orientation
-survey is a mood reading of a first week, so the charts lead with the number
-students would recognise (a vibe out of ten, an NPS ring) rather than with a
-grid of axes.
+Drawn to sit inside the Deeksharambh deck (`orientation_ppt.py`) and to look
+like it: a serif face, navy headings, one teal accent, and the four muted
+series colours the department-wise charts have always used. Colour carries the
+series, not a verdict — the words do the judging.
 
 Every function writes a PNG and returns its path, so both the dashboard and the
 PowerPoint deck draw from exactly the same picture.
@@ -18,27 +18,39 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 from matplotlib.colors import LinearSegmentedColormap  # noqa: E402
-from matplotlib.patches import FancyBboxPatch  # noqa: E402
 
-NAVY = "#0d2147"
-GOLD = "#e6b324"
-INK = "#1a1a2e"
-MUTED = "#64748b"
+# Georgia is the deck's face; DejaVu Serif ships with matplotlib and stands in
+# on machines that do not have it, so a chart is never drawn in the wrong voice.
+plt.rcParams["font.family"] = "serif"
+plt.rcParams["font.serif"] = ["Georgia", "Bookman Old Style", "DejaVu Serif"]
+
+NAVY = "#2e3a64"
+TEAL = "#21a88a"
+TEAL_DEEP = "#17806a"
+MINT = "#d9f1ec"
+GOLD = "#c8a45a"
+INK = "#2f3640"
+MUTED = "#5b6570"
 PAPER = "#ffffff"
+LINE = "#dfe4e8"
 
-# Cool-to-warm ramp used everywhere a 1-10 feeling is drawn.
+# One bar per series, in the order a legend reads them.
+SERIES = ["#4a7ebb", "#c0504d", "#9bbb59", "#8064a2"]
+
+# Single-hue ramp for a 1-10 distribution: pale mint at the low end, deep teal
+# at the high one.
 VIBE_CMAP = LinearSegmentedColormap.from_list(
-    "vibe", ["#e11d48", "#f97316", "#facc15", "#84cc16", "#059669"]
+    "vibe", ["#cfe9e2", "#8fd0be", "#4fb99b", "#21a88a", "#12735e"]
 )
 
 # What an average vibe actually means, in words a reader can use.
 MOODS: list[tuple[float, str, str]] = [
-    (9.0, "Buzzing", "#059669"),
-    (8.0, "Loving it", "#16a34a"),
-    (7.0, "Good vibes", "#84cc16"),
-    (6.0, "Warming up", "#facc15"),
-    (5.0, "Mixed feelings", "#f97316"),
-    (0.0, "Needs a lift", "#e11d48"),
+    (9.0, "Buzzing", "#12735e"),
+    (8.0, "Loving it", "#21a88a"),
+    (7.0, "Good vibes", "#4fb99b"),
+    (6.0, "Warming up", "#c8a45a"),
+    (5.0, "Mixed feelings", "#c98a4d"),
+    (0.0, "Needs a lift", "#c0504d"),
 ]
 
 
@@ -49,7 +61,7 @@ def mood_for(avg: float | None) -> tuple[str, str]:
     for floor, word, colour in MOODS:
         if avg >= floor:
             return (word, colour)
-    return ("Needs a lift", "#e11d48")
+    return ("Needs a lift", "#c0504d")
 
 
 def clean(label: str, limit: int = 34) -> str:
@@ -80,7 +92,7 @@ def _empty(path: Path, message: str, size=(10, 5)) -> Path:
 def _style(ax) -> None:
     for side in ("top", "right", "left"):
         ax.spines[side].set_visible(False)
-    ax.spines["bottom"].set_color("#e2e8f0")
+    ax.spines["bottom"].set_color(LINE)
     ax.tick_params(colors=MUTED, labelsize=11, length=0)
 
 
@@ -137,7 +149,7 @@ def plot_nps_ring(stats: dict, out_path: Path) -> Path:
         return _empty(out_path, "No recommendation scores yet", size=(7, 5))
 
     labels = ["Promoters 9–10", "Passives 7–8", "Detractors 0–6"]
-    colours = ["#059669", "#facc15", "#e11d48"]
+    colours = [TEAL, "#e8c468", "#c0504d"]
 
     fig, ax = plt.subplots(figsize=(7.4, 5.4))
     fig.patch.set_facecolor(PAPER)
@@ -162,77 +174,8 @@ def plot_nps_ring(stats: dict, out_path: Path) -> Path:
     return out_path
 
 
-def plot_feeling_meters(items: list[tuple[str, float | None, int]], out_path: Path,
-                        title: str = "How the cohort feels") -> Path:
-    """Rounded meters — one per headline average, filled to its share of the max."""
-    items = [(label, value, maximum) for label, value, maximum in items if value is not None]
-    if not items:
-        return _empty(out_path, "No ratings yet", size=(10, 4))
-
-    fig, ax = plt.subplots(figsize=(10.5, 0.95 * len(items) + 1.6))
-    fig.patch.set_facecolor(PAPER)
-    ax.set_xlim(0, 1.14)
-    ax.set_ylim(-0.6, len(items) - 0.4)
-    ax.axis("off")
-
-    for i, (label, value, maximum) in enumerate(reversed(items)):
-        share = max(0.0, min(1.0, value / maximum))
-        colour = VIBE_CMAP(share)
-        ax.add_patch(FancyBboxPatch((0, i - 0.17), 1.0, 0.34,
-                                    boxstyle="round,pad=0,rounding_size=0.17",
-                                    facecolor="#eef2f7", edgecolor="none"))
-        if share > 0:
-            ax.add_patch(FancyBboxPatch((0, i - 0.17), max(share, 0.02), 0.34,
-                                        boxstyle="round,pad=0,rounding_size=0.17",
-                                        facecolor=colour, edgecolor="none"))
-        ax.text(0, i + 0.32, label, fontsize=12, fontweight="bold", color=INK)
-        ax.text(1.03, i, f"{value:.1f}/{maximum}", fontsize=13,
-                fontweight="bold", color=NAVY, va="center")
-
-    ax.set_title(title, fontsize=17, fontweight="bold", color=NAVY, loc="left", pad=16)
-    fig.tight_layout()
-    fig.savefig(str(_ensure(out_path)), dpi=150, facecolor=PAPER)
-    plt.close(fig)
-    return out_path
-
-
-def plot_dept_vibe(rows: list[dict], out_path: Path,
-                   value_key: str = "vibe", maximum: int = 10,
-                   title: str = "Vibe by department") -> Path:
-    """One bar per department, coloured by how the department actually feels."""
-    rows = [r for r in rows if r.get(value_key) is not None]
-    if not rows:
-        return _empty(out_path, "No department averages yet")
-
-    rows = sorted(rows, key=lambda r: r[value_key])
-    labels = [clean(r["dept"], 30) for r in rows]
-    values = [r[value_key] for r in rows]
-    counts = [r.get("filled", 0) for r in rows]
-
-    fig, ax = plt.subplots(figsize=(11, max(3.2, 0.62 * len(rows) + 1.8)))
-    fig.patch.set_facecolor(PAPER)
-    bars = ax.barh(labels, values,
-                   color=[VIBE_CMAP(v / maximum) for v in values],
-                   height=0.62, zorder=3)
-    for bar, value, count in zip(bars, values, counts):
-        ax.text(bar.get_width() + maximum * 0.015, bar.get_y() + bar.get_height() / 2,
-                f"{value:.1f}   ({count})", va="center",
-                fontsize=11, fontweight="bold", color=INK)
-
-    ax.set_xlim(0, maximum * 1.18)
-    ax.set_title(title, fontsize=17, fontweight="bold", color=NAVY, loc="left", pad=16)
-    ax.set_xlabel(f"Average out of {maximum}  ·  (n) = responses", fontsize=11, color=MUTED)
-    ax.grid(axis="x", linestyle=":", alpha=0.35, zorder=0)
-    _style(ax)
-    ax.tick_params(axis="y", labelsize=11.5)
-    fig.tight_layout()
-    fig.savefig(str(_ensure(out_path)), dpi=150, facecolor=PAPER)
-    plt.close(fig)
-    return out_path
-
-
 def plot_top_options(options: list[dict], out_path: Path, title: str,
-                     colour: str = "#2563eb", limit: int = 7) -> Path:
+                     colour: str = TEAL, limit: int = 7) -> Path:
     """The loudest answers to one multi-select question."""
     options = [o for o in options if o.get("count")][:limit]
     if not options:
@@ -279,8 +222,8 @@ def plot_response_rate(rows: list[dict], out_path: Path,
 
     fig, ax = plt.subplots(figsize=(11, max(3.2, 0.62 * len(rows) + 1.8)))
     fig.patch.set_facecolor(PAPER)
-    ax.barh(labels, filled, color="#0d9488", height=0.62, label="Filled", zorder=3)
-    ax.barh(labels, pending, left=filled, color="#e2e8f0", height=0.62,
+    ax.barh(labels, filled, color=TEAL, height=0.62, label="Filled", zorder=3)
+    ax.barh(labels, pending, left=filled, color=MINT, height=0.62,
             label="Still pending", zorder=3)
     widest = max(r["eligible"] for r in rows)
     for i, row in enumerate(rows):
@@ -296,6 +239,71 @@ def plot_response_rate(rows: list[dict], out_path: Path,
     _style(ax)
     ax.tick_params(axis="y", labelsize=11.5)
     fig.tight_layout()
-    fig.savefig(str(_ensure(out_path)), dpi=150, facecolor=PAPER)
+    fig.savefig(str(_ensure(out_path)), dpi=150, facecolor=PAPER,
+                bbox_inches="tight", pad_inches=0.16)
     plt.close(fig)
     return out_path
+
+
+def plot_dept_series(rows: list[dict], series: list[tuple[str, str]], out_path: Path,
+                     maximum: float = 10.0, title: str = "",
+                     empty: str = "No department averages yet") -> Path:
+    """Department-wise grouped bars — one bar per measure, one group per department.
+
+    The shape the Deeksharambh deck has always used for its department slides:
+    the departments down the left, a bar per measure across, the value printed
+    on each bar, and the legend off to the right where it cannot crowd them.
+
+    `series` is [(key, label), ...] read off each row.
+    """
+    keys = [key for key, _ in series]
+    rows = [r for r in rows if any(r.get(k) is not None for k in keys)]
+    if not rows or not series:
+        return _empty(out_path, empty)
+
+    rows = sorted(rows, key=lambda r: -(r.get(keys[0]) or 0))
+    labels = [clean(r["dept"], 42) for r in rows]
+    count = len(series)
+    height = 0.8 / count
+    positions = range(len(rows))
+
+    fig, ax = plt.subplots(
+        figsize=(9.6, min(7.2, max(2.8, 0.34 * count * len(rows) + 1.3))))
+    fig.patch.set_facecolor(PAPER)
+
+    for i, (key, label) in enumerate(series):
+        values = [(r.get(key) or 0) for r in rows]
+        # Top series at the top of each group, so the legend reads downwards.
+        offset = (count - 1) / 2 - i
+        bars = ax.barh([p + offset * height for p in positions], values,
+                       height=height * 0.86, color=SERIES[i % len(SERIES)],
+                       label=label, zorder=3)
+        for bar, value, row in zip(bars, values, rows):
+            # A department that did not answer this measure gets no bar and no
+            # label — a "0" printed at the axis reads as a score of zero.
+            if not row.get(key):
+                continue
+            ax.text(bar.get_width() - maximum * 0.012,
+                    bar.get_y() + bar.get_height() / 2,
+                    f"{value:.1f}".rstrip("0").rstrip("."),
+                    va="center", ha="right", fontsize=10, color=INK,
+                    bbox=dict(boxstyle="square,pad=0.2", facecolor=PAPER,
+                              edgecolor="none"), zorder=4)
+
+    ax.set_yticks(list(positions))
+    ax.set_yticklabels(labels, fontsize=10.5, fontweight="bold", color=MUTED)
+    ax.set_xlim(0, maximum * 1.04)
+    ax.invert_yaxis()
+    if title:
+        ax.set_title(title, fontsize=16, fontweight="bold", color=NAVY, pad=16)
+    ax.legend(frameon=False, fontsize=10.5, loc="upper left",
+              bbox_to_anchor=(1.01, 1.0), labelcolor=NAVY)
+    ax.grid(axis="x", linestyle=":", alpha=0.3, zorder=0)
+    _style(ax)
+    ax.tick_params(axis="x", labelsize=10)
+    fig.tight_layout()
+    fig.savefig(str(_ensure(out_path)), dpi=150, facecolor=PAPER,
+                bbox_inches="tight", pad_inches=0.16)
+    plt.close(fig)
+    return out_path
+

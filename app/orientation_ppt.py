@@ -1,10 +1,16 @@
 """
 orientation_ppt.py — the Deeksharambh orientation report as a slide deck.
 
-Built to be read from the back of a room: one idea per slide, the number large,
-the mood named in words, and the charts from `orientation_charts` doing the
-explaining. Everything comes from `summarize_orientation()`, so the deck and
-the dashboard can never tell different stories.
+Built to the house design of the Deeksharambh analysis decks: a mint ground
+with a white panel floating on it, navy serif headings centred and underlined,
+a section kicker above each one ("Section I — PROGRAM EFFECTIVENESS"), teal
+meters for the averages, and a department-wise chart with the observations
+listed beside it.
+
+Everything comes from `summarize_orientation()`, so the deck and the dashboard
+can never tell different stories. Where the deck says something in words — the
+observations beside a chart — it is composed from those same figures and never
+from anything else.
 """
 from __future__ import annotations
 
@@ -15,24 +21,27 @@ from pathlib import Path
 
 from pptx import Presentation
 from pptx.dml.color import RGBColor
-from pptx.enum.text import PP_ALIGN
+from pptx.enum.text import MSO_ANCHOR, PP_ALIGN
 from pptx.util import Emu, Inches, Pt
 
 from app.orientation_charts import (
-    clean, mood_for, plot_dept_vibe, plot_feeling_meters, plot_nps_ring,
-    plot_response_rate, plot_top_options, plot_vibe_hero,
+    clean, mood_for, plot_dept_series, plot_nps_ring, plot_response_rate,
+    plot_top_options, plot_vibe_hero,
 )
 
-NAVY = RGBColor(0x0D, 0x21, 0x47)
-GOLD = RGBColor(0xE6, 0xB3, 0x24)
+# ── The palette of the printed report ────────────────────────────────────────
+NAVY = RGBColor(0x2E, 0x3A, 0x64)     # every heading
+INK = RGBColor(0x2F, 0x36, 0x40)      # body copy
+MUTED = RGBColor(0x5B, 0x65, 0x70)
+TEAL = RGBColor(0x21, 0xA8, 0x8A)     # meters, figures, rules
+TEAL_DEEP = RGBColor(0x17, 0x80, 0x6A)
+MINT = RGBColor(0xD9, 0xF1, 0xEC)     # the ground
+MINT_DEEP = RGBColor(0xBF, 0xE7, 0xDE)
 WHITE = RGBColor(0xFF, 0xFF, 0xFF)
-INK = RGBColor(0x1A, 0x1A, 0x2E)
-MUTED = RGBColor(0x64, 0x74, 0x8B)
-MIST = RGBColor(0xF1, 0xF5, 0xF9)
-TEAL = RGBColor(0x0D, 0x94, 0x88)
-ROSE = RGBColor(0xE1, 0x1D, 0x48)
-AMBER = RGBColor(0xF5, 0x9E, 0x0B)
-GREEN = RGBColor(0x05, 0x96, 0x69)
+LINE = RGBColor(0xDF, 0xE4, 0xE8)
+GOLD = RGBColor(0xC8, 0xA4, 0x5A)
+
+SERIF = "Georgia"
 
 W = Inches(13.333)
 H = Inches(7.5)
@@ -48,71 +57,185 @@ def _blank(prs: Presentation):
     return prs.slides.add_slide(prs.slide_layouts[6])
 
 
-def _text(slide, left, top, width, height, text, *, size=18, bold=False,
-          colour=INK, align=PP_ALIGN.LEFT, italic=False):
+def _face(para, *, size, bold, colour, italic=False, underline=False) -> None:
+    """Set the type on a paragraph and on the runs inside it.
+
+    PowerPoint reads a run's own properties first and only falls back to the
+    paragraph's, so a deck that sets one and not the other renders in whatever
+    the theme fancies.
+    """
+    for font in [para.font] + [run.font for run in para.runs]:
+        font.name = SERIF
+        font.size = Pt(size)
+        font.bold = bold
+        font.italic = italic
+        font.underline = underline
+        font.color.rgb = colour
+
+
+def _text(slide, left, top, width, height, text, *, size=14, bold=False,
+          colour=INK, align=PP_ALIGN.LEFT, italic=False, underline=False,
+          spacing=None):
     box = slide.shapes.add_textbox(left, top, width, height)
     frame = box.text_frame
     frame.word_wrap = True
     para = frame.paragraphs[0]
     para.text = text
     para.alignment = align
-    para.font.size = Pt(size)
-    para.font.bold = bold
-    para.font.italic = italic
-    para.font.color.rgb = colour
+    if spacing:
+        para.line_spacing = spacing
+    _face(para, size=size, bold=bold, colour=colour, italic=italic, underline=underline)
     return box
 
 
-def _band(slide, colour=NAVY, height=Inches(0.16), top=Emu(0)):
-    bar = slide.shapes.add_shape(RECT, Emu(0), top, W, height)
-    bar.fill.solid()
-    bar.fill.fore_color.rgb = colour
-    bar.line.fill.background()
-    return bar
-
-
-def _heading(slide, title: str, kicker: str = "") -> None:
-    _band(slide, GOLD, Inches(0.12))
-    if kicker:
-        _text(slide, Inches(0.7), Inches(0.32), Inches(11.9), Inches(0.3),
-              kicker.upper(), size=11, bold=True, colour=GOLD)
-    _text(slide, Inches(0.7), Inches(0.58), Inches(11.9), Inches(0.7),
-          title, size=28, bold=True, colour=NAVY)
-
-
-def _card(slide, left, top, width, height, value: str, label: str,
-          accent: RGBColor, value_size=40):
-    shape = slide.shapes.add_shape(ROUND, left, top, width, height)
-    shape.fill.solid()
-    shape.fill.fore_color.rgb = MIST
-    shape.line.color.rgb = MIST
-    shape.shadow.inherit = False
-    stripe = slide.shapes.add_shape(RECT, left, top, Inches(0.07), height)
-    stripe.fill.solid()
-    stripe.fill.fore_color.rgb = accent
-    stripe.line.fill.background()
-
-    frame = shape.text_frame
+def _paras(slide, left, top, width, height, lines: list[tuple], *, spacing=1.25):
+    """A block of paragraphs: (text, size, bold, colour) each, or a blank line."""
+    box = slide.shapes.add_textbox(left, top, width, height)
+    frame = box.text_frame
     frame.word_wrap = True
-    frame.margin_top = Inches(0.25)
-    head = frame.paragraphs[0]
-    head.text = value
-    head.alignment = PP_ALIGN.CENTER
-    head.font.size = Pt(value_size)
-    head.font.bold = True
-    head.font.color.rgb = accent
-    sub = frame.add_paragraph()
-    sub.text = label
-    sub.alignment = PP_ALIGN.CENTER
-    sub.font.size = Pt(12)
-    sub.font.bold = True
-    sub.font.color.rgb = MUTED
+    for i, line in enumerate(lines):
+        para = frame.paragraphs[0] if i == 0 else frame.add_paragraph()
+        text, size, bold, colour = line
+        para.text = text
+        para.line_spacing = spacing
+        _face(para, size=size, bold=bold, colour=colour)
+    return box
+
+
+def _rect(slide, left, top, width, height, fill: RGBColor | None,
+          line: RGBColor | None = None, shape=RECT, line_width=Pt(1)):
+    box = slide.shapes.add_shape(shape, left, top, width, height)
+    if fill is None:
+        box.fill.background()
+    else:
+        box.fill.solid()
+        box.fill.fore_color.rgb = fill
+    if line is None:
+        box.line.fill.background()
+    else:
+        box.line.color.rgb = line
+        box.line.width = line_width
+    box.shadow.inherit = False
+    return box
+
+
+def _stage(slide, *, panel=True, border: RGBColor | None = None):
+    """The mint ground with the white panel floating on it.
+
+    Every slide in the printed report is built this way; the panel is dropped
+    only where a chart wants the full mint width.
+    """
+    slide.background.fill.solid()
+    slide.background.fill.fore_color.rgb = MINT
+    _rect(slide, Emu(0), Emu(0), W, Inches(1.05), WHITE)
+    _rect(slide, Emu(0), H - Inches(0.62), W, Inches(0.62), WHITE)
+    if panel:
+        _rect(slide, Inches(0.28), Inches(1.28), W - Inches(0.56),
+              H - Inches(2.15), WHITE, border)
+
+
+def _title(slide, title: str, kicker: str = "", *, top=Inches(1.5),
+           underline=True, size=32):
+    """Centred kicker over a centred serif heading, ruled underneath."""
+    if kicker:
+        _text(slide, Inches(0.8), top, W - Inches(1.6), Inches(0.34),
+              kicker, size=13, bold=True, colour=NAVY, align=PP_ALIGN.CENTER)
+        top = top + Inches(0.4)
+    _text(slide, Inches(0.8), top, W - Inches(1.6), Inches(0.62),
+          title, size=size, bold=True, colour=NAVY, align=PP_ALIGN.CENTER,
+          underline=underline)
+    return top + Inches(0.75)
+
+
+def _meter(slide, left, top, width, *, value: float | None, maximum: int,
+           label: str, note: str):
+    """A rounded teal bar with its score beside it, then the label and a note."""
+    bar_w = width - Inches(1.55)
+    track = _rect(slide, left, top, bar_w, Inches(0.22), MINT_DEEP, shape=ROUND)
+    track.adjustments[0] = 0.5
+    share = 0.0 if value is None else max(0.0, min(1.0, value / maximum))
+    if share > 0:
+        fill = _rect(slide, left, top, Emu(int(bar_w * max(share, 0.06))),
+                     Inches(0.22), TEAL, shape=ROUND)
+        fill.adjustments[0] = 0.5
+    _text(slide, left + bar_w + Inches(0.16), top - Inches(0.09), Inches(1.35), Inches(0.3),
+          "—" if value is None else f"{value:.2f}/{maximum}",
+          size=15, bold=True, colour=INK)
+    _text(slide, left, top + Inches(0.28), width, Inches(0.3),
+          label, size=15, bold=True, colour=NAVY)
+    _text(slide, left, top + Inches(0.62), width, Inches(0.3),
+          note, size=12, colour=MUTED)
+
+
+def _tile(slide, left, top, width, height, title: str, body: str):
+    """A mint card with a teal dot — the engagement slide is built from these."""
+    _rect(slide, left, top, width, height, MINT, MINT_DEEP, shape=ROUND)
+    dot = _rect(slide, left + Inches(0.22), top + Inches(0.2),
+                Inches(0.42), Inches(0.42), TEAL, shape=ROUND)
+    dot.adjustments[0] = 0.5
+    _text(slide, left + Inches(0.22), top + Inches(0.78), width - Inches(0.44),
+          Inches(0.34), title, size=14, bold=True, colour=NAVY)
+    _text(slide, left + Inches(0.22), top + Inches(1.12), width - Inches(0.44),
+          Inches(0.5), body, size=12.5, colour=INK)
+
+
+def _observations(slide, left, top, width, height, bullets: list[str],
+                  *, fill=MINT, border=MINT_DEEP):
+    """The commentary box beside a department chart."""
+    bullets = [b for b in bullets if b]
+    if not bullets:
+        return
+    _rect(slide, left, top, width, height, fill, border)
+    box = slide.shapes.add_textbox(left + Inches(0.16), top + Inches(0.16),
+                                   width - Inches(0.32), height - Inches(0.32))
+    frame = box.text_frame
+    frame.word_wrap = True
+    for i, bullet in enumerate(bullets):
+        para = frame.paragraphs[0] if i == 0 else frame.add_paragraph()
+        para.text = f"•  {bullet}"
+        para.line_spacing = 1.2
+        para.space_after = Pt(9)
+        _face(para, size=11.5, bold=False, colour=INK)
+
+
+def _table(slide, left, top, width, headers: list[str], rows: list[list[str]],
+           widths: list[float] | None = None):
+    """A quiet table: mint header row, hairline rules, figures on the right."""
+    if not rows:
+        return
+    shape = slide.shapes.add_table(len(rows) + 1, len(headers), left, top, width,
+                                   Inches(0.26) * (len(rows) + 1))
+    table = shape.table
+    table.first_row = True
+    table.horz_banding = False
+    if widths:
+        for i, share in enumerate(widths):
+            table.columns[i].width = Emu(int(width * share))
+    for col, label in enumerate(headers):
+        cell = table.cell(0, col)
+        cell.text = label
+        cell.fill.solid()
+        cell.fill.fore_color.rgb = MINT
+        cell.vertical_anchor = MSO_ANCHOR.MIDDLE
+        para = cell.text_frame.paragraphs[0]
+        para.alignment = PP_ALIGN.CENTER if col else PP_ALIGN.LEFT
+        _face(para, size=10.5, bold=True, colour=NAVY)
+    for r, values in enumerate(rows, start=1):
+        for c, value in enumerate(values):
+            cell = table.cell(r, c)
+            cell.text = str(value)
+            cell.fill.solid()
+            cell.fill.fore_color.rgb = WHITE
+            cell.vertical_anchor = MSO_ANCHOR.MIDDLE
+            para = cell.text_frame.paragraphs[0]
+            para.alignment = PP_ALIGN.CENTER if c else PP_ALIGN.LEFT
+            _face(para, size=10, bold=False, colour=INK)
 
 
 def _picture(slide, image: Path, left, top, max_w, max_h) -> None:
     """Drop a chart in, scaled to fit its box and centred in it.
 
-    Charts are as tall as their data needs (one bar per department), so a
+    Charts are as tall as their data needs (one group per department), so a
     fixed width alone would push the long ones off the bottom of the slide.
     """
     if not image or not Path(image).exists():
@@ -135,29 +258,32 @@ def _fmt(value, digits=1, suffix="") -> str:
     return "—" if value is None else f"{value:.{digits}f}{suffix}"
 
 
-def _bullets(slide, left, top, width, height, rows: list[dict], accent: RGBColor,
-             empty: str = "No answers yet") -> None:
-    """A ranked list of options with their counts — used beside the charts."""
-    box = slide.shapes.add_textbox(left, top, width, height)
-    frame = box.text_frame
-    frame.word_wrap = True
+def _top(options, index: int = 0) -> dict:
+    rows = options or []
+    return rows[index] if len(rows) > index else {}
+
+
+def _leading(options) -> str:
+    """The answer most students gave, with its share — "Yes, mostly (64%)".
+
+    Deliberately quotes the option rather than bucketing it: the form's wording
+    changes between years, and a matcher that decides "Somewhat easy" counts as
+    easy would overstate the result in the one direction nobody would check.
+    """
+    rows = [o for o in (options or []) if o.get("count")]
     if not rows:
-        para = frame.paragraphs[0]
-        para.text = empty
-        para.font.size = Pt(13)
-        para.font.italic = True
-        para.font.color.rgb = MUTED
-        return
-    for i, row in enumerate(rows):
-        para = frame.paragraphs[0] if i == 0 else frame.add_paragraph()
-        para.text = f"{i + 1}.  {clean(row['label'], 46)}"
-        para.font.size = Pt(14)
-        para.font.bold = i == 0
-        para.font.color.rgb = accent if i == 0 else INK
-        tail = frame.add_paragraph()
-        tail.text = f"      {row['count']} students · {row.get('pct', 0):.0f}%"
-        tail.font.size = Pt(11)
-        tail.font.color.rgb = MUTED
+        return ""
+    top = rows[0]
+    return f"{clean(top['label'], 40)} ({top.get('pct', 0):.0f}%)"
+
+
+def _spread(rows: list[dict], key: str) -> tuple[dict, dict] | None:
+    """The highest and lowest department on one measure, when there are two."""
+    scored = [r for r in rows if r.get(key) is not None]
+    if len(scored) < 2:
+        return None
+    ranked = sorted(scored, key=lambda r: -r[key])
+    return ranked[0], ranked[-1]
 
 
 def generate_orientation_ppt(
@@ -166,8 +292,9 @@ def generate_orientation_ppt(
     scope: str,
     report: dict,
     departments: list[dict],
+    campuses: list[dict] | None = None,
 ) -> bytes:
-    """Build the deck. `report` is a summarize_orientation() result."""
+    """Build the deck. `report` is a build_report() / summarize_orientation() result."""
     prs = Presentation()
     prs.slide_width = W
     prs.slide_height = H
@@ -175,230 +302,390 @@ def generate_orientation_ppt(
     head = report.get("headline", {})
     cover = report.get("coverage", {})
     highlights = report.get("highlights", {})
+    levels = report.get("levels", [])
+    dept_mix = report.get("departments", [])
+    campuses = campuses or []
     questions = {q["key"]: q for s in report.get("sections", []) for q in s["questions"]}
+    total = report.get("count", 0)
     mood_word, mood_hex = mood_for(head.get("vibe"))
+
+    ug = next((l["count"] for l in levels if str(l.get("level", "")).upper() == "UG"), 0)
+    pg = next((l["count"] for l in levels if str(l.get("level", "")).upper() == "PG"), 0)
 
     # ── Slide 1 · Cover ───────────────────────────────────────────────────────
     slide = _blank(prs)
     slide.background.fill.solid()
-    slide.background.fill.fore_color.rgb = NAVY
-    stripe = slide.shapes.add_shape(RECT, Emu(0), Inches(2.62), W, Inches(0.06))
-    stripe.fill.solid()
-    stripe.fill.fore_color.rgb = GOLD
-    stripe.line.fill.background()
+    slide.background.fill.fore_color.rgb = WHITE
+    _rect(slide, Emu(0), Inches(1.15), Inches(8.0), Inches(5.35), MINT)
+    _rect(slide, Inches(8.0), Inches(1.15), W - Inches(8.0), Inches(5.35), MINT_DEEP)
 
-    _text(slide, Inches(0.9), Inches(1.35), Inches(11.5), Inches(0.4),
-          "DEEKSHARAMBH 2026 · JAIN UNIVERSITY", size=14, bold=True, colour=GOLD)
-    _text(slide, Inches(0.9), Inches(1.8), Inches(11.5), Inches(0.9),
-          "Orientation Experience Report", size=42, bold=True, colour=WHITE)
-    _text(slide, Inches(0.9), Inches(2.85), Inches(11.5), Inches(0.5),
-          f"{campus}  ·  {scope}", size=20, colour=WHITE)
-    _text(slide, Inches(0.9), Inches(3.35), Inches(11.5), Inches(0.4),
-          f"{report.get('count', 0)} student responses  ·  generated {datetime.now():%d %B %Y}",
-          size=13, italic=True, colour=RGBColor(0xB4, 0xC0, 0xD4))
+    _text(slide, Inches(0.62), Inches(1.85), Inches(6.9), Inches(1.9),
+          f"Student Experience Analysis Report — Deeksharambh {datetime.now():%Y}",
+          size=34, bold=True, colour=NAVY, spacing=1.15)
+    _text(slide, Inches(0.62), Inches(4.0), Inches(6.6), Inches(1.2),
+          "This report analyses how the first week landed — the transition into "
+          "campus life, the Bridge Course, the orientation sessions themselves, "
+          "and what students say they now expect of us.",
+          size=12.5, colour=INK, spacing=1.35)
+    _text(slide, Inches(0.62), Inches(5.35), Inches(6.6), Inches(0.4),
+          f"{campus}  ·  {scope}", size=12.5, bold=True, colour=NAVY)
+    _text(slide, Inches(0.62), Inches(5.72), Inches(6.6), Inches(0.4),
+          f"Office of Academics  ·  {total} student responses  ·  "
+          f"{datetime.now():%d %B %Y}", size=11.5, colour=MUTED)
 
-    # The one number the room came for.
-    hero = slide.shapes.add_shape(ROUND, Inches(0.9), Inches(4.15), Inches(4.2), Inches(2.35))
-    hero.fill.solid()
-    hero.fill.fore_color.rgb = _hex(mood_hex)
-    hero.line.fill.background()
-    hero.shadow.inherit = False
-    frame = hero.text_frame
-    frame.margin_top = Inches(0.3)
-    top_line = frame.paragraphs[0]
-    top_line.text = _fmt(head.get("vibe"), 1, " / 10")
-    top_line.alignment = PP_ALIGN.CENTER
-    top_line.font.size = Pt(48)
-    top_line.font.bold = True
-    top_line.font.color.rgb = WHITE
-    bottom = frame.add_paragraph()
-    bottom.text = f"OVERALL VIBE · {mood_word.upper()}"
-    bottom.alignment = PP_ALIGN.CENTER
-    bottom.font.size = Pt(14)
-    bottom.font.bold = True
-    bottom.font.color.rgb = WHITE
-
+    # The right panel carries the one number the room came for.
+    _text(slide, Inches(8.5), Inches(2.25), Inches(4.4), Inches(0.4),
+          "OVERALL VIBE OF THE STUDENTS", size=11.5, bold=True, colour=TEAL_DEEP,
+          align=PP_ALIGN.CENTER)
+    _text(slide, Inches(8.5), Inches(2.7), Inches(4.4), Inches(1.1),
+          _fmt(head.get("vibe"), 1, " / 10"), size=54, bold=True, colour=NAVY,
+          align=PP_ALIGN.CENTER)
+    _text(slide, Inches(8.5), Inches(3.85), Inches(4.4), Inches(0.4),
+          mood_word.upper(), size=15, bold=True, colour=_hex(mood_hex),
+          align=PP_ALIGN.CENTER)
     for i, (value, label) in enumerate([
-        (_fmt(head.get("nps"), 0, ""), "Net Promoter Score"),
+        (_fmt(head.get("nps"), 0), "Net Promoter Score"),
         (_fmt(head.get("belonging"), 1, " / 10"), "Sense of belonging"),
         (_fmt(cover.get("pct"), 0, "%"), "Response rate"),
     ]):
-        left = Inches(5.5) + i * Inches(2.65)
-        box = slide.shapes.add_shape(ROUND, left, Inches(4.15), Inches(2.4), Inches(2.35))
-        box.fill.solid()
-        box.fill.fore_color.rgb = RGBColor(0x14, 0x2C, 0x59)
-        box.line.color.rgb = RGBColor(0x2A, 0x40, 0x69)
-        box.shadow.inherit = False
-        tf = box.text_frame
-        tf.margin_top = Inches(0.45)
-        p1 = tf.paragraphs[0]
-        p1.text = value
-        p1.alignment = PP_ALIGN.CENTER
-        p1.font.size = Pt(34)
-        p1.font.bold = True
-        p1.font.color.rgb = GOLD
-        p2 = tf.add_paragraph()
-        p2.text = label
-        p2.alignment = PP_ALIGN.CENTER
-        p2.font.size = Pt(12)
-        p2.font.color.rgb = WHITE
+        top = Inches(4.45) + i * Inches(0.62)
+        _text(slide, Inches(8.5), top, Inches(2.6), Inches(0.34),
+              label, size=12, colour=INK)
+        _text(slide, Inches(11.1), top, Inches(1.8), Inches(0.34),
+              value, size=12, bold=True, colour=NAVY, align=PP_ALIGN.RIGHT)
 
     with tempfile.TemporaryDirectory() as tmp:
         tmpdir = Path(tmp)
 
-        # ── Slide 2 · Participation ───────────────────────────────────────────
+        # ── Slide 2 · Response overview ───────────────────────────────────────
         slide = _blank(prs)
-        _heading(slide, "Who answered", "Participation")
-        for i, (value, label, accent) in enumerate([
-            (str(report.get("count", 0)), "Responses", NAVY),
-            (_fmt(cover.get("pct"), 0, "%"), "Response rate", TEAL),
-            (str(cover.get("pending", 0)), "Still pending", AMBER),
-            (str(len(report.get("departments", []))), "Departments covered", GOLD),
+        _stage(slide)
+        _title(slide, "RESPONSE OVERVIEW", top=Inches(1.6), size=30)
+
+        campus_lines: list[tuple] = [("Campus-wise Split:", 15, True, NAVY)]
+        for row in campuses or [{"campus": campus, "filled": total,
+                                 "ug": ug, "pg": pg,
+                                 "departments": len(dept_mix)}]:
+            campus_lines.append((
+                f"•  {row['campus']}: {row['filled']} responses "
+                f"(UG: {row.get('ug', 0)}, PG: {row.get('pg', 0)})", 13, False, INK))
+            campus_lines.append((
+                f"     from {row.get('departments', 0)} departments", 12, False, MUTED))
+
+        _text(slide, Inches(0.75), Inches(2.72), Inches(5.6), Inches(0.4),
+              f"Total Responses: {total}", size=16, bold=True, colour=TEAL_DEEP)
+        _paras(slide, Inches(0.75), Inches(3.2), Inches(5.6), Inches(1.6), campus_lines)
+        _text(slide, Inches(0.75), Inches(4.75), Inches(5.6), Inches(0.34),
+              "Departments with the highest response", size=13, bold=True, colour=NAVY)
+        _table(slide, Inches(0.75), Inches(5.12), Inches(5.6),
+               ["Department", "Responses", "Share"],
+               [[clean(r["dept"], 40), str(r["count"]), f"{r.get('pct', 0):.0f}%"]
+                for r in dept_mix[:6]],
+               widths=[0.58, 0.22, 0.20])
+
+        _text(slide, Inches(6.95), Inches(2.72), Inches(5.6), Inches(0.4),
+              "Overall UG vs PG Breakdown:", size=16, bold=True, colour=NAVY)
+        _paras(slide, Inches(6.95), Inches(3.2), Inches(5.6), Inches(0.9), [
+            (f"•  UG Students: {ug} responses", 13, False, INK),
+            (f"•  PG Students: {pg} responses", 13, False, INK),
+        ])
+        _text(slide, Inches(6.95), Inches(4.02), Inches(5.6), Inches(0.7),
+              f"{cover.get('filled', 0)} of {cover.get('eligible', 0)} students in scope "
+              f"have answered ({_fmt(cover.get('pct'), 0, '%')}), across "
+              f"{len(dept_mix)} departments.", size=12.5, colour=INK, spacing=1.35)
+        _text(slide, Inches(6.95), Inches(4.75), Inches(5.6), Inches(0.34),
+              "Departments still to be heard from", size=13, bold=True, colour=NAVY)
+        _table(slide, Inches(6.95), Inches(5.12), Inches(5.6),
+               ["Department", "Answered", "Pending"],
+               [[clean(r["dept"], 40), str(r.get("filled", 0)), str(r.get("pending", 0))]
+                for r in sorted(departments, key=lambda r: -r.get("pending", 0))[:6]
+                if r.get("pending", 0)],
+               widths=[0.58, 0.21, 0.21])
+
+        # ── Slide 3 · Participation, department by department ─────────────────
+        slide = _blank(prs)
+        _stage(slide)
+        _title(slide, f"Department wise — Who has answered — {campus}",
+               top=Inches(1.5), size=23)
+        rate_img = plot_response_rate(departments, tmpdir / "rate.png", title="")
+        _picture(slide, rate_img, Inches(0.55), Inches(2.35), Inches(8.4), Inches(4.1))
+        best_rate = max((r for r in departments if r.get("eligible")),
+                        key=lambda r: r.get("pct", 0), default=None)
+        _observations(slide, Inches(9.2), Inches(2.5), Inches(3.5), Inches(3.1), [
+            f"{cover.get('filled', 0)} of {cover.get('eligible', 0)} eligible students "
+            f"answered — {_fmt(cover.get('pct'), 0, '%')} of the cohort.",
+            (f"{clean(best_rate['dept'], 44)} answered most completely "
+             f"({best_rate.get('pct', 0):.0f}%)." if best_rate else ""),
+            (f"{cover.get('pending', 0)} students have finished the baseline but not "
+             "yet the orientation form." if cover.get("pending") else ""),
+        ])
+
+        # ── Slide 4 · Section I — program effectiveness ────────────────────────
+        slide = _blank(prs)
+        _stage(slide)
+        _title(slide, "Ease of Transition to Campus Life",
+               "Section I — PROGRAM EFFECTIVENESS", top=Inches(1.55))
+        _rect(slide, Inches(0.62), Inches(2.82), W - Inches(1.24), Inches(2.98),
+              None, TEAL)
+
+        welcomed = _leading(questions.get("q3", {}).get("options"))
+        easy = _leading(questions.get("q5", {}).get("options"))
+        knows_help = _leading(questions.get("q31", {}).get("options"))
+        vibe_q = questions.get("q2", {})
+        high_vibe = sum(o.get("pct", 0) for o in vibe_q.get("options", [])
+                        if o.get("count") and int(o["label"]) >= 8)
+
+        for i, (value, maximum, label, note) in enumerate([
+            (head.get("vibe"), 10, "Overall vibe of the week",
+             f"{high_vibe:.0f}% of students rated it 8 or more."
+             if vibe_q.get("options") else "Not enough ratings yet."),
+            (head.get("belonging"), 10, "Sense of belonging at JAIN",
+             "How much students already feel part of the place."),
+            (head.get("success"), 10, "Confidence of succeeding here",
+             "Whether they can see themselves doing well."),
+            (head.get("nps_avg"), 10, "Likelihood to recommend JAIN",
+             f"Net Promoter Score of {_fmt(head.get('nps'), 0)} across "
+             f"{head.get('nps_answered', 0)} answers."),
         ]):
-            _card(slide, Inches(0.7) + i * Inches(3.15), Inches(1.6),
-                  Inches(2.85), Inches(1.9), value, label, accent)
+            left = Inches(0.85) + (i % 2) * Inches(6.1)
+            top = Inches(3.05) + (i // 2) * Inches(1.35)
+            _meter(slide, left, top, Inches(5.5), value=value, maximum=maximum,
+                   label=label, note=note)
 
-        rate_img = plot_response_rate(departments, tmpdir / "rate.png")
-        _picture(slide, rate_img, Inches(0.7), Inches(3.75), Inches(11.9), Inches(3.4))
+        # Each clause quotes the answer most students actually chose, so the
+        # caption cannot round a mixed result up into a good one.
+        summary = []
+        if welcomed:
+            summary.append(f"felt welcomed — {welcomed}")
+        if easy:
+            summary.append(f"transition into university life — {easy}")
+        if knows_help:
+            summary.append(f"knows whom to ask for help — {knows_help}")
+        _text(slide, Inches(0.85), Inches(5.93), Inches(11.6), Inches(0.6),
+              ("The first week averaged " + _fmt(head.get("vibe"), 1) +
+               " out of 10 — " + mood_word.lower() + "."
+               + ("  Most common answers: " + "; ".join(summary) + "."
+                  if summary else "")),
+              size=12.5, colour=INK, spacing=1.25)
 
-        # ── Slide 3 · The vibe ────────────────────────────────────────────────
+        # ── Slide 5 · Section I, department by department ──────────────────────
         slide = _blank(prs)
-        _heading(slide, f"Overall vibe — {mood_word.lower()}", "How the week felt")
-        vibe_img = plot_vibe_hero(questions.get("q2", {"options": [], "avg": head.get("vibe")}),
-                                  tmpdir / "vibe.png")
-        _picture(slide, vibe_img, Inches(0.7), Inches(1.55), Inches(8.6), Inches(5.4))
+        _stage(slide)
+        _title(slide, f"Department wise — Ease of Transition to Campus Life — {campus}",
+               top=Inches(1.5), size=22)
+        series_img = plot_dept_series(
+            departments,
+            [("vibe", "Overall vibe"), ("belonging", "Sense of belonging"),
+             ("success", "Confidence of succeeding")],
+            tmpdir / "dept_transition.png", maximum=10)
+        _picture(slide, series_img, Inches(0.5), Inches(2.35), Inches(8.5), Inches(4.1))
+        spread = _spread(departments, "vibe")
+        _observations(slide, Inches(9.2), Inches(2.5), Inches(3.5), Inches(3.3), [
+            (f"{clean(spread[0]['dept'], 42)} rated the week highest at "
+             f"{spread[0]['vibe']:.1f}/10; {clean(spread[1]['dept'], 42)} lowest at "
+             f"{spread[1]['vibe']:.1f}/10." if spread else
+             "Only one department has answered so far."),
+            f"The cohort averages {_fmt(head.get('vibe'), 1)}/10 on vibe and "
+            f"{_fmt(head.get('belonging'), 1)}/10 on belonging.",
+            (f"Departments answering most: " +
+             ", ".join(f"{clean(r['dept'], 30)} ({r['count']})" for r in dept_mix[:3])
+             if dept_mix else ""),
+        ])
 
-        _card(slide, Inches(9.6), Inches(1.7), Inches(3.0), Inches(1.6),
-              _fmt(head.get("vibe"), 1), "Average vibe / 10", _hex(mood_hex), value_size=36)
-        _card(slide, Inches(9.6), Inches(3.5), Inches(3.0), Inches(1.6),
-              _fmt(head.get("belonging"), 1), "I belong here / 10", TEAL, value_size=36)
-        _card(slide, Inches(9.6), Inches(5.3), Inches(3.0), Inches(1.6),
-              _fmt(head.get("success"), 1), "I can succeed / 10", GOLD, value_size=36)
-
-        # ── Slide 4 · Feeling meters + welcome ────────────────────────────────
+        # ── Slide 6 · Section II — academic foundation ─────────────────────────
         slide = _blank(prs)
-        _heading(slide, "The mood, measured", "Headline averages")
-        meters = plot_feeling_meters([
-            ("Overall vibe", head.get("vibe"), 10),
-            ("Sense of belonging", head.get("belonging"), 10),
-            ("Confidence of succeeding", head.get("success"), 10),
-            ("Bridge course confidence", head.get("bridge"), 5),
-            ("Recommendation score", head.get("nps_avg"), 10),
-        ], tmpdir / "meters.png", title="")
-        _picture(slide, meters, Inches(0.7), Inches(1.6), Inches(7.6), Inches(5.3))
+        _stage(slide)
+        _title(slide, "Bridge Course: Foundational Learning Modules",
+               "Section II — ACADEMIC FOUNDATION", top=Inches(1.55), size=28)
 
-        _text(slide, Inches(8.7), Inches(1.6), Inches(4.0), Inches(0.4),
-              "FELT WELCOMED", size=12, bold=True, colour=GOLD)
-        _bullets(slide, Inches(8.7), Inches(2.0), Inches(4.0), Inches(2.2),
-                 (questions.get("q3", {}).get("options") or [])[:4], TEAL)
-        _text(slide, Inches(8.7), Inches(4.3), Inches(4.0), Inches(0.4),
-              "WORDS THEY CHOSE", size=12, bold=True, colour=GOLD)
-        _bullets(slide, Inches(8.7), Inches(4.7), Inches(4.0), Inches(2.5),
-                 (questions.get("q1", {}).get("options") or [])[:4], NAVY)
+        prepared = _leading(questions.get("q18", {}).get("options"))
+        _paras(slide, Inches(0.85), Inches(3.0), Inches(6.4), Inches(2.0), [
+            (f"•  Academic confidence after the Bridge Course: "
+             f"{_fmt(head.get('bridge'), 2)}/5", 14, True, NAVY),
+            (f"•  Prepared for regular classes: {prepared or '—'}", 14, True, NAVY),
+            (f"•  Answered this section: {questions.get('q16', {}).get('answered', 0)} "
+             "students", 14, True, NAVY),
+        ])
+        helpful = (questions.get("q17", {}).get("options") or [])[:4]
+        _text(slide, Inches(0.85), Inches(4.35), Inches(6.4), Inches(1.4),
+              ("The Bridge Course was built to get students ready for the way the "
+               "programme actually teaches. These are the figures behind that, and "
+               "the areas students named as the ones that helped."),
+              size=12.5, colour=INK, spacing=1.35)
 
-        # ── Slide 5 · Recommendation ──────────────────────────────────────────
+        bridge_img = plot_top_options(
+            questions.get("q17", {}).get("options") or [],
+            tmpdir / "helpful.png", "Bridge Course areas that helped most", limit=5)
+        _picture(slide, bridge_img, Inches(7.15), Inches(2.85), Inches(5.4), Inches(3.6))
+
+        # ── Slide 7 · Section II, department by department ─────────────────────
         slide = _blank(prs)
-        _heading(slide, "Would they recommend JAIN?", "Net Promoter Score")
+        _stage(slide)
+        _title(slide,
+               f"Department wise — Bridge Course confidence — {campus}",
+               top=Inches(1.5), size=22)
+        bridge_dept = plot_dept_series(
+            departments, [("bridge", "Academic confidence after the Bridge Course")],
+            tmpdir / "dept_bridge.png", maximum=5,
+            empty="No Bridge Course ratings yet")
+        _picture(slide, bridge_dept, Inches(0.5), Inches(2.35), Inches(8.5), Inches(4.1))
+        bridge_spread = _spread(departments, "bridge")
+        _observations(slide, Inches(9.2), Inches(2.5), Inches(3.5), Inches(3.1), [
+            f"The Bridge Course averages {_fmt(head.get('bridge'), 2)} out of 5 "
+            "across the cohort.",
+            (f"{clean(bridge_spread[0]['dept'], 42)} rated it highest "
+             f"({bridge_spread[0]['bridge']:.1f}/5); "
+             f"{clean(bridge_spread[1]['dept'], 42)} lowest "
+             f"({bridge_spread[1]['bridge']:.1f}/5)." if bridge_spread else ""),
+            (f"Most helpful: {clean(_top(helpful).get('label', ''), 44)}."
+             if helpful else ""),
+        ])
+
+        # ── Slide 8 · Section III — engagement and networking ──────────────────
+        slide = _blank(prs)
+        _stage(slide)
+        _title(slide, "Impact of Immersive Orientation",
+               "Section III — ENGAGEMENT AND NETWORKING", top=Inches(1.5))
+        top_sessions = (highlights.get("impactful") or [])[:3]
+        if top_sessions:
+            for i, option in enumerate(top_sessions):
+                _tile(slide, Inches(0.85) + i * Inches(4.0), Inches(3.0),
+                      Inches(3.7), Inches(1.85),
+                      clean(option["label"], 34),
+                      f"{option['count']} students · {option.get('pct', 0):.0f}% "
+                      "named it among the sessions with the biggest impact.")
+        else:
+            _text(slide, Inches(0.85), Inches(3.2), Inches(11.6), Inches(0.5),
+                  "No sessions have been named yet.", size=13, colour=MUTED)
+
+        _text(slide, Inches(0.85), Inches(5.15), Inches(11.6), Inches(1.1),
+              (f"{head.get('promoters', 0)} of {head.get('nps_answered', 0)} students "
+               f"who answered would actively recommend JAIN, against "
+               f"{head.get('detractors', 0)} who would not — a Net Promoter Score of "
+               f"{_fmt(head.get('nps'), 0)}. "
+               + (f"The session most often named for improvement was "
+                  f"{clean(_top(highlights.get('needs_work')).get('label', ''), 44)}."
+                  if highlights.get("needs_work") else "")),
+              size=13, colour=INK, spacing=1.3)
+
+        # ── Slide 9 · Section III, department by department ────────────────────
+        slide = _blank(prs)
+        _stage(slide)
+        _title(slide, f"Department wise — Would they recommend JAIN — {campus}",
+               top=Inches(1.5), size=22)
+        for row in departments:
+            # Out of everyone in that department who answered the question —
+            # promoters against detractors alone would read 100% for a
+            # department where one student answered warmly and nobody coldly.
+            answered = row.get("nps_answered") or 0
+            row["_promoters_pct"] = (100.0 * row.get("promoters", 0) / answered
+                                     if answered else None)
+            row["_detractors_pct"] = (100.0 * row.get("detractors", 0) / answered
+                                      if answered else None)
+        nps_dept = plot_dept_series(
+            departments,
+            [("_promoters_pct", "Promoters (9–10)"), ("_detractors_pct", "Detractors (0–6)")],
+            tmpdir / "dept_nps.png", maximum=100,
+            empty="No recommendation scores yet")
+        _picture(slide, nps_dept, Inches(0.5), Inches(2.35), Inches(8.5), Inches(4.1))
+        _observations(slide, Inches(9.2), Inches(2.5), Inches(3.5), Inches(3.1), [
+            f"Across the cohort: {head.get('promoters', 0)} promoters, "
+            f"{head.get('passives', 0)} passives and {head.get('detractors', 0)} "
+            f"detractors — NPS {_fmt(head.get('nps'), 0)}.",
+            "Bars are each department's own answers, so a small department's "
+            "percentage rests on few students.",
+        ])
+
+        # ── Slide 10 · What to keep, what to fix ───────────────────────────────
+        slide = _blank(prs)
+        _stage(slide)
+        _title(slide, "What to keep, and what to fix", top=Inches(1.5), size=24)
+        keep_img = plot_top_options(highlights.get("keep") or [],
+                                    tmpdir / "keep.png", "Keep next year", limit=6)
+        fix_img = plot_top_options(highlights.get("needs_work") or [],
+                                   tmpdir / "fix.png", "Sessions needing work",
+                                   colour="#c0504d", limit=6)
+        _picture(slide, keep_img, Inches(0.6), Inches(2.35), Inches(5.9), Inches(4.1))
+        _picture(slide, fix_img, Inches(6.85), Inches(2.35), Inches(5.9), Inches(4.1))
+
+        # ── Slide 11 · The vibe, score by score ────────────────────────────────
+        slide = _blank(prs)
+        _stage(slide)
+        _title(slide, f"How the week was rated, score by score — {campus}",
+               top=Inches(1.5), size=24)
+        vibe_img = plot_vibe_hero(
+            questions.get("q2", {"options": [], "avg": head.get("vibe")}),
+            tmpdir / "vibe.png", title="")
+        _picture(slide, vibe_img, Inches(0.6), Inches(2.35), Inches(7.4), Inches(4.1))
         ring = plot_nps_ring(questions.get("q34") or {
             "promoters": head.get("promoters", 0),
             "passives": head.get("passives", 0),
             "detractors": head.get("detractors", 0),
             "nps": head.get("nps"),
         }, tmpdir / "nps.png")
-        _picture(slide, ring, Inches(0.9), Inches(1.7), Inches(6.0), Inches(5.2))
+        _picture(slide, ring, Inches(8.2), Inches(2.35), Inches(4.6), Inches(4.1))
 
-        _text(slide, Inches(7.4), Inches(1.8), Inches(5.2), Inches(0.4),
-              "WHAT WORKED", size=12, bold=True, colour=GOLD)
-        _bullets(slide, Inches(7.4), Inches(2.2), Inches(5.2), Inches(2.0),
-                 (highlights.get("keep") or [])[:3], GREEN)
-        _text(slide, Inches(7.4), Inches(4.3), Inches(5.2), Inches(0.4),
-              "WHAT DRAGGED", size=12, bold=True, colour=GOLD)
-        _bullets(slide, Inches(7.4), Inches(4.7), Inches(5.2), Inches(2.5),
-                 (highlights.get("needs_work") or [])[:3], ROSE)
-
-        # ── Slide 6 · Department vibe ─────────────────────────────────────────
+        # ── Slide 12 · Section IV — aspirations and growth ─────────────────────
         slide = _blank(prs)
-        _heading(slide, "Vibe, department by department", "Where the energy is")
-        dept_img = plot_dept_vibe(departments, tmpdir / "dept.png", title="")
-        _picture(slide, dept_img, Inches(0.7), Inches(1.55), Inches(11.9), Inches(5.5))
+        _stage(slide, border=TEAL)
+        _title(slide, "Reflection and Future Readiness",
+               "Section IV — ASPIRATIONS AND GROWTH", top=Inches(1.55))
 
-        # ── Slide 7 · Department table ────────────────────────────────────────
+        _text(slide, Inches(0.85), Inches(3.0), Inches(5.5), Inches(0.34),
+              "Most helpful aspects:", size=14, bold=True, colour=TEAL_DEEP)
+        _paras(slide, Inches(0.85), Inches(3.4), Inches(5.5), Inches(1.5),
+               [(f"•  {clean(o['label'], 44)}", 12.5, False, INK)
+                for o in (questions.get("q19", {}).get("options") or [])[:4]] or
+               [("Nothing named yet.", 12.5, False, MUTED)])
+
+        _text(slide, Inches(6.9), Inches(3.0), Inches(5.5), Inches(0.34),
+              "Top student expectations:", size=14, bold=True, colour=TEAL_DEEP)
+        _paras(slide, Inches(6.9), Inches(3.4), Inches(5.5), Inches(1.5),
+               [(f"•  {clean(o['label'], 44)}", 12.5, False, INK)
+                for o in (questions.get("q33", {}).get("options") or [])[:4]] or
+               [("Nothing named yet.", 12.5, False, MUTED)])
+
+        _rect(slide, Inches(0.85), Inches(4.95), Inches(11.6), Inches(1.0), WHITE, NAVY)
+        _text(slide, Inches(1.0), Inches(5.08), Inches(11.3), Inches(0.8),
+              (f"{campus}: {cover.get('filled', 0)} students rated the week "
+               f"{_fmt(head.get('vibe'), 1)}/10, belonging {_fmt(head.get('belonging'), 1)}/10 "
+               f"and their chance of succeeding here {_fmt(head.get('success'), 1)}/10. "
+               + (f"What stressed them most was "
+                  f"{clean(_top(highlights.get('stressors')).get('label', ''), 40)}."
+                  if highlights.get("stressors") else "")),
+              size=12.5, colour=INK, spacing=1.3)
+
+        # ── Slide 13 · Department scoreboard ───────────────────────────────────
         if departments:
             slide = _blank(prs)
-            _heading(slide, "Department scoreboard", "Every number in one place")
+            _stage(slide)
+            _title(slide, "Department Scoreboard", top=Inches(1.6), size=28)
             rows = sorted(departments, key=lambda r: -(r.get("vibe") or 0))[:12]
-            table = slide.shapes.add_table(
-                len(rows) + 1, 6, Inches(0.7), Inches(1.6),
-                Inches(11.9), Inches(0.42) * (len(rows) + 1)
-            ).table
-            headers = ["Department", "Responses", "Response rate", "Vibe /10", "Belonging /10", "NPS"]
-            for col, label in enumerate(headers):
-                cell = table.cell(0, col)
-                cell.text = label
-                para = cell.text_frame.paragraphs[0]
-                para.font.size = Pt(12)
-                para.font.bold = True
-                para.font.color.rgb = WHITE
-                cell.fill.solid()
-                cell.fill.fore_color.rgb = NAVY
-            for r, row in enumerate(rows, start=1):
-                values = [
-                    clean(row["dept"], 38),
-                    str(row.get("filled", 0)),
-                    _fmt(row.get("pct"), 0, "%"),
-                    _fmt(row.get("vibe"), 1),
-                    _fmt(row.get("belonging"), 1),
-                    _fmt(row.get("nps"), 0),
-                ]
-                for c, value in enumerate(values):
-                    cell = table.cell(r, c)
-                    cell.text = value
-                    para = cell.text_frame.paragraphs[0]
-                    para.font.size = Pt(11)
-                    para.font.color.rgb = INK
-                    cell.fill.solid()
-                    cell.fill.fore_color.rgb = WHITE if r % 2 else MIST
+            _table(slide, Inches(0.75), Inches(2.75), Inches(11.8),
+                   ["Department", "Answered", "Rate", "Vibe /10", "Belonging /10",
+                    "Bridge /5", "NPS"],
+                   [[clean(r["dept"], 42),
+                     f"{r.get('filled', 0)} / {r.get('eligible', 0)}",
+                     _fmt(r.get("pct"), 0, "%"),
+                     _fmt(r.get("vibe"), 1),
+                     _fmt(r.get("belonging"), 1),
+                     _fmt(r.get("bridge"), 1),
+                     _fmt(r.get("nps"), 0)] for r in rows],
+                   widths=[0.34, 0.12, 0.09, 0.11, 0.14, 0.11, 0.09])
 
-        # ── Slides 8-10 · Sessions, stress, next year ─────────────────────────
-        pairs = [
-            ("Sessions that landed", "What to protect",
-             highlights.get("impactful"), "#059669",
-             "Sessions that missed", "What to redesign",
-             highlights.get("needs_work"), "#e11d48"),
-            ("What stressed them", "Friction in week one",
-             highlights.get("stressors"), "#f59e0b",
-             "Keep this next year", "Their own words",
-             highlights.get("keep"), "#2563eb"),
-            ("Stop doing this", "Cut from next year",
-             highlights.get("stop"), "#9f1239",
-             "Add this next year", "What they are asking for",
-             highlights.get("introduce"), "#7c3aed"),
-        ]
-        for i, (t1, k1, o1, c1, t2, k2, o2, c2) in enumerate(pairs):
-            slide = _blank(prs)
-            _heading(slide, f"{t1}  ·  {t2}", k1)
-            left_img = plot_top_options(o1 or [], tmpdir / f"pair{i}a.png", t1, c1, limit=6)
-            right_img = plot_top_options(o2 or [], tmpdir / f"pair{i}b.png", t2, c2, limit=6)
-            _picture(slide, left_img, Inches(0.55), Inches(1.7), Inches(6.1), Inches(5.2))
-            _picture(slide, right_img, Inches(6.75), Inches(1.7), Inches(6.1), Inches(5.2))
-
-        # ── Closing ───────────────────────────────────────────────────────────
+        # ── Slide 14 · Closing ─────────────────────────────────────────────────
         slide = _blank(prs)
-        slide.background.fill.solid()
-        slide.background.fill.fore_color.rgb = NAVY
-        _text(slide, Inches(0.9), Inches(2.6), Inches(11.5), Inches(0.5),
-              "IN ONE LINE", size=14, bold=True, colour=GOLD)
-        summary = (
-            f"{report.get('count', 0)} students at {campus} rated Deeksharambh 2026 "
-            f"{_fmt(head.get('vibe'), 1)} out of 10 — {mood_word.lower()} — "
-            f"with an NPS of {_fmt(head.get('nps'), 0)} and a belonging score of "
-            f"{_fmt(head.get('belonging'), 1)} out of 10."
-        )
-        _text(slide, Inches(0.9), Inches(3.1), Inches(11.5), Inches(2.0),
-              summary, size=26, bold=True, colour=WHITE)
-        _text(slide, Inches(0.9), Inches(5.6), Inches(11.5), Inches(0.4),
+        _stage(slide)
+        _title(slide, "In one line", top=Inches(1.9), size=26)
+        _text(slide, Inches(1.2), Inches(3.1), Inches(10.9), Inches(2.0),
+              (f"{total} students at {campus} rated Deeksharambh "
+               f"{_fmt(head.get('vibe'), 1)} out of 10 — {mood_word.lower()} — "
+               f"with a Net Promoter Score of {_fmt(head.get('nps'), 0)} and a "
+               f"belonging score of {_fmt(head.get('belonging'), 1)} out of 10."),
+              size=22, bold=True, colour=NAVY, align=PP_ALIGN.CENTER, spacing=1.3)
+        _text(slide, Inches(1.2), Inches(5.4), Inches(10.9), Inches(0.4),
               "Office of Academics · JAIN (Deemed-to-be University)",
-              size=13, colour=RGBColor(0xB4, 0xC0, 0xD4))
+              size=12.5, colour=MUTED, align=PP_ALIGN.CENTER)
 
         buffer = io.BytesIO()
         prs.save(buffer)

@@ -188,6 +188,38 @@ the top-bar department filter is set, the campus otherwise.
 
 Campus links handed out earlier keep working unchanged.
 
+### The Deeksharambh deck
+
+Every orientation report — the admin's, the campus share link's, a department
+share link's — downloads as the same `.pptx`, built to the house design of the
+printed *Student Experience Analysis Report*: a mint ground with a white panel
+on it, navy serif headings centred and underlined, a section kicker above each
+one, teal meters for the averages, and a department-wise chart with the
+observations listed beside it.
+
+| Slide | What it carries |
+|---|---|
+| Cover | Title, scope, response count, and the overall vibe with its mood word |
+| Response overview | Total responses, the campus split with UG/PG, and the departments answering most and least |
+| Department wise — who has answered | Filled against still-pending, per department |
+| Section I — Program effectiveness | Vibe, belonging, confidence and recommendation as meters, with the answer most students actually chose |
+| Section I — department wise | Vibe, belonging and confidence, department by department |
+| Section II — Academic foundation | Bridge Course confidence, readiness for classes, and the areas that helped |
+| Section II — department wise | Bridge Course confidence, department by department |
+| Section III — Engagement and networking | The three sessions with the biggest impact, and the recommendation picture |
+| Section III — department wise | Promoters against detractors, as a share of that department's own answers |
+| What to keep, what to fix | The loudest answers on both sides |
+| Score by score | The 1–10 distribution and the NPS ring |
+| Section IV — Aspirations and growth | Most helpful aspects, top expectations, and the closing figures |
+| Department scoreboard | Every department's numbers in one table |
+| In one line | The sentence to quote |
+
+The observations beside each chart are composed from the same figures the
+charts draw — the highest and lowest department, the cohort average, who
+answered most — and never from anything else. Where the deck reports a
+single-choice question it quotes the answer students actually gave ("Yes,
+mostly (64%)") rather than bucketing wordings into a yes.
+
 ### Mailing a report
 
 Every directory row has an **✉️ Mail** button on each of its two lines, and each
