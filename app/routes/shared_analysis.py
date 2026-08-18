@@ -49,21 +49,47 @@ def get_directory_token() -> str:
 ORIENTATION_KEY = "__orientation__"
 
 
-def get_orientation_token(campus: str = "") -> str:
-    """Token for the shareable orientation report of one campus (or all)."""
-    return get_dept_token(f"{ORIENTATION_KEY}:{campus or 'all'}", "orientation")
+def get_orientation_token(campus: str = "", dept: str = "") -> str:
+    """Token for the shareable orientation report of one campus (or all).
+
+    Naming a department mints a different token, so a link built for one
+    department cannot be edited into another's. Campus links already handed
+    out keep working: their key is exactly what it always was.
+    """
+    scope = f"{ORIENTATION_KEY}:{campus or 'all'}"
+    if dept:
+        scope += f"::{dept}"
+    return get_dept_token(scope, "orientation")
 
 
-def verify_orientation_token(campus: str, token: str) -> bool:
-    return hmac.compare_digest(get_orientation_token(campus), token or "")
+def verify_orientation_token(campus: str, token: str, dept: str = "") -> bool:
+    return hmac.compare_digest(get_orientation_token(campus, dept), token or "")
 
 
-def orientation_share_url(base_url: str, campus: str = "") -> str:
+def orientation_share_url(base_url: str, campus: str = "", dept: str = "") -> str:
     """The link an admin copies out of the dashboard."""
     from urllib.parse import urlencode
 
-    query = urlencode({"campus": campus, "token": get_orientation_token(campus)})
-    return f"{base_url.rstrip('/')}/shared/orientation?{query}"
+    fields = {"campus": campus, "token": get_orientation_token(campus, dept)}
+    if dept:
+        fields["dept"] = dept
+    return f"{base_url.rstrip('/')}/shared/orientation?{urlencode(fields)}"
+
+
+def resolve_orientation_scope(campus: str, token: str, dept: str = "") -> tuple[str, bool]:
+    """What this link may read: the department in scope, and whether it is stuck there.
+
+    Two kinds of link open the orientation report. A campus link reads the
+    whole campus and its holder may narrow the view to any department at will.
+    A department link opens that one department and nothing else — the token
+    only verifies while `dept` stays what it was minted for.
+    """
+    if verify_orientation_token(campus, token):
+        return dept, False
+    if dept and verify_orientation_token(campus, token, dept):
+        return dept, True
+    raise HTTPException(
+        status_code=403, detail="Access denied: Invalid or expired sharing link.")
 
 
 # ── Cohort outcome and impact report ─────────────────────────────────────────
@@ -471,14 +497,15 @@ async def shared_orientation_page(
     request: Request,
     token: str = Query(...),
     campus: str = Query(default=""),
+    dept: str = Query(default=""),
 ):
     """The Deeksharambh orientation report, readable without an admin login.
 
     The page itself is a shell; everything on it comes from the data endpoint
-    below, which checks the same token again.
+    below, which checks the same token again. A department link opens the same
+    shell locked to that one department.
     """
-    if not verify_orientation_token(campus, token):
-        raise HTTPException(status_code=403, detail="Access denied: Invalid or expired sharing link.")
+    dept, locked = resolve_orientation_scope(campus, token, dept)
 
     return request.app.state.templates.TemplateResponse(
         request,
@@ -486,6 +513,9 @@ async def shared_orientation_page(
         {
             "campus": campus,
             "campus_label": campus or "All campuses",
+            "dept": dept,
+            "locked": locked,
+            "scope_label": dept if locked else (campus or "All campuses"),
             "token": token,
             "generated_at": datetime.now().strftime("%d %b %Y, %H:%M"),
         },
@@ -500,14 +530,14 @@ async def shared_orientation_data(
 ):
     """Everything the shared orientation page draws, in one payload.
 
-    `dept` narrows the report the way the dashboard's filter does; the token
-    still only covers the campus it was minted for.
+    `dept` narrows the report the way the dashboard's filter does — freely for
+    a campus link, and only to its own department for a department link.
     """
-    if not verify_orientation_token(campus, token):
-        raise HTTPException(status_code=403, detail="Access denied")
+    dept, locked = resolve_orientation_scope(campus, token, dept)
 
     from app.orientation_data import (
-        build_report, department_overview, orientation_dataset,
+        build_report, department_overview, department_scorecard,
+        orientation_dataset,
     )
 
     scoped = await orientation_dataset(campus=campus, dept=dept)
@@ -518,14 +548,29 @@ async def shared_orientation_data(
     whole = scoped if not dept else await orientation_dataset(campus=campus)
     departments = department_overview(whole["filled"], whole["pending"], campus)
 
-    return JSONResponse({
+    payload = {
         "campus": campus or "All campuses",
         "dept": dept,
+        "locked": locked,
         "report": report,
         "departments": departments,
         "dept_options": sorted({r["program"] for r in whole["filled"] if r["program"] != "—"}),
         "generated_at": datetime.now().strftime("%d %b %Y, %H:%M"),
-    })
+    }
+
+    if locked:
+        # A department link is that department's own report. It still gets the
+        # campus average to read its numbers against, but not the leaderboard
+        # naming everybody else.
+        payload["scorecard"] = department_scorecard(
+            whole["filled"], whole["pending"], dept, campus)
+        payload["departments"] = {
+            **departments,
+            "departments": [r for r in departments["departments"] if r["dept"] == dept],
+        }
+        payload["dept_options"] = [dept]
+
+    return JSONResponse(payload)
 
 
 @router.get("/shared/orientation/ppt")
@@ -535,8 +580,7 @@ async def shared_orientation_ppt(
     dept: str = Query(default=""),
 ):
     """The same slide deck the admin can download, for whoever holds the link."""
-    if not verify_orientation_token(campus, token):
-        raise HTTPException(status_code=403, detail="Access denied")
+    dept, _ = resolve_orientation_scope(campus, token, dept)
 
     from app.orientation_data import deck_response
 
