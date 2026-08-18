@@ -3,9 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Deeksharambh 2026 Orientation Report — {{ campus_label }} — JAIN University</title>
+<title>Deeksharambh 2026 Orientation Report — {{ scope_label }} — JAIN University</title>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/static/css/orientation_report.css">
+<link rel="stylesheet" href="/static/css/orientation_report.css?v=2">
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0 }
   body {
@@ -51,6 +51,13 @@
   .btn-gold { background: #e6b324; color: #0d2147 }
   .btn-soft { background: #fff; color: #334155; border: 1px solid #e2e8f0 }
   .spacer { flex: 1 }
+  /* A department link cannot be pointed anywhere else, so the picker becomes
+     a label saying which department this is. */
+  .scope {
+    display: inline-flex; align-items: center; gap: 7px;
+    background: #0d2147; color: #fff; border-radius: 10px; padding: 8px 14px;
+    font-size: 12.5px; font-weight: 700;
+  }
 
   .loading { text-align: center; padding: 60px 20px; color: #94a3b8; font-size: 13.5px }
   footer {
@@ -69,17 +76,23 @@
     <div class="logo"><img src="/static/logo.png" alt="JAIN University" onerror="this.src='/static/logosmall.png'"></div>
     <div class="grow">
       <h1>Deeksharambh 2026 · Orientation Report</h1>
-      <p id="subtitle">📍 {{ campus_label }} · how the first week actually felt</p>
+      <p id="subtitle">{% if locked %}🏢 {{ dept }}{% else %}📍 {{ campus_label }}{% endif %} · how the first week actually felt</p>
     </div>
-    <span class="pill">✦ Shared report</span>
+    <span class="pill">{% if locked %}✦ Department report{% else %}✦ Shared report{% endif %}</span>
   </header>
 
   <div class="toolbar">
     <button class="tab on" data-view="report"      onclick="showView('report')">📊 Result analysis</button>
-    <button class="tab"    data-view="departments" onclick="showView('departments')">🏢 Departments</button>
-    <select id="dept" class="field" onchange="reload()">
-      <option value="">All departments</option>
-    </select>
+    <button class="tab"    data-view="departments" onclick="showView('departments')">
+      {% if locked %}🏆 Vibe scorecard{% else %}🏢 Departments{% endif %}</button>
+    {% if locked %}
+      <span class="scope">🏢 {{ dept }}</span>
+      <input type="hidden" id="dept" value="{{ dept }}">
+    {% else %}
+      <select id="dept" class="field" onchange="reload()">
+        <option value="">All departments</option>
+      </select>
+    {% endif %}
     <span class="spacer"></span>
     <a id="ppt" class="btn btn-gold" href="#">⬇️ Download the deck</a>
     <button class="btn btn-soft" onclick="window.print()">🖨️ Print</button>
@@ -87,7 +100,7 @@
 
   <div id="loading" class="loading">Loading the orientation report…</div>
   <div id="report" class="ori-report" hidden></div>
-  <div id="departments" class="ori-depts" hidden></div>
+  <div id="departments" class="ori-report ori-depts" hidden></div>
 
   <footer>
     Deeksharambh 2026 · JAIN (Deemed-to-be University) · Office of Academics<br>
@@ -96,12 +109,15 @@
   </footer>
 </div>
 
-<script src="/static/js/orientation_report.js"></script>
+<script src="/static/js/orientation_report.js?v=2"></script>
 <script>
 const CAMPUS = {{ campus | tojson }};
 const TOKEN  = {{ token  | tojson }};
+// A department link is stuck on its own department: the token only verifies
+// while `dept` stays what it was minted for.
+const LOCKED = {{ (locked or false) | tojson }};
 let view = 'report';
-let deptsFilled = false;
+let deptsFilled = LOCKED;
 
 const params = (extra = {}) => new URLSearchParams(
   Object.assign({ campus: CAMPUS, token: TOKEN, dept: document.getElementById('dept').value }, extra));
@@ -139,13 +155,19 @@ async function reload() {
   }
 
   document.getElementById('subtitle').textContent =
-    `📍 ${data.campus}${data.dept ? ' · ' + data.dept : ''} · ` +
+    (data.dept ? `🏢 ${data.dept} · ${data.campus}` : `📍 ${data.campus}`) + ' · ' +
     `${data.report.coverage.filled} of ${data.report.coverage.eligible} students answered`;
   document.getElementById('generated').textContent = 'Generated ' + data.generated_at + '.';
   document.getElementById('ppt').href = '/shared/orientation/ppt?' + params();
 
   OrientationReport.renderReport(document.getElementById('report'), data.report);
-  OrientationReport.renderDepartments(document.getElementById('departments'), data.departments);
+  // A department link compares itself with its campus; a campus link ranks
+  // every department against every other.
+  if (LOCKED) {
+    OrientationReport.renderScorecard(document.getElementById('departments'), data.scorecard);
+  } else {
+    OrientationReport.renderDepartments(document.getElementById('departments'), data.departments);
+  }
 
   loading.hidden = true;
   showView(view);

@@ -10,6 +10,7 @@
  *
  *   OrientationReport.renderReport(hostEl, report)
  *   OrientationReport.renderDepartments(hostEl, overview, { onPick })
+ *   OrientationReport.renderScorecard(hostEl, scorecard)
  *   OrientationReport.mood(avg) -> [word, emoji, colour]
  */
 (function (global) {
@@ -343,6 +344,96 @@
       </div>`;
   }
 
+  // ── Department scorecard ──────────────────────────────────────────────────
+  // What a department-scoped share link opens with: this department's vibe,
+  // its counts, and every headline number against the campus average.
+
+  const ORDINALS = ['th', 'st', 'nd', 'rd'];
+  const ordinal = n => n + (ORDINALS[(n % 100 - 20) % 10] || ORDINALS[n % 100] || ORDINALS[0]);
+
+  /** Where a headline number sits on a 0-100 track of its own scale. */
+  const share = (metric, value) => (value === null || value === undefined) ? 0
+    : Math.max(0, Math.min(100, metric.key === 'nps'
+        ? (value + 100) / 2
+        : (value / (metric.max || 10)) * 100));
+
+  const reading = (metric, value) => (value === null || value === undefined) ? '—'
+    : metric.key === 'nps' ? (value > 0 ? '+' : '') + num(value, 0) : num(value, 1);
+
+  /** One metric: this department's figure, with the campus average marked on it. */
+  function metricCard(metric) {
+    const delta = metric.delta;
+    const tone = delta === null || delta === undefined ? 'flat'
+      : delta > 0.05 ? 'up' : delta < -0.05 ? 'down' : 'flat';
+    const sign = delta > 0 ? '+' : '';
+    return `
+      <div class="ori-metric">
+        <div class="ori-metric-label">${esc(metric.label)}</div>
+        <div class="ori-metric-value">${reading(metric, metric.value)}${
+          metric.max ? `<span>/ ${metric.max}</span>` : ''}</div>
+        <div class="ori-metric-track">
+          <div class="ori-metric-fill" style="width:${share(metric, metric.value)}%"></div>
+          ${metric.campus === null || metric.campus === undefined ? '' :
+            `<i class="ori-metric-mark" style="left:${share(metric, metric.campus)}%"
+                title="Campus average"></i>`}
+        </div>
+        <div class="ori-metric-foot">
+          <span>campus ${reading(metric, metric.campus)}</span>
+          <b class="ori-delta ori-delta-${tone}">${
+            delta === null || delta === undefined ? '—' : sign + num(delta, 1)}</b>
+        </div>
+      </div>`;
+  }
+
+  function scorecard(card) {
+    const d = card.department || {};
+    const [word, emoji, colour] = mood(d.vibe);
+    const chip = (value, label) =>
+      `<div class="ori-chip"><b>${esc(value)}</b><span>${esc(label)}</span></div>`;
+
+    const rank = card.rank ? `
+      <div class="ori-score-rank">
+        <b>${card.rank <= 3 ? MEDALS[card.rank - 1] : '#' + card.rank}</b>
+        <span>${esc(ordinal(card.rank))} of ${card.of} on vibe</span>
+      </div>` : '';
+
+    const note = (icon, label, value) => value ? `
+      <div class="ori-score-note">
+        <span class="ori-score-note-label">${icon} ${esc(label)}</span>
+        <b>${esc(value)}</b>
+      </div>` : '';
+
+    return `
+      <section class="ori-score" style="--mood:${colour}">
+        <div class="ori-score-head">
+          <div class="ori-score-face">${emoji}</div>
+          <div class="ori-score-id">
+            <div class="ori-score-kicker">Deeksharambh 2026 · ${esc(card.campus)}</div>
+            <div class="ori-score-name">${esc(card.dept)}</div>
+            <div class="ori-score-word">${esc(word)} · ${num(d.vibe, 1)} / 10 overall vibe</div>
+          </div>
+          ${rank}
+        </div>
+        <div class="ori-hero-chips ori-score-chips">
+          ${chip(d.filled, 'Replies')}
+          ${chip(d.pending, 'Still pending')}
+          ${chip(d.eligible, 'Eligible')}
+          ${chip(num(d.pct, 0) + '%', 'Answered')}
+        </div>
+        <div class="ori-score-grid">${(card.metrics || []).map(metricCard).join('')}</div>
+        <div class="ori-score-notes">
+          ${note('🏆', 'Loudest praise', d.top_session)}
+          ${note('😰', 'Biggest stressor', d.top_stressor)}
+        </div>
+        <div class="ori-score-foot">
+          Bars are this department; the tick on each bar is the
+          ${esc(card.campus)} average
+          (${card.campus_overall ? card.campus_overall.filled : 0} replies from
+          ${card.campus_overall ? card.campus_overall.eligible : 0} students).
+        </div>
+      </section>`;
+  }
+
   // ── Public API ────────────────────────────────────────────────────────────
 
   function renderReport(host, report) {
@@ -426,8 +517,18 @@
     }
   }
 
+  /** One department's card, for a link that opens only that department. */
+  function renderScorecard(host, card) {
+    if (!host) return;
+    if (!card || !card.dept) {
+      host.innerHTML = '<div class="ori-card ori-empty-card">No scorecard for this department yet.</div>';
+      return;
+    }
+    host.innerHTML = scorecard(card);
+  }
+
   global.OrientationReport = {
-    renderReport, renderDepartments, mood, esc, num, bars, podium, ring, tile,
-    ACCENTS,
+    renderReport, renderDepartments, renderScorecard, mood, esc, num, bars,
+    podium, ring, tile, ACCENTS,
   };
 })(window);

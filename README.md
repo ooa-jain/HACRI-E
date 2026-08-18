@@ -153,6 +153,34 @@ their department. Single-department exports carry the student sheet only.
 Each department's analysis link is independently shareable — hand a single
 department its own link without exposing the rest.
 
+### Deeksharambh report links (campus, and one per department)
+
+The **Orientation** page hands out read-only links to the same orientation
+report the admin reads. They need no login, show aggregate figures only, and
+name no student.
+
+| Where | Link | Opens |
+|---|---|---|
+| Orientation page | `/shared/orientation?campus=…&token=…` | that campus's full analysis, with a department picker |
+| Orientation → **Departments** | `/shared/orientation?campus=…&dept=…&token=…` | one department's own report, and nothing else |
+
+A department link is signed for that department alone: the token is minted from
+campus **and** department, so editing `dept=` in the URL closes the page rather
+than opening the neighbouring department. The department picker becomes a
+label, the leaderboard naming every other department is replaced by that
+department's **vibe scorecard** — its rank on vibe, its reply and pending
+counts, and vibe / recommendation / belonging / will-succeed / bridge-course
+each marked against the campus average — and the slide deck downloads scoped
+the same way.
+
+The **Departments** tab lists every department with its counts and vibe next to
+its link, with a filter box, so the right one is quick to find and obviously
+worth sending (or not, when only two students have answered). **Copy share
+link** at the top of the report follows what is on screen: the department when
+the top-bar department filter is set, the campus otherwise.
+
+Campus links handed out earlier keep working unchanged.
+
 ### Mailing a report
 
 Every directory row has an **✉️ Mail** button on each of its two lines, and each

@@ -185,6 +185,109 @@
 .ori-scale-bar { width: 100%; border-radius: 5px 5px 0 0; }
 .ori-scale-label { font-size: 9.5px; font-weight: 700; color: var(--muted); }
 
+/* ── Department scorecard ────────────────────────────────────────────────── */
+/* The banner a department-scoped share link opens with: one department's vibe,
+   its counts, and every headline number marked against the campus average. */
+.ori-score {
+  --mood: #84cc16;
+  border-radius: 22px;
+  padding: 24px 26px;
+  color: #fff;
+  background:
+    radial-gradient(120% 160% at 100% 0%, color-mix(in srgb, var(--mood) 55%, transparent) 0%, transparent 62%),
+    linear-gradient(135deg, #0d2147 0%, #1a3a7a 100%);
+  box-shadow: 0 14px 34px rgba(13, 33, 71, .22);
+}
+@supports not (background: color-mix(in srgb, red 50%, blue)) {
+  .ori-score { background: linear-gradient(135deg, #0d2147 0%, #1a3a7a 60%, #24518f 100%); }
+}
+.ori-score *, .ori-score *::before, .ori-score *::after { box-sizing: border-box; }
+
+.ori-score-head { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.ori-score-face { font-size: 52px; line-height: 1; }
+.ori-score-id { flex: 1; min-width: 200px; }
+.ori-score-kicker {
+  font-size: 10.5px; font-weight: 800; letter-spacing: 1.6px;
+  text-transform: uppercase; color: rgba(255, 255, 255, .6);
+}
+.ori-score-name { font-size: 26px; font-weight: 800; letter-spacing: -.3px; margin-top: 3px; }
+.ori-score-word {
+  font-size: 12.5px; font-weight: 800; letter-spacing: 1px;
+  text-transform: uppercase; color: var(--mood); margin-top: 4px;
+}
+.ori-score-rank {
+  text-align: center; flex-shrink: 0;
+  background: rgba(255, 255, 255, .12); border: 1px solid rgba(255, 255, 255, .18);
+  border-radius: 16px; padding: 10px 16px;
+}
+.ori-score-rank b { display: block; font-size: 26px; font-weight: 800; line-height: 1.1; }
+.ori-score-rank span {
+  display: block; font-size: 9.5px; font-weight: 700; letter-spacing: .8px;
+  text-transform: uppercase; color: rgba(255, 255, 255, .72); margin-top: 3px;
+}
+
+.ori-score-chips {
+  grid-template-columns: repeat(auto-fit, minmax(84px, 1fr));
+  margin-top: 18px;
+}
+
+.ori-score-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px; margin-top: 10px;
+}
+.ori-metric {
+  background: rgba(255, 255, 255, .09);
+  border: 1px solid rgba(255, 255, 255, .14);
+  border-radius: 14px; padding: 12px 14px;
+}
+.ori-metric-label {
+  font-size: 9.5px; font-weight: 800; letter-spacing: .9px;
+  text-transform: uppercase; color: rgba(255, 255, 255, .7);
+}
+.ori-metric-value { font-size: 24px; font-weight: 800; line-height: 1.2; margin-top: 2px; }
+.ori-metric-value span { font-size: 12px; font-weight: 700; color: rgba(255, 255, 255, .55); margin-left: 4px; }
+.ori-metric-track {
+  position: relative; height: 7px; border-radius: 999px; margin-top: 9px;
+  background: rgba(255, 255, 255, .16);
+}
+.ori-metric-fill {
+  height: 100%; border-radius: 999px; background: var(--mood);
+  transition: width .35s ease;
+}
+.ori-metric-mark {
+  position: absolute; top: -3px; width: 2px; height: 13px; border-radius: 2px;
+  background: #fff; transform: translateX(-1px);
+}
+.ori-metric-foot {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
+  font-size: 10px; font-weight: 700; color: rgba(255, 255, 255, .6); margin-top: 7px;
+}
+.ori-delta { font-size: 11px; font-weight: 800; }
+.ori-delta-up   { color: #86efac; }
+.ori-delta-down { color: #fda4af; }
+.ori-delta-flat { color: rgba(255, 255, 255, .7); }
+
+.ori-score-notes { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+.ori-score-note {
+  flex: 1; min-width: 220px;
+  background: rgba(255, 255, 255, .09); border: 1px solid rgba(255, 255, 255, .14);
+  border-radius: 14px; padding: 10px 14px;
+}
+.ori-score-note-label {
+  display: block; font-size: 9.5px; font-weight: 800; letter-spacing: .9px;
+  text-transform: uppercase; color: rgba(255, 255, 255, .65);
+}
+.ori-score-note b { font-size: 12.5px; font-weight: 700; }
+.ori-score-foot {
+  font-size: 10.5px; color: rgba(255, 255, 255, .55); margin-top: 12px; line-height: 1.6;
+}
+
+@media (max-width: 640px) {
+  .ori-score { padding: 20px 18px; }
+  .ori-score-name { font-size: 21px; }
+  .ori-score-face { font-size: 42px; }
+}
+
 /* ── Department leaderboard ──────────────────────────────────────────────── */
 .ori-depts > * + * { margin-top: 10px; }
 .ori-dept {

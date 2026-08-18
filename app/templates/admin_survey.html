@@ -10,10 +10,10 @@
      shared page, so both sides of the login look identical. -->
 <!-- nginx serves /static/ with `expires 7d`, so the version marker is what
      makes a restyle reach browsers that already hold the old sheet. Bump it
-     whenever admin_shell.css changes. -->
+     whenever the file it marks changes. -->
 <link rel="stylesheet" href="/static/css/admin_shell.css?v=2">
-<link rel="stylesheet" href="/static/css/orientation_report.css">
-<script src="/static/js/orientation_report.js"></script>
+<link rel="stylesheet" href="/static/css/orientation_report.css?v=2">
+<script src="/static/js/orientation_report.js?v=2"></script>
 <link rel="stylesheet" href="/static/css/cohort_report.css">
 <script src="/static/js/cohort_report.js"></script>
 <style>
@@ -638,6 +638,19 @@
               <div class="card space-y-3">
                 <div class="h-card">📋 Department scoreboard</div>
                 <div id="ori-dept-scoreboard"></div>
+              </div>
+              <div class="card space-y-3">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <div class="h-card">🔗 One share link per department</div>
+                    <div class="sub">Hand a department its own Deeksharambh report — its vibe, its counts and every
+                      answer its own students gave, against the campus average. Opens without an admin login, names
+                      nobody, and cannot be edited to open another department's.</div>
+                  </div>
+                  <input id="ori-dept-link-search" oninput="renderOriDeptShareLinks()"
+                         class="field w-full sm:w-56" placeholder="🔍 Filter departments…">
+                </div>
+                <div id="ori-dept-share-links" class="space-y-2"></div>
               </div>
             </div>
 
@@ -2420,6 +2433,7 @@ function closeOriCampus() {
   oriOpen = false;
   oriCampus = '';
   oriDeptData = null;
+  oriDeptLinks = null;
   $('ori-report').classList.add('hidden');
   $('ori-picker').classList.remove('hidden');
   loadOriCampuses();
@@ -2481,18 +2495,84 @@ async function loadOriShareLinks() {
     </div>`).join('');
 }
 
-/** Copy the link for whichever campus is open. */
-function copyOriShareLink(btn) {
+/** Copy the link for what is actually on screen — this department, or the campus. */
+async function copyOriShareLink(btn) {
+  const dept = deptFilter();
+  if (dept) {
+    const row = (await fetchOriDeptLinks()).find(l => l.dept === dept);
+    if (!row) return toast('No orientation replies from ' + dept + ' yet');
+    return copy(row.url);
+  }
   const wanted = oriCampus || 'All campuses';
   const row = (oriShareLinks || []).find(l => l.campus === wanted);
   if (!row) return toast('Share link not ready yet — reopen this page');
   copy(row.url);
 }
 
+// ── One link per department ─────────────────────────────────────────────
+// Same report, narrowed to a single department and signed for it alone, so a
+// head of department can be sent theirs without it opening anybody else's.
+let oriDeptLinks       = null;
+let oriDeptLinksCampus = null;   // which campus the cache belongs to
+
+async function fetchOriDeptLinks() {
+  if (oriDeptLinks && oriDeptLinksCampus === oriCampus) return oriDeptLinks;
+  try {
+    const d = await api('/admin/api/orientation/dept-share-links?' +
+      new URLSearchParams({ campus: oriCampus }));
+    oriDeptLinks = d.links;
+    oriDeptLinksCampus = oriCampus;
+  } catch (err) { return []; }
+  return oriDeptLinks;
+}
+
+async function loadOriDeptShareLinks() {
+  const host = $('ori-dept-share-links');
+  if (!host) return;
+  if (!(oriDeptLinks && oriDeptLinksCampus === oriCampus)) {
+    host.innerHTML = '<div class="text-xs text-slate-400">Building the department links…</div>';
+  }
+  await fetchOriDeptLinks();
+  if (!oriDeptLinks) {
+    host.innerHTML = '<div class="text-xs text-rose-500">Could not build the department links</div>';
+    return;
+  }
+  renderOriDeptShareLinks();
+}
+
+function renderOriDeptShareLinks() {
+  const host = $('ori-dept-share-links');
+  if (!host || !oriDeptLinks) return;
+  const q = ($('ori-dept-link-search').value || '').toLowerCase();
+  const rows = oriDeptLinks.filter(l => l.dept.toLowerCase().includes(q));
+
+  if (!rows.length) {
+    host.innerHTML = '<div class="text-xs text-slate-400">No department has answered here yet.</div>';
+    return;
+  }
+  host.innerHTML = rows.map(l => `
+    <div class="flex flex-col lg:flex-row lg:items-center gap-2 border border-slate-200 rounded-xl p-3">
+      <div class="lg:w-72 shrink-0">
+        <div class="text-xs font-extrabold text-slate-900">🏢 ${e(l.dept)}</div>
+        <div class="text-[11px] text-slate-500 mt-0.5">
+          ${l.filled} of ${l.eligible} answered (${oriNum(l.pct, 0)}%) ·
+          vibe <b style="color:${oriMood(l.vibe)[2]}">${oriNum(l.vibe, 1)}</b>/10 ·
+          NPS ${l.nps === null || l.nps === undefined ? '—' : oriNum(l.nps, 0)}
+        </div>
+      </div>
+      <input readonly class="field link flex-1" value="${e(l.url)}" onclick="this.select()">
+      <div class="flex gap-2">
+        <button class="btn btn-soft" onclick="copy('${e(l.url)}')">Copy</button>
+        <a href="${e(l.url)}" target="_blank" rel="noopener" class="btn btn-primary">Open</a>
+      </div>
+    </div>`).join('');
+}
+
 function openOriCampus(campus) {
   oriOpen = true;
   oriCampus = campus === 'All campuses' ? '' : campus;
   oriDeptData = null;
+  oriDeptLinks = null;
   $('ori-campus-name').textContent = campus;
   $('ori-picker').classList.add('hidden');
   $('ori-report').classList.remove('hidden');
@@ -2548,6 +2628,7 @@ async function loadOriDepartments() {
   } catch (err) {
     $('ori-dept-bars').innerHTML = '<div class="ori-card ori-empty-card">Could not load the department analysis</div>';
   }
+  loadOriDeptShareLinks();
 }
 
 function renderOriDepartments() {
