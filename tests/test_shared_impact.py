@@ -216,3 +216,37 @@ async def test_registered_total_is_everyone_on_the_portal(client: AsyncClient):
     # Unaffected by the campus scope: it is the headline the page opens with.
     assert (await vibe_report())["registered_total"] == 5
     assert (await vibe_report(campus="Kochi"))["registered_total"] == 5
+
+
+@pytest.mark.asyncio
+async def test_the_page_opens_every_deeksharambh_report(client):
+    """One link shared, every orientation report reachable behind it.
+
+    The page carries the campus's own Deeksharambh link and one per
+    department, each signed for what it opens — and each has to actually
+    open, or the page is handing out dead links.
+    """
+    import re
+
+    await _seed()
+    page = (await client.get("/shared/impact", params={"campus": "", "token": _token()})).text
+
+    # Jinja escapes the ampersands in an attribute, as HTML requires; a browser
+    # decodes them again, so the test does too.
+    import html as html_lib
+
+    links = [html_lib.unescape(url) for url in
+             re.findall(r'href="(http://test/shared/orientation\?[^"]+)"', page)]
+    assert links, "the impact page lists no Deeksharambh links"
+
+    # The campus link, plus the two departments that finished both surveys.
+    assert any("dept=" not in url for url in links)
+    assert sum(1 for url in links if "dept=" in url) == 2
+
+    for url in links:
+        assert (await client.get(url.replace("http://test", ""))).status_code == 200
+
+    # A department link stripped of its department must not open the campus.
+    dept_url = next(url for url in links if "dept=" in url)
+    stripped = re.sub(r"&dept=[^&]*", "", dept_url.replace("http://test", ""))
+    assert (await client.get(stripped)).status_code == 403

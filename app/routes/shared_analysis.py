@@ -725,10 +725,32 @@ async def shared_impact(request: Request, token: str = Query(...), campus: str =
     from app.orientation_analysis import CAMPUSES
 
     report = await vibe_report(campus=campus)
+
+    # Every Deeksharambh report reachable from this one page: the campus as a
+    # whole, then each department on its own signed link. Anyone holding the
+    # impact link can open all of them — that is the point of gathering them
+    # here, and they carry aggregate figures only, never a named student.
+    base = str(request.base_url).rstrip("/")
+    orientation_links = [{
+        "dept": "",
+        "label": campus or "Every department, every campus",
+        "count": report.get("orientation", 0),
+        "url": orientation_share_url(base, campus),
+    }] + [
+        {
+            "dept": row["dept"],
+            "label": row["dept"],
+            "count": row["count"],
+            "url": orientation_share_url(base, campus, row["dept"]),
+        }
+        for row in sorted(report.get("departments") or [], key=lambda r: r["dept"].lower())
+    ]
+
     return request.app.state.templates.TemplateResponse(
         request, "shared_vibe.html", {
             "report": report,
             "campus": campus,
+            "orientation_links": orientation_links,
             # The switcher in the hero needs each campus's own token: a link is
             # only ever valid for the campus it names.
             "all_token": get_vibe_token(""),

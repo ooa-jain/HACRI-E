@@ -117,6 +117,15 @@ body {
 .quad-box { position: relative; height: 460px; margin-top: 18px }
 .quad-legend { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 14px; font-size: 12.5px; font-weight: 600; color: var(--ink-soft) }
 .quad-legend i { display: inline-block; width: 12px; height: 12px; border-radius: 4px; margin-right: 6px; vertical-align: -1px }
+.quad-legend i.pre { border-radius: 50%; }
+.quad-legend i.post { border-radius: 3px; transform: rotate(45deg); }
+.quad-views { display: inline-flex; gap: 4px; padding: 4px; border-radius: 999px; background: var(--cream); border: 2px solid var(--ink); margin-top: 16px }
+.quad-view {
+  border: none; background: none; cursor: pointer; font: inherit;
+  font-size: 12.5px; font-weight: 800; padding: 8px 16px; border-radius: 999px; color: var(--muted);
+  transition: background .16s ease, color .16s ease;
+}
+.quad-view.on { background: var(--ink); color: #fff }
 .move-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-top: 16px }
 .move {
   border-radius: 16px; padding: 14px 16px;
@@ -158,6 +167,29 @@ body {
 .deeksha-bar-head span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
 .deeksha-track { height: 12px; border-radius: 999px; background: var(--paper); border: 1.5px solid var(--ink); overflow: hidden }
 .deeksha-track i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--sun), var(--lime)); transition: width .9s cubic-bezier(.2,.8,.3,1) }
+
+/* Every Deeksharambh report, reachable from this page. */
+.ori-links { margin-top: 22px; padding-top: 20px; border-top: 2px dashed var(--line) }
+.ori-link-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; margin-top: 14px }
+.ori-link {
+  background: var(--cream); border: 2px solid var(--ink); border-radius: 18px; padding: 14px 16px;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.ori-link.all { background: linear-gradient(140deg, #2f1b57, #6d28d9); color: #fff; grid-column: 1 / -1 }
+.ori-link-name { font-size: 14px; font-weight: 800; letter-spacing: -.2px }
+.ori-link-meta { font-size: 11.5px; font-weight: 600; color: var(--muted) }
+.ori-link.all .ori-link-meta { color: rgba(255,255,255,.7) }
+.ori-link-actions { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap }
+.ori-link-btn {
+  font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; text-decoration: none;
+  padding: 7px 14px; border-radius: 999px; border: 2px solid var(--ink);
+  background: var(--paper); color: var(--ink);
+  transition: transform .14s ease, background .14s ease, color .14s ease;
+}
+.ori-link-btn:hover { transform: translateY(-1px) }
+.ori-link.all .ori-link-btn { border-color: #fff }
+.ori-link-btn.copy { background: var(--sun) }
+.ori-link-btn.done { background: var(--lime) }
 
 /* Campus switch, right in the hero. */
 .campus-row { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 26px }
@@ -510,23 +542,47 @@ body {
         </div>
       </div>
       {% endif %}
+
+      {% if orientation_links %}
+      <div class="ori-links">
+        <h3 class="deeksha-h3">Open the Deeksharambh report</h3>
+        <p class="deeksha-note">
+          The full orientation report — every question, every session, department by department.
+          Each department opens on its own link, so one can be forwarded on its own.
+        </p>
+        <div class="ori-link-grid">
+          {% for link in orientation_links %}
+            <div class="ori-link {% if not link.dept %}all{% endif %}">
+              <div class="ori-link-name">{{ link.label }}</div>
+              <div class="ori-link-meta">{{ link.count }} student{{ '' if link.count == 1 else 's' }}</div>
+              <div class="ori-link-actions">
+                <a class="ori-link-btn" href="{{ link.url }}" target="_blank" rel="noopener">Open</a>
+                <button type="button" class="ori-link-btn copy" data-copy="{{ link.url }}">Copy link</button>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
     </section>
 
     <section class="card rise" style="margin-top:18px">
       <span class="section-kicker">Every single student</span>
-      <h2 class="card-title">Where every student reached</h2>
+      <h2 class="card-title">Where every student started, and where they reached</h2>
       <p class="card-sub">
-        One dot per student — only the {{ r.movement.points | length }} who completed both the
-        baseline and the post survey. Green moved up, rust slipped back, grey held steady.
-        Literacy runs across, readiness up. Pick a department to see just those students.
+        Only the {{ r.movement.points | length }} students who completed both the baseline and the
+        post survey. <b>Cohort overview</b> is the familiar quadrant: a circle where each student
+        started, a diamond where they reached, and the line between. <b>Where they reached</b>
+        drops the baseline and zooms into the 3-to-5 corner where nearly everyone sits. Pick a
+        department to see just those students.
       </p>
+      <div class="quad-views">
+        <button class="quad-view on" data-quad-view="overview">Cohort overview</button>
+        <button class="quad-view" data-quad-view="reached">Where they reached</button>
+      </div>
       <div class="picker" id="picker-quadrant"></div>
       <div class="quad-box"><canvas id="chart-quadrant"></canvas></div>
-      <div class="quad-legend">
-        <span><i style="background:#58cc4a"></i>Moved up</span>
-        <span><i style="background:#8d8378"></i>Held steady</span>
-        <span><i style="background:#c2410c"></i>Slipped back</span>
-      </div>
+      <div class="quad-legend" id="quad-legend"></div>
       <p class="picker-note" id="note-quadrant"></p>
       <div class="move-row" id="move-row-quadrant"></div>
     </section>
@@ -732,37 +788,6 @@ const impactPicker = makePicker({
 const MOVES = REPORT.movement.points;
 let quadrantChart = null;
 
-/* The plot runs 3 to 5, not 1 to 5: almost every student sits in the top
-   corner, and on the full scale they pile into a cloud. Anyone scoring below
-   3 falls outside the window, so the note under the chart says how many. */
-const QUAD_MIN = 3;
-
-const QUAD_TONES = {
-  up:   'rgba(88,204,74,.85)',
-  held: 'rgba(141,131,120,.7)',
-  down: 'rgba(194,65,12,.8)',
-};
-
-const quadState = { dept: '' };
-
-function quadRows() {
-  return quadState.dept ? MOVES.filter(m => m.dept === quadState.dept) : MOVES;
-}
-
-const quadBand = m => (m.up ? 'up' : (m.down ? 'down' : 'held'));
-
-function quadDatasets(rows) {
-  return [
-    ['up', 'Moved up'], ['held', 'Held steady'], ['down', 'Slipped back'],
-  ].map(([band, label]) => ({
-    label,
-    pointRadius: 4, pointHoverRadius: 7,
-    backgroundColor: QUAD_TONES[band],
-    borderColor: 'rgba(23,17,10,.35)', borderWidth: 1,
-    data: rows.filter(m => quadBand(m) === band).map(m => ({ x: m.x1, y: m.y1, dept: m.dept })),
-  }));
-}
-
 /* How the ten points fell — the orientation week's own distribution, plotted
    the way every other count on this page is. */
 const VIBE_SPREAD = REPORT.deeksharambh.spread || [];
@@ -809,48 +834,180 @@ function drawVibe() {
   });
 }
 
+/* Two ways of reading the same students.
+   "Cohort overview" is the quadrant the programme has always been reported
+   in: the full 1-to-5 field, the four corners named, a circle where a student
+   started and a diamond where they reached, joined by a line. "Where they
+   reached" drops the baseline and zooms into the 3-to-5 corner, where nearly
+   everybody actually sits — on the full field they pile into a cloud. */
+const QUAD_MIN = 3;
+
+const QUAD_TONES = {
+  up:   'rgba(88,204,74,.85)',
+  held: 'rgba(141,131,120,.7)',
+  down: 'rgba(194,65,12,.8)',
+};
+
+const quadState = { dept: '', view: 'overview' };
+
+function quadRows() {
+  return quadState.dept ? MOVES.filter(m => m.dept === quadState.dept) : MOVES;
+}
+
+const quadBand = m => (m.up ? 'up' : (m.down ? 'down' : 'held'));
+
+/* The four corners, and every student's move, painted under the marks. */
+const quadrantBands = {
+  id: 'quadrantBands',
+  beforeDatasetsDraw(chart) {
+    const { ctx, chartArea, scales } = chart;
+    if (!chartArea) return;
+    const mx = scales.x.getPixelForValue(3);
+    const my = scales.y.getPixelForValue(3);
+
+    const bands = [
+      [chartArea.left, chartArea.top, mx - chartArea.left, my - chartArea.top,
+       'rgba(245,183,49,.13)', 'Q2 · AI Enthusiast', 'Lower literacy · higher readiness'],
+      [mx, chartArea.top, chartArea.right - mx, my - chartArea.top,
+       'rgba(88,204,74,.15)', 'Q1 · AI Champion', 'Higher literacy · higher readiness'],
+      [chartArea.left, my, mx - chartArea.left, chartArea.bottom - my,
+       'rgba(194,65,12,.10)', 'Q3 · Getting started', 'Lower on both'],
+      [mx, my, chartArea.right - mx, chartArea.bottom - my,
+       'rgba(43,167,217,.11)', 'Q4 · Quietly capable', 'Higher literacy · lower readiness'],
+    ];
+    ctx.save();
+    bands.forEach(([x, y, w, h, fill, title, sub]) => {
+      ctx.fillStyle = fill;
+      ctx.fillRect(x, y, w, h);
+      ctx.fillStyle = 'rgba(23,17,10,.62)';
+      ctx.font = '800 12px Outfit, sans-serif';
+      ctx.fillText(title, x + 12, y + 22);
+      ctx.fillStyle = 'rgba(23,17,10,.42)';
+      ctx.font = '600 10.5px Outfit, sans-serif';
+      ctx.fillText(sub, x + 12, y + 38);
+    });
+    ctx.strokeStyle = 'rgba(23,17,10,.22)';
+    ctx.setLineDash([5, 5]);
+    ctx.beginPath();
+    ctx.moveTo(mx, chartArea.top); ctx.lineTo(mx, chartArea.bottom);
+    ctx.moveTo(chartArea.left, my); ctx.lineTo(chartArea.right, my);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Each student's move, drawn straight onto the canvas. A line dataset
+    // would need a null between every pair to break the path, and nulls on a
+    // linear axis break the scale's min/max — this is also far cheaper.
+    ctx.lineWidth = 1.1;
+    [['down', 'rgba(194,65,12,.42)'], ['held', 'rgba(141,131,120,.32)'],
+     ['up', 'rgba(88,204,74,.46)']].forEach(([band, colour]) => {
+      ctx.strokeStyle = colour;
+      ctx.beginPath();
+      quadRows().forEach(m => {
+        if (quadBand(m) !== band) return;
+        ctx.moveTo(scales.x.getPixelForValue(m.x0), scales.y.getPixelForValue(m.y0));
+        ctx.lineTo(scales.x.getPixelForValue(m.x1), scales.y.getPixelForValue(m.y1));
+      });
+      ctx.stroke();
+    });
+    ctx.restore();
+  },
+};
+
+const QUAD_AXIS = (text, min) => ({
+  min: min, max: 5,
+  title: { display: true, text: text, font: { family: 'Outfit', size: 12, weight: '800' }, color: '#4a3f31' },
+  grid: { color: AXIS.grid },
+  ticks: { font: { family: 'Outfit', size: 11 } },
+});
+
+/** Overview: where each student started and where they reached. */
+function overviewDatasets(rows) {
+  return [
+    {
+      label: 'Started (baseline)', pointStyle: 'circle', pointRadius: 4, pointHoverRadius: 7,
+      backgroundColor: 'rgba(141,131,120,.55)', borderColor: 'rgba(23,17,10,.3)', borderWidth: 1,
+      data: rows.map(m => ({ x: m.x0, y: m.y0, dept: m.dept })),
+    },
+    {
+      label: 'Reached (post survey)', pointStyle: 'rectRot', pointRadius: 5.5, pointHoverRadius: 8,
+      backgroundColor: rows.map(m => QUAD_TONES[quadBand(m)]),
+      borderColor: 'rgba(23,17,10,.45)', borderWidth: 1,
+      data: rows.map(m => ({ x: m.x1, y: m.y1, dept: m.dept })),
+    },
+  ];
+}
+
+/** Reached: one mark per student, in the corner they actually occupy. */
+function reachedDatasets(rows) {
+  return [
+    ['up', 'Moved up'], ['held', 'Held steady'], ['down', 'Slipped back'],
+  ].map(([band, label]) => ({
+    label: label,
+    pointRadius: 4, pointHoverRadius: 7,
+    backgroundColor: QUAD_TONES[band],
+    borderColor: 'rgba(23,17,10,.35)', borderWidth: 1,
+    data: rows.filter(m => quadBand(m) === band).map(m => ({ x: m.x1, y: m.y1, dept: m.dept })),
+  }));
+}
+
+const QUAD_LEGENDS = {
+  overview: [
+    ['pre', '#8d8378', 'Started — baseline'],
+    ['post', '#58cc4a', 'Reached — moved up'],
+    ['post', '#8d8378', 'Reached — held steady'],
+    ['post', '#c2410c', 'Reached — slipped back'],
+  ],
+  reached: [
+    ['post', '#58cc4a', 'Moved up'],
+    ['post', '#8d8378', 'Held steady'],
+    ['post', '#c2410c', 'Slipped back'],
+  ],
+};
+
 function drawQuadrant() {
   const canvas = document.getElementById('chart-quadrant');
   if (!canvas || !MOVES.length) return;
 
+  const overview = quadState.view === 'overview';
   const rows = quadRows();
-  const shown = rows.filter(m => m.x1 >= QUAD_MIN && m.y1 >= QUAD_MIN);
-  const data = { datasets: quadDatasets(rows) };
+  const min = overview ? 1 : QUAD_MIN;
 
-  if (quadrantChart) {
-    quadrantChart.data = data;
-    quadrantChart.update();
-  } else {
-    quadrantChart = new Chart(canvas, {
-      type: 'scatter',
-      data,
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        animation: STILL || MOVES.length > 400 ? false : { duration: 600 },
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            backgroundColor: 'rgba(23,17,10,.94)', padding: 10, cornerRadius: 10,
-            titleFont: { family: 'Outfit', weight: '800' }, bodyFont: { family: 'Outfit' },
-            callbacks: {
-              title: items => items[0].dataset.label,
-              label: item => [
-                item.raw.dept,
-                `Literacy ${item.parsed.x.toFixed(2)} · readiness ${item.parsed.y.toFixed(2)}`,
-              ],
-            },
+  // The plugin list is fixed when a chart is built, and the two views want
+  // different axes, so switching view rebuilds rather than updates.
+  if (quadrantChart) { quadrantChart.destroy(); quadrantChart = null; }
+
+  quadrantChart = new Chart(canvas, {
+    type: 'scatter',
+    data: { datasets: overview ? overviewDatasets(rows) : reachedDatasets(rows) },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      animation: STILL || rows.length > 400 ? false : { duration: 600 },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: 'rgba(23,17,10,.94)', padding: 10, cornerRadius: 10,
+          titleFont: { family: 'Outfit', weight: '800' }, bodyFont: { family: 'Outfit' },
+          callbacks: {
+            title: items => items[0].dataset.label,
+            label: item => [
+              item.raw.dept,
+              `Literacy ${item.parsed.x.toFixed(2)} · readiness ${item.parsed.y.toFixed(2)}`,
+            ],
           },
         },
-        scales: {
-          x: { min: QUAD_MIN, max: 5, title: { display: true, text: 'AI Literacy — do I understand AI?',
-               font: { family: 'Outfit', size: 12, weight: '800' }, color: '#4a3f31' },
-               grid: { color: AXIS.grid }, ticks: { font: { family: 'Outfit', size: 11 } } },
-          y: { min: QUAD_MIN, max: 5, title: { display: true, text: 'AI Readiness — am I ready to use AI?',
-               font: { family: 'Outfit', size: 12, weight: '800' }, color: '#4a3f31' },
-               grid: { color: AXIS.grid }, ticks: { font: { family: 'Outfit', size: 11 } } },
-        },
       },
-    });
+      scales: {
+        x: QUAD_AXIS('AI Literacy — do I understand AI?', min),
+        y: QUAD_AXIS('AI Readiness — am I ready to use AI?', min),
+      },
+    },
+    plugins: overview ? [quadrantBands] : [],
+  });
+
+  const legend = document.getElementById('quad-legend');
+  if (legend) {
+    legend.innerHTML = QUAD_LEGENDS[quadState.view].map(([shape, colour, label]) =>
+      `<span><i class="${shape}" style="background:${colour}"></i>${label}</span>`).join('');
   }
 
   // The counts below the chart follow the department that is showing.
@@ -869,7 +1026,8 @@ function drawQuadrant() {
 
   const note = document.getElementById('note-quadrant');
   if (note) {
-    const off = rows.length - shown.length;
+    const off = overview ? 0
+      : rows.length - rows.filter(m => m.x1 >= QUAD_MIN && m.y1 >= QUAD_MIN).length;
     note.textContent =
       `${rows.length} student${rows.length === 1 ? '' : 's'} ` +
       `${quadState.dept ? 'in ' + quadState.dept : 'across every department'}, ` +
@@ -877,6 +1035,15 @@ function drawQuadrant() {
       (off ? ` ${off} scored below ${QUAD_MIN} on one of the two scales and sit outside this view.` : '');
   }
 }
+
+document.querySelectorAll('[data-quad-view]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    quadState.view = btn.dataset.quadView;
+    document.querySelectorAll('[data-quad-view]').forEach(b =>
+      b.classList.toggle('on', b === btn));
+    drawQuadrant();
+  });
+});
 
 /* One department at a time, or all of them — the same chip row the other
    charts use. */
@@ -932,6 +1099,24 @@ document.getElementById('switch').addEventListener('click', ev => {
 });
 
 showView('outcome');
+
+/* A department link is meant to be sent on, so it copies rather than opens. */
+document.addEventListener('click', ev => {
+  const btn = ev.target.closest('[data-copy]');
+  if (!btn) return;
+  const url = new URL(btn.getAttribute('data-copy'), window.location.origin).href;
+  const done = () => {
+    const was = btn.textContent;
+    btn.classList.add('done');
+    btn.textContent = 'Copied';
+    setTimeout(() => { btn.classList.remove('done'); btn.textContent = was; }, 1600);
+  };
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(url).then(done, () => window.prompt('Copy this link', url));
+  } else {
+    window.prompt('Copy this link', url);
+  }
+});
 
 /* ── Roll call ──────────────────────────────────────────────────────── */
 const HUES = ['#6d28d9', '#2ba7d9', '#58cc4a', '#f5b731', '#f0567a', '#b45309'];
