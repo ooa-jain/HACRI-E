@@ -166,6 +166,8 @@ def _movement(rows: list[dict]) -> dict[str, Any]:
             "x0": before["lit"], "y0": before["read"],
             "x1": after["lit"],  "y1": after["read"],
             "up": move > 0.05,
+            "down": move < -0.05,
+            "dept": r.get("program") or "—",
         })
     return {
         "points": points,

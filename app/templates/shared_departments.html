@@ -150,6 +150,15 @@
       color: #ffffff;
     }
     .btn-ppt:hover { background: #92400e; }
+    .btn-ori {
+      background: #6d28d9; color: #fff;
+    }
+    .btn-ori:hover { background: #5b21b6; }
+    .btn-copy {
+      background: #fff; color: #4a3f31; border: 1px solid #ddd0bb;
+    }
+    .btn-copy:hover { background: #f7f2e8; }
+    .btn-copy.done { background: #15803d; color: #fff; border-color: #15803d; }
     .btn-mail {
       background: var(--navy);
       color: #ffffff;
@@ -336,6 +345,13 @@
                      data-token="{{ d.token_post }}"
                      data-student-path="{{ d.student_post_path }}" data-registered="{{ d.registered }}" data-pre-done="{{ d.pre_done }}" data-post-done="{{ d.post_done }}" data-post-pending="{{ d.post_pending }}" data-lit-pre="{{ d.avg_lit_pre if d.avg_lit_pre is not none else '' }}" data-read-pre="{{ d.avg_read_pre if d.avg_read_pre is not none else '' }}" data-lit-post="{{ d.avg_lit_post if d.avg_lit_post is not none else '' }}" data-read-post="{{ d.avg_read_post if d.avg_read_post is not none else '' }}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="5" width="19" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg> Mail</button>
                 </div>
+                <div class="link-row">
+                  <b>Deeksharambh</b>
+                  {% set ori = '/shared/orientation?campus=' ~ ('' if d.dept_key == 'Overall' else '&dept=' ~ enc) ~ '&token=' ~ d.orientation_token %}
+                  <a class="btn btn-ori btn-sm" target="_blank" href="{{ ori }}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l2.4 5.4 5.6.6-4.2 3.9 1.2 5.6L12 15.8 6.9 18.5l1.2-5.6L4 9l5.6-.6z"/></svg> Report</a>
+                  <a class="btn btn-ppt btn-sm" href="/shared/orientation/ppt?campus={% if d.dept_key != 'Overall' %}&dept={{ enc }}{% endif %}&token={{ d.orientation_token }}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M12 16v4M8 20h8"/></svg> Deck</a>
+                  <button type="button" class="btn btn-copy btn-sm" data-copy="{{ ori }}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg> Copy link</button>
+                </div>
               </div>
             </td>
           </tr>
@@ -446,6 +462,29 @@ document.addEventListener('click', ev => {
   });
   if (input) input.addEventListener('input', apply);
   apply();
+})();
+</script>
+
+<script>
+/* Copy a department's Deeksharambh link straight to the clipboard — the point
+   of the row is to send it on to that department. */
+(function () {
+  document.addEventListener('click', function (ev) {
+    var btn = ev.target.closest('[data-copy]');
+    if (!btn) return;
+    var url = new URL(btn.getAttribute('data-copy'), window.location.origin).href;
+    var done = function () {
+      var was = btn.innerHTML;
+      btn.classList.add('done');
+      btn.textContent = 'Copied';
+      setTimeout(function () { btn.classList.remove('done'); btn.innerHTML = was; }, 1600);
+    };
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(url).then(done, function () { window.prompt('Copy this link', url); });
+    } else {
+      window.prompt('Copy this link', url);
+    }
+  });
 })();
 </script>
 </body>

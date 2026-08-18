@@ -1,0 +1,179 @@
+/*
+ * orientation_vibe.css — the look of the shared Deeksharambh report.
+ *
+ * The public orientation link is handed to students, parents and heads of
+ * department, so it carries the impact page's design rather than the admin
+ * console's: cream ground, ink outlines, hard offset shadows, one loud number
+ * per idea. Everything is namespaced `ov-` and drawn by
+ * static/js/orientation_vibe.js; the admin dashboard keeps its own renderer.
+ */
+
+.ov {
+  --ink: #17110a;
+  --ink-soft: #4a3f31;
+  --muted: #7d7060;
+  --paper: #fffdf8;
+  --line: #ece0cc;
+  --cream: #fbf4e6;
+  --grape: #6d28d9;
+  --sun: #f5b731;
+  --lime: #58cc4a;
+  --sky: #2ba7d9;
+  --rose: #f0567a;
+  --rust: #c2410c;
+  --radius: 26px;
+}
+.ov *, .ov *::before, .ov *::after { box-sizing: border-box; }
+
+/* ── Motion ───────────────────────────────────────────────────────────────
+   Everything moves once, on the way in, and only when the reader has said
+   nothing about preferring less. */
+.ov-rise {
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity .55s ease, transform .55s cubic-bezier(.2, .8, .3, 1);
+  transition-delay: var(--d, 0ms);
+}
+.ov-rise.in { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) {
+  .ov-rise { opacity: 1; transform: none; transition: none; }
+}
+
+/* ── Cards ────────────────────────────────────────────────────────────── */
+.ov-card {
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  border-radius: var(--radius);
+  padding: 24px;
+  box-shadow: 6px 6px 0 rgba(23, 17, 10, .1);
+}
+.ov-card + .ov-card, .ov > * + * { margin-top: 18px; }
+.ov-kicker {
+  display: inline-block;
+  font-size: 11px; font-weight: 800; letter-spacing: 1.6px; text-transform: uppercase;
+  color: var(--grape); margin-bottom: 6px;
+}
+.ov-title { font-size: 21px; font-weight: 800; letter-spacing: -.5px; }
+.ov-sub { font-size: 13.5px; color: var(--muted); margin-top: 4px; line-height: 1.5; }
+.ov-h3 { font-size: 15px; font-weight: 800; letter-spacing: -.2px; }
+.ov-empty { font-size: 13px; color: var(--muted); padding: 10px 0; }
+.ov-empty-card {
+  background: var(--paper); border: 2px dashed var(--line); border-radius: var(--radius);
+  padding: 46px 24px; text-align: center; color: var(--muted); font-size: 14px; font-weight: 600;
+}
+
+/* ── Stat tiles ───────────────────────────────────────────────────────── */
+.ov-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(158px, 1fr)); gap: 14px; }
+.ov-tile {
+  --tone: var(--grape);
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  border-radius: 20px;
+  padding: 18px;
+  box-shadow: 5px 5px 0 rgba(23, 17, 10, .09);
+  transition: transform .16s ease, box-shadow .16s ease;
+}
+.ov-tile:hover { transform: translate(-2px, -2px); box-shadow: 8px 8px 0 rgba(23, 17, 10, .14); }
+.ov-tile b { display: block; font-size: 34px; font-weight: 900; letter-spacing: -1.5px; line-height: 1; color: var(--tone); }
+.ov-tile b small { font-size: 15px; font-weight: 700; opacity: .55; letter-spacing: 0; }
+.ov-tile span {
+  display: block; font-size: 12px; font-weight: 700; color: var(--muted);
+  text-transform: uppercase; letter-spacing: .6px; margin-top: 7px;
+}
+.ov-meter { height: 8px; border-radius: 999px; background: var(--cream); border: 1px solid var(--line); margin-top: 10px; overflow: hidden; }
+.ov-meter i { display: block; height: 100%; width: 0; background: var(--tone); transition: width .9s cubic-bezier(.2,.8,.3,1); }
+
+/* ── Bars and ranks ───────────────────────────────────────────────────── */
+.ov-bar + .ov-bar { margin-top: 12px; }
+.ov-bar-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 5px; }
+.ov-bar-label { font-size: 13px; font-weight: 700; color: var(--ink-soft); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ov-bar-value { font-size: 12px; font-weight: 800; color: var(--muted); flex-shrink: 0; }
+.ov-track { height: 12px; border-radius: 999px; background: var(--cream); border: 1.5px solid var(--ink); overflow: hidden; }
+.ov-track i { display: block; height: 100%; width: 0; background: var(--tone, var(--grape)); transition: width .9s cubic-bezier(.2,.8,.3,1); }
+
+.ov-rank { display: flex; align-items: center; gap: 12px; }
+.ov-rank + .ov-rank { margin-top: 12px; }
+.ov-rank-badge {
+  width: 30px; height: 30px; flex-shrink: 0; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; font-weight: 900; color: #fff; background: var(--tone, var(--grape));
+  border: 2px solid var(--ink);
+}
+.ov-rank-body { flex: 1; min-width: 0; }
+.ov-rank-count { flex-shrink: 0; text-align: right; font-size: 15px; font-weight: 900; letter-spacing: -.5px; }
+.ov-rank-count small { display: block; font-size: 11px; font-weight: 700; color: var(--muted); letter-spacing: 0; }
+
+/* ── Panels of answers ────────────────────────────────────────────────── */
+.ov-panels { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 16px; }
+.ov-panel {
+  background: var(--paper); border: 2px solid var(--ink); border-radius: 22px;
+  padding: 20px; box-shadow: 5px 5px 0 rgba(23, 17, 10, .09);
+  border-top: 8px solid var(--tone, var(--grape));
+}
+.ov-panel-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
+.ov-panel-title { font-size: 15.5px; font-weight: 800; letter-spacing: -.3px; }
+.ov-panel-note { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); }
+
+/* ── Charts ───────────────────────────────────────────────────────────── */
+.ov-chart { position: relative; width: 100%; margin-top: 14px; }
+.ov-chart canvas { width: 100% !important; height: 100% !important; display: block; }
+.ov-legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 14px; font-size: 12.5px; font-weight: 700; color: var(--ink-soft); }
+.ov-legend i { display: inline-block; width: 12px; height: 12px; border-radius: 4px; margin-right: 6px; vertical-align: -1px; border: 1.5px solid var(--ink); }
+
+/* ── Three-way split (promoters / passives / detractors) ──────────────── */
+.ov-split3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-top: 16px; }
+.ov-cell {
+  --tone: var(--grape);
+  border-radius: 18px; padding: 16px; text-align: left;
+  background: var(--cream); border: 2px solid var(--ink);
+}
+.ov-cell b { display: block; font-size: 28px; font-weight: 900; letter-spacing: -1px; line-height: 1; color: var(--tone); }
+.ov-cell span { display: block; font-size: 12.5px; font-weight: 700; margin-top: 6px; }
+.ov-cell small { display: block; font-size: 11.5px; color: var(--muted); font-weight: 600; margin-top: 3px; }
+
+/* ── Question grid ────────────────────────────────────────────────────── */
+.ov-section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
+.ov-qgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(310px, 1fr)); gap: 16px; margin-top: 18px; }
+.ov-q {
+  background: var(--cream); border: 2px solid var(--ink); border-radius: 20px; padding: 18px;
+}
+.ov-q-title { font-size: 14px; font-weight: 800; letter-spacing: -.2px; }
+.ov-q-sub { font-size: 11.5px; font-weight: 700; color: var(--muted); margin: 3px 0 14px; }
+.ov-q-row + .ov-q-row { margin-top: 14px; }
+.ov-q-row-label { font-size: 12px; font-weight: 800; color: var(--ink-soft); margin-bottom: 7px; }
+.ov-q .ov-track { background: var(--paper); }
+
+/* ── Department leaderboard ───────────────────────────────────────────── */
+.ov-depts { display: grid; gap: 12px; }
+.ov-dept {
+  display: flex; align-items: center; gap: 14px; width: 100%; text-align: left;
+  background: var(--paper); border: 2px solid var(--ink); border-radius: 20px;
+  padding: 16px 18px; box-shadow: 4px 4px 0 rgba(23, 17, 10, .08);
+  font: inherit; color: inherit;
+}
+button.ov-dept { cursor: pointer; transition: transform .14s ease, box-shadow .14s ease; }
+button.ov-dept:hover { transform: translate(-2px, -2px); box-shadow: 7px 7px 0 rgba(23, 17, 10, .13); }
+button.ov-dept:focus-visible { outline: 3px solid var(--grape); outline-offset: 3px; }
+.ov-dept-rank { width: 34px; flex-shrink: 0; font-size: 17px; font-weight: 900; color: var(--muted); text-align: center; }
+.ov-dept-body { flex: 1; min-width: 0; }
+.ov-dept-name { font-size: 14.5px; font-weight: 800; letter-spacing: -.2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ov-dept-meta { font-size: 11.5px; font-weight: 600; color: var(--muted); margin: 4px 0 8px; }
+.ov-dept-score { flex-shrink: 0; text-align: right; }
+.ov-dept-score b { display: block; font-size: 26px; font-weight: 900; letter-spacing: -1px; line-height: 1; color: var(--tone, var(--grape)); }
+.ov-dept-score span { display: block; font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); margin-top: 4px; }
+.ov-dept-average {
+  display: flex; flex-wrap: wrap; gap: 8px 22px; align-items: center;
+  background: var(--ink); color: #fff; border-radius: 20px; padding: 16px 20px;
+  font-size: 13px; font-weight: 600;
+}
+.ov-dept-average b { font-weight: 900; }
+
+@media (max-width: 640px) {
+  .ov-card { padding: 18px; border-radius: 20px; }
+  .ov-tile b { font-size: 28px; }
+}
+
+@media print {
+  .ov-rise { opacity: 1 !important; transform: none !important; }
+  .ov-card, .ov-tile, .ov-panel, .ov-dept { box-shadow: none; break-inside: avoid; }
+}

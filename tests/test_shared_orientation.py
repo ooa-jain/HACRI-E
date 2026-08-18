@@ -160,3 +160,93 @@ async def test_the_renderer_and_its_stylesheet_are_served(client):
         r = await client.get(path)
         assert r.status_code == 200
         assert len(r.content) > 1000
+
+
+# ── Department links ─────────────────────────────────────────────────────────
+#
+# Each department is sent its own link. It opens that department alone: the
+# report is theirs, the comparison is the campus average, and no other
+# department's scoreboard travels with it.
+
+
+def _dept_link(campus: str, dept: str) -> dict:
+    return {"campus": campus, "dept": dept, "token": get_orientation_token(campus, dept)}
+
+
+@pytest.mark.asyncio
+async def test_admin_hands_out_one_link_per_department(app_with_mock):
+    await _seed()
+    transport = ASGITransport(app=app_with_mock)
+    async with AsyncClient(transport=transport, base_url="http://test") as admin:
+        admin.cookies.set("survey_admin_session", "1")
+        body = (await admin.get("/admin/api/orientation/dept-share-links",
+                                params={"campus": "Bangalore"})).json()
+
+    assert body["campus"] == "Bangalore"
+    assert [row["dept"] for row in body["links"]] == [
+        "Department of Commerce", "Department of Law",
+    ]
+    for row in body["links"]:
+        assert "dept=" in row["url"] and "token=" in row["url"]
+    # A department's link is not its campus's link, nor its neighbour's.
+    tokens = {row["url"].split("token=")[1] for row in body["links"]}
+    assert len(tokens) == 2
+    assert get_orientation_token("Bangalore") not in tokens
+
+    async with AsyncClient(transport=transport, base_url="http://test") as anon:
+        r = await anon.get("/admin/api/orientation/dept-share-links")
+        assert r.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_a_department_link_opens_that_department_alone(client):
+    await _seed()
+    params = _dept_link("Bangalore", "Department of Law")
+
+    page = await client.get("/shared/orientation", params=params)
+    assert page.status_code == 200
+    assert "Department of Law" in page.text
+
+    body = (await client.get("/shared/orientation/data", params=params)).json()
+    assert body["locked"] is True
+    assert body["dept"] == "Department of Law"
+    assert body["report"]["count"] == 1                      # Asha only
+    assert body["report"]["headline"]["vibe"] == 9.0
+    # Its own row, and the campus average to read it against — nobody else's.
+    assert [d["dept"] for d in body["departments"]["departments"]] == ["Department of Law"]
+    assert body["departments"]["overall"]["filled"] == 2      # the whole campus
+    assert body["dept_options"] == ["Department of Law"]
+
+    deck = await client.get("/shared/orientation/ppt", params=params)
+    assert deck.status_code == 200
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("params", [
+    # Its own token pointed at the department next door.
+    {"campus": "Bangalore", "dept": "Department of Commerce",
+     "token": get_orientation_token("Bangalore", "Department of Law")},
+    # The same department, but on the campus it was not minted for.
+    {"campus": "Kochi", "dept": "Department of Law",
+     "token": get_orientation_token("Bangalore", "Department of Law")},
+    # A department token stripped back to the whole campus.
+    {"campus": "Bangalore", "token": get_orientation_token("Bangalore", "Department of Law")},
+])
+async def test_a_department_link_cannot_be_edited_into_another(client, params):
+    await _seed()
+    for path in ("/shared/orientation", "/shared/orientation/data", "/shared/orientation/ppt"):
+        assert (await client.get(path, params=params)).status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_the_campus_link_still_filters_freely(client):
+    """The campus link keeps its picker: dept is a filter, not a lock."""
+    await _seed()
+    params = {**_link("Bangalore"), "dept": "Department of Commerce"}
+    body = (await client.get("/shared/orientation/data", params=params)).json()
+
+    assert body["locked"] is False
+    assert body["report"]["count"] == 1
+    assert {d["dept"] for d in body["departments"]["departments"]} == {
+        "Department of Law", "Department of Commerce",
+    }

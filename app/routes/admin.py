@@ -964,6 +964,39 @@ async def api_orientation_share_links(request: Request):
     })
 
 
+@router.get("/admin/api/orientation/dept-share-links")
+async def api_orientation_dept_share_links(request: Request, campus: str = Query(default="")):
+    """One orientation link per department, for sending to each department.
+
+    Each link carries its own token and opens that department alone, so a head
+    of department sees their students' week and nobody else's.
+    """
+    if not _is_survey_admin(request):
+        raise HTTPException(status_code=403)
+
+    from app.orientation_data import ALL_CAMPUSES, department_rows, orientation_dataset
+    from app.routes.shared_analysis import orientation_share_url
+
+    base = str(request.base_url).rstrip("/")
+    data = await orientation_dataset(campus=campus)
+    rows = [r for r in department_rows(data["filled"], data["pending"]) if r["dept"] != "—"]
+
+    return JSONResponse({
+        "campus": campus or ALL_CAMPUSES,
+        "links": [
+            {
+                "dept": row["dept"],
+                "filled": row["filled"],
+                "eligible": row["eligible"],
+                "pct": row["pct"],
+                "vibe": row["vibe"],
+                "url": orientation_share_url(base, campus, row["dept"]),
+            }
+            for row in sorted(rows, key=lambda r: r["dept"].lower())
+        ],
+    })
+
+
 @router.get("/admin/survey/orientation-ppt")
 async def admin_orientation_ppt(
     request: Request,

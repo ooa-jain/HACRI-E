@@ -49,21 +49,46 @@ def get_directory_token() -> str:
 ORIENTATION_KEY = "__orientation__"
 
 
-def get_orientation_token(campus: str = "") -> str:
-    """Token for the shareable orientation report of one campus (or all)."""
-    return get_dept_token(f"{ORIENTATION_KEY}:{campus or 'all'}", "orientation")
+def get_orientation_token(campus: str = "", dept: str = "") -> str:
+    """Token for the shareable orientation report.
+
+    Without a department it opens the whole campus (or every campus), and the
+    reader may narrow it in the page. With one it opens that department alone
+    — the link a head of department is sent, which cannot be edited into
+    somebody else's numbers.
+    """
+    scope = f"{ORIENTATION_KEY}:{campus or 'all'}"
+    if dept:
+        scope += f":{dept}"
+    return get_dept_token(scope, "orientation")
 
 
-def verify_orientation_token(campus: str, token: str) -> bool:
-    return hmac.compare_digest(get_orientation_token(campus), token or "")
+def verify_orientation_token(campus: str, token: str, dept: str = "") -> bool:
+    return hmac.compare_digest(get_orientation_token(campus, dept), token or "")
 
 
-def orientation_share_url(base_url: str, campus: str = "") -> str:
+def orientation_scope(campus: str, dept: str, token: str) -> str:
+    """The department a link is locked to, or "" when it covers the campus.
+
+    Refuses anything else, so a department token cannot be pointed at another
+    department and a campus token cannot be pointed at another campus.
+    """
+    if verify_orientation_token(campus, token):
+        return ""
+    if dept and verify_orientation_token(campus, token, dept):
+        return dept
+    raise HTTPException(status_code=403, detail="Access denied: Invalid or expired sharing link.")
+
+
+def orientation_share_url(base_url: str, campus: str = "", dept: str = "") -> str:
     """The link an admin copies out of the dashboard."""
     from urllib.parse import urlencode
 
-    query = urlencode({"campus": campus, "token": get_orientation_token(campus)})
-    return f"{base_url.rstrip('/')}/shared/orientation?{query}"
+    query = {"campus": campus}
+    if dept:
+        query["dept"] = dept
+    query["token"] = get_orientation_token(campus, dept)
+    return f"{base_url.rstrip('/')}/shared/orientation?{urlencode(query)}"
 
 
 # ── Cohort outcome and impact report ─────────────────────────────────────────
@@ -472,14 +497,14 @@ async def shared_orientation_page(
     request: Request,
     token: str = Query(...),
     campus: str = Query(default=""),
+    dept: str = Query(default=""),
 ):
     """The Deeksharambh orientation report, readable without an admin login.
 
     The page itself is a shell; everything on it comes from the data endpoint
     below, which checks the same token again.
     """
-    if not verify_orientation_token(campus, token):
-        raise HTTPException(status_code=403, detail="Access denied: Invalid or expired sharing link.")
+    locked = orientation_scope(campus, dept, token)
 
     return request.app.state.templates.TemplateResponse(
         request,
@@ -487,6 +512,9 @@ async def shared_orientation_page(
         {
             "campus": campus,
             "campus_label": campus or "All campuses",
+            "dept": locked,
+            "locked": bool(locked),
+            "scope_label": locked or (campus or "All campuses"),
             "token": token,
             "generated_at": datetime.now().strftime("%d %b %Y, %H:%M"),
         },
@@ -501,30 +529,40 @@ async def shared_orientation_data(
 ):
     """Everything the shared orientation page draws, in one payload.
 
-    `dept` narrows the report the way the dashboard's filter does; the token
-    still only covers the campus it was minted for.
+    On a campus link `dept` narrows the report the way the dashboard's filter
+    does. On a department link the department is fixed by the token, and the
+    payload carries that department plus the campus average to read it
+    against — never the other departments' scoreboards.
     """
-    if not verify_orientation_token(campus, token):
-        raise HTTPException(status_code=403, detail="Access denied")
+    locked = orientation_scope(campus, dept, token)
 
     from app.orientation_data import (
         build_report, department_overview, orientation_dataset,
     )
 
-    scoped = await orientation_dataset(campus=campus, dept=dept)
+    scope_dept = locked or dept
+    scoped = await orientation_dataset(campus=campus, dept=scope_dept)
     report = build_report(scoped["filled"], scoped["pending"], campus)
 
     # Department comparison always covers the whole campus — narrowing it to
     # one department would leave nothing to compare against.
-    whole = scoped if not dept else await orientation_dataset(campus=campus)
+    whole = scoped if not scope_dept else await orientation_dataset(campus=campus)
     departments = department_overview(whole["filled"], whole["pending"], campus)
+    dept_options = sorted({r["program"] for r in whole["filled"] if r["program"] != "—"})
+
+    if locked:
+        departments["departments"] = [
+            row for row in departments["departments"] if row["dept"] == locked
+        ]
+        dept_options = [locked]
 
     return JSONResponse({
         "campus": campus or "All campuses",
-        "dept": dept,
+        "dept": scope_dept,
+        "locked": bool(locked),
         "report": report,
         "departments": departments,
-        "dept_options": sorted({r["program"] for r in whole["filled"] if r["program"] != "—"}),
+        "dept_options": dept_options,
         "generated_at": datetime.now().strftime("%d %b %Y, %H:%M"),
     })
 
@@ -536,12 +574,11 @@ async def shared_orientation_ppt(
     dept: str = Query(default=""),
 ):
     """The same slide deck the admin can download, for whoever holds the link."""
-    if not verify_orientation_token(campus, token):
-        raise HTTPException(status_code=403, detail="Access denied")
+    locked = orientation_scope(campus, dept, token)
 
     from app.orientation_data import deck_response
 
-    return await deck_response(campus=campus, dept=dept)
+    return await deck_response(campus=campus, dept=locked or dept)
 
 
 @router.get("/shared/cohort", response_class=HTMLResponse)
@@ -646,8 +683,12 @@ async def shared_departments_list(request: Request, token: str = Query(...)):
         "student_post_path": "/post/all",
     }
 
+    # Each department also gets its own Deeksharambh link, locked to it.
+    overall_row["orientation_token"] = get_orientation_token("")
     dept_list = [overall_row] + [
-        {**r, "name": r["dept"], "dept_key": r["dept"]} for r in rows
+        {**r, "name": r["dept"], "dept_key": r["dept"],
+         "orientation_token": get_orientation_token("", r["dept"])}
+        for r in rows
     ]
 
     return request.app.state.templates.TemplateResponse(

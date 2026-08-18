@@ -456,24 +456,21 @@ body {
 
     <section class="card rise" style="margin-top:18px">
       <span class="section-kicker">Every single student</span>
-      <h2 class="card-title">Where everyone started, and where they reached</h2>
+      <h2 class="card-title">Where every student reached</h2>
       <p class="card-sub">
-        One line per student: the faint dot is the baseline, the bright dot is the post survey.
-        Green means they moved up, rust means they slipped. Literacy runs across, readiness up.
+        One dot per student — only the {{ r.movement.points | length }} who completed both the
+        baseline and the post survey. Green moved up, rust slipped back, grey held steady.
+        Literacy runs across, readiness up. Pick a department to see just those students.
       </p>
+      <div class="picker" id="picker-quadrant"></div>
       <div class="quad-box"><canvas id="chart-quadrant"></canvas></div>
       <div class="quad-legend">
-        <span><i style="background:#8d8378"></i>Baseline</span>
-        <span><i style="background:#15803d"></i>Post survey</span>
         <span><i style="background:#58cc4a"></i>Moved up</span>
-        <span><i style="background:#c2410c"></i>Slipped</span>
+        <span><i style="background:#8d8378"></i>Held steady</span>
+        <span><i style="background:#c2410c"></i>Slipped back</span>
       </div>
-      <div class="move-row">
-        <div class="move"><b style="color:#15803d">{{ r.movement.gained }}</b><span>Moved up</span></div>
-        <div class="move"><b style="color:#7d7060">{{ r.movement.held }}</b><span>Held steady</span></div>
-        <div class="move"><b style="color:#c2410c">{{ r.movement.slipped }}</b><span>Slipped back</span></div>
-        <div class="move"><b>{{ r.movement.points | length }}</b><span>Students plotted</span></div>
-      </div>
+      <p class="picker-note" id="note-quadrant"></p>
+      <div class="move-row" id="move-row-quadrant"></div>
     </section>
 
     <section class="card rise" style="margin-top:18px">
@@ -661,108 +658,137 @@ const impactPicker = makePicker({
 });
 
 /* ── The quadrant ───────────────────────────────────────────────────────
-   Every student twice: where they started, where they reached, and the line
-   between. The quadrant bands are painted underneath by a small plugin, so
-   the four corners are readable without a legend. */
+   One mark per student, at the point they reached, coloured by whether they
+   moved up, held, or slipped. Only students who finished both surveys are in
+   here at all — a student missing either score is never plotted. */
 const MOVES = REPORT.movement.points;
 let quadrantChart = null;
 
-const quadrantBands = {
-  id: 'quadrantBands',
-  beforeDatasetsDraw(chart) {
-    const { ctx, chartArea, scales } = chart;
-    if (!chartArea) return;
-    const mx = scales.x.getPixelForValue(3);
-    const my = scales.y.getPixelForValue(3);
+/* The plot runs 3 to 5, not 1 to 5: almost every student sits in the top
+   corner, and on the full scale they pile into a cloud. Anyone scoring below
+   3 falls outside the window, so the note under the chart says how many. */
+const QUAD_MIN = 3;
 
-    // The four bands, so the corners read without a legend.
-    const bands = [
-      [chartArea.left, chartArea.top, mx - chartArea.left, my - chartArea.top,
-       'rgba(245,183,49,.13)', 'Q2 · AI Enthusiast', 'Lower literacy · higher readiness'],
-      [mx, chartArea.top, chartArea.right - mx, my - chartArea.top,
-       'rgba(88,204,74,.15)', 'Q1 · AI Champion', 'Higher literacy · higher readiness'],
-      [chartArea.left, my, mx - chartArea.left, chartArea.bottom - my,
-       'rgba(194,65,12,.10)', 'Q3 · Getting started', 'Lower on both'],
-      [mx, my, chartArea.right - mx, chartArea.bottom - my,
-       'rgba(43,167,217,.11)', 'Q4 · Quietly capable', 'Higher literacy · lower readiness'],
-    ];
-    ctx.save();
-    bands.forEach(([x, y, w, h, fill, title, sub]) => {
-      ctx.fillStyle = fill;
-      ctx.fillRect(x, y, w, h);
-      ctx.fillStyle = 'rgba(23,17,10,.62)';
-      ctx.font = '800 12px Outfit, sans-serif';
-      ctx.fillText(title, x + 12, y + 22);
-      ctx.fillStyle = 'rgba(23,17,10,.42)';
-      ctx.font = '600 10.5px Outfit, sans-serif';
-      ctx.fillText(sub, x + 12, y + 38);
-    });
-    ctx.strokeStyle = 'rgba(23,17,10,.22)';
-    ctx.setLineDash([5, 5]);
-    ctx.beginPath();
-    ctx.moveTo(mx, chartArea.top); ctx.lineTo(mx, chartArea.bottom);
-    ctx.moveTo(chartArea.left, my); ctx.lineTo(chartArea.right, my);
-    ctx.stroke();
-    ctx.setLineDash([]);
-
-    // Each student's move, drawn straight onto the canvas. A line dataset
-    // would need a null between every pair to break the path, and nulls on a
-    // linear axis break the scale's min/max — this is also far cheaper.
-    ctx.lineWidth = 1.1;
-    [[false, 'rgba(194,65,12,.42)'], [true, 'rgba(88,204,74,.46)']].forEach(([up, colour]) => {
-      ctx.strokeStyle = colour;
-      ctx.beginPath();
-      MOVES.forEach(m => {
-        if (!!m.up !== up) return;
-        ctx.moveTo(scales.x.getPixelForValue(m.x0), scales.y.getPixelForValue(m.y0));
-        ctx.lineTo(scales.x.getPixelForValue(m.x1), scales.y.getPixelForValue(m.y1));
-      });
-      ctx.stroke();
-    });
-    ctx.restore();
-  },
+const QUAD_TONES = {
+  up:   'rgba(88,204,74,.85)',
+  held: 'rgba(141,131,120,.7)',
+  down: 'rgba(194,65,12,.8)',
 };
+
+const quadState = { dept: '' };
+
+function quadRows() {
+  return quadState.dept ? MOVES.filter(m => m.dept === quadState.dept) : MOVES;
+}
+
+const quadBand = m => (m.up ? 'up' : (m.down ? 'down' : 'held'));
+
+function quadDatasets(rows) {
+  return [
+    ['up', 'Moved up'], ['held', 'Held steady'], ['down', 'Slipped back'],
+  ].map(([band, label]) => ({
+    label,
+    pointRadius: 4, pointHoverRadius: 7,
+    backgroundColor: QUAD_TONES[band],
+    borderColor: 'rgba(23,17,10,.35)', borderWidth: 1,
+    data: rows.filter(m => quadBand(m) === band).map(m => ({ x: m.x1, y: m.y1, dept: m.dept })),
+  }));
+}
 
 function drawQuadrant() {
   const canvas = document.getElementById('chart-quadrant');
-  if (!canvas || quadrantChart || !MOVES.length) return;
+  if (!canvas || !MOVES.length) return;
 
-  quadrantChart = new Chart(canvas, {
-    type: 'scatter',
-    data: {
-      datasets: [
-        { label: 'Baseline', pointRadius: 3, pointHoverRadius: 6,
-          data: MOVES.map(p => ({ x: p.x0, y: p.y0 })),
-          backgroundColor: 'rgba(141,131,120,.7)' },
-        { label: 'Post survey', pointRadius: 3.6, pointHoverRadius: 6,
-          data: MOVES.map(p => ({ x: p.x1, y: p.y1 })),
-          backgroundColor: 'rgba(21,128,61,.85)' },
-      ],
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      animation: STILL || MOVES.length > 400 ? false : { duration: 600 },
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          backgroundColor: 'rgba(23,17,10,.94)', padding: 10, cornerRadius: 10,
-          titleFont: { family: 'Outfit', weight: '800' }, bodyFont: { family: 'Outfit' },
-          callbacks: {
-            label: item => `${item.dataset.label}: literacy ${item.parsed.x.toFixed(2)}, readiness ${item.parsed.y.toFixed(2)}`,
+  const rows = quadRows();
+  const shown = rows.filter(m => m.x1 >= QUAD_MIN && m.y1 >= QUAD_MIN);
+  const data = { datasets: quadDatasets(rows) };
+
+  if (quadrantChart) {
+    quadrantChart.data = data;
+    quadrantChart.update();
+  } else {
+    quadrantChart = new Chart(canvas, {
+      type: 'scatter',
+      data,
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        animation: STILL || MOVES.length > 400 ? false : { duration: 600 },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: 'rgba(23,17,10,.94)', padding: 10, cornerRadius: 10,
+            titleFont: { family: 'Outfit', weight: '800' }, bodyFont: { family: 'Outfit' },
+            callbacks: {
+              title: items => items[0].dataset.label,
+              label: item => [
+                item.raw.dept,
+                `Literacy ${item.parsed.x.toFixed(2)} · readiness ${item.parsed.y.toFixed(2)}`,
+              ],
+            },
           },
         },
+        scales: {
+          x: { min: QUAD_MIN, max: 5, title: { display: true, text: 'AI Literacy — do I understand AI?',
+               font: { family: 'Outfit', size: 12, weight: '800' }, color: '#4a3f31' },
+               grid: { color: AXIS.grid }, ticks: { font: { family: 'Outfit', size: 11 } } },
+          y: { min: QUAD_MIN, max: 5, title: { display: true, text: 'AI Readiness — am I ready to use AI?',
+               font: { family: 'Outfit', size: 12, weight: '800' }, color: '#4a3f31' },
+               grid: { color: AXIS.grid }, ticks: { font: { family: 'Outfit', size: 11 } } },
+        },
       },
-      scales: {
-        x: { min: 1, max: 5, title: { display: true, text: 'AI Literacy — do I understand AI?',
-             font: { family: 'Outfit', size: 12, weight: '800' }, color: '#4a3f31' },
-             grid: { color: AXIS.grid }, ticks: { font: { family: 'Outfit', size: 11 } } },
-        y: { min: 1, max: 5, title: { display: true, text: 'AI Readiness — am I ready to use AI?',
-             font: { family: 'Outfit', size: 12, weight: '800' }, color: '#4a3f31' },
-             grid: { color: AXIS.grid }, ticks: { font: { family: 'Outfit', size: 11 } } },
-      },
-    },
-    plugins: [quadrantBands],
-  });
+    });
+  }
+
+  // The counts below the chart follow the department that is showing.
+  const tally = band => rows.filter(m => quadBand(m) === band).length;
+  const row = document.getElementById('move-row-quadrant');
+  if (row) {
+    row.innerHTML = [
+      ['#15803d', tally('up'), 'Moved up'],
+      ['#7d7060', tally('held'), 'Held steady'],
+      ['#c2410c', tally('down'), 'Slipped back'],
+      ['', rows.length, 'Students plotted'],
+    ].map(([colour, value, label]) =>
+      `<div class="move"><b${colour ? ` style="color:${colour}"` : ''}>${value}</b><span>${label}</span></div>`
+    ).join('');
+  }
+
+  const note = document.getElementById('note-quadrant');
+  if (note) {
+    const off = rows.length - shown.length;
+    note.textContent =
+      `${rows.length} student${rows.length === 1 ? '' : 's'} ` +
+      `${quadState.dept ? 'in ' + quadState.dept : 'across every department'}, ` +
+      `all of whom finished both surveys.` +
+      (off ? ` ${off} scored below ${QUAD_MIN} on one of the two scales and sit outside this view.` : '');
+  }
+}
+
+/* One department at a time, or all of them — the same chip row the other
+   charts use. */
+function paintQuadPicker() {
+  const host = document.getElementById('picker-quadrant');
+  if (!host) return;
+  const depts = Array.from(new Set(MOVES.map(m => m.dept))).sort();
+  if (depts.length < 2) return;
+
+  const counts = {};
+  MOVES.forEach(m => { counts[m.dept] = (counts[m.dept] || 0) + 1; });
+
+  host.innerHTML =
+    `<button class="pick pick-all ${quadState.dept ? '' : 'on'}" data-dept="">All departments <small>${MOVES.length}</small></button>` +
+    depts.map(d => `
+      <button class="pick ${quadState.dept === d ? 'on' : ''}" data-dept="${esc(d)}">
+        ${esc(d)} <small>${counts[d]}</small>
+      </button>`).join('');
+
+  host.onclick = ev => {
+    const btn = ev.target.closest('button');
+    if (!btn) return;
+    quadState.dept = btn.dataset.dept;
+    paintQuadPicker();
+    drawQuadrant();
+  };
 }
 
 /* ── The switch ─────────────────────────────────────────────────────────
@@ -779,7 +805,7 @@ function showView(name) {
   if (!drawn[name]) {
     drawn[name] = true;
     if (name === 'outcome') outcomePicker.draw();
-    else { impactPicker.draw(); drawQuadrant(); }
+    else { impactPicker.draw(); paintQuadPicker(); drawQuadrant(); }
   }
   // A view revealed after its cards were already observed would stay faded.
   document.getElementById('view-' + name)
