@@ -20,7 +20,7 @@ from typing import Any
 from app.cohort_analysis import cohort_dataset
 from app.db import ORI, STATUS_POST_DONE, STATUS_PRE_DONE, get_db
 from app.hacri_e2_compat import quadrant
-from app.orientation_analysis import CAMPUSES, _answer_for, _num, normalize_campus
+from app.orientation_analysis import CAMPUSES, _answer_for, _labels, _num, normalize_campus
 from app.scoring import score_for_user
 
 ALL_CAMPUSES = "All campuses"
@@ -190,29 +190,61 @@ def _quadrant_tally(rows: list[dict]) -> dict[str, dict[str, int]]:
 
 
 async def _orientation_vibe(emails: set[str]) -> dict[str, Any]:
-    """The Deeksharambh vibe, for the students the page is counting.
+    """The Deeksharambh week, for the students the page is counting.
 
     The orientation report scores the whole orientation cohort; this scores
-    only the students in scope here, so the vibe sits beside the AI figures as
-    the same people's answer.
+    only the students in scope here, so the week sits beside the AI figures as
+    the same people's answer — how it felt, whether they belong, whether they
+    think they will succeed, what the bridge course did, and whether they
+    would recommend the place afterwards.
     """
-    scores: list[float] = []
-    belonging: list[float] = []
+    from collections import Counter
+
+    fields = {"vibe": "q2", "belonging": "q29", "success": "q32",
+              "bridge": "q16", "recommend": "q34"}
+    answers: dict[str, list[float]] = {key: [] for key in fields}
+    spread: Counter[int] = Counter()
+    sessions: Counter[str] = Counter()
+
     async for doc in get_db()[ORI].find({}):
         email = (doc.get("email") or "").strip().lower()
         if emails and email not in emails:
             continue
         record = doc.get("data") or {}
+        for key, question in fields.items():
+            value = _num(_answer_for(record, question))
+            if value is not None:
+                answers[key].append(value)
         vibe = _num(_answer_for(record, "q2"))
-        belong = _num(_answer_for(record, "q29"))
         if vibe is not None:
-            scores.append(vibe)
-        if belong is not None:
-            belonging.append(belong)
+            spread[int(round(vibe))] += 1
+        for label in _labels(_answer_for(record, "q11")):
+            sessions[label] += 1
+
+    rated = answers["recommend"]
+    promoters = sum(1 for v in rated if v >= 9)
+    detractors = sum(1 for v in rated if v < 7)
+    answered = len(answers["vibe"])
+
     return {
-        "answered": len(scores),
-        "vibe": _mean(scores),
-        "belonging": _mean(belonging),
+        "answered": answered,
+        "vibe": _mean(answers["vibe"]),
+        "belonging": _mean(answers["belonging"]),
+        "success": _mean(answers["success"]),
+        "bridge": _mean(answers["bridge"]),
+        "bridge_max": 5,
+        "recommend": _mean(rated),
+        "nps": round(100.0 * (promoters - detractors) / len(rated)) if rated else None,
+        "promoters": promoters,
+        "detractors": detractors,
+        # How the ten points fell, so the page can plot the week rather than
+        # print one average for it.
+        "spread": [{"label": str(score), "count": spread.get(score, 0),
+                    "pct": round(100.0 * spread.get(score, 0) / answered, 1) if answered else 0.0}
+                   for score in range(1, 11)],
+        "sessions": [{"label": label, "count": count,
+                      "pct": round(100.0 * count / answered, 1) if answered else 0.0}
+                     for label, count in sessions.most_common(5)],
         "max": 10,
     }
 
@@ -278,7 +310,11 @@ def build_vibe_report(rows: list[dict], *, campus: str = "",
             "readiness": _lift(impact_before["readiness"], impact_after["readiness"]),
         },
         "movement": _movement(finished),
-        "deeksharambh": orientation or {"answered": 0, "vibe": None, "belonging": None, "max": 10},
+        "deeksharambh": orientation or {
+            "answered": 0, "vibe": None, "belonging": None, "success": None,
+            "bridge": None, "bridge_max": 5, "recommend": None, "nps": None,
+            "promoters": 0, "detractors": 0, "spread": [], "sessions": [], "max": 10,
+        },
 
         "departments": _departments(finished),
         "parents": _parents(finished),
