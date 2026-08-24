@@ -746,15 +746,88 @@ async def shared_impact(request: Request, token: str = Query(...), campus: str =
         for row in sorted(report.get("departments") or [], key=lambda r: r["dept"].lower())
     ]
 
+    from app.deeksharambh_brief_export import THEME_LINE, THEME_TITLE
+
     return request.app.state.templates.TemplateResponse(
         request, "shared_vibe.html", {
             "report": report,
             "campus": campus,
             "orientation_links": orientation_links,
+            "brief_theme_title": THEME_TITLE,
+            "brief_theme_line": THEME_LINE,
             # The switcher in the hero needs each campus's own token: a link is
             # only ever valid for the campus it names.
             "all_token": get_vibe_token(""),
             "campus_tokens": {name: get_vibe_token(name) for name in CAMPUSES},
             "generated_at": datetime.now().strftime("%d %b %Y, %H:%M"),
         },
+    )
+
+
+def _brief_filename(campus: str, ext: str) -> str:
+    name = f"Deeksharambh_2026_Student_Experience_Brief_{campus or 'All'}.{ext}"
+    return "".join(c if (c.isalnum() or c in "._-") else "_" for c in name)
+
+
+@router.get("/shared/impact/brief-ppt")
+async def shared_impact_brief_ppt(token: str = Query(...), campus: str = Query(default="")):
+    """The Student Experience & Orientation Impact Analysis brief, for
+    whoever holds the impact link — the same deck the admin can download."""
+    if not verify_vibe_token(campus, token):
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    from app.deeksharambh_brief_export import build_deeksharambh_brief_pptx
+    from app.orientation_data import deeksharambh_brief
+
+    data = await deeksharambh_brief(campus=campus)
+    ppt_bytes = await _in_thread(
+        build_deeksharambh_brief_pptx, data,
+        generated_at=datetime.now().strftime("%d %b %Y, %H:%M"))
+
+    return StreamingResponse(
+        io.BytesIO(ppt_bytes),
+        media_type="application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        headers={"Content-Disposition": f'attachment; filename="{_brief_filename(campus, "pptx")}"'},
+    )
+
+
+@router.get("/shared/impact/brief-docx")
+async def shared_impact_brief_docx(token: str = Query(...), campus: str = Query(default="")):
+    """The same brief, as a Word document."""
+    if not verify_vibe_token(campus, token):
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    from app.deeksharambh_brief_export import build_deeksharambh_brief_docx
+    from app.orientation_data import deeksharambh_brief
+
+    data = await deeksharambh_brief(campus=campus)
+    docx_bytes = await _in_thread(
+        build_deeksharambh_brief_docx, data,
+        generated_at=datetime.now().strftime("%d %b %Y, %H:%M"))
+
+    return StreamingResponse(
+        io.BytesIO(docx_bytes),
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers={"Content-Disposition": f'attachment; filename="{_brief_filename(campus, "docx")}"'},
+    )
+
+
+@router.get("/shared/impact/brief-xlsx")
+async def shared_impact_brief_xlsx(token: str = Query(...), campus: str = Query(default="")):
+    """The same brief's numbers, as a workbook."""
+    if not verify_vibe_token(campus, token):
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    from app.deeksharambh_brief_export import build_deeksharambh_brief_xlsx
+    from app.orientation_data import deeksharambh_brief
+
+    data = await deeksharambh_brief(campus=campus)
+    xlsx_bytes = await _in_thread(
+        build_deeksharambh_brief_xlsx, data,
+        generated_at=datetime.now().strftime("%d %b %Y, %H:%M"))
+
+    return StreamingResponse(
+        io.BytesIO(xlsx_bytes),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{_brief_filename(campus, "xlsx")}"'},
     )

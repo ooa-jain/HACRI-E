@@ -1051,6 +1051,88 @@ async def admin_orientation_count_docx(request: Request, campus: str = Query(def
     )
 
 
+def _brief_filename(campus: str, ext: str) -> str:
+    name = f"Deeksharambh_2026_Student_Experience_Brief_{campus or 'All'}.{ext}"
+    return "".join(c if (c.isalnum() or c in "._-") else "_" for c in name)
+
+
+@router.get("/admin/survey/deeksharambh-brief-ppt")
+async def admin_deeksharambh_brief_ppt(request: Request, campus: str = Query(default="")):
+    """The Student Experience & Orientation Impact Analysis brief — the
+    journey, every department, the theme, what students said and asked for,
+    and a closing summary. Same shape as the report already circulated."""
+    if not _is_survey_admin(request):
+        raise HTTPException(status_code=403)
+
+    from datetime import datetime
+    from fastapi.responses import StreamingResponse
+    import io
+
+    from app.deeksharambh_brief_export import build_deeksharambh_brief_pptx
+    from app.orientation_data import deeksharambh_brief
+    from app.routes.shared_analysis import _in_thread
+
+    data = await deeksharambh_brief(campus=campus)
+    generated_at = datetime.now().strftime("%d %b %Y, %H:%M")
+    ppt_bytes = await _in_thread(build_deeksharambh_brief_pptx, data, generated_at=generated_at)
+
+    return StreamingResponse(
+        io.BytesIO(ppt_bytes),
+        media_type="application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        headers={"Content-Disposition": f'attachment; filename="{_brief_filename(campus, "pptx")}"'},
+    )
+
+
+@router.get("/admin/survey/deeksharambh-brief-docx")
+async def admin_deeksharambh_brief_docx(request: Request, campus: str = Query(default="")):
+    """The same brief, as a Word document."""
+    if not _is_survey_admin(request):
+        raise HTTPException(status_code=403)
+
+    from datetime import datetime
+    from fastapi.responses import StreamingResponse
+    import io
+
+    from app.deeksharambh_brief_export import build_deeksharambh_brief_docx
+    from app.orientation_data import deeksharambh_brief
+    from app.routes.shared_analysis import _in_thread
+
+    data = await deeksharambh_brief(campus=campus)
+    generated_at = datetime.now().strftime("%d %b %Y, %H:%M")
+    docx_bytes = await _in_thread(build_deeksharambh_brief_docx, data, generated_at=generated_at)
+
+    return StreamingResponse(
+        io.BytesIO(docx_bytes),
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers={"Content-Disposition": f'attachment; filename="{_brief_filename(campus, "docx")}"'},
+    )
+
+
+@router.get("/admin/survey/deeksharambh-brief-xlsx")
+async def admin_deeksharambh_brief_xlsx(request: Request, campus: str = Query(default="")):
+    """The same brief's numbers, as a workbook — one sheet per section."""
+    if not _is_survey_admin(request):
+        raise HTTPException(status_code=403)
+
+    from datetime import datetime
+    from fastapi.responses import StreamingResponse
+    import io
+
+    from app.deeksharambh_brief_export import build_deeksharambh_brief_xlsx
+    from app.orientation_data import deeksharambh_brief
+    from app.routes.shared_analysis import _in_thread
+
+    data = await deeksharambh_brief(campus=campus)
+    generated_at = datetime.now().strftime("%d %b %Y, %H:%M")
+    xlsx_bytes = await _in_thread(build_deeksharambh_brief_xlsx, data, generated_at=generated_at)
+
+    return StreamingResponse(
+        io.BytesIO(xlsx_bytes),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{_brief_filename(campus, "xlsx")}"'},
+    )
+
+
 async def run_orientation_mail_task(
     task_id: str,
     recipients: list[dict],

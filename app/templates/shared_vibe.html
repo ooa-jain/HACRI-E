@@ -563,6 +563,30 @@ body {
         </div>
       </div>
       {% endif %}
+
+      {% if brief_theme_title %}
+      <div class="ori-links">
+        <h3 class="deeksha-h3">{{ brief_theme_title }}</h3>
+        <p class="deeksha-note">Theme: {{ brief_theme_line }}</p>
+        <p class="deeksha-note" style="margin-top:6px">
+          The full Student Experience & Orientation Impact brief — the journey from baseline to
+          post survey, every department registered vs. submitted, what students said about the
+          week, and what they're asking for next.
+        </p>
+        {% set brief_qs = 'campus=' ~ campus ~ '&token=' ~ (campus_tokens[campus] if campus else all_token) %}
+        <div class="ori-link-grid">
+          <div class="ori-link all">
+            <div class="ori-link-name">Download the brief</div>
+            <div class="ori-link-meta">PPT · Word · Excel</div>
+            <div class="ori-link-actions">
+              <a class="ori-link-btn" href="/shared/impact/brief-ppt?{{ brief_qs }}">PPT</a>
+              <a class="ori-link-btn" href="/shared/impact/brief-docx?{{ brief_qs }}">Word</a>
+              <a class="ori-link-btn" href="/shared/impact/brief-xlsx?{{ brief_qs }}">Excel</a>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endif %}
     </section>
 
     <section class="card rise" style="margin-top:18px">

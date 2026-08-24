@@ -413,6 +413,85 @@ async def department_count_summary(*, campus: str = "") -> dict:
     }
 
 
+def _top_option(report: dict, key: str) -> dict | None:
+    """The most-picked answer to a single-choice question, or None unasked."""
+    for section in report.get("sections", []):
+        for q in section["questions"]:
+            if q["key"] == key:
+                options = q.get("options") or []
+                return options[0] if options else None
+    return None
+
+
+async def deeksharambh_brief(*, campus: str = "") -> dict:
+    """The whole "Human + AI" brief in one call — the shape of the Student
+    Experience Report the Office of Academics already circulates by hand.
+
+    The three-step journey (baseline, Deeksharambh, post survey) and the
+    department table come from the registration data itself, so a department
+    nobody has answered from yet still gets a row rather than being left off.
+    Everything past that — what students said, what they are asking for — is
+    read straight from their own answers: no figure here is composed or
+    estimated, only counted.
+    """
+    from app.cohort_analysis import cohort_dataset, journey_block
+    from app.db import STATUS_POST_DONE, STATUS_PRE_DONE
+
+    rows = await cohort_dataset(campus=campus)
+    journey = journey_block(rows)
+    full_journey = sum(1 for r in rows if r["status"] == STATUS_POST_DONE and r["orientation"])
+    pre_not_deeksharambh = sum(
+        1 for r in rows
+        if r["status"] in (STATUS_PRE_DONE, STATUS_POST_DONE) and not r["orientation"]
+    )
+
+    scoped = await orientation_dataset(campus=campus)
+    filled, pending = scoped[FILLED], scoped[PENDING]
+    report = summarize_orientation([r["data"] for r in filled])
+    head = report["headline"]
+
+    vibe_q = next((q for s in report["sections"] for q in s["questions"] if q["key"] == "q2"), None)
+    high_vibe_pct = 0.0
+    if vibe_q:
+        answered = sum(o["count"] for o in vibe_q["options"])
+        high = sum(o["count"] for o in vibe_q["options"] if o["label"] in ("8", "9", "10"))
+        high_vibe_pct = round(100.0 * high / answered) if answered else 0.0
+
+    expectations = None
+    for section in report["sections"]:
+        for q in section["questions"]:
+            if q["key"] == "q33":
+                expectations = q["options"]
+    pre_completed = journey["stages"][1]["count"]
+
+    return {
+        "campus": campus or ALL_CAMPUSES,
+        "journey": journey,
+        "full_journey": full_journey,
+        "full_journey_pct": round(100.0 * full_journey / journey["registered"]) if journey["registered"] else 0.0,
+        "pre_not_deeksharambh": pre_not_deeksharambh,
+        "departments": sorted(
+            department_rows(filled, pending),
+            key=lambda r: (-r["eligible"], r["dept"].lower()),
+        ),
+        "deeksharambh_count": report["count"],
+        "pre_completed": pre_completed,
+        "deeksharambh_pct_of_pre": (
+            round(100.0 * report["count"] / pre_completed) if pre_completed else 0.0
+        ),
+        "welcomed": _top_option(report, "q3"),
+        "transition": _top_option(report, "q5"),
+        "help_contact": _top_option(report, "q31"),
+        "high_vibe_pct": high_vibe_pct,
+        "vibe": head["vibe"],
+        "nps": head["nps"],
+        "belonging": head["belonging"],
+        "expectations": sorted(expectations or [], key=lambda o: -o["count"]),
+        "sessions_landed": (report["highlights"].get("impactful") or [])[:3],
+        "needs_work": (report["highlights"].get("needs_work") or [])[:2],
+    }
+
+
 def campus_card(name: str, filled: list[dict], pending: list[dict]) -> dict:
     """The summary shown on a campus tile."""
     headline = summarize_orientation([r["data"] for r in filled])["headline"]
