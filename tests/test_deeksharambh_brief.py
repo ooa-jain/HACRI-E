@@ -199,11 +199,44 @@ async def test_brief_xlsx_has_one_sheet_per_section(admin_client):
     from openpyxl import load_workbook
 
     wb = load_workbook(BytesIO(r.content))
-    assert wb.sheetnames == ["Overview", "Departments", "What students said", "Expectations"]
+    # "Students" only rides along on the admin download — named data has no
+    # business on the copy anyone with the shared link can pull.
+    assert wb.sheetnames == [
+        "Overview", "Departments", "What students said", "Expectations", "Students",
+    ]
     dept_sheet = wb["Departments"]
     assert dept_sheet["A1"].value == "Department"
     depts = {row[0].value: row[1].value for row in dept_sheet.iter_rows(min_row=2)}
     assert depts["Department of Law"] == 3
+
+    roster = wb["Students"]
+    assert [c.value for c in roster[1]] == ["Name", "Email", "Department", "Campus", "Level", "Submitted"]
+    names = {row[0].value for row in roster.iter_rows(min_row=2)}
+    # Everyone who actually submitted Deeksharambh — not Dev (never did), not
+    # Esha (never did the baseline either).
+    assert names == {"Asha", "Bilal", "Chitra", "Farah"}
+
+
+@pytest.mark.asyncio
+async def test_shared_brief_xlsx_names_nobody(client):
+    """The public/token download is aggregate-only — no Students sheet."""
+    await _seed()
+    await _seed_matched_for_impact()
+    from app.routes.shared_analysis import get_vibe_token
+
+    r = await client.get("/shared/impact/brief-xlsx",
+                         params={"campus": "", "token": get_vibe_token("")})
+    assert r.status_code == 200
+
+    from io import BytesIO
+    from openpyxl import load_workbook
+
+    wb = load_workbook(BytesIO(r.content))
+    assert "Students" not in wb.sheetnames
+    for sheet in wb.worksheets:
+        for row in sheet.iter_rows():
+            for cell in row:
+                assert cell.value not in ("Asha", "Bilal", "Chitra", "Farah", "Dev", "Esha")
 
 
 @pytest.mark.asyncio

@@ -1119,10 +1119,13 @@ async def admin_deeksharambh_brief_xlsx(request: Request, campus: str = Query(de
     import io
 
     from app.deeksharambh_brief_export import build_deeksharambh_brief_xlsx
-    from app.orientation_data import deeksharambh_brief
+    from app.orientation_data import deeksharambh_brief, deeksharambh_roster
     from app.routes.shared_analysis import _in_thread
 
     data = await deeksharambh_brief(campus=campus)
+    # Named, so it only ever rides along on this admin download — never the
+    # copy built for the shared/token route.
+    data["roster"] = await deeksharambh_roster(campus=campus)
     generated_at = datetime.now().strftime("%d %b %Y, %H:%M")
     xlsx_bytes = await _in_thread(build_deeksharambh_brief_xlsx, data, generated_at=generated_at)
 

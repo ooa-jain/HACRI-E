@@ -492,6 +492,31 @@ async def deeksharambh_brief(*, campus: str = "") -> dict:
     }
 
 
+async def deeksharambh_roster(*, campus: str = "") -> list[dict]:
+    """Every student who submitted the Deeksharambh form, named.
+
+    Admin-only: the brief itself is aggregate throughout, on purpose, because
+    it is also handed out on a public link. This is the one place a name
+    appears, so it is fetched separately and only wired into the workbook the
+    admin console downloads — never the one behind a shared token.
+    """
+    scoped = await orientation_dataset(campus=campus)
+    return sorted(
+        (
+            {
+                "name": r["name"] or "—",
+                "email": r["email"],
+                "dept": r["program"],
+                "campus": r["campus"],
+                "level": (r["ug_or_pg"] or "ug").upper(),
+                "submitted_at": r["orientation_at"],
+            }
+            for r in scoped[FILLED]
+        ),
+        key=lambda r: (r["dept"].lower(), r["name"].lower()),
+    )
+
+
 def campus_card(name: str, filled: list[dict], pending: list[dict]) -> dict:
     """The summary shown on a campus tile."""
     headline = summarize_orientation([r["data"] for r in filled])["headline"]

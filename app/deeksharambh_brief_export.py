@@ -733,6 +733,34 @@ def build_deeksharambh_brief_xlsx(data: dict, *, generated_at: str) -> bytes:
             ws4.cell(i, c).border = border
     sized(ws4, [42, 12, 20])
 
+    # ── Students ─────────────────────────────────────────────────────────
+    # Named, so only ever present on the admin-triggered download — the
+    # caller attaches `data["roster"]` itself; the public/token route never
+    # does, and this sheet simply does not exist on that copy.
+    roster = data.get("roster")
+    if roster:
+        ws5 = wb.create_sheet("Students")
+        ws5.append(["Name", "Email", "Department", "Campus", "Level", "Submitted"])
+        for cell in ws5[1]:
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = centre
+            cell.border = border
+        for i, student in enumerate(roster, start=2):
+            ws5.cell(i, 1, student["name"])
+            ws5.cell(i, 2, student["email"])
+            ws5.cell(i, 3, clean(student["dept"], 80))
+            ws5.cell(i, 4, student["campus"])
+            ws5.cell(i, 5, student["level"])
+            ws5.cell(i, 6, student["submitted_at"])
+            if i % 2 == 0:
+                for c in range(1, 7):
+                    ws5.cell(i, c).fill = tint_fill
+            for c in range(1, 7):
+                ws5.cell(i, c).border = border
+        sized(ws5, [24, 30, 40, 14, 8, 20])
+        ws5.freeze_panes = "A2"
+
     buffer = io.BytesIO()
     wb.save(buffer)
     return buffer.getvalue()
