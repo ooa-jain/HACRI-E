@@ -357,6 +357,62 @@ async def deck_response(*, campus: str = "", dept: str = "", ug_or_pg: str = "")
     )
 
 
+def _dept_counts(rows: list[dict]) -> list[dict]:
+    """How many answered, per department — nothing else."""
+    counts: dict[str, int] = {}
+    for r in rows:
+        if r["program"] == "—":
+            continue
+        counts[r["program"]] = counts.get(r["program"], 0) + 1
+    return sorted(
+        ({"dept": dept, "count": count} for dept, count in counts.items()),
+        key=lambda r: (-r["count"], r["dept"].lower()),
+    )
+
+
+async def department_count_summary(*, campus: str = "") -> dict:
+    """Every department's response count — no scores, no highlights.
+
+    What the plain count export needs: the campuses in scope, each one's
+    departments ranked by how many answered, and the totals that put those
+    numbers in context (registered, answered, still pending, UG/PG). Pure
+    headcount, built the same way every other orientation figure is, so this
+    number can never drift from the report's.
+    """
+    scoped = await orientation_dataset(campus=campus)
+    filled, pending = scoped[FILLED], scoped[PENDING]
+
+    by_campus: dict[str, list[dict]] = {}
+    for r in filled:
+        by_campus.setdefault(r["campus"], []).append(r)
+
+    # Named campuses first, in their usual order; anything else (a stray
+    # "Unspecified" bucket) trails after.
+    order = [c for c in CAMPUSES if c in by_campus] + \
+        sorted(c for c in by_campus if c not in CAMPUSES)
+    campus_tables = [
+        {"campus": name, "count": len(by_campus[name]),
+         "departments": _dept_counts(by_campus[name])}
+        for name in order
+    ]
+
+    ug = sum(1 for r in filled if (r["ug_or_pg"] or "ug").lower() != "pg")
+    pg = len(filled) - ug
+    eligible = len(filled) + len(pending)
+
+    return {
+        "campus": campus or ALL_CAMPUSES,
+        "total_registered": eligible,
+        "total_answered": len(filled),
+        "total_pending": len(pending),
+        "response_rate": round(100.0 * len(filled) / eligible, 1) if eligible else 0.0,
+        "ug": ug,
+        "pg": pg,
+        "campuses": campus_tables,
+        "departments": _dept_counts(filled),
+    }
+
+
 def campus_card(name: str, filled: list[dict], pending: list[dict]) -> dict:
     """The summary shown on a campus tile."""
     headline = summarize_orientation([r["data"] for r in filled])["headline"]

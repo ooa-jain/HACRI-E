@@ -995,6 +995,62 @@ async def admin_orientation_ppt(
     return await deck_response(campus=campus, dept=dept, ug_or_pg=ug_or_pg)
 
 
+@router.get("/admin/survey/orientation-count-ppt")
+async def admin_orientation_count_ppt(request: Request, campus: str = Query(default="")):
+    """Just the department headcount, as a slide deck — no scores, no charts."""
+    if not _is_survey_admin(request):
+        raise HTTPException(status_code=403)
+
+    from datetime import datetime
+    from fastapi.responses import StreamingResponse
+    import io
+
+    from app.orientation_data import department_count_summary
+    from app.orientation_count_export import build_department_count_pptx
+    from app.routes.shared_analysis import _in_thread
+
+    data = await department_count_summary(campus=campus)
+    generated_at = datetime.now().strftime("%d %b %Y, %H:%M")
+    ppt_bytes = await _in_thread(
+        build_department_count_pptx, data, generated_at=generated_at)
+
+    filename = f"Deeksharambh_2026_Department_Count_{campus or 'All'}.pptx"
+    filename = "".join(c if (c.isalnum() or c in "._-") else "_" for c in filename)
+    return StreamingResponse(
+        io.BytesIO(ppt_bytes),
+        media_type="application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.get("/admin/survey/orientation-count-docx")
+async def admin_orientation_count_docx(request: Request, campus: str = Query(default="")):
+    """The same headcount, as a Word document."""
+    if not _is_survey_admin(request):
+        raise HTTPException(status_code=403)
+
+    from datetime import datetime
+    from fastapi.responses import StreamingResponse
+    import io
+
+    from app.orientation_data import department_count_summary
+    from app.orientation_count_export import build_department_count_docx
+    from app.routes.shared_analysis import _in_thread
+
+    data = await department_count_summary(campus=campus)
+    generated_at = datetime.now().strftime("%d %b %Y, %H:%M")
+    docx_bytes = await _in_thread(
+        build_department_count_docx, data, generated_at=generated_at)
+
+    filename = f"Deeksharambh_2026_Department_Count_{campus or 'All'}.docx"
+    filename = "".join(c if (c.isalnum() or c in "._-") else "_" for c in filename)
+    return StreamingResponse(
+        io.BytesIO(docx_bytes),
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
 async def run_orientation_mail_task(
     task_id: str,
     recipients: list[dict],

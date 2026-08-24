@@ -597,6 +597,20 @@
               <div class="card text-center text-xs text-slate-400">Loading campuses…</div>
             </div>
 
+            <div class="card">
+              <div class="panel-head">
+                <div>
+                  <div class="h-card">🔢 Department response count</div>
+                  <div class="sub">Just the headcount — every department, every campus, no scores.
+                    A cover and a headcount table, nothing else.</div>
+                </div>
+                <div class="panel-actions">
+                  <a href="/admin/survey/orientation-count-ppt" class="btn btn-dark">⬇️ PPT</a>
+                  <a href="/admin/survey/orientation-count-docx" class="btn btn-soft">⬇️ Word</a>
+                </div>
+              </div>
+            </div>
+
             <div class="card space-y-3">
               <div>
                 <div class="h-card">🔗 Share the report</div>
@@ -623,6 +637,7 @@
                   <button class="tabbtn"    data-view="email"       onclick="setOriView('email')">📧 Email</button>
                 </div>
                 <a id="ori-ppt" href="#" class="btn btn-dark">⬇️ Download PPT</a>
+                <a id="ori-count-ppt" href="#" class="btn btn-soft" title="Just the department headcount">🔢 Count</a>
                 <button onclick="copyOriShareLink(this)" class="btn btn-soft">🔗 Copy share link</button>
               </div>
             </div>
@@ -2622,6 +2637,7 @@ function setOriView(view) {
   ['analysis', 'departments', 'filled', 'email'].forEach(v =>
     $('ori-view-' + v).classList.toggle('hidden', v !== view));
   $('ori-ppt').href = '/admin/survey/orientation-ppt?' + oriParams();
+  $('ori-count-ppt').href = '/admin/survey/orientation-count-ppt?campus=' + encodeURIComponent(oriCampus);
   if (view === 'analysis')    loadOriCampusReport();
   if (view === 'departments') loadOriDepartments();
   if (view === 'filled')      loadOriStudents();
