@@ -18,14 +18,6 @@ from __future__ import annotations
 
 import io
 
-from docx import Document
-from docx.enum.table import WD_TABLE_ALIGNMENT
-from docx.enum.text import WD_ALIGN_PARAGRAPH
-from docx.oxml import OxmlElement
-from docx.oxml.ns import qn
-from docx.shared import Inches as DocxInches
-from docx.shared import Pt as DocxPt
-from docx.shared import RGBColor as DocxRGBColor
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
@@ -35,6 +27,26 @@ from pptx.enum.text import MSO_ANCHOR, PP_ALIGN
 from pptx.util import Emu, Inches, Pt
 
 from app.orientation_charts import clean
+
+# python-docx backs the Word half of this module only. Importing it at module
+# load time meant a server without it installed couldn't even build the
+# slide deck or the workbook — one missing optional dependency taking down
+# two unrelated downloads. It loads lazily, the first time a docx is built.
+try:
+    from docx import Document
+    from docx.enum.table import WD_TABLE_ALIGNMENT
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+    from docx.oxml import OxmlElement
+    from docx.oxml.ns import qn
+    from docx.shared import Inches as DocxInches
+    from docx.shared import Pt as DocxPt
+    from docx.shared import RGBColor as DocxRGBColor
+except ImportError:
+    Document = WD_TABLE_ALIGNMENT = WD_ALIGN_PARAGRAPH = None
+    OxmlElement = qn = DocxInches = DocxPt = None
+
+    def DocxRGBColor(*_a, **_kw):  # placeholder so the module-level palette below still loads
+        return None
 
 # ── Palette ───────────────────────────────────────────────────────────────
 CREAM = RGBColor(0xF7, 0xF4, 0xEF)
@@ -577,6 +589,9 @@ def _docx_conclusion(doc: Document, data: dict) -> None:
 
 def build_deeksharambh_brief_docx(data: dict, *, generated_at: str) -> bytes:
     """The same brief, laid out as a Word document."""
+    if Document is None:
+        raise RuntimeError(
+            "python-docx is not installed — run `pip install -r requirements.txt`")
     doc = Document()
     section = doc.sections[0]
     section.page_width = DocxInches(8.5)
