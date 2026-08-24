@@ -182,8 +182,35 @@ button.ov-dept:focus-visible { outline: 3px solid var(--grape); outline-offset: 
 }
 
 @media print {
-  .ov-rise { opacity: 1 !important; transform: none !important; }
-  .ov-card, .ov-tile, .ov-panel, .ov-dept { box-shadow: none; break-inside: avoid; }
+  /* Nothing is mid-animation on paper. */
+  .ov-rise { opacity: 1 !important; transform: none !important; transition: none !important; }
+  .ov-card, .ov-tile, .ov-panel, .ov-dept, .ov-q, .ov-chart { box-shadow: none; break-inside: avoid; }
+  .ov-two, .ov-panels, .ov-tiles { break-inside: avoid; }
+
+  /* The hero is painted, not decorated: drop its background and the white
+     text on it goes with it, along with the chart's own white axis labels.
+     Printing it exactly is what keeps the page readable. */
+  .ov-hero {
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+    box-shadow: none;
+  }
+  /* Gradient-clipped text is the first thing a print pipeline drops, and it
+     leaves nothing behind — the number is set solid for paper. */
+  .ov-hero-big {
+    background: none !important;
+    -webkit-text-fill-color: #f5b731 !important;
+    color: #f5b731 !important;
+  }
+  .ov-hero-big small { -webkit-text-fill-color: rgba(255,255,255,.6) !important; }
+  .ov-hero-mood, .ov-half, .ov-panel, .ov-cell, .ov-rank-badge, .ov-track i,
+  .ov-meter i, .ov-dept-average, .ov-score-big span {
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
+
+  /* Jumping to a section means nothing on paper. */
+  .ov-nav { display: none; }
+
+  a[href] { text-decoration: none; color: inherit; }
 }
 
 /* ── Hero ─────────────────────────────────────────────────────────────────

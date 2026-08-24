@@ -96,11 +96,22 @@
     text-align: center; margin-top: 40px; font-size: 12px; color: var(--muted); line-height: 1.8;
   }
   @media print {
-    .toolbar, .pill, .btn { display: none }
-    .cover { color: #17110a; background: none; padding: 0 0 12px }
-    .cover::after { display: none }
-    .pagehead p { color: #4a3f31 }
+    @page { margin: 12mm; }
+    .toolbar, .btn { display: none }
     body { background: #fff }
+    .wrap { padding: 0 }
+    /* The cover carries the branding, so it prints as it looks rather than as
+       an empty white band with white text on it. Its negative margin belongs
+       to the screen layout and would clip the title on paper. */
+    .cover {
+      margin: 0 0 18px; padding: 18px 20px 46px; border-radius: 18px;
+      -webkit-print-color-adjust: exact; print-color-adjust: exact;
+      break-inside: avoid;
+    }
+    .cover::after { display: none }
+    .pagehead { margin-top: 20px }
+    .pagehead h1 { font-size: 30px }
+    footer { color: #4a3f31 }
   }
 </style>
 </head>
