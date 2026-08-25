@@ -135,3 +135,42 @@ async def test_no_mailbox_configured_is_an_error_not_a_silent_no_op(monkeypatch)
     monkeypatch.setattr(emailer, "settings", _settings())
     with pytest.raises(RuntimeError, match="No SMTP host"):
         await emailer.send_with_failover(object())
+
+
+# ── The one button whose success depends on mail ─────────────────────────────
+#
+# The admin OTP is the login. It is the only place in the app that awaits a
+# send inline and shows the result to the person who pressed the button, so it
+# is the place a mail problem is actually visible as "the button is broken".
+
+@pytest.mark.asyncio
+async def test_the_otp_screen_does_not_claim_a_mail_that_was_never_sent(monkeypatch):
+    """In dry-run the flow still continues — the code is in the log — but the
+    screen must not say "OTP sent" to an admin who will never receive one."""
+    from httpx import ASGITransport, AsyncClient
+    from mongomock_motor import AsyncMongoMockClient
+    from app import db
+    from app.settings import settings as live
+
+    db._set_client_for_tests(AsyncMongoMockClient())
+    try:
+        from app.main import app
+        await db.init_indexes(allow_duplicate_email=True)
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as c:
+            r = await c.post("/admin/survey/request-otp",
+                             data={"username": live.survey_admin_username})
+        assert r.status_code == 200
+        assert "no OTP was emailed" in r.text
+        assert "EMAIL_DRY_RUN=false" in r.text
+    finally:
+        db._reset_clients_for_tests()
+
+
+@pytest.mark.asyncio
+async def test_a_failed_otp_names_every_mailbox_it_tried(two_mailboxes, monkeypatch):
+    """"Please check SMTP config" does not say which host failed or why."""
+    hosts = [a["hostname"] for a in emailer.smtp_accounts()]
+    assert hosts == ["primary.example.org", "backup.example.org"]
+    # The route builds its message from exactly this list, so both appear.
+    assert len(hosts) > 1

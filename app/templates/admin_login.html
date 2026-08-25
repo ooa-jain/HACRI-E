@@ -333,8 +333,15 @@
   <!-- ── Step 2: Enter OTP ─────────────────────────────────────── -->
   <div class="info">
     <svg style="vertical-align: middle; margin-right: 6px;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+    {% if mail_off %}
+    Mail is switched off on this server, so <strong>no OTP was emailed</strong>.
+    The code is in the application log. To send it for real, set
+    <code>EMAIL_DRY_RUN=false</code> and <code>SMTP_HOST</code> in the .env.<br>
+    Code is valid for 10 minutes.
+    {% else %}
     OTP sent to <strong>{{ otp_email_hint }}</strong>.<br>
     Code is valid for 10 minutes.
+    {% endif %}
   </div>
 
   <form method="post" action="/admin/login" id="login-form">

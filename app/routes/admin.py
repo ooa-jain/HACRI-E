@@ -72,9 +72,23 @@ async def survey_request_otp(request: Request, username: str = Form(...)):
     from app.db import save_admin_otp
     await save_admin_otp(username, otp, expiry)
 
-    # Send email
+    # Send email.
+    #
+    # This is the one button in the app whose success depends on mail going
+    # out: the OTP is the login. In dry-run there is no mail, so telling the
+    # admin "we sent it" leaves them waiting for something that was written to
+    # a log file — say so instead, and say where to find the code.
+    from app import emailer
+    # Mail off is a normal state in development, where the code goes to the log
+    # and the flow carries on. What it must not do is claim the OTP was emailed:
+    # in production that leaves an admin waiting for a message nobody sent.
+    mail_off = emailer._is_dry_run()
+    if mail_off:
+        log.warning("OTP [%s] for %s NOT emailed — mail is off (%s).", otp, username,
+                    "EMAIL_DRY_RUN is true" if settings.smtp_host
+                    else "no SMTP_HOST configured")
+
     try:
-        from app import emailer
         body = (
             f"Your {portal_name} OTP is: {otp}\n\n"
             f"This OTP is valid for 10 minutes.\n\n"
@@ -89,9 +103,13 @@ async def survey_request_otp(request: Request, username: str = Form(...)):
         log.info("OTP [%s] sent to %s for %s", otp, email, username)
     except Exception as exc:
         log.exception("Failed to send OTP email: %s", exc)
+        hosts = ", ".join(a["hostname"] for a in emailer.smtp_accounts())
         return request.app.state.templates.TemplateResponse(
             request, "admin_login.html",
-            {"error": f"Failed to send OTP email. Please check SMTP config. ({exc})",
+            {"error": f"Could not send the OTP. Tried: {hosts}. Last error: {exc}"
+                      + ("" if len(emailer.smtp_accounts()) > 1 else
+                         " Configuring SMTP_FALLBACK_HOST would give this a second "
+                         "mailbox to try."),
              "title": "Admin Login", "otp_sent": False},
             status_code=500,
         )
@@ -115,6 +133,7 @@ async def survey_request_otp(request: Request, username: str = Form(...)):
             "otp_sent": True,
             "otp_username": username,
             "otp_email_hint": masked_email,
+            "mail_off": mail_off,
             "error": None,
         },
     )
