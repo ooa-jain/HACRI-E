@@ -454,7 +454,15 @@ body.admin-shell header.admin-bar {
   scrollbar-width: none;
 }
 .bar-nav::-webkit-scrollbar { display: none }
-.bar-nav .nav-btn {
+
+/* The nav markup is built once and used in two places: the horizontal
+   `.bar-nav` strip, and the sidebar, which is a bare `#nav`. These rules were
+   scoped to `.bar-nav` alone, so in the sidebar none of them applied — no
+   sizing on the icons, which left every SVG at its intrinsic size and made the
+   sidebar a column of enormous line drawings, and no hover, active or chip
+   styling either. They are scoped to both containers now. */
+.bar-nav .nav-btn,
+#nav .nav-btn {
   display: inline-flex;
   align-items: center;
   gap: 7px;
@@ -468,15 +476,20 @@ body.admin-shell header.admin-bar {
   white-space: nowrap;
   transition: background .14s ease, color .14s ease;
 }
-.bar-nav .nav-btn .nav-ico { width: 16px; height: 16px; flex: none; opacity: .75 }
-.bar-nav .nav-btn:hover { background: var(--a-surface-sunk); color: var(--a-ink) }
-.bar-nav .nav-btn.on {
+.bar-nav .nav-btn .nav-ico,
+#nav .nav-btn .nav-ico { width: 16px; height: 16px; flex: none; opacity: .75 }
+.bar-nav .nav-btn:hover,
+#nav .nav-btn:hover { background: var(--a-surface-sunk); color: var(--a-ink) }
+.bar-nav .nav-btn.on,
+#nav .nav-btn.on {
   background: var(--a-navy);
   color: #fff;
   font-weight: 700;
 }
-.bar-nav .nav-btn.on .nav-ico { opacity: 1; color: var(--a-gold) }
-.bar-nav .nav-chip {
+.bar-nav .nav-btn.on .nav-ico,
+#nav .nav-btn.on .nav-ico { opacity: 1; color: var(--a-gold) }
+.bar-nav .nav-chip,
+#nav .nav-chip {
   font-size: 10px;
   font-weight: 700;
   padding: 1px 6px;
@@ -484,7 +497,23 @@ body.admin-shell header.admin-bar {
   background: var(--a-surface-sunk);
   color: var(--a-muted);
 }
-.bar-nav .nav-btn.on .nav-chip { background: rgba(255, 255, 255, .18); color: #fff }
+.bar-nav .nav-btn.on .nav-chip,
+#nav .nav-btn.on .nav-chip { background: rgba(255, 255, 255, .18); color: #fff }
+
+/* Sidebar rows fill their column and push the count to the right edge. */
+#nav .nav-btn { width: 100%; justify-content: flex-start }
+#nav .nav-chip { margin-left: auto }
+#nav .nav-group {
+  padding: 12px 12px 4px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .8px;
+  text-transform: uppercase;
+  color: var(--a-faint);
+}
+
+/* Nothing else should be able to blow an icon up to its intrinsic size. */
+.nav-ico { width: 16px; height: 16px; flex: none }
 
 /* The section's own title, under the bar. */
 .page-head { padding: 20px 24px 0 }

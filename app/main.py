@@ -120,6 +120,18 @@ templates.env.globals["asset"] = asset
 app.state.templates = templates
 
 app.mount("/static",    StaticFiles(directory=str(BASE_DIR / "static")),         name="static")
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    """Browsers ask for this on every page whether or not anyone linked it, so
+    without it every single page view logged a 404."""
+    from fastapi.responses import FileResponse, Response
+
+    icon = BASE_DIR / "static" / "logosmall.png"
+    if icon.exists():
+        return FileResponse(icon, media_type="image/png")
+    return Response(status_code=204)
 app.mount("/generated", StaticFiles(directory=str(_gen.resolve())),               name="generated")
 
 app.include_router(landing.router,             tags=["landing"])

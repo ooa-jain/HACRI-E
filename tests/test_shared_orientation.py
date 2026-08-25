@@ -178,7 +178,7 @@ async def test_the_shared_page_wears_the_public_design(client):
     assert "orientation_vibe.css" in page
     assert "orientation_report.js" not in page
     # Chart.js has to be there or every distribution falls back to nothing.
-    assert "chart.js" in page
+    assert "/static/vendor/chart.umd.js" in page
 
 
 # ── One link per department ──────────────────────────────────────────────────
