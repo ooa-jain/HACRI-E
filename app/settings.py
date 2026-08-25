@@ -46,6 +46,11 @@ class Settings(BaseSettings):
     smtp_fallback_port: int = 465
     smtp_fallback_user: str | None = None
     smtp_fallback_pass: str | None = None
+    # Most providers refuse to relay a message whose From address is not one of
+    # theirs. A fallback on a different provider therefore needs its own From,
+    # or every failover is rejected at the door. Falls back to the fallback
+    # user's own address when left unset.
+    smtp_fallback_from: str | None = None
 
     # How long to wait on a single SMTP connection before giving up on it and
     # trying the next account. Hostinger answers in well under a second when
@@ -72,6 +77,7 @@ class Settings(BaseSettings):
         "smtp_fallback_port": ("smtp_backup_port", "smtp_port_2"),
         "smtp_fallback_user": ("smtp_backup_user", "smtp_email_2", "smtp_user_2"),
         "smtp_fallback_pass": ("smtp_backup_pass", "smtp_password_2", "smtp_pass_2"),
+        "smtp_fallback_from": ("smtp_backup_from", "email_from_2"),
     }
 
     @model_validator(mode="before")

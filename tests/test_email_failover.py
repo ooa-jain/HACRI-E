@@ -80,11 +80,23 @@ def two_mailboxes(monkeypatch):
         SMTP_FALLBACK_PASS="p2"))
 
 
+def _message():
+    from email.message import EmailMessage
+    msg = EmailMessage()
+    msg["From"] = "JAIN Office of Academics <primary@example.org>"
+    msg["To"] = "student@example.org"
+    msg["Subject"] = "Deeksharambh"
+    msg.set_content("body")
+    return msg
+
+
 def _record(monkeypatch, failing: set[str]):
-    tried: list[str] = []
+    """Records (hostname, From) for each attempt — aiosmtplib never runs."""
+    tried: list[tuple[str, str]] = []
 
     async def fake_send(msg, **kwargs):
-        tried.append(kwargs["hostname"])
+        tried.append((kwargs["hostname"], msg["From"]))
+        assert "from_addr" not in kwargs, "from_addr leaked into the SMTP kwargs"
         if kwargs["hostname"] in failing:
             raise TimeoutError(f"{kwargs['hostname']} timed out")
 
@@ -95,16 +107,17 @@ def _record(monkeypatch, failing: set[str]):
 @pytest.mark.asyncio
 async def test_the_primary_alone_handles_a_healthy_send(two_mailboxes, monkeypatch):
     tried = _record(monkeypatch, failing=set())
-    await emailer.send_with_failover(object())
-    assert tried == ["primary.example.org"], "the fallback was used unnecessarily"
+    await emailer.send_with_failover(_message())
+    assert [h for h, _ in tried] == ["primary.example.org"], \
+        "the fallback was used unnecessarily"
 
 
 @pytest.mark.asyncio
 async def test_a_timeout_on_the_primary_moves_the_message_to_the_fallback(
         two_mailboxes, monkeypatch):
     tried = _record(monkeypatch, failing={"primary.example.org"})
-    await emailer.send_with_failover(object())
-    assert tried == ["primary.example.org", "backup.example.org"]
+    await emailer.send_with_failover(_message())
+    assert [h for h, _ in tried] == ["primary.example.org", "backup.example.org"]
 
 
 @pytest.mark.asyncio
@@ -113,8 +126,8 @@ async def test_the_error_surfaces_only_when_every_mailbox_fails(
     tried = _record(monkeypatch,
                     failing={"primary.example.org", "backup.example.org"})
     with pytest.raises(TimeoutError):
-        await emailer.send_with_failover(object())
-    assert tried == ["primary.example.org", "backup.example.org"]
+        await emailer.send_with_failover(_message())
+    assert [h for h, _ in tried] == ["primary.example.org", "backup.example.org"]
 
 
 @pytest.mark.asyncio
@@ -122,7 +135,7 @@ async def test_falling_back_is_logged_loudly_enough_to_notice(
         two_mailboxes, monkeypatch, caplog):
     _record(monkeypatch, failing={"primary.example.org"})
     with caplog.at_level("WARNING"):
-        await emailer.send_with_failover(object())
+        await emailer.send_with_failover(_message())
     joined = caplog.text
     assert "primary.example.org" in joined
     assert "backup.example.org" in joined
@@ -134,7 +147,7 @@ async def test_falling_back_is_logged_loudly_enough_to_notice(
 async def test_no_mailbox_configured_is_an_error_not_a_silent_no_op(monkeypatch):
     monkeypatch.setattr(emailer, "settings", _settings())
     with pytest.raises(RuntimeError, match="No SMTP host"):
-        await emailer.send_with_failover(object())
+        await emailer.send_with_failover(_message())
 
 
 # ── The one button whose success depends on mail ─────────────────────────────
@@ -174,3 +187,48 @@ async def test_a_failed_otp_names_every_mailbox_it_tried(two_mailboxes, monkeypa
     assert hosts == ["primary.example.org", "backup.example.org"]
     # The route builds its message from exactly this list, so both appear.
     assert len(hosts) > 1
+
+
+# ── Sending as the right address ─────────────────────────────────────────────
+#
+# A provider will not relay a message claiming to be from someone else's
+# domain. Handing Hostinger a message that says it is from a gmail.com address
+# is a rejection, so the whole failover would have been for nothing.
+
+@pytest.mark.asyncio
+async def test_the_fallback_sends_as_itself_not_as_the_primary(monkeypatch):
+    monkeypatch.setattr(emailer, "settings", _settings(
+        SMTP_HOST="primary.example.org", SMTP_USER="a@primary.example.org",
+        SMTP_PASS="p1", EMAIL_FROM="Office <a@primary.example.org>",
+        SMTP_FALLBACK_HOST="backup.example.org",
+        SMTP_FALLBACK_USER="b@backup.example.org", SMTP_FALLBACK_PASS="p2"))
+    tried = _record(monkeypatch, failing={"primary.example.org"})
+
+    await emailer.send_with_failover(_message())
+
+    hosts = [h for h, _ in tried]
+    froms = [f for _, f in tried]
+    assert hosts == ["primary.example.org", "backup.example.org"]
+    assert froms[0] == "Office <a@primary.example.org>"
+    assert froms[1] == "b@backup.example.org", (
+        "the fallback tried to send as the primary's address"
+    )
+
+
+@pytest.mark.asyncio
+async def test_an_explicit_fallback_from_wins_over_the_fallback_username(monkeypatch):
+    monkeypatch.setattr(emailer, "settings", _settings(
+        SMTP_HOST="primary.example.org", EMAIL_FROM="Office <a@primary.example.org>",
+        SMTP_FALLBACK_HOST="backup.example.org",
+        SMTP_FALLBACK_USER="smtp-login@backup.example.org",
+        SMTP_FALLBACK_FROM="Office of Academics <ooa@backup.example.org>"))
+    tried = _record(monkeypatch, failing={"primary.example.org"})
+
+    await emailer.send_with_failover(_message())
+    assert tried[1][1] == "Office of Academics <ooa@backup.example.org>"
+
+
+def test_the_primary_keeps_the_configured_from(monkeypatch):
+    monkeypatch.setattr(emailer, "settings", _settings(
+        SMTP_HOST="primary.example.org", EMAIL_FROM="Office <a@primary.example.org>"))
+    assert emailer.smtp_accounts()[0]["from_addr"] == "Office <a@primary.example.org>"

@@ -44,7 +44,7 @@ def _is_dry_run() -> bool:
     return bool(settings.email_dry_run or not settings.smtp_host)
 
 
-def _account_kwargs(host, port, user, password) -> dict:
+def _account_kwargs(host, port, user, password, from_addr=None) -> dict:
     """Connection kwargs for one mailbox.
 
     Port 465 → implicit TLS (use_tls). Any other port → STARTTLS.
@@ -56,6 +56,8 @@ def _account_kwargs(host, port, user, password) -> dict:
         password=password,
         timeout=settings.smtp_timeout_seconds,
     )
+    # Not a connection setting — popped before the kwargs reach aiosmtplib.
+    kwargs["from_addr"] = from_addr or settings.email_from
     if int(port) == 465:
         kwargs["use_tls"] = True
     else:
@@ -79,7 +81,10 @@ def smtp_accounts() -> list[dict]:
     if settings.smtp_fallback_host:
         accounts.append(_account_kwargs(
             settings.smtp_fallback_host, settings.smtp_fallback_port,
-            settings.smtp_fallback_user, settings.smtp_fallback_pass))
+            settings.smtp_fallback_user, settings.smtp_fallback_pass,
+            # Its own From, or its own address — never the primary's, which
+            # the fallback provider would refuse to relay.
+            settings.smtp_fallback_from or settings.smtp_fallback_user))
     return accounts
 
 
@@ -108,8 +113,15 @@ async def send_with_failover(msg) -> None:
         raise RuntimeError("No SMTP host configured — set SMTP_HOST in the .env.")
 
     last: Exception | None = None
-    for i, kwargs in enumerate(accounts):
+    for i, account in enumerate(accounts):
+        kwargs = dict(account)
+        from_addr = kwargs.pop("from_addr", None)
         host = kwargs["hostname"]
+        # Each provider sends as itself. Handing Hostinger a message that says
+        # it is from a gmail.com address is a relay it will decline.
+        if from_addr and msg.get("From") != from_addr:
+            del msg["From"]
+            msg["From"] = from_addr
         try:
             await aiosmtplib.send(msg, **kwargs)
             if i:
@@ -185,8 +197,10 @@ class SmtpBatchSender:
     def __init__(self) -> None:
         self.dry_run = _is_dry_run()
         self._client: aiosmtplib.SMTP | None = None
-        # Which mailbox the open connection belongs to, for the log.
+        # Which mailbox the open connection belongs to, for the log, and the
+        # address that mailbox is entitled to send as.
         self._account = 0
+        self._from: str | None = None
 
     async def __aenter__(self) -> "SmtpBatchSender":
         if not self.dry_run:
@@ -230,6 +244,7 @@ class SmtpBatchSender:
                             kwargs["hostname"])
             self._client = client
             self._account = i
+            self._from = kwargs.get("from_addr")
             return
 
         assert last is not None
@@ -252,6 +267,11 @@ class SmtpBatchSender:
         if self._client is None or not self._client.is_connected:
             log.info("SMTP client not connected; establishing connection.")
             await self._connect()
+
+        # Send as whichever mailbox this connection belongs to.
+        if self._from and msg.get("From") != self._from:
+            del msg["From"]
+            msg["From"] = self._from
 
         try:
             await self._client.send_message(msg)  # type: ignore[union-attr]
