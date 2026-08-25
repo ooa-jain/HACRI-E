@@ -10,6 +10,7 @@ Collections:
 """
 from __future__ import annotations
 import time
+import re
 from datetime import datetime, timezone
 from typing import Any
 from pymongo import AsyncMongoClient, ReturnDocument
@@ -232,8 +233,24 @@ async def upsert_user(
     )
 
 
+def email_filter(email: str) -> dict:
+    """A Mongo filter matching one address however it happens to be cased.
+
+    Registration stores an address exactly as it was typed, and the session
+    cookie carries exactly what was typed at sign-in, so the two need not
+    match. A student who registered as "Rahul.M@..." and signed in as
+    "rahul.m@..." was, to an exact-match query, a different person: their
+    record was not found, their orientation reply was filed against nobody,
+    and the page after submit sent them back to the landing page.
+
+    Use this anywhere a lookup or an update decides who a student is.
+    """
+    text = (email or "").strip()
+    return {"email": {"$regex": f"^{re.escape(text)}$", "$options": "i"}}
+
+
 async def get_user(email: str) -> dict | None:
-    return await get_db()[USERS].find_one({"email": email})
+    return await get_db()[USERS].find_one(email_filter(email))
 
 
 # ── Pre survey ─────────────────────────────────────────────────────────────────

@@ -224,7 +224,7 @@ async def pre_get(
             return RedirectResponse(url="/orientation", status_code=303)
         return RedirectResponse(url="/survey/post", status_code=303)
 
-    user = await get_db()["users"].find_one({"email": session["email"]})
+    user = await _find_user(session["email"])
     if user and user.get("status") == STATUS_POST_DONE:
         from app.routes.landing import email_to_slug
         return RedirectResponse(url=f"/results/{email_to_slug(session['email'])}", status_code=303)
@@ -326,13 +326,31 @@ async def pre_done(
     )
 
 
+async def _find_user(email: str):
+    """The user record for a signed-in address, whatever case they typed.
+
+    The session cookie carries the address exactly as the student entered it,
+    and registration stores it as it was given, so the two need not match on
+    case. Every lookup that decides where a student goes next has to allow for
+    that or it will decide they do not exist.
+    """
+    from app.db import email_filter
+    return await get_db()["users"].find_one(email_filter(email))
+
+
 # ── Post ─────────────────────────────────────────────────────────────────────
 @router.get("/survey/post", response_class=HTMLResponse)
 async def post_get(
     request: Request,
     session: Annotated[dict, Depends(get_current_session)],
 ):
-    user = await get_db()["users"].find_one({"email": session["email"]})
+    # Case-insensitively, the way /orientation and every other lookup does it.
+    # An exact match here sent a student who registered as "Rahul.M@..." and
+    # signed in as "rahul.m@..." straight back to the landing page the moment
+    # they finished the orientation form: their answers were saved, their user
+    # record was not found, and they were bounced to "/" with nothing said.
+    # It is also what fills the report's unmatched-reply bucket.
+    user = await _find_user(session["email"])
     if not user:
         return RedirectResponse(url="/", status_code=303)
     if user.get("status") == STATUS_POST_DONE:

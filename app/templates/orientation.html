@@ -1205,12 +1205,7 @@ function autoFillOrientation() {
 }
 
 async function submitForm(){
-  let redirected = false;
-  function navToNext(url){
-    if (redirected) return;
-    redirected = true;
-    window.location.href = url || "/survey/post";
-  }
+  let done = false;
 
   // There used to be a 400ms timer here that navigated to the AI survey
   // whether or not the POST had finished. Assigning window.location cancels an
@@ -1219,12 +1214,15 @@ async function submitForm(){
   // successful-looking redirect while their answers were thrown away. Nothing
   // told them, and nothing told us.
   //
-  // So: wait for the server to confirm the save, and say so plainly when it
-  // does not. `keepalive` keeps the request alive even if the page is closed
-  // or navigated mid-flight, which is the guarantee that timer was reaching
-  // for.
+  // So: wait for the server to confirm the save, then confirm it to the
+  // student on this page rather than throwing them at the next one. A student
+  // who has just spent five minutes on a form has to see that it landed —
+  // especially since the page they used to be sent to can bounce them
+  // elsewhere for reasons that have nothing to do with this form. `keepalive`
+  // keeps the request alive even if the page goes away mid-flight, which is
+  // the guarantee that timer was reaching for.
   function fail(reason){
-    if (redirected) return;
+    if (done) return;
     const spin = document.getElementById("spin");
     if (spin) spin.classList.remove("show");
     const panel = document.getElementById("submitError");
@@ -1254,7 +1252,7 @@ async function submitForm(){
     if (pf) pf.style.width = "100%";
 
     const plb = document.getElementById("plb");
-    if (plb) plb.textContent = "Redirecting to AI Survey...";
+    if (plb) plb.textContent = "Saving your answers...";
 
     // Keep local backup
     try{ localStorage.setItem(STORAGE_KEY, JSON.stringify([...(JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]")), state])); }catch(e){}
@@ -1278,8 +1276,19 @@ async function submitForm(){
     }
 
     if (res.ok) {
-      const j = await res.json().catch(() => ({}));
-      navToNext((j && j.redirect) ? j.redirect : "/survey/post");
+      await res.json().catch(() => ({}));
+      // Confirm receipt, then let the student move on themselves.
+      //
+      // This used to redirect straight to the next survey the instant the save
+      // came back, so the student never saw an acknowledgement of the form they
+      // had just spent five minutes on — and if the next page bounced them
+      // (no baseline yet, or their record not found) they landed somewhere
+      // unrelated with nothing said. Pressing submit has to visibly do
+      // something, and the thank-you screen already exists.
+      done = true;
+      const spin = document.getElementById("spin");
+      if (spin) spin.classList.remove("show");
+      showThanks();
       return;
     }
 

@@ -27,7 +27,8 @@ async def orientation_get(
     clean_email = email.strip().lower()
     name  = session["name"]
 
-    user = await get_db()["users"].find_one({"$or": [{"email": clean_email}, {"email": email}]})
+    from app.db import email_filter
+    user = await get_db()["users"].find_one(email_filter(email))
     if user and user.get("status") == STATUS_POST_DONE:
         from app.routes.landing import email_to_slug
         from fastapi.responses import RedirectResponse
@@ -48,7 +49,8 @@ async def orientation_get(
         ori_doc = await get_db()["orientation_responses"].find_one({"email": {"$in": [clean_email, email]}})
         if ori_doc:
             already_done = True
-            await get_db()["users"].update_one({"$or": [{"email": clean_email}, {"email": email}]}, {"$set": {"orientation_submitted": True}})
+            await get_db()["users"].update_one(
+                email_filter(email), {"$set": {"orientation_submitted": True}})
 
     saved_responses = {}
     if already_done:
@@ -105,10 +107,14 @@ async def orientation_submit(
 
     await save_orientation_response(email, name, data)
 
+    # Case-insensitively: the address on the session is whatever the student
+    # typed, and the record holds whatever they typed at registration. When
+    # these disagreed this update matched nothing, the student was never marked
+    # as having answered, and the page after submit bounced them.
+    from app.db import email_filter
     db = get_db()
     await db["users"].update_one(
-        {"$or": [{"email": clean_email}, {"email": email}]},
-        {"$set": {"orientation_submitted": True}}
+        email_filter(email), {"$set": {"orientation_submitted": True}}
     )
 
     return JSONResponse({"ok": True, "id": data["id"], "redirect": "/survey/post"})

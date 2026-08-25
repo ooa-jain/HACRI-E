@@ -25,6 +25,14 @@ def submit_js() -> str:
     return source[start:source.index("\nfunction showThanks()", start)]
 
 
+@pytest.fixture(scope="module")
+def submit_code(submit_js) -> str:
+    """submitForm with its comments stripped — the prose explains the bug in
+    the same words the tests look for, which would mask a regression."""
+    return "\n".join(line for line in submit_js.splitlines()
+                     if not line.strip().startswith("//"))
+
+
 def test_nothing_navigates_away_on_a_timer(submit_js):
     """The bug itself: a setTimeout that redirects, racing the request."""
     timers = re.findall(r"setTimeout\s*\((.*?),\s*(\d+)\s*\)", submit_js, re.S)
@@ -34,21 +42,30 @@ def test_nothing_navigates_away_on_a_timer(submit_js):
         )
 
 
+def test_submitting_never_navigates_the_page_at_all(submit_code):
+    """Success confirms in place. Nothing in this function may set location:
+    the page it used to jump to can bounce the student somewhere unrelated
+    (no baseline yet, record not found) with nothing said about the form they
+    just filled in."""
+    assert "window.location" not in submit_code
+    assert "location.href" not in submit_code
+
+
 def test_the_request_survives_the_page_going_away(submit_js):
     """keepalive is the guarantee the timer was reaching for."""
     assert "keepalive: true" in submit_js
 
 
-def test_the_redirect_waits_for_the_server_to_confirm_the_save(submit_js):
-    """navToNext may only run after res.ok — never on the way in."""
+def test_the_student_is_thanked_only_after_the_server_confirms_the_save(submit_js):
+    """The confirmation is a claim that the answers are stored, so it may only
+    appear once the server has said they are."""
     fetch_at = submit_js.index("fetch('/api/orientation/submit'")
     ok_at = submit_js.index("if (res.ok)")
-    # Calls only — the declaration sits at the top of the function by nature.
-    calls = [m.start() for m in re.finditer(r"(?<!function )navToNext\(", submit_js)]
-    assert calls, "nothing ever navigates onward"
-    for at in calls:
-        assert at > fetch_at, "the page leaves before the POST is sent"
-    assert min(at for at in calls if at > ok_at) > ok_at
+    thanks = [m.start() for m in re.finditer(r"showThanks\(\)", submit_js)]
+    assert thanks, "a successful submit shows the student nothing"
+    for at in thanks:
+        assert at > fetch_at, "the student is thanked before the POST is sent"
+        assert at > ok_at, "the student is thanked without checking the response"
 
 
 def test_a_failed_submit_tells_the_student_instead_of_moving_on(submit_js):
