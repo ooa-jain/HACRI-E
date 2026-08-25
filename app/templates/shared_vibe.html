@@ -547,7 +547,8 @@ body {
         <h3 class="deeksha-h3">Open the Deeksharambh report</h3>
         <p class="deeksha-note">
           The full orientation report — every question, every session, department by department.
-          Each department opens on its own link, so one can be forwarded on its own.
+          Each department opens on its own link, so one can be forwarded on its own, and the
+          same link downloads that department's deck or its workbook.
         </p>
         <div class="ori-link-grid">
           {% for link in orientation_links %}
@@ -556,6 +557,8 @@ body {
               <div class="ori-link-meta">{{ link.count }} student{{ '' if link.count == 1 else 's' }}</div>
               <div class="ori-link-actions">
                 <a class="ori-link-btn" href="{{ link.url }}" target="_blank" rel="noopener">Open</a>
+                <a class="ori-link-btn" href="{{ link.ppt_url }}">Deck</a>
+                <a class="ori-link-btn" href="{{ link.excel_url }}">Excel</a>
                 <button type="button" class="ori-link-btn copy" data-copy="{{ link.url }}">Copy link</button>
               </div>
             </div>

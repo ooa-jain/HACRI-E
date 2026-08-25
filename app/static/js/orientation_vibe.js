@@ -58,6 +58,9 @@
     ['keep',       'Keep next year',        'In their own words',     GRAPE],
     ['stop',       'Stop next year',        'Cut from the programme', ROSE],
     ['introduce',  'Introduce next year',   'What they are asking for', SKY],
+    ['challenges', 'Challenges settling in', 'What got in the way',     '#8a6d3b'],
+    ['least_connecting', 'Least connecting', 'Sessions that did not land', '#5b6b8c'],
+    ['reasons',    'Why they scored us so', 'Behind the recommendation', '#2b7a78'],
   ];
 
   // ── Charts ────────────────────────────────────────────────────────────────

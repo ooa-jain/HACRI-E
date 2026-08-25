@@ -16,13 +16,19 @@ from datetime import datetime
 from app.db import (
     STATUS_POST_DONE, STATUS_PRE_DONE, get_db, list_survey_users,
 )
-from app.orientation_analysis import CAMPUSES, normalize_campus, summarize_orientation
+from app.orientation_analysis import (
+    CAMPUSES, MIN_REPORTABLE, normalize_campus, summarize_orientation,
+)
 
 ORI = "orientation_responses"
 FILLED = "filled"
 PENDING = "pending"
 UNSPECIFIED_CAMPUS = "Unspecified"
 ALL_CAMPUSES = "All campuses"
+
+# The programme every reply whose student we could not match is filed under.
+# It is not a department, and anything counting departments has to say so.
+UNMATCHED_PROGRAM = "—"
 
 
 def _fmt_date(doc) -> str:
@@ -169,6 +175,9 @@ def department_rows(filled: list[dict], pending: list[dict]) -> list[dict]:
             "nps_answered": head["nps_answered"],
             "top_session": (top["impactful"][0]["label"] if top["impactful"] else ""),
             "top_stressor": (top["stressors"][0]["label"] if top["stressors"] else ""),
+            # Whether this row's scores can be published without describing a
+            # named handful of students. The row itself always can be.
+            "reportable": len(answered) >= MIN_REPORTABLE,
         })
 
     rows.sort(key=lambda r: (-(r["vibe"] or 0), -r["filled"], r["dept"].lower()))
@@ -198,6 +207,10 @@ def department_scorecard(
     figure it should be read against, and the two things its own students were
     loudest about. `filled` / `pending` are the whole campus — the department is
     picked out here, because a rank means nothing without the rest of the field.
+
+    Not redacted: this is the department's own link showing the department its
+    own students' answers. What `redact_small_cells` exists to stop is a small
+    department's scores being published to everybody else.
     """
     rows = department_rows(filled, pending)
     ranked = [r for r in rows if r["vibe"] is not None]
@@ -235,6 +248,40 @@ def department_scorecard(
     }
 
 
+# The figures that describe what a department said, as opposed to how many of
+# them said it. These are what a small cell has to withhold.
+OPINION_KEYS = ("vibe", "nps", "belonging", "success", "bridge",
+                "promoters", "passives", "detractors", "nps_answered",
+                "top_session", "top_stressor")
+
+
+def redact_small_cells(rows: list[dict]) -> list[dict]:
+    """Blank the scores of departments too small to report, keep the counts.
+
+    A department where one student answered has no average — it has that
+    student's own answers under their department's name, and both the campus
+    deck and the campus share link put every department's name in a list
+    anyone can read. So those rows keep their coverage and lose their figures.
+
+    `filled`, `pending`, `eligible` and `pct` survive: how many students
+    answered is the coverage question the report exists to answer, and it is
+    not what any of them told us in confidence.
+
+    Applied where a report describes departments other than the reader's own —
+    the campus deck and the campus share link. A department's own scoped deck
+    or link shows it its own students' answers unredacted, and so does the
+    admin dashboard.
+    """
+    out = []
+    for row in rows:
+        if row.get("reportable", True):
+            out.append(dict(row))
+            continue
+        out.append({**row, **{key: (None if not isinstance(row.get(key), str) else "")
+                              for key in OPINION_KEYS}})
+    return out
+
+
 def coverage_of(filled: list[dict], pending: list[dict]) -> dict:
     eligible = len(filled) + len(pending)
     return {
@@ -264,6 +311,12 @@ def build_report(filled: list[dict], pending: list[dict], campus: str = "") -> d
              for name, count in dept_counts.items()),
             key=lambda r: (-r["count"], r["dept"]),
         ),
+        # How many named departments answered. `departments` above also carries
+        # the unmatched bucket, so its length is one too many whenever a reply
+        # arrived without a student record — which is why the overview slide
+        # used to disagree with its own campus lines.
+        "department_count": sum(1 for name in dept_counts if name != UNMATCHED_PROGRAM),
+        "unmatched": dept_counts.get(UNMATCHED_PROGRAM, 0),
         "levels": sorted(
             ({"level": name, "count": count} for name, count in level_counts.items()),
             key=lambda r: -r["count"],
@@ -311,10 +364,53 @@ def campus_split(filled: list[dict], pending: list[dict]) -> list[dict]:
             "eligible": len(answered) + len(waiting),
             "ug": sum(1 for r in answered if (r["ug_or_pg"] or "ug").lower() == "ug"),
             "pg": sum(1 for r in answered if (r["ug_or_pg"] or "ug").lower() == "pg"),
-            "departments": len({r["program"] for r in answered if r["program"] != "—"}),
+            "departments": len({r["program"] for r in answered
+                                if r["program"] != UNMATCHED_PROGRAM}),
         })
     rows.sort(key=lambda r: -r["filled"])
     return rows
+
+
+async def excel_response(*, campus: str = "", dept: str = "", ug_or_pg: str = ""):
+    """The orientation report as a downloadable .xlsx, ready to return.
+
+    The same scope, the same redaction and the same figures as the deck — it is
+    the deck's numbers in a form somebody can sort and filter.
+    """
+    import io
+
+    from fastapi.responses import StreamingResponse
+
+    from app.orientation_excel import generate_orientation_excel
+    from app.routes.shared_analysis import _in_thread
+
+    data = await orientation_dataset(campus=campus, dept=dept, ug_or_pg=ug_or_pg)
+    filled, pending = data[FILLED], data[PENDING]
+    report = build_report(filled, pending, campus)
+    rows = department_rows(filled, pending)
+
+    scope = dept or "All departments"
+    if ug_or_pg:
+        scope += f" · {ug_or_pg.upper()}"
+
+    book = await _in_thread(
+        generate_orientation_excel,
+        campus=campus or ALL_CAMPUSES,
+        scope=scope,
+        report=report,
+        departments=(rows if dept else redact_small_cells(rows)),
+        campuses=campus_split(filled, pending),
+        generated_at=datetime.now().strftime("%d %b %Y, %H:%M"),
+    )
+
+    filename = f"Deeksharambh_2026_Orientation_{campus or 'All'}_{dept or 'All'}.xlsx"
+    filename = "".join(c if (c.isalnum() or c in "._-") else "_" for c in filename)
+    return StreamingResponse(
+        io.BytesIO(book),
+        media_type=(
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 async def deck_response(*, campus: str = "", dept: str = "", ug_or_pg: str = ""):
@@ -332,6 +428,7 @@ async def deck_response(*, campus: str = "", dept: str = "", ug_or_pg: str = "")
     # The same report the dashboard draws — coverage, the department mix and
     # the UG/PG split included, since the deck opens on all three.
     report = build_report(filled, pending, campus)
+    rows = department_rows(filled, pending)
 
     scope = dept or "All departments"
     if ug_or_pg:
@@ -343,8 +440,10 @@ async def deck_response(*, campus: str = "", dept: str = "", ug_or_pg: str = "")
         scope=scope,
         report=report,
         # A department-scoped deck compares nothing, so its scoreboard is just
-        # that one department; the campus deck compares them all.
-        departments=department_rows(filled, pending),
+        # that one department; the campus deck compares them all — and is
+        # handed around, so there the departments too small to report keep
+        # their coverage and lose their scores.
+        departments=(rows if dept else redact_small_cells(rows)),
         campuses=campus_split(filled, pending),
     )
 

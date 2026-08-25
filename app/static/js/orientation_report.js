@@ -51,6 +51,9 @@
     ['keep',       '👍 Keep next year',         '#3b82c4'],
     ['stop',       '🚫 Stop next year',         '#b03a5b'],
     ['introduce',  '✨ Introduce next year',    '#6f6bd8'],
+    ['challenges', '🧭 Challenges settling in', '#8a6d3b'],
+    ['least_connecting', '💤 Least connecting', '#5b6b8c'],
+    ['reasons',    '💬 Why they scored us so',  '#2b7a78'],
   ];
 
   const MEDALS = ['🥇', '🥈', '🥉'];

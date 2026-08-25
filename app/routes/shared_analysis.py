@@ -66,14 +66,21 @@ def verify_orientation_token(campus: str, token: str, dept: str = "") -> bool:
     return hmac.compare_digest(get_orientation_token(campus, dept), token or "")
 
 
-def orientation_share_url(base_url: str, campus: str = "", dept: str = "") -> str:
-    """The link an admin copies out of the dashboard."""
+def orientation_share_url(base_url: str, campus: str = "", dept: str = "",
+                          path: str = "/shared/orientation") -> str:
+    """The link an admin copies out of the dashboard.
+
+    `path` picks what the same token opens: the report page by default, or one
+    of its downloads — the deck at `/shared/orientation/ppt`, the workbook at
+    `/shared/orientation/excel`. All three read the identical scope, so one
+    token is enough for the set.
+    """
     from urllib.parse import urlencode
 
     fields = {"campus": campus, "token": get_orientation_token(campus, dept)}
     if dept:
         fields["dept"] = dept
-    return f"{base_url.rstrip('/')}/shared/orientation?{urlencode(fields)}"
+    return f"{base_url.rstrip('/')}{path}?{urlencode(fields)}"
 
 
 def resolve_orientation_scope(campus: str, token: str, dept: str = "") -> tuple[str, bool]:
@@ -537,8 +544,8 @@ async def shared_orientation_data(
     dept, locked = resolve_orientation_scope(campus, token, dept)
 
     from app.orientation_data import (
-        build_report, department_overview, department_scorecard,
-        orientation_dataset,
+        UNMATCHED_PROGRAM, build_report, department_overview,
+        department_scorecard, orientation_dataset, redact_small_cells,
     )
 
     scoped = await orientation_dataset(campus=campus, dept=dept)
@@ -548,6 +555,13 @@ async def shared_orientation_data(
     # one department would leave nothing to compare against.
     whole = scoped if not dept else await orientation_dataset(campus=campus)
     departments = department_overview(whole["filled"], whole["pending"], campus)
+    if not locked:
+        # A campus link lists every department by name and needs no login, so
+        # a department where one student answered would publish that student's
+        # own scores. Those rows keep their coverage and lose their figures.
+        # A department link is narrowed below to the reader's own department,
+        # which is entitled to see what its students said.
+        departments["departments"] = redact_small_cells(departments["departments"])
 
     payload = {
         "campus": campus or "All campuses",
@@ -555,7 +569,8 @@ async def shared_orientation_data(
         "locked": locked,
         "report": report,
         "departments": departments,
-        "dept_options": sorted({r["program"] for r in whole["filled"] if r["program"] != "—"}),
+        "dept_options": sorted({r["program"] for r in whole["filled"]
+                                if r["program"] != UNMATCHED_PROGRAM}),
         "generated_at": datetime.now().strftime("%d %b %Y, %H:%M"),
     }
 
@@ -586,6 +601,20 @@ async def shared_orientation_ppt(
     from app.orientation_data import deck_response
 
     return await deck_response(campus=campus, dept=dept)
+
+
+@router.get("/shared/orientation/excel")
+async def shared_orientation_excel(
+    token: str = Query(...),
+    campus: str = Query(default=""),
+    dept: str = Query(default=""),
+):
+    """The same report as the deck, as a workbook, for whoever holds the link."""
+    dept, _ = resolve_orientation_scope(campus, token, dept)
+
+    from app.orientation_data import excel_response
+
+    return await excel_response(campus=campus, dept=dept)
 
 
 @router.get("/shared/cohort", response_class=HTMLResponse)
@@ -731,18 +760,24 @@ async def shared_impact(request: Request, token: str = Query(...), campus: str =
     # impact link can open all of them — that is the point of gathering them
     # here, and they carry aggregate figures only, never a named student.
     base = str(request.base_url).rstrip("/")
-    orientation_links = [{
-        "dept": "",
-        "label": campus or "Every department, every campus",
-        "count": report.get("orientation", 0),
-        "url": orientation_share_url(base, campus),
-    }] + [
-        {
-            "dept": row["dept"],
-            "label": row["dept"],
-            "count": row["count"],
-            "url": orientation_share_url(base, campus, row["dept"]),
+
+    def links_for(dept: str, label: str, count: int) -> dict:
+        return {
+            "dept": dept,
+            "label": label,
+            "count": count,
+            "url": orientation_share_url(base, campus, dept),
+            "ppt_url": orientation_share_url(base, campus, dept,
+                                             "/shared/orientation/ppt"),
+            "excel_url": orientation_share_url(base, campus, dept,
+                                               "/shared/orientation/excel"),
         }
+
+    orientation_links = [
+        links_for("", campus or "Every department, every campus",
+                  report.get("orientation", 0))
+    ] + [
+        links_for(row["dept"], row["dept"], row["count"])
         for row in sorted(report.get("departments") or [], key=lambda r: r["dept"].lower())
     ]
 

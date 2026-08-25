@@ -139,6 +139,7 @@
     {% endif %}
     <span class="spacer"></span>
     <button class="btn" onclick="window.print()">Print</button>
+    <a id="xlsx" class="btn" href="#">Download as Excel</a>
     <a id="ppt" class="btn btn-primary" href="#">Download the deck</a>
   </div>
 
@@ -205,6 +206,7 @@ async function reload() {
     `${data.report.coverage.filled} of ${data.report.coverage.eligible} students answered`;
   document.getElementById('generated').textContent = 'Generated ' + data.generated_at + '.';
   document.getElementById('ppt').href = '/shared/orientation/ppt?' + params();
+  document.getElementById('xlsx').href = '/shared/orientation/excel?' + params();
 
   OrientationVibe.renderReport(document.getElementById('report'), data.report);
   // A department link compares itself with its campus; a campus link ranks
