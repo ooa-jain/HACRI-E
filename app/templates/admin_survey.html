@@ -381,97 +381,37 @@
 
       <!-- ── LINKS ────────────────────────────────────────────────────── -->
       <div class="panel" id="p-links">
-        <div class="space-y-5">
-          <div class="card space-y-4">
-            <div><div class="h-card">🏢 Overall department directory — one link for everything</div>
+        <!-- Every shareable link in the app, in one place. They used to sit on
+             three separate pages, so the whole set was never visible at once
+             and it was easy to send a campus report where a department report
+             was meant. Rendered from /admin/api/share-links. -->
+        <div class="share-hub" id="share-hub">
+          <div class="share-loading">Gathering every link…</div>
+        </div>
+
+        <div class="card mt-5">
+          <div class="panel-head">
+            <div>
+              <div class="h-card">Department survey links</div>
               <div class="sub">
-                A single shareable page listing every department with registered, baseline filled, post filled and
-                post pending counts, how the reminder mails landed (sent / clicked / filled after), and average
-                scores — plus each department's own analysis link, Excel and PPT export. Anyone with the link can
-                open it; no admin login needed.
-              </div></div>
-            <div class="bg-slate-900 text-white rounded-xl p-4 space-y-2">
-              <div class="flex items-center gap-2">
-                <input id="directory-link" readonly class="field link flex-1 bg-slate-800 border-slate-700 text-slate-100">
-                <button class="btn btn-soft" onclick="copy(document.getElementById('directory-link').value)">Copy</button>
-                <a id="directory-open" href="#" target="_blank" class="btn btn-primary">Open</a>
-              </div>
-              <div class="text-[11px] text-slate-400">Figures refresh every time the page is opened.</div>
-            </div>
-          </div>
-
-          <div class="card space-y-4">
-            <div><div class="h-card">🔗 Department survey links</div>
-              <div class="sub">
-                Every department gets two links to hand out.
-                <b class="text-blue-700">Outcome Survey 1 — Baseline</b> opens the registration page with that
-                department already filled in, so everyone who signs up through it is filed correctly.
-                <b class="text-emerald-700">Impact — Post Survey</b> asks only for the email the student registered
-                with: if it has a completed baseline in that department, the post survey opens straight away.
-                Wrong department or no baseline yet, and the page tells them what to do.
-              </div></div>
-
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
-              <div class="bg-slate-900 text-white rounded-xl p-4 space-y-2">
-                <div class="text-xs font-bold text-sky-400">📝 Outcome Survey 1 — any department</div>
-                <div class="flex items-center gap-2">
-                  <input id="all-pre-link" readonly class="field link flex-1 bg-slate-800 border-slate-700 text-slate-100">
-                  <button class="btn btn-soft" onclick="copy(document.getElementById('all-pre-link').value)">Copy</button>
-                  <a id="all-pre-open" href="#" target="_blank" class="btn btn-primary">Open</a>
-                </div>
-                <div class="text-[11px] text-slate-400">The normal registration page — the student picks their own department.</div>
-              </div>
-              <div class="bg-slate-900 text-white rounded-xl p-4 space-y-2">
-                <div class="text-xs font-bold text-amber-400">📊 Impact Post Survey — any department</div>
-                <div class="flex items-center gap-2">
-                  <input id="all-post-link" readonly class="field link flex-1 bg-slate-800 border-slate-700 text-slate-100">
-                  <button class="btn btn-soft" onclick="copy(document.getElementById('all-post-link').value)">Copy</button>
-                  <a id="all-post-open" href="#" target="_blank" class="btn btn-primary">Open</a>
-                </div>
-                <div class="text-[11px] text-slate-400">Accepts any registered student with a completed baseline.</div>
+                Each department's own baseline and post-survey links, with how far
+                it has got and a shortcut to mail the department.
+                <b>Baseline</b> opens registration with the department already
+                filled in. <b>Post survey</b> asks only for the address the student
+                registered with.
               </div>
             </div>
-
-            <input id="link-search" oninput="renderPostLinks()" class="field"
-                   placeholder="🔍 Filter departments…">
-            <div id="post-links-table"></div>
-          </div>
-
-          <div class="card space-y-4">
-            <div><div class="h-card">📈 Public analysis links (all departments combined)</div>
-              <div class="sub">Read-only report pages that can be shared outside the admin portal.</div></div>
-
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <div class="border border-slate-200 rounded-xl p-4 space-y-2">
-                <div class="text-xs font-bold text-teal-700">📝 Baseline (pre) — overall report</div>
-                <div class="flex items-center gap-2">
-                  <input id="overall-pre-link" readonly class="field link flex-1">
-                  <button class="btn btn-soft" onclick="copy(document.getElementById('overall-pre-link').value)">Copy</button>
-                </div>
-                <div class="flex flex-wrap gap-2">
-                  <a id="overall-pre-view"  href="#" target="_blank" class="btn btn-primary">📈 View</a>
-                  <a id="overall-pre-excel" href="#" class="btn btn-green">📥 Excel</a>
-                  <a id="overall-pre-ppt"   href="#" class="btn btn-soft">📊 PPT</a>
-                </div>
-              </div>
-              <div class="border border-slate-200 rounded-xl p-4 space-y-2">
-                <div class="text-xs font-bold text-emerald-700">📊 Post-workshop — overall report</div>
-                <div class="flex items-center gap-2">
-                  <input id="overall-post-link" readonly class="field link flex-1">
-                  <button class="btn btn-soft" onclick="copy(document.getElementById('overall-post-link').value)">Copy</button>
-                </div>
-                <div class="flex flex-wrap gap-2">
-                  <a id="overall-post-view"  href="#" target="_blank" class="btn btn-primary">📊 View</a>
-                  <a id="overall-post-excel" href="#" class="btn btn-green">📥 Excel</a>
-                  <a id="overall-post-ppt"   href="#" class="btn btn-soft">📊 PPT</a>
-                </div>
+            <div class="panel-actions">
+              <div class="search-wrap" style="min-width:220px">
+                <svg class="search-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg>
+                <input id="link-search" class="field" placeholder="Filter departments…"
+                       oninput="renderPostLinks()">
               </div>
             </div>
           </div>
-
-          <div class="card space-y-3">
-            <div><div class="h-card">🎓 Student entry points</div><div class="sub">The links students use to begin.</div></div>
-            <div id="entry-links" class="space-y-2"></div>
+          <div class="overflow-x-auto p-5 pt-4">
+            <table id="post-links-table"></table>
           </div>
         </div>
       </div>
@@ -2190,38 +2130,82 @@ async function resendDept(btn, dept, type) {
 // ═══════════════════════════════════════════════════════════════════════
 let linkData = null;
 
+/* ── The share hub ────────────────────────────────────────────────────────
+   One page carrying every shareable link in the app, grouped by who the link
+   is for. Each row says in words what it opens, because the difference between
+   a campus report and a department report is not visible in the URL and
+   sending the wrong one shows a head of department everybody else's figures. */
 async function loadLinks() {
-  tableBusy('post-links-table', 'Loading department links…');
-  try {
-    linkData = await api('/admin/api/survey/post-links');
-    $('all-post-link').value  = linkData.all_url;
-    $('all-post-open').href   = linkData.all_url;
-    $('all-pre-link').value   = linkData.pre_all_url;
-    $('all-pre-open').href    = linkData.pre_all_url;
-    $('directory-link').value = linkData.directory_url;
-    $('directory-open').href  = linkData.directory_url;
-    renderPostLinks();
-  } catch (err) { tableBusy('post-links-table', 'Could not load department links'); }
+  const hub = $('share-hub');
+  hub.innerHTML = '<div class="share-loading">Gathering every link…</div>';
 
-  renderEntryLinks();
-  loadDepts();  // fills the overall report links below
+  let data;
+  try {
+    data = await api('/admin/api/share-links');
+  } catch (err) {
+    hub.innerHTML = '<div class="share-loading">Could not load the links. ' +
+                    'Refresh the page to try again.</div>';
+    return;
+  }
+
+  // The department table below the hub reads the same payload as the mail
+  // composer's department picker.
+  try {
+    if (!linkData) linkData = await api('/admin/api/survey/post-links');
+    renderPostLinks();
+  } catch (err) {
+    tableBusy('post-links-table', 'Could not load department links');
+  }
+
+  hub.innerHTML = `
+    <div class="share-intro">
+      <div class="h-card">Every link, in one place</div>
+      <div class="sub">${data.total} links. Anything under a report heading opens
+        without a login — treat those as you would the figures themselves.</div>
+    </div>
+    ${data.groups.map(g => `
+      <section class="share-group">
+        <div class="share-group-head">
+          <h3 class="share-group-title">${e(g.title)}</h3>
+          <span class="share-group-count">${g.links.length}</span>
+        </div>
+        <div class="share-group-note">${e(g.note)}</div>
+        <div class="share-rows">
+          ${g.links.map(l => shareRow(l)).join('')}
+        </div>
+      </section>`).join('')}`;
 }
+
+function shareRow(link) {
+  const downloads = (link.downloads || []).map(d =>
+    `<a class="btn btn-soft" href="${e(d.url)}">${e(d.label)}</a>`).join('');
+  return `
+    <div class="share-row">
+      <div class="share-row-head">
+        <div class="share-row-name">${e(link.label)}</div>
+        <div class="share-row-sub">${e(link.sub || '')}</div>
+      </div>
+      <div class="share-row-url" title="${e(link.url)}">${e(link.url)}</div>
+      <div class="share-row-actions">
+        ${downloads}
+        <button class="btn btn-soft" data-share-copy="${e(link.url)}">Copy</button>
+        <a class="btn btn-primary" href="${e(link.url)}" target="_blank" rel="noopener">Open</a>
+      </div>
+    </div>`;
+}
+
+/* One listener for the whole hub rather than a handler per row. */
+document.addEventListener('click', ev => {
+  const btn = ev.target.closest('[data-share-copy]');
+  if (!btn) return;
+  copy(btn.getAttribute('data-share-copy'));
+  const was = btn.textContent;
+  btn.textContent = 'Copied';
+  btn.classList.add('is-copied');
+  setTimeout(() => { btn.textContent = was; btn.classList.remove('is-copied'); }, 1500);
+});
 
 /** The handful of links students and staff start from. */
-function renderEntryLinks() {
-  $('entry-links').innerHTML = [
-    ['🏠 Survey home (registration)', location.origin + '/'],
-    ['🎓 Deeksharambh orientation', {{ (orientation_share_url or '') | tojson }}],
-    ['🌐 Overall department directory', (linkData && linkData.directory_url) || ''],
-  ].filter(([, url]) => !!url).map(([label, url]) => `
-    <div class="flex items-center gap-2">
-      <span class="text-xs font-semibold text-slate-700 w-56 shrink-0">${label}</span>
-      <input readonly class="field link flex-1" value="${e(url)}">
-      <button class="btn btn-soft" onclick="copy('${e(url)}')">Copy</button>
-      <a href="${e(url)}" target="_blank" class="btn btn-primary">Open</a>
-    </div>`).join('');
-}
-
 /** One row per department, carrying both survey links. */
 function renderPostLinks() {
   if (!linkData) return;

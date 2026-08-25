@@ -930,6 +930,124 @@ async def api_cohort_share_links(request: Request):
     })
 
 
+@router.get("/admin/api/share-links")
+async def api_all_share_links(request: Request):
+    """Every shareable link in the app, in one call.
+
+    They were spread over five endpoints and three separate pages, so nobody
+    could see the whole set at once and it was easy to hand out the wrong one —
+    a campus report where a department report was meant, or a login-free
+    analysis link where a student form was meant. One list, grouped by who the
+    link is for, with what each one opens said in words.
+
+    Each entry carries `downloads` where the same token also fetches a file, so
+    the deck and the workbook are offered next to the link rather than only
+    from inside the page it opens.
+    """
+    if not _is_survey_admin(request):
+        raise HTTPException(status_code=403)
+
+    from app.orientation_analysis import CAMPUSES
+    from app.orientation_data import (
+        ALL_CAMPUSES, department_rows, orientation_dataset,
+    )
+    from app.routes.post_link import dept_post_url, dept_pre_url
+    from app.routes.shared_analysis import (
+        cohort_share_url, directory_url, orientation_share_url, vibe_share_url,
+    )
+
+    base = str(request.base_url).rstrip("/")
+    public = (settings.public_base_url or base).rstrip("/")
+
+    def orientation(campus: str = "", dept: str = "") -> dict:
+        return {
+            "url": orientation_share_url(base, campus, dept),
+            "downloads": [
+                {"label": "Deck", "url": orientation_share_url(
+                    base, campus, dept, "/shared/orientation/ppt")},
+                {"label": "Excel", "url": orientation_share_url(
+                    base, campus, dept, "/shared/orientation/excel")},
+            ],
+        }
+
+    groups = [{
+        "key": "students",
+        "title": "For students",
+        "note": "Hand these to students. They ask for an email and open a form — "
+                "no report, no figures.",
+        "links": [
+            {"label": "Deeksharambh orientation form",
+             "sub": "The orientation feedback form. Closes when the form is switched off.",
+             "url": f"{public}/deeksharambh"},
+            {"label": "Baseline survey — registration",
+             "sub": "The normal sign-up page; the student picks their own department.",
+             "url": dept_pre_url(public, None)},
+            {"label": "Post survey — by email",
+             "sub": "Asks only for the address they registered with.",
+             "url": dept_post_url(public, None)},
+        ],
+    }, {
+        "key": "directory",
+        "title": "For the office",
+        "note": "Every department on one page, with its own exports. Opens without a login.",
+        "links": [
+            {"label": "Department directory",
+             "sub": "Counts, reminder-mail outcomes and average scores for every department.",
+             "url": directory_url(base)},
+        ],
+    }]
+
+    # Deeksharambh — the whole cohort, each campus, then each department.
+    ori_links = [{"label": ALL_CAMPUSES,
+                  "sub": "Every department, every campus.", **orientation()}]
+    for name in CAMPUSES:
+        ori_links.append({"label": name, "sub": f"Everything answered at {name}.",
+                          **orientation(name)})
+
+    data = await orientation_dataset()
+    for row in department_rows(data["filled"], data["pending"]):
+        if not row["dept"] or row["dept"] == "—":
+            continue
+        ori_links.append({
+            "label": row["dept"],
+            "sub": f"{row['filled']} of {row['eligible']} answered "
+                   f"({row['pct']:.0f}%) — this department only.",
+            "count": row["filled"],
+            **orientation("", row["dept"]),
+        })
+
+    groups.append({
+        "key": "orientation",
+        "title": "Deeksharambh report",
+        "note": "Opens the orientation report without a login. A department link "
+                "opens that department alone and cannot be edited into another's.",
+        "links": ori_links,
+    })
+
+    groups.append({
+        "key": "impact",
+        "title": "Student impact page",
+        "note": "The public-facing page written for students and parents.",
+        "links": [{"label": "All campuses", "sub": "Every campus together.",
+                   "url": vibe_share_url(base, "")}]
+                 + [{"label": n, "sub": f"{n} only.", "url": vibe_share_url(base, n)}
+                    for n in CAMPUSES],
+    })
+
+    groups.append({
+        "key": "cohort",
+        "title": "Outcome and impact report",
+        "note": "Baseline against post survey, for the students who did both.",
+        "links": [{"label": ALL_CAMPUSES, "sub": "Every campus together.",
+                   "url": cohort_share_url(base, "")}]
+                 + [{"label": n, "sub": f"{n} only.", "url": cohort_share_url(base, n)}
+                    for n in CAMPUSES],
+    })
+
+    return JSONResponse({"groups": groups,
+                         "total": sum(len(g["links"]) for g in groups)})
+
+
 @router.get("/admin/api/orientation/share-links")
 async def api_orientation_share_links(request: Request):
     """Copyable links that open the orientation report without a login.
