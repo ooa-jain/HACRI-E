@@ -24,6 +24,7 @@ from pptx.dml.color import RGBColor
 from pptx.enum.text import MSO_ANCHOR, PP_ALIGN
 from pptx.util import Emu, Inches, Pt
 
+from app.orientation_analysis import MIN_REPORTABLE
 from app.orientation_charts import (
     clean, mood_for, plot_dept_series, plot_nps_ring, plot_response_rate,
     plot_top_options, plot_vibe_hero,
@@ -47,6 +48,9 @@ W = Inches(13.333)
 H = Inches(7.5)
 RECT = 1  # MSO_SHAPE.RECTANGLE
 ROUND = 5  # MSO_SHAPE.ROUNDED_RECTANGLE
+
+# Scoreboard rows per slide — what fits above the footnote at this type size.
+PER_PAGE = 12
 
 
 def _hex(colour: str) -> RGBColor:
@@ -179,6 +183,37 @@ def _tile(slide, left, top, width, height, title: str, body: str):
           Inches(0.5), body, size=12.5, colour=INK)
 
 
+def _ranked(slide, left, top, width, height, title: str, note: str,
+            options: list[dict], answered: int, *, accent=TEAL_DEEP, limit=5):
+    """One feedback question as a ranked list, with the number behind it.
+
+    The count is what students actually clicked; the share beside it is of the
+    students who answered that question, which the note above the list names
+    outright. A ranked list with no denominator is the one way this deck could
+    still mislead a reader who is doing nothing wrong.
+    """
+    _rect(slide, left, top, width, height, MINT, MINT_DEEP, shape=ROUND)
+    _text(slide, left + Inches(0.2), top + Inches(0.16), width - Inches(0.4),
+          Inches(0.3), title, size=14, bold=True, colour=accent)
+    _text(slide, left + Inches(0.2), top + Inches(0.46), width - Inches(0.4),
+          Inches(0.26), note, size=10.5, colour=MUTED)
+
+    rows = (options or [])[:limit]
+    if not rows:
+        _text(slide, left + Inches(0.2), top + Inches(0.82), width - Inches(0.4),
+              Inches(0.3), "Nobody answered this question.", size=11.5, colour=MUTED)
+        return
+    for i, option in enumerate(rows):
+        y = top + Inches(0.8) + i * Inches(0.46)
+        _text(slide, left + Inches(0.2), y, Inches(0.3), Inches(0.3),
+              f"{i + 1}", size=11.5, bold=True, colour=accent)
+        _text(slide, left + Inches(0.5), y, width - Inches(1.85), Inches(0.3),
+              clean(option.get("label", ""), 38), size=11.5, colour=INK)
+        _text(slide, left + width - Inches(1.35), y, Inches(1.15), Inches(0.3),
+              f"{option.get('count', 0):,}  ·  {option.get('pct', 0):.0f}%",
+              size=11.5, bold=True, colour=NAVY, align=PP_ALIGN.RIGHT)
+
+
 def _observations(slide, left, top, width, height, bullets: list[str],
                   *, fill=MINT, border=MINT_DEEP):
     """The commentary box beside a department chart."""
@@ -278,12 +313,46 @@ def _leading(options) -> str:
 
 
 def _spread(rows: list[dict], key: str) -> tuple[dict, dict] | None:
-    """The highest and lowest department on one measure, when there are two."""
-    scored = [r for r in rows if r.get(key) is not None]
+    """The highest and lowest department on one measure, when there are two.
+
+    Only departments big enough to report: naming "the department that rated
+    the week highest" is worth saying about 91 students and meaningless about
+    one, who would top the table on their own mood that morning.
+    """
+    scored = [r for r in rows
+              if r.get(key) is not None and r.get("reportable", True)]
     if len(scored) < 2:
         return None
     ranked = sorted(scored, key=lambda r: -r[key])
     return ranked[0], ranked[-1]
+
+
+def _of(answered, total) -> str:
+    """"of the 1,078 who answered" — the denominator a bare share hides.
+
+    Every percentage in this deck is a share of the students who answered that
+    one question, which is almost never the whole cohort. Printed next to the
+    figure so nobody reads it against the response count on the cover.
+    """
+    if not answered:
+        return ""
+    if total and answered >= total:
+        return f"of all {answered:,} respondents"
+    return f"of the {answered:,} who answered"
+
+
+def _denominator(answered, total) -> str:
+    """The note above a ranked list, naming what its shares are shares of."""
+    if not answered:
+        return "Nobody answered this question."
+    if total and answered >= total:
+        return f"All {answered:,} respondents answered"
+    return (f"{answered:,} of {total:,} respondents answered · "
+            f"shares are of those {answered:,}")
+
+
+def _rule(slide, left, top, width) -> None:
+    _rect(slide, left, top, width, Emu(9525), LINE, None)
 
 
 def generate_orientation_ppt(
@@ -389,10 +458,19 @@ def generate_orientation_ppt(
             (f"•  UG Students: {ug} responses", 13, False, INK),
             (f"•  PG Students: {pg} responses", 13, False, INK),
         ])
+        # `dept_mix` also carries the bucket for replies we could not match to a
+        # student record, which is not a department. Counting it here is what
+        # used to make this line disagree with the campus split above it.
+        named = report.get("department_count", len(dept_mix))
+        unmatched = report.get("unmatched", 0)
         _text(slide, Inches(6.95), Inches(4.02), Inches(5.6), Inches(0.7),
               f"{cover.get('filled', 0)} of {cover.get('eligible', 0)} students in scope "
               f"have answered ({_fmt(cover.get('pct'), 0, '%')}), across "
-              f"{len(dept_mix)} departments.", size=12.5, colour=INK, spacing=1.35)
+              f"{named} departments."
+              + (f" A further {unmatched} replies could not be matched to a "
+                 "student record and are counted in the totals only."
+                 if unmatched else ""),
+              size=12.5, colour=INK, spacing=1.35)
         _text(slide, Inches(6.95), Inches(4.75), Inches(5.6), Inches(0.34),
               "Departments still to be heard from", size=13, bold=True, colour=NAVY)
         _table(slide, Inches(6.95), Inches(5.12), Inches(5.6),
@@ -402,7 +480,61 @@ def generate_orientation_ppt(
                 if r.get("pending", 0)],
                widths=[0.58, 0.21, 0.21])
 
-        # ── Slide 3 · Participation, department by department ─────────────────
+        # ── Slides 3-4 · What students told us ────────────────────────────────
+        #
+        # First, before any average. Every one of these questions was asked so
+        # the programme could be changed, and a deck that opens on scores and
+        # leaves the asks to an appendix has quietly reordered the point. The
+        # dashboard has always drawn all six panels; the deck used to print
+        # four and drop "stop" and "introduce" entirely.
+        answered_by = report.get("highlights_answered", {})
+        labels = report.get("highlights_labels", {})
+
+        def feedback_slide(heading, kicker, panels):
+            slide = _blank(prs)
+            _stage(slide)
+            _title(slide, heading, kicker, top=Inches(1.4), size=26)
+            for i, (key, accent) in enumerate(panels):
+                answered = answered_by.get(key, 0)
+                _ranked(slide,
+                        Inches(0.62) + i * Inches(4.08), Inches(2.72),
+                        Inches(3.85), Inches(3.35),
+                        labels.get(key, key),
+                        _denominator(answered, total),
+                        highlights.get(key) or [], answered, accent=accent)
+            return slide
+
+        slide = feedback_slide(
+            "What students asked us to change",
+            "Section 0 — STUDENT FEEDBACK, IN FULL",
+            [("keep", TEAL_DEEP), ("stop", _hex("#b03a5b")), ("introduce", _hex("#6f6bd8"))])
+        _text(slide, Inches(0.62), Inches(6.22), Inches(12.1), Inches(0.5),
+              ("Every question here was a fixed list of options — the orientation form "
+               "carries no free-text box, so these rankings are the whole of what "
+               "students were able to tell us in their own direction.  "
+               f"Answered by {answered_by.get('keep', 0):,}, "
+               f"{answered_by.get('stop', 0):,} and "
+               f"{answered_by.get('introduce', 0):,} students respectively, "
+               f"of {total:,} who responded."),
+              size=11.5, colour=MUTED, spacing=1.25)
+
+        slide = feedback_slide(
+            "Where the week was hardest",
+            "Section 0 — STUDENT FEEDBACK, IN FULL",
+            [("challenges", _hex("#c0504d")), ("stressors", _hex("#e0913a")),
+             ("least_connecting", _hex("#5b6b8c"))])
+        reasons = highlights.get("reasons") or []
+        _text(slide, Inches(0.62), Inches(6.22), Inches(12.1), Inches(0.5),
+              (f"{labels.get('reasons', 'Why they scored us that way')}: "
+               + "; ".join(f"{clean(o['label'], 38)} ({o['count']:,})"
+                           for o in reasons[:3])
+               + f" — {_of(answered_by.get('reasons', 0), total)}."
+               if reasons else
+               f"{labels.get('reasons', 'Why they scored us that way')}: "
+               "nobody answered that question."),
+              size=11.5, colour=MUTED, spacing=1.25)
+
+        # ── Slide 5 · Participation, department by department ─────────────────
         slide = _blank(prs)
         _stage(slide)
         _title(slide, f"Department wise — Who has answered — {campus}",
@@ -437,7 +569,8 @@ def generate_orientation_ppt(
 
         for i, (value, maximum, label, note) in enumerate([
             (head.get("vibe"), 10, "Overall vibe of the week",
-             f"{high_vibe:.0f}% of students rated it 8 or more."
+             f"{high_vibe:.0f}% of the {vibe_q.get('answered', 0):,} students who "
+             f"rated the week gave it 8 or more."
              if vibe_q.get("options") else "Not enough ratings yet."),
             (head.get("belonging"), 10, "Sense of belonging at JAIN",
              "How much students already feel part of the place."),
@@ -454,6 +587,9 @@ def generate_orientation_ppt(
 
         # Each clause quotes the answer most students actually chose, so the
         # caption cannot round a mixed result up into a good one.
+        # Each of these three questions was answered by a different number of
+        # students, so each share is of its own question's respondents. Said
+        # once, plainly, rather than three parenthetical denominators.
         summary = []
         if welcomed:
             summary.append(f"felt welcomed — {welcomed}")
@@ -464,7 +600,9 @@ def generate_orientation_ppt(
         _text(slide, Inches(0.85), Inches(5.93), Inches(11.6), Inches(0.6),
               ("The first week averaged " + _fmt(head.get("vibe"), 1) +
                " out of 10 — " + mood_word.lower() + "."
-               + ("  Most common answers: " + "; ".join(summary) + "."
+               + ("  Most common answers: " + "; ".join(summary)
+                  + ".  Each share is of the students who answered that "
+                    "question, not of all " + f"{total:,}."
                   if summary else "")),
               size=12.5, colour=INK, spacing=1.25)
 
@@ -499,12 +637,16 @@ def generate_orientation_ppt(
                "Section II — ACADEMIC FOUNDATION", top=Inches(1.55), size=28)
 
         prepared = _leading(questions.get("q18", {}).get("options"))
+        bridge_n = questions.get("q16", {}).get("answered", 0)
+        prepared_n = questions.get("q18", {}).get("answered", 0)
         _paras(slide, Inches(0.85), Inches(3.0), Inches(6.4), Inches(2.0), [
             (f"•  Academic confidence after the Bridge Course: "
              f"{_fmt(head.get('bridge'), 2)}/5", 14, True, NAVY),
+            (f"•  Rated by {bridge_n:,} of the {total:,} who responded",
+             12.5, False, MUTED),
             (f"•  Prepared for regular classes: {prepared or '—'}", 14, True, NAVY),
-            (f"•  Answered this section: {questions.get('q16', {}).get('answered', 0)} "
-             "students", 14, True, NAVY),
+            (f"•  That share is of the {prepared_n:,} who answered that question",
+             12.5, False, MUTED),
         ])
         helpful = (questions.get("q17", {}).get("options") or [])[:4]
         _text(slide, Inches(0.85), Inches(4.35), Inches(6.4), Inches(1.4),
@@ -547,13 +689,15 @@ def generate_orientation_ppt(
         _title(slide, "Impact of Immersive Orientation",
                "Section III — ENGAGEMENT AND NETWORKING", top=Inches(1.5))
         top_sessions = (highlights.get("impactful") or [])[:3]
+        impact_n = answered_by.get("impactful", 0)
         if top_sessions:
             for i, option in enumerate(top_sessions):
                 _tile(slide, Inches(0.85) + i * Inches(4.0), Inches(3.0),
                       Inches(3.7), Inches(1.85),
                       clean(option["label"], 34),
-                      f"{option['count']} students · {option.get('pct', 0):.0f}% "
-                      "named it among the sessions with the biggest impact.")
+                      f"{option['count']:,} students named it among the sessions "
+                      f"with the biggest impact — {option.get('pct', 0):.0f}% "
+                      f"{_of(impact_n, total)}.")
         else:
             _text(slide, Inches(0.85), Inches(3.2), Inches(11.6), Inches(0.5),
                   "No sessions have been named yet.", size=13, colour=MUTED)
@@ -655,23 +799,50 @@ def generate_orientation_ppt(
                   if highlights.get("stressors") else "")),
               size=12.5, colour=INK, spacing=1.3)
 
-        # ── Slide 13 · Department scoreboard ───────────────────────────────────
+        # ── Department scoreboard ──────────────────────────────────────────────
+        #
+        # Every department that has a student in scope, over as many slides as
+        # that takes. It used to be one slide sliced to the top twelve by vibe,
+        # which meant the departments cut were by construction the lowest-rated
+        # ones — the reader saw a leaderboard and was told it was a roster.
         if departments:
-            slide = _blank(prs)
-            _stage(slide)
-            _title(slide, "Department Scoreboard", top=Inches(1.6), size=28)
-            rows = sorted(departments, key=lambda r: -(r.get("vibe") or 0))[:12]
-            _table(slide, Inches(0.75), Inches(2.75), Inches(11.8),
-                   ["Department", "Answered", "Rate", "Vibe /10", "Belonging /10",
-                    "Bridge /5", "NPS"],
-                   [[clean(r["dept"], 42),
-                     f"{r.get('filled', 0)} / {r.get('eligible', 0)}",
-                     _fmt(r.get("pct"), 0, "%"),
-                     _fmt(r.get("vibe"), 1),
-                     _fmt(r.get("belonging"), 1),
-                     _fmt(r.get("bridge"), 1),
-                     _fmt(r.get("nps"), 0)] for r in rows],
-                   widths=[0.34, 0.12, 0.09, 0.11, 0.14, 0.11, 0.09])
+            ranked = sorted(
+                departments,
+                key=lambda r: (r.get("vibe") is None, -(r.get("vibe") or 0),
+                               -r.get("filled", 0), r["dept"].lower()))
+            small = sum(1 for r in ranked if not r.get("reportable", True))
+            pages = [ranked[i:i + PER_PAGE] for i in range(0, len(ranked), PER_PAGE)]
+
+            for page, rows in enumerate(pages, 1):
+                slide = _blank(prs)
+                _stage(slide)
+                _title(slide,
+                       "Department Scoreboard" +
+                       (f" ({page} of {len(pages)})" if len(pages) > 1 else ""),
+                       top=Inches(1.6), size=28)
+                _table(slide, Inches(0.75), Inches(2.62), Inches(11.8),
+                       ["Department", "Answered", "Rate", "Vibe /10",
+                        "Belonging /10", "Bridge /5", "NPS"],
+                       [[clean(r["dept"], 42),
+                         f"{r.get('filled', 0)} / {r.get('eligible', 0)}",
+                         _fmt(r.get("pct"), 0, "%"),
+                         _fmt(r.get("vibe"), 1),
+                         _fmt(r.get("belonging"), 1),
+                         _fmt(r.get("bridge"), 1),
+                         _fmt(r.get("nps"), 0)] for r in rows],
+                       widths=[0.34, 0.12, 0.09, 0.11, 0.14, 0.11, 0.09])
+
+                footnote = (
+                    f"All {len(ranked)} departments with a student in scope, "
+                    f"best-rated first; {cover.get('filled', 0):,} responses in total.")
+                if small:
+                    footnote += (
+                        f"  A dash means fewer than {MIN_REPORTABLE} students in that "
+                        "department answered: the count is shown, the scores are "
+                        "withheld because an average of one or two replies identifies "
+                        f"the students who gave them ({small} of {len(ranked)} here).")
+                _text(slide, Inches(0.75), H - Inches(1.28), Inches(11.8), Inches(0.62),
+                      footnote, size=10.5, colour=MUTED, spacing=1.2)
 
         # ── Slide 14 · Closing ─────────────────────────────────────────────────
         slide = _blank(prs)

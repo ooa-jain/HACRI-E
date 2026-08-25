@@ -18,6 +18,11 @@ from collections import Counter
 # Campuses the registration form and the orientation form both offer.
 CAMPUSES = ("Bangalore", "Kochi")
 
+# A department's average is one identifiable student's answer when only one
+# student answered. Below this many replies, anything published outside the
+# department itself says how many answered and not what they said.
+MIN_REPORTABLE = 10
+
 
 def normalize_campus(value) -> str:
     """Map any campus spelling to "Bangalore" / "Kochi", or "" when unknown.
@@ -275,8 +280,26 @@ def summarize_orientation(records: list[dict]) -> dict:
     success   = _scale_stats(records, "q32", 10)
     nps       = _nps_stats(records, "q34")
 
-    def top(key: str, limit: int = 5) -> list[dict]:
-        return _choice_stats(records, key, multi=True)["options"][:limit]
+    # Every question students used to tell us what to change. `highlights`
+    # keeps the ranked options the dashboard draws; `highlights_answered`
+    # carries the denominator each ranking was measured against, because a
+    # share of the students who answered that question is not a share of the
+    # cohort and a report that prints the first while showing the second
+    # overstates it.
+    FEEDBACK = {
+        "impactful":        "q11",   # sessions with the biggest impact
+        "needs_work":       "q12",   # sessions needing the most improvement
+        "least_connecting": "q5b",   # sessions that felt least connecting
+        "keep":             "q37",   # continue next year
+        "stop":             "q38",   # stop next year
+        "introduce":        "q39",   # introduce next year
+        "reasons":          "q36",   # why they scored the recommendation as they did
+        "challenges":       "q7",    # what made onboarding hard
+        "stressors":        "q28",   # what stressed them out
+    }
+
+    feedback = {name: _choice_stats(records, key, multi=True)
+                for name, key in FEEDBACK.items()}
 
     return {
         "count": total,
@@ -292,13 +315,18 @@ def summarize_orientation(records: list[dict]) -> dict:
             "detractors": nps["detractors"],
             "nps_answered": nps["answered"],
         },
-        "highlights": {
-            "impactful": top("q11"),
-            "needs_work": top("q12"),
-            "keep": top("q37"),
-            "stop": top("q38"),
-            "introduce": top("q39"),
-            "stressors": top("q28"),
+        "highlights": {name: stats["options"][:5] for name, stats in feedback.items()},
+        "highlights_answered": {name: stats["answered"] for name, stats in feedback.items()},
+        "highlights_labels": {
+            "impactful":        "Sessions that landed",
+            "needs_work":       "Sessions needing work",
+            "least_connecting": "Sessions that felt least connecting",
+            "keep":             "Keep next year",
+            "stop":             "Stop next year",
+            "introduce":        "Introduce next year",
+            "reasons":          "Why they scored us that way",
+            "challenges":       "Challenges settling in",
+            "stressors":        "Biggest stressors",
         },
         "sections": sections,
     }
