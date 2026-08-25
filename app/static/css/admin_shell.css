@@ -2,60 +2,99 @@
  * admin_shell.css — the look of the admin dashboards.
  *
  * Loaded by every admin page (survey, orientation, login) so they read as one
- * product. The shape is a warm analytics console: every section listed across
- * a top bar, each on its own page, over a cream workspace of rounded cards —
- * a welcome banner, hero KPIs with a trend delta and a sparkline, chart
- * panels, a ranked leaderboard, an activity feed, and tables.
+ * product. The shape is an analytics console: a dark rail listing every
+ * section, each on its own page, over a bright workspace of cards — a welcome
+ * banner, hero KPIs with a trend delta and a sparkline, chart panels, a ranked
+ * leaderboard, an activity feed, and tables.
  *
- * Gold is the single accent and JAIN's; everything else is warm greys with a
- * small semantic set (green up, rust down, amber waiting). It restyles the component classes
- * the templates already use (.card, .stat, .btn, .field, .tabbtn, tables)
- * rather than asking existing markup to change, and adds the new primitives
- * (.kpi, .rank, .feed, .panel-head) the overview page builds on.
+ * The design brief: this is data about eighteen-year-olds' first week at
+ * university, read by the people who plan it. It should look like something
+ * built this year — confident, high contrast, quick to scan — without turning
+ * an academic instrument into a toy. So: one deep indigo rail, a bright
+ * workspace, JAIN's gold kept as the signature, and a violet doing the
+ * interactive work. Numbers are the loudest thing on every screen.
+ *
+ * It restyles the component classes the templates already use (.card, .stat,
+ * .btn, .field, .tabbtn, tables) rather than asking existing markup to change,
+ * and adds the primitives (.kpi, .rank, .feed, .panel-head) the overview page
+ * builds on. Every selector here has markup somewhere — nothing is decoration
+ * looking for a home.
  */
 
-/* Warm palette: a cream ground, near-black rail, gold as the one accent.
-   Greys carry a little warmth so nothing reads blue against the cream. */
 :root {
-  /* Brand */
-  --a-navy: #1f1a12;
-  --a-navy-soft: #2e271c;
-  --a-navy-deep: #14110c;
-  --a-gold: #d9a441;
-  --a-gold-deep: #b9862c;
-  --a-gold-soft: #f6e9cf;
+  /* Brand. The rail and the gold are JAIN's; the violet is the one thing that
+     is clickable, so it never appears on anything that is not. */
+  --a-navy: #15132a;
+  --a-navy-soft: #221f3d;
+  --a-navy-deep: #0e0c1c;
+  --a-gold: #ffc53d;
+  --a-gold-deep: #d99500;
+  --a-gold-soft: #fff4d6;
+  --a-violet: #6d5bf6;
+  --a-violet-deep: #5344d6;
+  --a-violet-soft: #efecff;
 
-  /* Ink and ground */
-  --a-ink: #1c1917;
-  --a-ink-soft: #443c33;
-  --a-muted: #7c7266;
-  --a-faint: #a89e90;
-  --a-bg: #f7f2e8;
-  --a-surface: #fffdf9;
-  --a-surface-sunk: #f9f4ea;
-  --a-line: #ece3d4;
-  --a-line-strong: #ddd0bb;
+  /* Ink and ground. The greys carry a little violet so they sit with the
+     accent instead of fighting it — a neutral mid-grey would read unchosen. */
+  --a-ink: #16152b;
+  --a-ink-soft: #3d3b58;
+  --a-muted: #6b6889;
+  --a-faint: #9d9ab8;
+  --a-bg: #f4f4fb;
+  --a-surface: #ffffff;
+  --a-surface-sunk: #f2f1fa;
+  --a-line: #e7e6f4;
+  --a-line-strong: #d6d4ea;
 
-  /* Semantics, warmed to sit on cream */
-  --a-up: #15803d;
-  --a-up-bg: #e6f4e6;
-  --a-down: #c2410c;
-  --a-down-bg: #fceee6;
-  --a-wait: #a16207;
-  --a-wait-bg: #fbf1da;
-  --a-info: #b9862c;
-  --a-info-bg: #f6e9cf;
+  /* Semantics. Separate from the accent: violet means "you can press this",
+     these mean "this is how it is going". */
+  --a-up: #0f9d76;
+  --a-up-bg: #e2f8f1;
+  --a-down: #d93a4c;
+  --a-down-bg: #fdecee;
+  --a-wait: #b46a00;
+  --a-wait-bg: #fff3dc;
+  --a-info: #2f6fd0;
+  --a-info-bg: #e8f1fe;
 
-  --a-radius: 20px;
-  --a-shadow: 0 1px 2px rgba(60, 45, 20, .05);
-  --a-shadow-lift: 0 6px 14px -4px rgba(60, 45, 20, .12), 0 20px 36px -22px rgba(60, 45, 20, .3);
+  --a-radius: 16px;
+  --a-radius-sm: 10px;
+  --a-shadow: 0 1px 2px rgba(30, 25, 70, .06);
+  --a-shadow-lift:
+    0 2px 6px -2px rgba(30, 25, 70, .10),
+    0 18px 34px -20px rgba(30, 25, 70, .34);
+  --a-shadow-rail: 0 24px 60px -30px rgba(14, 12, 28, .8);
+
+  --a-display: "Bricolage Grotesque", "Instrument Sans", system-ui, -apple-system,
+               "Segoe UI", sans-serif;
+  --a-body: "Instrument Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --a-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* The label that sits above almost every number on these pages. */
+  --a-micro-size: 10.5px;
+  --a-micro-track: .11em;
 }
 
 /* ── Ground ──────────────────────────────────────────────────────────────── */
 body.admin-shell {
   background-color: var(--a-bg);
   color: var(--a-ink);
+  font-family: var(--a-body);
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Digits line up in columns everywhere, so a table of figures reads as a
+   shape rather than as ragged text. */
+body.admin-shell {
+  font-variant-numeric: tabular-nums;
+}
+
+body.admin-shell h1,
+body.admin-shell h2,
+body.admin-shell h3 {
+  font-family: var(--a-display);
+  letter-spacing: -.02em;
 }
 
 /* ── Panels ──────────────────────────────────────────────────────────────── */
@@ -67,277 +106,273 @@ body.admin-shell .coh-card {
   border-radius: var(--a-radius);
   box-shadow: var(--a-shadow);
 }
-body.admin-shell .coh-panel,
-body.admin-shell .ori-q,
-body.admin-shell .coh-campus,
-body.admin-shell .ori-dept,
-body.admin-shell .coh-node {
-  background: var(--a-surface-sunk);
-  border-color: var(--a-line);
-  border-radius: 12px;
-}
+
+/* A panel's own title. Named .h-card for "heading, card" — it is the heading
+   inside a card, not a card itself. */
 body.admin-shell .h-card {
-  font-size: 14px;
+  font-family: var(--a-display);
+  font-size: 14.5px;
   font-weight: 700;
-  letter-spacing: -.2px;
+  letter-spacing: -.02em;
   color: var(--a-ink);
 }
-body.admin-shell .sub { color: var(--a-muted); }
 
-/* A card's own header row: title on the left, controls on the right. */
+body.admin-shell .sub {
+  color: var(--a-muted);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
 .panel-head {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  gap: 12px;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 20px 22px 0;
 }
-.panel-head .panel-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.panel-head .panel-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.page-head { padding: 26px 26px 0 }
+.page-head #page-title {
+  font-family: var(--a-display);
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -.03em;
+  color: var(--a-ink);
+}
+.page-head #page-sub {
+  font-size: 13px;
+  color: var(--a-muted);
+  margin-top: 3px;
+}
 
 /* ── Welcome banner ──────────────────────────────────────────────────────
-   The overview opens by saying where the cohort stands in a sentence, with
-   the two things an admin usually came to do beside it. */
+   The one full-bleed dark surface in the workspace: it opens the page, and
+   nothing else competes with it. */
 .hero {
   position: relative;
   overflow: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 22px;
-  flex-wrap: wrap;
-  padding: 22px 26px;
+  background:
+    radial-gradient(120% 140% at 88% -10%, rgba(109, 91, 246, .55) 0%, transparent 58%),
+    radial-gradient(90% 120% at 8% 110%, rgba(255, 197, 61, .22) 0%, transparent 60%),
+    var(--a-navy);
+  color: #fff;
+  border: none;
   border-radius: var(--a-radius);
-  background: linear-gradient(120deg, #e8bd68 0%, var(--a-gold) 42%, var(--a-gold-deep) 100%);
-  color: #2a2013;
-  margin-bottom: 18px;
-}
-.hero::after {
-  content: '';
-  position: absolute;
-  left: 0; right: 0; bottom: -1px;
-  height: 62px;
-  background: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 600 62' preserveAspectRatio='none'%3E%3Cpath d='M0 34c80 20 150-14 230-6s130 26 200 18 100-24 170-16v34H0z' fill='rgba(255,255,255,0.16)'/%3E%3C/svg%3E")
-              bottom center / 100% 100% no-repeat;
-  pointer-events: none;
+  padding: 26px 28px;
+  box-shadow: var(--a-shadow-lift);
 }
 .hero > * { position: relative; z-index: 1 }
+
+/* A soft grain of light across the top edge, so the block is not a flat slab. */
+.hero::after {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 1px;
+  background: linear-gradient(90deg,
+    transparent, rgba(255, 255, 255, .5), transparent);
+}
+
 .hero-title {
-  font-size: 20px;
-  font-weight: 800;
-  letter-spacing: -.4px;
-  margin: 0 0 5px;
+  font-family: var(--a-display);
+  font-size: clamp(20px, 2.6vw, 27px);
+  font-weight: 700;
+  letter-spacing: -.03em;
+  line-height: 1.15;
 }
 .hero-sub {
-  font-size: 12.5px;
-  color: rgba(42, 32, 19, .72);
-  margin: 0 0 14px;
-  max-width: 56ch;
+  margin-top: 7px;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, .72);
+  max-width: 62ch;
 }
-.hero-actions { display: flex; flex-wrap: wrap; gap: 9px }
+
+.hero-actions { display: flex; gap: 9px; flex-wrap: wrap; margin-top: 18px }
 .hero-actions .btn { border: none }
-.hero-actions .btn-ink { background: #241c10; color: #fff }
-.hero-actions .btn-ink:hover { background: #3a2e1c }
-.hero-actions .btn-cream { background: rgba(255, 255, 255, .82); color: #3a2e1c }
-.hero-actions .btn-cream:hover { background: #fff }
-/* The ring on the right: completion, drawn as a gauge. */
-.hero-gauge { flex: none; display: flex; align-items: center; gap: 14px }
+.hero-actions .btn-cream {
+  background: #fff;
+  color: var(--a-navy);
+  font-weight: 700;
+}
+.hero-actions .btn-cream:hover { background: var(--a-gold-soft) }
+.hero-actions .btn-ink {
+  background: rgba(255, 255, 255, .12);
+  color: #fff;
+  backdrop-filter: blur(6px);
+}
+.hero-actions .btn-ink:hover { background: rgba(255, 255, 255, .2) }
+
+/* The completion gauge sitting in the banner. */
+.hero-gauge { display: flex; align-items: center; gap: 14px }
 .hero-ring {
   position: relative;
-  width: 96px; height: 96px;
+  width: 74px;
+  height: 74px;
   border-radius: 50%;
   display: grid;
   place-items: center;
-  background: conic-gradient(#241c10 calc(var(--pct, 0) * 1%), rgba(255, 255, 255, .45) 0);
-  transition: background .9s cubic-bezier(.22, 1, .36, 1);
+  flex: none;
 }
 .hero-ring::after {
-  content: '';
+  content: "";
   position: absolute;
-  inset: 9px;
+  inset: 7px;
   border-radius: 50%;
-  background: linear-gradient(140deg, #f0cd8a, var(--a-gold));
+  background: var(--a-navy);
 }
 .hero-ring b {
   position: relative;
   z-index: 1;
-  font-size: 19px;
-  font-weight: 800;
-  letter-spacing: -.6px;
-  color: #2a2013;
+  font-family: var(--a-display);
+  font-size: 17px;
+  font-weight: 700;
+  color: #fff;
 }
-.hero-gauge-label { font-size: 11.5px; font-weight: 700; color: rgba(42,32,19,.78); max-width: 8rem; line-height: 1.35 }
+.hero-gauge-label {
+  font-family: var(--a-mono);
+  font-size: var(--a-micro-size);
+  letter-spacing: var(--a-micro-track);
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, .6);
+  line-height: 1.5;
+}
 
 /* ── KPI cards ───────────────────────────────────────────────────────────
-   Title and caption on top, then a row: the figure and its movement on the
-   left, the fortnight's shape on the right. One card in the set is a filled
-   accent tile carrying the headline rate. */
+   The row of headline figures. The number is the point, so it is set large
+   in the display face and everything around it is deliberately quiet. */
 .kpi-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-  gap: 16px;
+  gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
 }
+.kpi-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
 .kpi {
   position: relative;
-  overflow: hidden;
   background: var(--a-surface);
   border: 1px solid var(--a-line);
   border-radius: var(--a-radius);
-  padding: 16px 18px;
+  padding: 18px 20px 16px;
   box-shadow: var(--a-shadow);
-  transition: box-shadow .16s ease, border-color .16s ease;
-  min-width: 0;
+  transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
 }
-.kpi:hover { box-shadow: var(--a-shadow-lift); border-color: var(--a-line-strong); }
-.kpi-top { display: flex; align-items: center; gap: 9px; }
+.kpi:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--a-shadow-lift);
+  border-color: var(--a-line-strong);
+}
+
+.kpi-top { display: flex; align-items: center; gap: 9px; margin-bottom: 12px }
+.kpi-label {
+  font-family: var(--a-mono);
+  font-size: var(--a-micro-size);
+  font-weight: 500;
+  letter-spacing: var(--a-micro-track);
+  text-transform: uppercase;
+  color: var(--a-muted);
+}
+
 .kpi-ico {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px; height: 28px;
+  width: 30px;
+  height: 30px;
   border-radius: 9px;
-  color: var(--a-gold-deep);
-  background: var(--a-gold-soft);
+  display: grid;
+  place-items: center;
   flex: none;
 }
-.kpi-ico svg { width: 15px; height: 15px; }
-.kpi-ico-blue  { background: #eef0f7; color: #4a4436 }
-.kpi-ico-green { background: var(--a-up-bg);   color: var(--a-up) }
-.kpi-ico-amber { background: var(--a-wait-bg); color: var(--a-wait) }
-.kpi-ico-gold  { background: var(--a-gold-soft); color: var(--a-gold-deep) }
-.kpi-label {
-  font-size: 12.5px;
-  font-weight: 650;
-  letter-spacing: -.1px;
-  color: var(--a-ink);
-}
-.kpi-caption { font-size: 11.5px; color: var(--a-faint); margin-top: 9px }
+.kpi-ico svg { width: 15px; height: 15px }
+.kpi-ico-gold  { background: var(--a-gold-soft);   color: var(--a-gold-deep) }
+.kpi-ico-blue  { background: var(--a-info-bg);     color: var(--a-info) }
+.kpi-ico-green { background: var(--a-up-bg);       color: var(--a-up) }
+.kpi-ico-amber { background: var(--a-wait-bg);     color: var(--a-wait) }
 
-/* The figure sits beside its own sparkline. */
-.kpi-body {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 14px;
-  margin-top: 4px;
-}
-.kpi-figure { min-width: 0 }
-.kpi-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 4px }
 .kpi-val {
-  font-size: 26px;
-  font-weight: 800;
-  line-height: 1.1;
-  letter-spacing: -1px;
+  font-family: var(--a-display);
+  font-size: 33px;
+  font-weight: 700;
+  letter-spacing: -.035em;
+  line-height: 1;
   color: var(--a-ink);
 }
+.kpi-caption {
+  font-size: 12px;
+  color: var(--a-muted);
+}
+
 .kpi-delta {
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  font-size: 11px;
+  font-size: 11.5px;
   font-weight: 700;
-  padding: 2px 7px;
+  padding: 3px 8px;
   border-radius: 999px;
   white-space: nowrap;
 }
-.kpi-delta.up   { background: var(--a-up-bg);   color: var(--a-up) }
-.kpi-delta.down { background: var(--a-down-bg); color: var(--a-down) }
-.kpi-delta.flat { background: var(--a-surface-sunk); color: var(--a-muted) }
-.kpi-spark { width: 46%; max-width: 130px; height: 40px; flex: none }
-.kpi-spark svg { display: block; width: 100%; height: 100% }
-.kpi-foot { font-size: 11px; color: var(--a-faint); margin-top: 10px }
+.kpi-delta.up   { color: var(--a-up);   background: var(--a-up-bg) }
+.kpi-delta.down { color: var(--a-down); background: var(--a-down-bg) }
+.kpi-delta.flat { color: var(--a-muted); background: var(--a-surface-sunk) }
 
-/* The accent tile: same anatomy, filled, with a wave along its foot. */
+.kpi-spark { width: 92px; height: 34px; flex: none; opacity: .95 }
+.kpi-spark svg { width: 100%; height: 100%; display: block }
+
+.kpi-foot {
+  margin-top: 12px;
+  padding-top: 11px;
+  border-top: 1px solid var(--a-line);
+  font-size: 11.5px;
+  color: var(--a-faint);
+}
+
+/* One card in the row carries the headline number, and wears the rail's
+   colours so the eye lands there first. */
 .kpi-accent {
-  background: linear-gradient(135deg, #8a6320 0%, var(--a-gold-deep) 45%, var(--a-gold) 100%);
+  background:
+    radial-gradient(110% 130% at 92% -20%, rgba(109, 91, 246, .5) 0%, transparent 60%),
+    var(--a-navy);
   border-color: transparent;
   color: #fff;
-}
-.kpi-accent::after {
-  content: '';
-  position: absolute;
-  left: 0; right: 0; bottom: -1px;
-  height: 54px;
-  background: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 54' preserveAspectRatio='none'%3E%3Cpath d='M0 30c40 16 70-12 110-6s60 22 100 16 60-22 90-16v34H0z' fill='rgba(255,255,255,0.13)'/%3E%3Cpath d='M0 42c46 12 74-8 116-4s64 16 104 12 50-14 80-10v22H0z' fill='rgba(255,255,255,0.10)'/%3E%3C/svg%3E")
-              bottom center / 100% 100% no-repeat;
-  pointer-events: none;
+  overflow: hidden;
 }
 .kpi-accent > * { position: relative; z-index: 1 }
-.kpi-accent .kpi-label { color: #fff }
-.kpi-accent .kpi-caption,
-.kpi-accent .kpi-foot { color: rgba(255, 255, 255, .72) }
-.kpi-accent .kpi-val { color: #fff }
-.kpi-accent .kpi-ico { background: rgba(255, 255, 255, .18); color: #fff }
-.kpi-accent .kpi-delta.up   { background: rgba(255, 255, 255, .22); color: #fff }
-.kpi-accent .kpi-delta.down { background: rgba(255, 255, 255, .22); color: #fff }
-.kpi-accent .kpi-delta.flat { background: rgba(255, 255, 255, .16); color: rgba(255,255,255,.85) }
-
-/* The smaller strip under the hero row — one figure, one caption. */
-body.admin-shell .stat,
-body.admin-shell .ori-tile,
-body.admin-shell .coh-tile,
-body.admin-shell .coh-owed-item {
-  background: var(--a-surface);
-  border: 1px solid var(--a-line);
-  border-radius: 12px;
-  box-shadow: var(--a-shadow);
-  transition: transform .16s ease, box-shadow .16s ease;
+.kpi-accent::after {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .45), transparent);
 }
-body.admin-shell .stat:hover,
-body.admin-shell .coh-tile:hover,
-body.admin-shell .ori-tile:hover {
-  transform: translateY(-1px);
-  box-shadow: var(--a-shadow-lift);
-}
-body.admin-shell .stat b { letter-spacing: -.6px }
-body.admin-shell .stat s { letter-spacing: .1px }
-
-/* The counter strip still names its colours through Tailwind utilities, which
-   are all cool. Remap the ones in use so nothing reads blue on cream. */
-body.admin-shell .stat .text-blue-600    { color: var(--a-info) }
-body.admin-shell .stat .text-indigo-600  { color: #6b5b3e }
-body.admin-shell .stat .text-sky-600     { color: #7a6a4e }
-body.admin-shell .stat .text-teal-600,
-body.admin-shell .stat .text-emerald-600 { color: var(--a-up) }
-body.admin-shell .stat .text-rose-600    { color: var(--a-down) }
-body.admin-shell .stat .text-amber-600   { color: var(--a-wait) }
-body.admin-shell .stat.border-l-blue-600    { border-left-color: var(--a-info) }
-body.admin-shell .stat.border-l-indigo-600  { border-left-color: #6b5b3e }
-body.admin-shell .stat.border-l-sky-600     { border-left-color: #7a6a4e }
-body.admin-shell .stat.border-l-teal-600,
-body.admin-shell .stat.border-l-emerald-600 { border-left-color: var(--a-up) }
-body.admin-shell .stat.border-l-rose-500    { border-left-color: var(--a-down) }
-body.admin-shell .stat.border-l-amber-500,
-body.admin-shell .stat.border-l-amber-600   { border-left-color: var(--a-wait) }
-body.admin-shell .stat.border-l-slate-800   { border-left-color: var(--a-navy) }
-body.admin-shell .stat.border-l-slate-400,
-body.admin-shell .stat.border-l-slate-300   { border-left-color: var(--a-line-strong) }
+.kpi-accent .kpi-label { color: rgba(255, 255, 255, .62) }
+.kpi-accent .kpi-val   { color: #fff }
+.kpi-accent .kpi-ico   { background: rgba(255, 255, 255, .13); color: var(--a-gold) }
+.kpi-accent .kpi-foot  { border-top-color: rgba(255, 255, 255, .14); color: rgba(255, 255, 255, .55) }
+.kpi-accent .kpi-delta.up   { background: rgba(15, 157, 118, .24); color: #7becc9 }
+.kpi-accent .kpi-delta.down { background: rgba(217, 58, 76, .26);  color: #ffabb4 }
+.kpi-accent .kpi-delta.flat { background: rgba(255, 255, 255, .14); color: rgba(255, 255, 255, .78) }
 
 /* ── Leaderboard ─────────────────────────────────────────────────────────── */
 .rank {
   display: flex;
   align-items: flex-start;
   gap: 12px;
-  padding: 11px 0;
+  padding: 13px 0;
   border-top: 1px solid var(--a-line);
 }
 .rank:first-child { border-top: none; padding-top: 4px }
-.rank-n {
-  flex: none;
-  width: 22px; height: 22px;
-  border-radius: 7px;
-  background: var(--a-surface-sunk);
-  border: 1px solid var(--a-line);
-  color: var(--a-muted);
-  font-size: 11px;
-  font-weight: 700;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  margin-top: 1px;
-}
-.rank:nth-child(1) .rank-n { background: var(--a-gold); border-color: var(--a-gold); color: #241c10 }
-.rank:nth-child(2) .rank-n { background: var(--a-gold-soft); border-color: #ecdcbc; color: var(--a-gold-deep) }
-.rank:nth-child(3) .rank-n { background: var(--a-surface-sunk); border-color: var(--a-line); color: var(--a-muted) }
 .rank-body { flex: 1; min-width: 0 }
 .rank-head {
   display: flex;
@@ -345,130 +380,175 @@ body.admin-shell .stat.border-l-slate-300   { border-left-color: var(--a-line-st
   justify-content: space-between;
   gap: 10px;
 }
+
+.rank-n {
+  width: 24px;
+  height: 24px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  font-family: var(--a-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--a-muted);
+  background: var(--a-surface-sunk);
+}
+/* The top three earn a colour; the rest stay quiet so the podium reads. */
+.rank:nth-child(1) .rank-n { background: var(--a-gold);   color: var(--a-navy) }
+.rank:nth-child(2) .rank-n { background: #d9d7ec;         color: var(--a-ink) }
+.rank:nth-child(3) .rank-n { background: #f2d9c0;         color: #8a5a2b }
+
 .rank-name {
-  font-size: 12.5px;
   font-weight: 600;
+  font-size: 13.5px;
   color: var(--a-ink);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.rank-val { font-size: 12.5px; font-weight: 800; color: var(--a-gold-deep); flex: none }
+.rank-sub {
+  font-size: 11.5px;
+  color: var(--a-faint);
+  margin-top: 2px;
+}
+.rank-val {
+  font-family: var(--a-display);
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--a-ink);
+}
+/* The proportion bar under each row. */
 .bar {
+  position: relative;
   height: 6px;
   border-radius: 999px;
   background: var(--a-surface-sunk);
   overflow: hidden;
-  margin: 6px 0 5px;
+  margin-top: 8px;
 }
 .bar > i {
   display: block;
   height: 100%;
   border-radius: 999px;
-  background: linear-gradient(90deg, var(--a-gold-deep), var(--a-gold));
-  transition: width .5s cubic-bezier(.22, 1, .36, 1);
+  background: linear-gradient(90deg, var(--a-violet), #9b8cff);
+  transition: width .5s cubic-bezier(.2, .8, .2, 1);
 }
-.bar.bar-gold > i { background: linear-gradient(90deg, #7a5f22, var(--a-gold-deep)) }
-.rank-sub { font-size: 11px; color: var(--a-faint) }
+.bar.bar-gold > i { background: linear-gradient(90deg, var(--a-gold-deep), var(--a-gold)) }
 
 /* ── Activity feed ───────────────────────────────────────────────────────── */
-.feed { position: relative; margin: 0; padding: 2px 0 0; list-style: none }
+.feed { position: relative; padding: 4px 22px 20px 34px }
+/* The spine the dots hang from. */
 .feed::before {
-  content: '';
+  content: "";
   position: absolute;
-  left: 5px; top: 10px; bottom: 10px;
-  width: 1px;
-  background: var(--a-line);
+  left: 26px;
+  top: 12px;
+  bottom: 26px;
+  width: 2px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, var(--a-line-strong), transparent);
 }
-.feed-item {
-  position: relative;
-  display: flex;
-  gap: 12px;
-  padding: 8px 0;
-}
+.feed-item { position: relative; padding: 9px 0 9px 16px }
 .feed-dot {
-  position: relative;
-  z-index: 1;
-  flex: none;
-  width: 11px; height: 11px;
-  margin-top: 4px;
-  border-radius: 999px;
+  position: absolute;
+  left: -9px;
+  top: 15px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: 2px solid var(--a-surface);
   background: var(--a-faint);
-  box-shadow: 0 0 0 3px var(--a-surface);
+  box-shadow: 0 0 0 2px var(--a-surface);
 }
-.feed-dot.d-green { background: var(--a-up) }
-.feed-dot.d-blue  { background: var(--a-gold-deep) }
 .feed-dot.d-gold  { background: var(--a-gold) }
-.feed-dot.d-grey  { background: var(--a-line-strong) }
+.feed-dot.d-green { background: var(--a-up) }
+.feed-dot.d-blue  { background: var(--a-info) }
+.feed-dot.d-grey  { background: var(--a-faint) }
+
 .feed-body { min-width: 0 }
-.feed-title {
-  font-size: 12.5px;
-  color: var(--a-ink-soft);
-  line-height: 1.35;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
+.feed-title { font-size: 13px; color: var(--a-ink-soft); line-height: 1.45 }
 .feed-title b { color: var(--a-ink); font-weight: 650 }
-.feed-time { font-size: 11px; color: var(--a-faint); margin-top: 2px }
-.feed-empty { font-size: 12px; color: var(--a-faint); padding: 18px 0; text-align: center }
+.feed-time {
+  font-family: var(--a-mono);
+  font-size: 10.5px;
+  color: var(--a-faint);
+  margin-top: 2px;
+}
+.feed-empty {
+  padding: 26px 6px;
+  text-align: center;
+  color: var(--a-faint);
+  font-size: 12.5px;
+}
 
 /* ── Top bar ─────────────────────────────────────────────────────────────
-   The rail is gone. The sections sit in the bar as links, each to its own
-   page, so nothing is hidden behind a collapse and the browser's history
-   works the way a reader expects. */
+   The strip above the workspace: brand, search, scope. It stays put while
+   the page below it scrolls. */
 body.admin-shell header.admin-bar {
-  background: var(--a-surface);
+  background: rgba(255, 255, 255, .82);
+  backdrop-filter: saturate(1.6) blur(12px);
   border-bottom: 1px solid var(--a-line);
 }
+
 .bar-row {
   display: flex;
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
-  padding: 11px 20px;
+  padding: 12px 22px;
 }
 .bar-brand { display: flex; flex-direction: column; margin-right: 6px; flex: none }
 .bar-word {
-  font-size: 14px;
-  font-weight: 800;
-  letter-spacing: -.3px;
+  font-family: var(--a-display);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -.02em;
   color: var(--a-ink);
-  line-height: 1.15;
 }
 .bar-word em { font-style: normal; color: var(--a-gold-deep) }
-.bar-kicker { font-size: 10px; color: var(--a-faint); letter-spacing: .2px }
-
+.bar-kicker {
+  font-family: var(--a-mono);
+  font-size: var(--a-micro-size);
+  letter-spacing: var(--a-micro-track);
+  text-transform: uppercase;
+  color: var(--a-faint);
+}
 .bar-row .search-wrap { flex: 1; min-width: 200px; max-width: 26rem; position: relative }
-/* `.field` is 100% wide by default, so the bar's selects must be told again
-   or each one claims a line of its own. */
-.bar-row select.field { width: auto; min-width: 8rem; max-width: 13rem; }
+/* Scope selects in the top bar size to their content. The templates ask for
+   this with Tailwind's `w-auto`, but their own inline `.field { width: 100% }`
+   is written later at equal specificity and wins, so the level filter stretched
+   across the whole bar. Stated here, where it outranks both. */
+.bar-row select.field,
+body.admin-shell header.admin-bar select.field {
+  width: auto;
+  min-width: 8rem;
+  max-width: 14rem;
+}
 .bar-row .btn { flex: none }
 
-/* The section links. They scroll sideways rather than wrap on a phone. */
+/* The nav markup is built once and used in two places: this horizontal strip,
+   and the sidebar, which is a bare `#nav`. Scoping these rules to `.bar-nav`
+   alone left the sidebar with none of them — no sizing on the icons, so every
+   SVG rendered at its intrinsic size and the menu became a column of enormous
+   line drawings, and no hover, active or chip styling either. */
 .bar-nav {
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 0 14px 8px;
+  padding: 0 18px 9px;
   overflow-x: auto;
   scrollbar-width: none;
 }
 .bar-nav::-webkit-scrollbar { display: none }
 
-/* The nav markup is built once and used in two places: the horizontal
-   `.bar-nav` strip, and the sidebar, which is a bare `#nav`. These rules were
-   scoped to `.bar-nav` alone, so in the sidebar none of them applied — no
-   sizing on the icons, which left every SVG at its intrinsic size and made the
-   sidebar a column of enormous line drawings, and no hover, active or chip
-   styling either. They are scoped to both containers now. */
 .bar-nav .nav-btn,
 #nav .nav-btn {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
+  gap: 9px;
   flex: none;
-  padding: 7px 12px;
-  border-radius: 10px;
+  padding: 8px 12px;
+  border-radius: var(--a-radius-sm);
   font-size: 12.5px;
   font-weight: 600;
   color: var(--a-muted);
@@ -477,7 +557,7 @@ body.admin-shell header.admin-bar {
   transition: background .14s ease, color .14s ease;
 }
 .bar-nav .nav-btn .nav-ico,
-#nav .nav-btn .nav-ico { width: 16px; height: 16px; flex: none; opacity: .75 }
+#nav .nav-btn .nav-ico { width: 16px; height: 16px; flex: none; opacity: .78 }
 .bar-nav .nav-btn:hover,
 #nav .nav-btn:hover { background: var(--a-surface-sunk); color: var(--a-ink) }
 .bar-nav .nav-btn.on,
@@ -490,9 +570,10 @@ body.admin-shell header.admin-bar {
 #nav .nav-btn.on .nav-ico { opacity: 1; color: var(--a-gold) }
 .bar-nav .nav-chip,
 #nav .nav-chip {
+  font-family: var(--a-mono);
   font-size: 10px;
   font-weight: 700;
-  padding: 1px 6px;
+  padding: 2px 7px;
   border-radius: 999px;
   background: var(--a-surface-sunk);
   color: var(--a-muted);
@@ -500,216 +581,434 @@ body.admin-shell header.admin-bar {
 .bar-nav .nav-btn.on .nav-chip,
 #nav .nav-btn.on .nav-chip { background: rgba(255, 255, 255, .18); color: #fff }
 
-/* Sidebar rows fill their column and push the count to the right edge. */
-#nav .nav-btn { width: 100%; justify-content: flex-start }
-#nav .nav-chip { margin-left: auto }
+/* In the dark sidebar the rows fill their column, the palette inverts, and the
+   active row gets a lit edge rather than a filled block — a solid navy pill on
+   a navy rail would disappear. */
+#nav { padding-bottom: 10px }
+#nav .nav-btn {
+  width: 100%;
+  justify-content: flex-start;
+  color: rgba(255, 255, 255, .62);
+  position: relative;
+}
+#nav .nav-btn:hover { background: rgba(255, 255, 255, .07); color: #fff }
+#nav .nav-btn.on {
+  background: linear-gradient(90deg, rgba(109, 91, 246, .34), rgba(109, 91, 246, .06));
+  color: #fff;
+}
+#nav .nav-btn.on::before {
+  content: "";
+  position: absolute;
+  left: -12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 18px;
+  border-radius: 0 3px 3px 0;
+  background: var(--a-gold);
+}
+#nav .nav-chip {
+  margin-left: auto;
+  background: rgba(255, 255, 255, .1);
+  color: rgba(255, 255, 255, .78);
+}
+#nav .nav-btn.on .nav-chip { background: rgba(255, 255, 255, .2); color: #fff }
 #nav .nav-group {
-  padding: 12px 12px 4px;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: .8px;
+  padding: 15px 12px 5px;
+  font-family: var(--a-mono);
+  font-size: var(--a-micro-size);
+  font-weight: 500;
+  letter-spacing: var(--a-micro-track);
   text-transform: uppercase;
-  color: var(--a-faint);
+  color: rgba(255, 255, 255, .38);
 }
 
-/* Nothing else should be able to blow an icon up to its intrinsic size. */
+/* Nothing else may blow an icon up to its intrinsic size. */
 .nav-ico { width: 16px; height: 16px; flex: none }
 
-/* The section's own title, under the bar. */
-.page-head { padding: 20px 24px 0 }
-.page-head #page-title {
-  font-size: 20px;
-  font-weight: 800;
-  letter-spacing: -.5px;
-  color: var(--a-ink);
-  margin: 0;
+/* The rail itself. The markup carries Tailwind's bg-slate-900, which is a
+   blue-grey and does not belong to this palette; this wins on specificity and
+   keeps the rail the same indigo as the hero and the active pills. */
+body.admin-shell #sidebar {
+  background: var(--a-navy-deep);
+  border-right: 1px solid rgba(255, 255, 255, .07);
+  box-shadow: var(--a-shadow-rail);
 }
-.page-head #page-sub { font-size: 12.5px; color: var(--a-muted); margin: 3px 0 0 }
 
-/* Search box in the bar, with a leading icon slot. */
-.search-wrap { position: relative }
-.search-wrap .search-ico {
-  position: absolute;
-  left: 11px; top: 50%;
-  transform: translateY(-50%);
-  width: 15px; height: 15px;
-  color: var(--a-faint);
-  pointer-events: none;
+/* Who is signed in, at the foot of the rail. Previously unstyled, so it read
+   as three loose lines of text under the menu. */
+.who {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 11px;
+  border-radius: var(--a-radius-sm);
+  background: rgba(255, 255, 255, .06);
 }
-.search-wrap .field { padding-left: 32px; padding-right: 42px }
-.search-kbd {
-  position: absolute;
-  right: 8px; top: 50%;
-  transform: translateY(-50%);
+.who-av {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  flex: none;
+  font-family: var(--a-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--a-navy);
+  background: var(--a-gold);
+}
+.who-name {
+  font-size: 12.5px;
+  font-weight: 650;
+  color: #fff;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.who-role {
+  font-family: var(--a-mono);
   font-size: 10px;
-  font-weight: 600;
-  color: var(--a-faint);
-  background: var(--a-surface-sunk);
-  border: 1px solid var(--a-line);
-  border-radius: 5px;
-  padding: 1px 5px;
-  pointer-events: none;
+  letter-spacing: .04em;
+  color: rgba(255, 255, 255, .52);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* ── Controls ────────────────────────────────────────────────────────────── */
 body.admin-shell .btn {
-  border-radius: 9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 8px 14px;
+  border-radius: var(--a-radius-sm);
+  border: 1px solid var(--a-line-strong);
+  background: var(--a-surface);
+  color: var(--a-ink);
+  font-family: var(--a-body);
+  font-size: 12.5px;
   font-weight: 600;
-  letter-spacing: .1px;
-  box-shadow: 0 1px 2px rgba(16, 24, 40, .05);
-  transition: transform .14s ease, box-shadow .14s ease, background .14s ease;
+  line-height: 1.2;
+  cursor: pointer;
+  transition: background .14s ease, border-color .14s ease,
+              transform .1s ease, box-shadow .14s ease;
 }
-body.admin-shell .btn:hover { transform: translateY(-1px); box-shadow: var(--a-shadow-lift); }
-body.admin-shell .btn:active { transform: none; }
-body.admin-shell .btn-soft {
-  background: var(--a-surface);
-  border: 1px solid var(--a-line-strong);
-  color: var(--a-ink-soft);
+body.admin-shell .btn:hover {
+  background: var(--a-surface-sunk);
+  border-color: var(--a-line-strong);
 }
-body.admin-shell .btn-soft:hover { background: var(--a-surface-sunk) }
-body.admin-shell .btn-primary { background: var(--a-navy); }
-body.admin-shell .btn-green { background: #241c10; }
-body.admin-shell .btn-green:hover { background: #3a2e1c; }
-body.admin-shell .btn-primary:hover { background: var(--a-navy-soft); }
-body.admin-shell .btn-dark { background: #241c10; }
-body.admin-shell .field,
-body.admin-shell .coh-select {
-  background: var(--a-surface);
-  border: 1px solid var(--a-line-strong);
-  border-radius: 9px;
-  color: var(--a-ink-soft);
-  transition: border-color .14s ease, box-shadow .14s ease;
+body.admin-shell .btn:active { transform: translateY(1px) }
+body.admin-shell .btn:focus-visible {
+  outline: 2px solid var(--a-violet);
+  outline-offset: 2px;
 }
-body.admin-shell .field:focus,
-body.admin-shell .coh-select:focus {
-  border-color: rgba(185, 134, 44, .55);
-  box-shadow: 0 0 0 3px rgba(217, 164, 65, .18);
-  outline: none;
+
+body.admin-shell .btn-primary {
+  background: var(--a-violet);
+  border-color: var(--a-violet);
+  color: #fff;
+  box-shadow: 0 6px 16px -8px rgba(109, 91, 246, .9);
 }
-body.admin-shell .tabbtn {
-  background: var(--a-surface);
-  border: 1px solid var(--a-line);
-  color: var(--a-ink-soft);
-  border-radius: 9px;
-  transition: background .14s ease, color .14s ease, box-shadow .14s ease;
+body.admin-shell .btn-primary:hover {
+  background: var(--a-violet-deep);
+  border-color: var(--a-violet-deep);
 }
-body.admin-shell .tabbtn:hover { background: var(--a-surface-sunk) }
-body.admin-shell .tabbtn.on {
+body.admin-shell .btn-dark {
   background: var(--a-navy);
   border-color: var(--a-navy);
   color: #fff;
-  box-shadow: 0 6px 14px -8px rgba(31, 26, 18, .8);
 }
-body.admin-shell .badge { border-radius: 7px; font-weight: 600; }
+body.admin-shell .btn-green {
+  background: var(--a-up);
+  border-color: var(--a-up);
+  color: #fff;
+}
+body.admin-shell .btn-green:hover { filter: brightness(.94) }
+body.admin-shell .btn-soft {
+  background: var(--a-surface-sunk);
+  border-color: transparent;
+  color: var(--a-ink-soft);
+}
+body.admin-shell .btn-soft:hover { background: var(--a-line); color: var(--a-ink) }
 
-/* Segmented control for the trend window (7 / 30 / 90 days). */
+.icon-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  border: 1px solid var(--a-line);
+  background: var(--a-surface);
+  color: var(--a-muted);
+  cursor: pointer;
+  transition: background .14s ease, color .14s ease, border-color .14s ease;
+}
+.icon-btn svg { width: 15px; height: 15px }
+.icon-btn:hover { background: var(--a-surface-sunk); color: var(--a-ink) }
+.icon-btn.danger:hover {
+  background: var(--a-down-bg);
+  color: var(--a-down);
+  border-color: var(--a-down-bg);
+}
+.icon-btn:disabled { opacity: .45; cursor: not-allowed }
+
+/* Segmented control — 7d / 30d / 90d, by rate / by count. */
 .seg {
   display: inline-flex;
   padding: 3px;
   gap: 2px;
-  border-radius: 10px;
+  border-radius: 999px;
   background: var(--a-surface-sunk);
   border: 1px solid var(--a-line);
 }
 .seg button {
   border: none;
-  background: none;
-  cursor: pointer;
+  background: transparent;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-family: var(--a-body);
   font-size: 11.5px;
-  font-weight: 600;
+  font-weight: 650;
   color: var(--a-muted);
-  padding: 4px 10px;
-  border-radius: 7px;
+  cursor: pointer;
   transition: background .14s ease, color .14s ease;
 }
 .seg button:hover { color: var(--a-ink) }
 .seg button.on {
   background: var(--a-surface);
-  color: var(--a-gold-deep);
+  color: var(--a-ink);
   box-shadow: var(--a-shadow);
 }
 
-/* ── Tables ──────────────────────────────────────────────────────────────── */
-body.admin-shell table { border-radius: 12px; overflow: hidden; }
-body.admin-shell thead tr { background: var(--a-surface-sunk) !important; }
-body.admin-shell th {
-  font-size: 10.5px; font-weight: 700; letter-spacing: .5px;
-  text-transform: uppercase; color: var(--a-muted);
-}
-body.admin-shell tbody tr { transition: background .12s ease; }
-body.admin-shell tbody tr:hover { background: var(--a-surface-sunk) !important; }
-
-/* ── People rows ─────────────────────────────────────────────────────────
-   A student reads as a person: initials, name, and the quiet second line
-   that carries the address or the date. */
-.cell-user { display: flex; align-items: center; gap: 10px; text-align: left; }
-.avatar {
-  flex: none;
-  width: 32px; height: 32px;
-  border-radius: 50%;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: .2px;
-  color: #fff;
-  user-select: none;
-}
-.cell-name {
+body.admin-shell .tabbtn {
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: transparent;
   font-size: 12.5px;
   font-weight: 650;
-  color: var(--a-ink);
-  line-height: 1.3;
-}
-button:hover > .cell-user .cell-name,
-.cell-user:hover .cell-name { color: var(--a-gold-deep); }
-.cell-sub {
-  font-size: 11px;
-  color: var(--a-faint);
-  line-height: 1.35;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-.cell-sub svg { width: 11px; height: 11px; flex: none; opacity: .8 }
-
-/* Round icon buttons at the end of a row. */
-.icon-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px; height: 28px;
-  border-radius: 50%;
-  border: 1px solid var(--a-line);
-  background: var(--a-surface);
   color: var(--a-muted);
   cursor: pointer;
-  transition: background .13s ease, color .13s ease, border-color .13s ease;
+  transition: background .14s ease, color .14s ease;
 }
-.icon-btn svg { width: 13px; height: 13px }
-.icon-btn:hover { background: var(--a-gold-soft); color: var(--a-gold-deep); border-color: #ecdcbc }
-.icon-btn.danger:hover { background: #fff1f2; color: #be123c; border-color: #fbc9d2 }
-.icon-btn:disabled { opacity: .45; cursor: not-allowed }
-.row-actions { display: flex; align-items: center; gap: 6px; justify-content: flex-end }
+body.admin-shell .tabbtn:hover { background: var(--a-surface-sunk); color: var(--a-ink) }
+body.admin-shell .tabbtn.on {
+  background: var(--a-navy);
+  color: #fff;
+}
 
-/* "Showing 42 of 420" beside a table's own controls. */
-.result-count { font-size: 11.5px; color: var(--a-muted); white-space: nowrap }
+body.admin-shell .coh-select,
+body.admin-shell .field {
+  border-radius: var(--a-radius-sm);
+  border: 1px solid var(--a-line-strong);
+  background: var(--a-surface);
+  color: var(--a-ink);
+  font-family: var(--a-body);
+  font-size: 12.5px;
+  padding: 8px 11px;
+}
+body.admin-shell .coh-select:focus,
+body.admin-shell .field:focus {
+  outline: none;
+  border-color: var(--a-violet);
+  box-shadow: 0 0 0 3px var(--a-violet-soft);
+}
+
+.search-wrap { position: relative }
+body.admin-shell .search-wrap .field {
+  width: 100%;
+  padding-left: 34px;
+  padding-right: 42px;
+}
+.search-wrap .search-ico {
+  position: absolute;
+  left: 11px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 15px;
+  height: 15px;
+  color: var(--a-faint);
+  pointer-events: none;
+}
+.search-kbd {
+  position: absolute;
+  right: 9px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-family: var(--a-mono);
+  font-size: 10px;
+  color: var(--a-faint);
+  border: 1px solid var(--a-line);
+  border-radius: 6px;
+  padding: 2px 5px;
+  background: var(--a-surface-sunk);
+  pointer-events: none;
+}
+
+body.admin-shell .badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--a-surface-sunk);
+  color: var(--a-muted);
+}
+
+.avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-family: var(--a-mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  background: var(--a-violet-soft);
+  color: var(--a-violet-deep);
+  flex: none;
+}
+
+.result-count { font-size: 12px; color: var(--a-muted) }
 .result-count b { color: var(--a-ink); font-weight: 700 }
 
-/* ── Notes and toasts ────────────────────────────────────────────────────── */
-body.admin-shell .note { border-radius: 11px; }
-body.admin-shell #toast {
-  border-radius: 11px;
-  background: rgba(15, 23, 42, .94);
-  backdrop-filter: blur(8px);
+/* ── Tables ──────────────────────────────────────────────────────────────── */
+body.admin-shell table { width: 100%; border-collapse: collapse }
+body.admin-shell thead tr { background: transparent }
+body.admin-shell th {
+  font-family: var(--a-mono);
+  font-size: var(--a-micro-size);
+  font-weight: 500;
+  letter-spacing: var(--a-micro-track);
+  text-transform: uppercase;
+  color: var(--a-faint);
+  text-align: left;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--a-line-strong);
+  white-space: nowrap;
+}
+body.admin-shell tbody tr { border-bottom: 1px solid var(--a-line) }
+body.admin-shell tbody tr:hover { background: var(--a-surface-sunk) }
+
+/* ── People rows ─────────────────────────────────────────────────────────
+   A student in a table: name over address, the whole cell clickable. */
+.cell-user { display: flex; align-items: center; gap: 10px; min-width: 0 }
+.cell-name {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--a-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cell-user:hover .cell-name { color: var(--a-violet-deep) }
+.cell-sub {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--a-mono);
+  font-size: 10.5px;
+  color: var(--a-faint);
+  margin-top: 1px;
+}
+.cell-sub svg { width: 11px; height: 11px; flex: none }
+
+.row-actions { display: flex; align-items: center; gap: 6px; justify-content: flex-end }
+
+/* The small stat blocks that carry a coloured left edge for their meaning. */
+body.admin-shell .stat {
+  background: var(--a-surface);
+  border: 1px solid var(--a-line);
+  border-left-width: 3px;
+  border-radius: var(--a-radius-sm);
+  padding: 13px 15px;
+}
+body.admin-shell .stat b {
+  display: block;
+  font-family: var(--a-display);
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -.03em;
+  line-height: 1.1;
+  color: var(--a-ink);
+}
+body.admin-shell .stat s {
+  display: block;
+  text-decoration: none;
+  font-size: 11.5px;
+  color: var(--a-muted);
+  margin-top: 3px;
+}
+body.admin-shell .stat.border-l-slate-800  { border-left-color: var(--a-navy) }
+body.admin-shell .stat.border-l-slate-300  { border-left-color: var(--a-line-strong) }
+body.admin-shell .stat.border-l-emerald-600{ border-left-color: var(--a-up) }
+body.admin-shell .stat.border-l-rose-500   { border-left-color: var(--a-down) }
+body.admin-shell .stat.border-l-amber-600  { border-left-color: var(--a-wait) }
+body.admin-shell .stat.border-l-blue-600,
+body.admin-shell .stat.border-l-sky-600    { border-left-color: var(--a-info) }
+body.admin-shell .stat.border-l-indigo-600 { border-left-color: var(--a-violet) }
+
+body.admin-shell .stat .text-emerald-600 { color: var(--a-up) }
+body.admin-shell .stat .text-rose-600    { color: var(--a-down) }
+body.admin-shell .stat .text-amber-600   { color: var(--a-wait) }
+body.admin-shell .stat .text-blue-600,
+body.admin-shell .stat .text-sky-600     { color: var(--a-info) }
+body.admin-shell .stat .text-indigo-600  { color: var(--a-violet) }
+
+body.admin-shell .coh-node,
+body.admin-shell .coh-owed-item {
+  background: var(--a-surface);
+  border: 1px solid var(--a-line);
+  border-radius: var(--a-radius-sm);
+}
+body.admin-shell .ori-tile:hover {
+  border-color: var(--a-violet);
   box-shadow: var(--a-shadow-lift);
 }
 
-/* Reduced motion: keep the surfaces, drop the movement. */
+/* ── Notes and toasts ────────────────────────────────────────────────────── */
+body.admin-shell .note {
+  background: var(--a-violet-soft);
+  border: 1px solid #ddd7ff;
+  border-radius: var(--a-radius-sm);
+  color: var(--a-ink-soft);
+  font-size: 12.5px;
+  padding: 11px 14px;
+}
+body.admin-shell #toast {
+  background: var(--a-navy);
+  color: #fff;
+  border-radius: 999px;
+  padding: 11px 20px;
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: var(--a-shadow-lift);
+}
+
+/* ── Letting utilities win ───────────────────────────────────────────────
+   `body.admin-shell .btn` sets display, and at two classes plus an element it
+   outranks Tailwind's single-class `.hidden` and `.md\:hidden`. So a button
+   marked to disappear on desktop stayed on screen — which is why the page
+   showed two hamburger menus side by side, the mobile one and the desktop one.
+
+   A utility whose entire job is to override is the one honest use of
+   !important. Kept to hiding, and to nothing else. */
+body.admin-shell .hidden { display: none !important }
+
+@media (min-width: 640px)  { body.admin-shell .sm\:hidden { display: none !important } }
+@media (min-width: 768px)  { body.admin-shell .md\:hidden { display: none !important } }
+@media (min-width: 1024px) { body.admin-shell .lg\:hidden { display: none !important } }
+
+/* ── Motion ──────────────────────────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
-  body.admin-shell * { transition: none !important; }
-  body.admin-shell .btn:hover,
-  body.admin-shell .stat:hover,
-  .kpi:hover { transform: none; }
+  body.admin-shell *,
+  body.admin-shell *::before,
+  body.admin-shell *::after {
+    animation-duration: .001ms !important;
+    transition-duration: .001ms !important;
+  }
 }
