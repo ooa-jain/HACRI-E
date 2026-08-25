@@ -44,22 +44,87 @@ def _is_dry_run() -> bool:
     return bool(settings.email_dry_run or not settings.smtp_host)
 
 
-def _smtp_connect_kwargs() -> dict:
-    """Connection kwargs shared by one-shot sends and the batch sender.
+def _account_kwargs(host, port, user, password) -> dict:
+    """Connection kwargs for one mailbox.
 
     Port 465 → implicit TLS (use_tls). Any other port → STARTTLS.
     """
     kwargs: dict[str, Any] = dict(
-        hostname=settings.smtp_host,
-        port=settings.smtp_port,
-        username=settings.smtp_user,
-        password=settings.smtp_pass,
+        hostname=host,
+        port=port,
+        username=user,
+        password=password,
+        timeout=settings.smtp_timeout_seconds,
     )
-    if settings.smtp_port == 465:
+    if int(port) == 465:
         kwargs["use_tls"] = True
     else:
         kwargs["start_tls"] = True
     return kwargs
+
+
+def smtp_accounts() -> list[dict]:
+    """Every mailbox to try, in order, for one message.
+
+    The primary first, then the fallback if one is configured. A mailbox with
+    no host is not a mailbox, so it never reaches the list — which is what
+    makes the fallback optional: leave SMTP_FALLBACK_HOST unset and this
+    returns exactly the single account it always did.
+    """
+    accounts = []
+    if settings.smtp_host:
+        accounts.append(_account_kwargs(
+            settings.smtp_host, settings.smtp_port,
+            settings.smtp_user, settings.smtp_pass))
+    if settings.smtp_fallback_host:
+        accounts.append(_account_kwargs(
+            settings.smtp_fallback_host, settings.smtp_fallback_port,
+            settings.smtp_fallback_user, settings.smtp_fallback_pass))
+    return accounts
+
+
+def _smtp_connect_kwargs() -> dict:
+    """The primary mailbox's kwargs. Kept for callers that want just the one."""
+    accounts = smtp_accounts()
+    return accounts[0] if accounts else _account_kwargs(
+        settings.smtp_host, settings.smtp_port,
+        settings.smtp_user, settings.smtp_pass)
+
+
+async def send_with_failover(msg) -> None:
+    """Send one message, trying each configured mailbox in turn.
+
+    A refusal, a timeout or a rate limit on the first account is not a reason
+    to lose the message when a second mailbox is sitting there. Every failure
+    is logged with the host that produced it, so a mailbox that has quietly
+    stopped working is visible in the log rather than only in the gap where
+    the mail should have been.
+
+    Raises the last error when every account fails — callers that must not
+    raise already wrap this.
+    """
+    accounts = smtp_accounts()
+    if not accounts:
+        raise RuntimeError("No SMTP host configured — set SMTP_HOST in the .env.")
+
+    last: Exception | None = None
+    for i, kwargs in enumerate(accounts):
+        host = kwargs["hostname"]
+        try:
+            await aiosmtplib.send(msg, **kwargs)
+            if i:
+                log.warning("Sent via the fallback mailbox at %s — the primary "
+                            "is failing and needs looking at.", host)
+            return
+        except Exception as e:
+            last = e
+            remaining = len(accounts) - i - 1
+            log.error("SMTP send via %s failed: %s%s", host, e,
+                      f" — trying {remaining} more mailbox(es)." if remaining
+                      else " — no mailboxes left to try.")
+
+    assert last is not None
+    raise last
 
 
 def _build_html_message(
@@ -120,6 +185,8 @@ class SmtpBatchSender:
     def __init__(self) -> None:
         self.dry_run = _is_dry_run()
         self._client: aiosmtplib.SMTP | None = None
+        # Which mailbox the open connection belongs to, for the log.
+        self._account = 0
 
     async def __aenter__(self) -> "SmtpBatchSender":
         if not self.dry_run:
@@ -130,18 +197,43 @@ class SmtpBatchSender:
         await self._close()
 
     async def _connect(self) -> None:
-        kwargs = _smtp_connect_kwargs()
-        client = aiosmtplib.SMTP(
-            hostname=kwargs["hostname"],
-            port=kwargs["port"],
-            use_tls=kwargs.get("use_tls", False),
-            start_tls=kwargs.get("start_tls", False),
-            timeout=60,
-        )
-        await client.connect()
-        if settings.smtp_user and settings.smtp_pass:
-            await client.login(settings.smtp_user, settings.smtp_pass)
-        self._client = client
+        """Open a connection to the first mailbox that will take one.
+
+        A bulk send is exactly where a mailbox gives out — rate limits are
+        reached by volume — so the fallback matters more here than anywhere.
+        """
+        accounts = smtp_accounts()
+        if not accounts:
+            raise RuntimeError("No SMTP host configured — set SMTP_HOST in the .env.")
+
+        last: Exception | None = None
+        for i, kwargs in enumerate(accounts):
+            try:
+                client = aiosmtplib.SMTP(
+                    hostname=kwargs["hostname"],
+                    port=kwargs["port"],
+                    use_tls=kwargs.get("use_tls", False),
+                    start_tls=kwargs.get("start_tls", False),
+                    timeout=kwargs.get("timeout", 60),
+                )
+                await client.connect()
+                if kwargs.get("username") and kwargs.get("password"):
+                    await client.login(kwargs["username"], kwargs["password"])
+            except Exception as e:
+                last = e
+                log.error("SMTP connect to %s failed: %s", kwargs["hostname"], e)
+                continue
+
+            if i:
+                log.warning("Batch running on the fallback mailbox at %s — the "
+                            "primary is failing and needs looking at.",
+                            kwargs["hostname"])
+            self._client = client
+            self._account = i
+            return
+
+        assert last is not None
+        raise last
 
     async def _close(self) -> None:
         if self._client is not None:
@@ -164,7 +256,9 @@ class SmtpBatchSender:
         try:
             await self._client.send_message(msg)  # type: ignore[union-attr]
         except (aiosmtplib.SMTPServerDisconnected, aiosmtplib.SMTPConnectError, aiosmtplib.SMTPException) as e:
-            # Reconnect once and retry
+            # Reconnect once and retry. _connect() walks the configured
+            # mailboxes, so a primary that dies mid-batch hands the rest of the
+            # run to the fallback rather than failing every remaining message.
             log.warning("SMTP send failed (%s); reconnecting and retrying once.", e)
             await self._close()
             try:
@@ -200,18 +294,7 @@ async def send_results_email(
             _dry_run_save(msg)
             return
 
-        smtp_kwargs = dict(
-            hostname=settings.smtp_host,
-            port=settings.smtp_port,
-            username=settings.smtp_user,
-            password=settings.smtp_pass,
-        )
-        if settings.smtp_port == 465:
-            smtp_kwargs["use_tls"] = True
-        else:
-            smtp_kwargs["start_tls"] = True
-
-        await aiosmtplib.send(msg, **smtp_kwargs)
+        await send_with_failover(msg)
     except Exception as e:  # pragma: no cover
         log.exception("Failed to send results email to %s: %s", email, e)
 
@@ -327,18 +410,7 @@ async def send_simple_email(
     msg["From"] = settings.email_from
     msg["To"] = f"{to_name} <{to_email}>"
 
-    smtp_kwargs = dict(
-        hostname=settings.smtp_host,
-        port=settings.smtp_port,
-        username=settings.smtp_user,
-        password=settings.smtp_pass,
-    )
-    if settings.smtp_port == 465:
-        smtp_kwargs["use_tls"] = True
-    else:
-        smtp_kwargs["start_tls"] = True
-
-    await aiosmtplib.send(msg, **smtp_kwargs)
+    await send_with_failover(msg)
 
 
 async def send_html_email(
@@ -354,7 +426,7 @@ async def send_html_email(
         log.info("DRY RUN HTML email to %s <%s>: %s", to_name, to_email, subject)
         _dry_run_log_message(msg)
         return
-    await aiosmtplib.send(msg, **_smtp_connect_kwargs())
+    await send_with_failover(msg)
 
 
 # ── Reminder message builders (used by single sends AND the batch sender) ──────
@@ -422,7 +494,7 @@ async def send_pre_reminder_email(email: str, name: str, resume_link: str) -> No
         log.info("DRY RUN pre-reminder to %s <%s>", name, email)
         _dry_run_log_message(msg)
         return
-    await aiosmtplib.send(msg, **_smtp_connect_kwargs())
+    await send_with_failover(msg)
 
 
 async def send_post_reminder_email(email: str, name: str, resume_link: str) -> None:
@@ -431,4 +503,4 @@ async def send_post_reminder_email(email: str, name: str, resume_link: str) -> N
         log.info("DRY RUN post-reminder to %s <%s>", name, email)
         _dry_run_log_message(msg)
         return
-    await aiosmtplib.send(msg, **_smtp_connect_kwargs())
+    await send_with_failover(msg)
