@@ -5,10 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Deeksharambh 2026 Orientation Report — {{ scope_label }} — JAIN University</title>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/static/css/orientation_vibe.css?v=1">
+<link rel="stylesheet" href="{{ asset('/static/css/orientation_vibe.css') }}">
 <!-- The same charting library the impact report uses, so a distribution is
      plotted the same way on both pages. -->
-<script src="/static/vendor/chart.umd.js"></script>
+<script src="{{ asset('/static/vendor/chart.umd.js') }}"></script>
 <style>
   /* The page around the report. The public Deeksharambh link goes to students,
      parents and heads of department, so it wears the impact page's design:
@@ -165,7 +165,7 @@
   </footer>
 </div>
 
-<script src="/static/js/orientation_vibe.js?v=1"></script>
+<script src="{{ asset('/static/js/orientation_vibe.js') }}"></script>
 <script>
 const CAMPUS = {{ campus | tojson }};
 const TOKEN  = {{ token  | tojson }};

@@ -4,18 +4,18 @@
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>AI Survey Admin — JAIN University</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/static/vendor/tailwind.css">
-<script src="/static/vendor/chart.umd.js"></script>
+<link rel="stylesheet" href="{{ asset('/static/vendor/tailwind.css') }}">
+<script src="{{ asset('/static/vendor/chart.umd.js') }}"></script>
 <!-- The orientation report draws itself; the same pair renders the public
      shared page, so both sides of the login look identical. -->
 <!-- nginx serves /static/ with `expires 7d`, so the version marker is what
      makes a restyle reach browsers that already hold the old sheet. Bump it
      whenever the file it marks changes. -->
-<link rel="stylesheet" href="/static/css/admin_shell.css?v=2">
-<link rel="stylesheet" href="/static/css/orientation_report.css?v=4">
-<script src="/static/js/orientation_report.js?v=4"></script>
-<link rel="stylesheet" href="/static/css/cohort_report.css">
-<script src="/static/js/cohort_report.js"></script>
+<link rel="stylesheet" href="{{ asset('/static/css/admin_shell.css') }}">
+<link rel="stylesheet" href="{{ asset('/static/css/orientation_report.css') }}">
+<script src="{{ asset('/static/js/orientation_report.js') }}"></script>
+<link rel="stylesheet" href="{{ asset('/static/css/cohort_report.css') }}">
+<script src="{{ asset('/static/js/cohort_report.js') }}"></script>
 <style>
   body { font-family: 'Inter', system-ui, sans-serif; }
   .panel { display: none; }
