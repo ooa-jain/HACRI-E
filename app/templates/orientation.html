@@ -164,6 +164,12 @@
 .section.active.cols-2 .q.full-col{grid-column:1/-1}
 .section.active.cols-2 .q.full-col .chips,
 .section.active.cols-2 .q.full-col textarea{font-size:14px}
+.submit-error{max-width:520px;margin:32px auto;padding:22px 24px;border-radius:14px;
+  background:#fff5f5;border:1px solid #f0b4b4;text-align:left}
+.submit-error .se-title{font-size:17px;font-weight:700;color:#9b2c2c;margin-bottom:6px}
+.submit-error .se-body{font-size:14px;color:#63292b;line-height:1.55;margin-bottom:16px}
+.submit-error .se-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.submit-error .se-note{font-size:12px;color:#8a5a5a;margin-top:14px}
 @keyframes up{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 .sec-eye{display:inline-flex;align-items:center;background:var(--gold-l);color:var(--gold-d);border-radius:20px;padding:4px 13px;font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;margin-bottom:8px;border:1px solid rgba(230,179,36,0.25)}
 .sec-title{font-size:22px;font-weight:800;letter-spacing:-0.3px;margin-bottom:4px;color:#0d2147 !important;}
@@ -912,7 +918,19 @@ footer{text-align:center;padding-top:1.75rem;font-size:11px;color:var(--muted);o
   </div>
 </div>
 
-<div class="spinner" id="spin"><div class="spin"></div><div>Submitting &amp; Redirecting to AI Survey...</div></div>
+<div class="spinner" id="spin"><div class="spin"></div><div>Saving your answers…</div></div>
+
+<!-- Shown only when the submission genuinely failed. The student's answers are
+     still in `state` and in localStorage, so retrying re-sends the same thing. -->
+<div class="submit-error" id="submitError" hidden>
+  <div class="se-title">We could not save your answers</div>
+  <div class="se-body" id="submitErrorBody"></div>
+  <div class="se-actions">
+    <button class="bnx" onclick="submitForm()">Try again</button>
+    <a class="bbk" href="/survey/post">Skip to the AI survey</a>
+  </div>
+  <div class="se-note">Your answers are still on this page — closing it will lose them.</div>
+</div>
 
 <!-- THANK YOU -->
 <div class="ty" id="ty">
@@ -1194,10 +1212,29 @@ async function submitForm(){
     window.location.href = url || "/survey/post";
   }
 
-  // Safety fallback: guaranteed redirect to AI survey within 400ms max
-  const safetyTimer = setTimeout(() => {
-    navToNext("/survey/post");
-  }, 400);
+  // There used to be a 400ms timer here that navigated to the AI survey
+  // whether or not the POST had finished. Assigning window.location cancels an
+  // in-flight fetch, so on any connection slower than 400ms — which is most
+  // phones on campus wifi, carrying forty-one answers — the student watched a
+  // successful-looking redirect while their answers were thrown away. Nothing
+  // told them, and nothing told us.
+  //
+  // So: wait for the server to confirm the save, and say so plainly when it
+  // does not. `keepalive` keeps the request alive even if the page is closed
+  // or navigated mid-flight, which is the guarantee that timer was reaching
+  // for.
+  function fail(reason){
+    if (redirected) return;
+    const spin = document.getElementById("spin");
+    if (spin) spin.classList.remove("show");
+    const panel = document.getElementById("submitError");
+    const body = document.getElementById("submitErrorBody");
+    if (body) body.textContent = reason;
+    if (panel) { panel.hidden = false; panel.scrollIntoView({block: "center"}); }
+  }
+
+  const panel = document.getElementById("submitError");
+  if (panel) panel.hidden = true;
 
   try {
     ["q2","q16","q29","q32"].forEach(id=>{
@@ -1222,23 +1259,40 @@ async function submitForm(){
     // Keep local backup
     try{ localStorage.setItem(STORAGE_KEY, JSON.stringify([...(JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]")), state])); }catch(e){}
 
-    const res = await fetch('/api/orientation/submit', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify(state)
-    });
-    clearTimeout(safetyTimer);
+    // A slow reply is still a reply. Only give up after long enough that the
+    // connection really is gone, and then say so rather than moving on.
+    const giveUp = new AbortController();
+    const watchdog = setTimeout(() => giveUp.abort(), 30000);
+
+    let res;
+    try {
+      res = await fetch('/api/orientation/submit', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(state),
+        keepalive: true,
+        signal: giveUp.signal
+      });
+    } finally {
+      clearTimeout(watchdog);
+    }
+
     if (res.ok) {
       const j = await res.json().catch(() => ({}));
       navToNext((j && j.redirect) ? j.redirect : "/survey/post");
-    } else {
-      console.error('Submit HTTP error:', res.status);
-      navToNext("/survey/post");
+      return;
     }
+
+    console.error('Submit HTTP error:', res.status);
+    fail(res.status === 401 || res.status === 403
+      ? "Your session has expired. Open the survey link from your email again and "
+        + "your answers on this page will still be here."
+      : "The server replied with an error (" + res.status + "). Please try again.");
   } catch (err) {
     console.error('Submit error:', err);
-    clearTimeout(safetyTimer);
-    navToNext("/survey/post");
+    fail(err && err.name === "AbortError"
+      ? "The connection timed out. Check your internet and try again."
+      : "We could not reach the server. Check your internet and try again.");
   }
 }
 
