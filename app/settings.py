@@ -1,7 +1,7 @@
 from __future__ import annotations
 from functools import lru_cache
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -39,25 +39,66 @@ class Settings(BaseSettings):
     email_from: str = "HACRI-E <noreply@juooa.cloud>"
     email_dry_run: bool = True
 
+    # A second mailbox to fall back to when the first one refuses, times out or
+    # hits its rate limit. Leave the host unset and nothing changes: one
+    # account, one attempt, exactly as before.
+    smtp_fallback_host: str | None = None
+    smtp_fallback_port: int = 465
+    smtp_fallback_user: str | None = None
+    smtp_fallback_pass: str | None = None
+
+    # How long to wait on a single SMTP connection before giving up on it and
+    # trying the next account. Hostinger answers in well under a second when
+    # it is healthy; a minute of hanging is what a queue backing up looks like.
+    smtp_timeout_seconds: float = 30.0
+
     # Seconds to pause between messages inside a bulk send. The batch reuses a
     # single SMTP connection, so this only needs to be a small courtesy delay to
     # stay under provider per-second limits. Set to 0 to send as fast as possible.
     email_batch_delay_seconds: float = 0.4
 
+    # The names people actually type in a .env, mapped to the ones this class
+    # reads. SMTP_SERVER / SMTP_EMAIL / SMTP_PASSWORD are what most hosting
+    # panels call these fields, and an .env written that way used to configure
+    # nothing at all: smtp_host stayed None, _is_dry_run() went true, and the
+    # app logged every message to a file instead of sending it — silently, and
+    # looking exactly like working software.
+    SMTP_ALIASES: ClassVar[dict[str, tuple[str, ...]]] = {
+        "smtp_host": ("smtp_server", "smtp_hostname"),
+        "smtp_port": (),
+        "smtp_user": ("smtp_email", "smtp_username", "email_user"),
+        "smtp_pass": ("smtp_password", "email_pass"),
+        "smtp_fallback_host": ("smtp_backup_host", "smtp_server_2", "smtp_host_2"),
+        "smtp_fallback_port": ("smtp_backup_port", "smtp_port_2"),
+        "smtp_fallback_user": ("smtp_backup_user", "smtp_email_2", "smtp_user_2"),
+        "smtp_fallback_pass": ("smtp_backup_pass", "smtp_password_2", "smtp_pass_2"),
+    }
+
     @model_validator(mode="before")
     @classmethod
     def populate_smtp_defaults(cls, data: Any) -> Any:
-        if isinstance(data, dict):
-            # Case insensitive check for keys
-            # Pydantic settings loads keys in lowercase or original depending on configuration.
-            # We check both lowercase and original casing.
-            email_user = data.get("email_user") or data.get("EMAIL_USER")
-            email_pass = data.get("email_pass") or data.get("EMAIL_PASS")
-            
-            if not data.get("smtp_user") and not data.get("SMTP_USER") and email_user:
-                data["smtp_user"] = email_user
-            if not data.get("smtp_pass") and not data.get("SMTP_PASS") and email_pass:
-                data["smtp_pass"] = email_pass
+        """Accept the alias spellings, without overriding a canonical name.
+
+        Pydantic-settings hands keys through in either case depending on where
+        they came from, so every lookup tries both.
+        """
+        if not isinstance(data, dict):
+            return data
+
+        def value_of(name: str):
+            for key in (name, name.upper()):
+                if data.get(key) not in (None, ""):
+                    return data[key]
+            return None
+
+        for canonical, aliases in cls.SMTP_ALIASES.items():
+            if value_of(canonical) is not None:
+                continue
+            for alias in aliases:
+                found = value_of(alias)
+                if found is not None:
+                    data[canonical] = found
+                    break
         return data
 
 

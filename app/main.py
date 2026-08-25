@@ -48,6 +48,26 @@ async def lifespan(app: FastAPI):
     log.info("Starting HACRI-E + Deeksharambh app...")
     await db.init_indexes()
     log.info("Mongo indexes ready.")
+
+    # Say out loud what the mail configuration is going to do. A .env written
+    # with a hosting panel's variable names, or one that still has
+    # EMAIL_DRY_RUN=true, leaves the app looking completely healthy while every
+    # message goes to a log file instead of a student. This line is how that
+    # gets noticed at deploy time rather than weeks later.
+    from app import emailer
+    accounts = emailer.smtp_accounts()
+    if emailer._is_dry_run():
+        log.warning(
+            "MAIL IS OFF — nothing will be delivered. %s",
+            "EMAIL_DRY_RUN is true; set it to false to send."
+            if settings.smtp_host else
+            "No SMTP_HOST is set. If your .env uses SMTP_SERVER / SMTP_EMAIL / "
+            "SMTP_PASSWORD those are read as aliases, so check for a typo.")
+    else:
+        log.info("Mail is on via %s%s.",
+                 accounts[0]["hostname"],
+                 f", falling back to {accounts[1]['hostname']}"
+                 if len(accounts) > 1 else " with no fallback configured")
     
     # Start auto-reminder background task
     import asyncio
