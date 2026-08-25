@@ -261,6 +261,12 @@ select option, option{background-color:#ffffff !important;color:#000000 !importa
 .spinner.show{display:block}
 .spin{display:inline-block;width:24px;height:24px;border:3px solid var(--border);border-top-color:var(--navy);border-radius:50%;animation:spin .7s linear infinite;margin-bottom:8px}
 @keyframes spin{to{transform:rotate(360deg)}}
+.suberr{display:none;text-align:center;padding:1.6rem 1.2rem;margin-top:1rem;border:1.5px solid #f0567a;border-radius:12px;background:#fef2f4}
+.suberr.show{display:block}
+.suberr-t{font-size:15px;font-weight:700;color:#9f1239;margin-bottom:4px}
+.suberr-s{font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.5}
+.suberr button{padding:10px 22px;border:none;border-radius:10px;background:var(--navy);color:#fff;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit}
+.suberr button:hover{background:var(--navy-deep)}
 .ty{display:none;animation:up .4s ease}
 .ty.active{display:block}
 
@@ -914,6 +920,12 @@ footer{text-align:center;padding-top:1.75rem;font-size:11px;color:var(--muted);o
 
 <div class="spinner" id="spin"><div class="spin"></div><div>Submitting &amp; Redirecting to AI Survey...</div></div>
 
+<div class="suberr" id="suberr">
+  <div class="suberr-t">⚠️ We couldn't save your feedback</div>
+  <div class="suberr-s">Your connection dropped or the server didn't respond. Your answers are still on this page — nothing has been lost. Please try submitting again.</div>
+  <button onclick="submitForm()">Try again</button>
+</div>
+
 <!-- THANK YOU -->
 <div class="ty" id="ty">
   <div class="ty-hero">
@@ -1187,59 +1199,58 @@ function autoFillOrientation() {
 }
 
 async function submitForm(){
-  let redirected = false;
-  function navToNext(url){
-    if (redirected) return;
-    redirected = true;
-    window.location.href = url || "/survey/post";
-  }
+  ["q2","q16","q29","q32"].forEach(id=>{
+    const el = document.getElementById(id);
+    if (el && el.value !== undefined) state[id] = parseInt(el.value);
+  });
+  state.timestamp = new Date().toISOString();
+  if (!state.id) state.id = Math.random().toString(36).slice(2,10);
 
-  // Safety fallback: guaranteed redirect to AI survey within 400ms max
-  const safetyTimer = setTimeout(() => {
-    navToNext("/survey/post");
-  }, 400);
+  const sec9 = document.getElementById("sec9");
+  if (sec9) sec9.classList.remove("active");
 
-  try {
-    ["q2","q16","q29","q32"].forEach(id=>{
-      const el = document.getElementById(id);
-      if (el && el.value !== undefined) state[id] = parseInt(el.value);
-    });
-    state.timestamp = new Date().toISOString();
-    if (!state.id) state.id = Math.random().toString(36).slice(2,10);
+  const errPanel = document.getElementById("suberr");
+  if (errPanel) errPanel.classList.remove("show");
 
-    const sec9 = document.getElementById("sec9");
-    if (sec9) sec9.classList.remove("active");
+  const spin = document.getElementById("spin");
+  if (spin) spin.classList.add("show");
 
-    const spin = document.getElementById("spin");
-    if (spin) spin.classList.add("show");
+  const pf = document.getElementById("pf");
+  if (pf) pf.style.width = "100%";
 
-    const pf = document.getElementById("pf");
-    if (pf) pf.style.width = "100%";
+  const plb = document.getElementById("plb");
+  if (plb) plb.textContent = "Submitting...";
 
-    const plb = document.getElementById("plb");
-    if (plb) plb.textContent = "Redirecting to AI Survey...";
+  // Keep local backup — belt-and-braces, not relied on for recovery.
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify([...(JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]")), state])); }catch(e){}
 
-    // Keep local backup
-    try{ localStorage.setItem(STORAGE_KEY, JSON.stringify([...(JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]")), state])); }catch(e){}
-
+  async function attemptSubmit(){
     const res = await fetch('/api/orientation/submit', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify(state)
     });
-    clearTimeout(safetyTimer);
-    if (res.ok) {
-      const j = await res.json().catch(() => ({}));
-      navToNext((j && j.redirect) ? j.redirect : "/survey/post");
-    } else {
-      console.error('Submit HTTP error:', res.status);
-      navToNext("/survey/post");
-    }
-  } catch (err) {
-    console.error('Submit error:', err);
-    clearTimeout(safetyTimer);
-    navToNext("/survey/post");
+    if (!res.ok) throw new Error('Submit HTTP error: ' + res.status);
+    const j = await res.json().catch(() => ({}));
+    return (j && j.redirect) ? j.redirect : "/survey/post";
   }
+
+  // Most failures are a transient network blip, so retry once, silently,
+  // before telling the student anything went wrong.
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      const redirect = await attemptSubmit();
+      if (plb) plb.textContent = "Redirecting to AI Survey...";
+      window.location.href = redirect;
+      return;
+    } catch (err) {
+      console.error('Submit error (attempt ' + attempt + '):', err);
+    }
+  }
+
+  // Both attempts failed — tell the student, don't pretend it worked.
+  if (spin) spin.classList.remove("show");
+  if (errPanel) errPanel.classList.add("show");
 }
 
 function showThanks(){
