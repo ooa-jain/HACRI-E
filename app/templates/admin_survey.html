@@ -73,9 +73,53 @@
               class="text-slate-400 hover:text-white text-lg px-1 rounded-md">&#10005;</button>
     </div>
 
-    <nav id="nav" class="flex-1 px-3 py-2 space-y-0.5 overflow-y-auto"></nav>
+    <nav id="nav" class="px-3 py-2 space-y-0.5 overflow-y-auto"></nav>
 
-    <div class="px-3 pb-4 pt-3 space-y-2 border-t border-white/5">
+    <!-- The rail used to end at the last menu item and leave a third of the
+         screen empty. What belongs in that space is the thing an admin opens
+         the page to check: how far the cohort has got. Filled by paintRail()
+         from the same figures the overview KPIs use, so the two can never
+         disagree. -->
+    <div class="rail-fill"></div>
+
+    <div class="rail-pulse" id="rail-pulse">
+      <div class="rail-pulse-head">
+        <span class="rail-pulse-title">Cohort progress</span>
+        <span class="rail-pulse-pct" id="rail-pct">—</span>
+      </div>
+      <div class="rail-steps" id="rail-steps">
+        <div class="rail-step" data-step="reg">
+          <div class="rail-step-top"><span>Registered</span><b id="rail-reg">—</b></div>
+          <div class="bar"><i style="width:0%"></i></div>
+        </div>
+        <div class="rail-step" data-step="pre">
+          <div class="rail-step-top"><span>Baseline done</span><b id="rail-pre">—</b></div>
+          <div class="bar"><i style="width:0%"></i></div>
+        </div>
+        <div class="rail-step" data-step="post">
+          <div class="rail-step-top"><span>Post survey done</span><b id="rail-post">—</b></div>
+          <div class="bar"><i style="width:0%"></i></div>
+        </div>
+      </div>
+      <div class="rail-pulse-foot" id="rail-foot">Waiting for figures…</div>
+    </div>
+
+    <div class="rail-quick">
+      <button class="rail-quick-btn" onclick="show('p-links')" title="Every shareable link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg>
+        Links
+      </button>
+      <button class="rail-quick-btn" onclick="show('p-emails')" title="Reminder mail">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg>
+        Mail
+      </button>
+      <button class="rail-quick-btn" onclick="location.reload()" title="Reload the figures">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v6h-6"/></svg>
+        Refresh
+      </button>
+    </div>
+
+    <div class="rail-foot">
       <div class="who">
         <span class="who-av">JU</span>
         <div class="min-w-0">
@@ -1272,6 +1316,8 @@ function renderOverview() {
   set('ov-email-sent', sent); set('ov-email-clicked', clicked);
   set('ov-email-unclicked', unclicked); set('ov-email-completed', after);
 
+  paintRail({ total, pre, post, rate });
+
   const scope = scopeLabel();
   const whoScope = $('who-scope');
   if (whoScope) whoScope.textContent = scope;
@@ -2129,6 +2175,27 @@ async function resendDept(btn, dept, type) {
 //  Links — department survey entry links
 // ═══════════════════════════════════════════════════════════════════════
 let linkData = null;
+
+/* ── The rail's progress card ────────────────────────────────────────────
+   Registered, then baseline, then post: three steps of one funnel, each bar
+   measured against the registered total rather than against itself, so the
+   three lengths can be compared by eye. That is the whole point of putting
+   them one above the other. */
+function paintRail({ total, pre, post, rate }) {
+  const set = (id, v) => { const el = $(id); if (el) el.textContent = v; };
+  set('rail-reg',  total.toLocaleString());
+  set('rail-pre',  pre.toLocaleString());
+  set('rail-post', post.toLocaleString());
+  set('rail-pct',  total ? rate.toFixed(0) + '%' : '—');
+
+  const width = n => (total ? Math.max(2, Math.round(100 * n / total)) : 0) + '%';
+  const bars = document.querySelectorAll('#rail-steps .bar > i');
+  [total, pre, post].forEach((n, i) => { if (bars[i]) bars[i].style.width = width(n); });
+
+  set('rail-foot', total
+    ? `${(total - post).toLocaleString()} still to finish · ${scopeLabel()}`
+    : 'No students in this scope yet.');
+}
 
 /* ── The share hub ────────────────────────────────────────────────────────
    One page carrying every shareable link in the app, grouped by who the link

@@ -674,6 +674,117 @@ body.admin-shell #sidebar .text-slate-400 { color: var(--a-faint) }
 body.admin-shell #sidebar .border-white\/5 { border-color: var(--a-line) }
 body.admin-shell #sidebar .bg-white { background: var(--t-lavender) }
 
+/* ── What the rail carries below the menu ────────────────────────────────
+   The menu is short and the rail is tall, which used to leave a third of the
+   screen empty. These fill it with the thing the page is opened to check. */
+.rail-fill { flex: 1; min-height: 12px }
+
+.rail-pulse {
+  margin: 0 12px 10px;
+  padding: 14px 14px 12px;
+  border-radius: var(--a-radius-sm);
+  background: var(--t-lavender);
+  border: 1px solid var(--t-lavender-line);
+}
+.rail-pulse-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.rail-pulse-title {
+  font-family: var(--a-mono);
+  font-size: var(--a-micro-size);
+  letter-spacing: var(--a-micro-track);
+  text-transform: uppercase;
+  color: var(--t-lavender-ink);
+}
+.rail-pulse-pct {
+  font-family: var(--a-display);
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -.02em;
+  color: var(--a-ink);
+}
+
+.rail-steps { display: flex; flex-direction: column; gap: 10px }
+.rail-step-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--a-ink-soft);
+  margin-bottom: 4px;
+}
+.rail-step-top b {
+  font-family: var(--a-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--a-ink);
+}
+/* Each step keeps its own colour, the same one its card wears on the
+   overview, so the rail and the board agree without a legend. */
+.rail-step .bar { background: rgba(255, 255, 255, .7); margin-top: 0 }
+.rail-step[data-step="reg"]  .bar > i { background: var(--t-sky-ink) }
+.rail-step[data-step="pre"]  .bar > i { background: var(--a-violet) }
+.rail-step[data-step="post"] .bar > i { background: var(--t-mint-ink) }
+
+.rail-pulse-foot {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--t-lavender-line);
+  font-size: 10.5px;
+  line-height: 1.45;
+  color: var(--a-muted);
+}
+
+/* Three things reached often enough to deserve a permanent home. */
+.rail-quick {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin: 0 12px 12px;
+}
+.rail-quick-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 10px 4px;
+  border: 1px solid var(--a-line);
+  border-radius: var(--a-radius-sm);
+  background: var(--a-surface);
+  color: var(--a-muted);
+  font-family: var(--a-body);
+  font-size: 10.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .14s ease, color .14s ease, border-color .14s ease;
+}
+.rail-quick-btn svg { width: 15px; height: 15px }
+.rail-quick-btn:hover {
+  background: var(--t-lavender);
+  border-color: var(--t-lavender-line);
+  color: var(--t-lavender-ink);
+}
+
+.rail-foot {
+  padding: 12px;
+  border-top: 1px solid var(--a-line);
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+body.admin-shell .btn-rose {
+  background: var(--t-rose);
+  border-color: var(--t-rose-line);
+  color: var(--t-rose-ink);
+  font-weight: 650;
+}
+body.admin-shell .btn-rose:hover { background: #fbe1ea }
+
 /* Who is signed in, at the foot of the rail. */
 .who {
   display: flex;
