@@ -677,7 +677,13 @@ body.admin-shell #sidebar .bg-white { background: var(--t-lavender) }
 /* ── What the rail carries below the menu ────────────────────────────────
    The menu is short and the rail is tall, which used to leave a third of the
    screen empty. These fill it with the thing the page is opened to check. */
-.rail-fill { flex: 1; min-height: 12px }
+/* The menu absorbs the slack and scrolls when there is not enough of it. The
+   progress card, the quick actions and the footer keep their natural height
+   and sit at the bottom — give the spacer the slack instead and a short
+   window squashes the menu until the last item is clipped off. */
+body.admin-shell #nav { flex: 1 1 auto; min-height: 0; overflow-y: auto }
+.rail-fill { flex: 0 0 auto; height: 10px }
+
 
 .rail-pulse {
   margin: 0 12px 10px;
@@ -770,6 +776,17 @@ body.admin-shell #sidebar .bg-white { background: var(--t-lavender) }
   color: var(--t-lavender-ink);
 }
 
+/* On a short window the menu would have to be scrolled to reach its last
+   item, which is a poor trade for a card that only reports. Below this height
+   the progress card and the quick actions stand down so the whole menu fits;
+   the same figures are on the overview, two clicks away at worst.
+
+   Placed after both, because `display: none` here and `display: grid` there
+   are the same specificity — the later one wins, and this has to be it. */
+@media (max-height: 820px) {
+  .rail-pulse, .rail-quick, .rail-fill { display: none }
+}
+
 .rail-foot {
   padding: 12px;
   border-top: 1px solid var(--a-line);
@@ -784,6 +801,18 @@ body.admin-shell .btn-rose {
   font-weight: 650;
 }
 body.admin-shell .btn-rose:hover { background: #fbe1ea }
+
+/* The wordmark, now that the logo tile is gone. It carries the brand on its
+   own, so it is set in the display face rather than left as bold body text. */
+.brand-word {
+  font-family: var(--a-display);
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -.03em;
+  line-height: 1;
+  color: var(--a-ink);
+}
+body.admin-shell header .brand-word { color: #fff }
 
 /* Who is signed in, at the foot of the rail. */
 .who {
