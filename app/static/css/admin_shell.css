@@ -2,17 +2,22 @@
  * admin_shell.css — the look of the admin dashboards.
  *
  * Loaded by every admin page (survey, orientation, login) so they read as one
- * product. The shape is an analytics console: a dark rail listing every
- * section, each on its own page, over a bright workspace of cards — a welcome
- * banner, hero KPIs with a trend delta and a sparkline, chart panels, a ranked
- * leaderboard, an activity feed, and tables.
+ * product. The shape is an analytics console: a rail listing every section,
+ * each on its own page, over a workspace of cards — a welcome banner, hero
+ * KPIs with a trend delta and a sparkline, chart panels, a ranked leaderboard,
+ * an activity feed, and tables.
  *
  * The design brief: this is data about eighteen-year-olds' first week at
- * university, read by the people who plan it. It should look like something
- * built this year — confident, high contrast, quick to scan — without turning
- * an academic instrument into a toy. So: one deep indigo rail, a bright
- * workspace, JAIN's gold kept as the signature, and a violet doing the
- * interactive work. Numbers are the loudest thing on every screen.
+ * university, read by the people who plan it. So the workspace is calm and
+ * pale rather than a dark cockpit — every panel is a softly tinted card with a
+ * small coloured label naming what it is, and the tint is the label's own
+ * colour at a whisper. Six tints, assigned by meaning and never at random:
+ * a card's colour tells you which kind of thing you are looking at before you
+ * read a word of it.
+ *
+ * Nothing shouts. Contrast comes from the size of the numbers and the space
+ * around them, not from ink weight, and there is one violet reserved for
+ * things you can press.
  *
  * It restyles the component classes the templates already use (.card, .stat,
  * .btn, .field, .tabbtn, tables) rather than asking existing markup to change,
@@ -22,58 +27,74 @@
  */
 
 :root {
-  /* Brand. The rail and the gold are JAIN's; the violet is the one thing that
+  /* The six tints. Each is a pale ground, a border a shade firmer, and the
+     saturated version of the same hue for the label that sits on it — so a
+     card, its edge and its title are one colour at three strengths. */
+  --t-mint:      #e9f7f1;  --t-mint-line:      #c7ebdc;  --t-mint-ink:      #0b7a58;
+  --t-lavender:  #efecfc;  --t-lavender-line:  #dbd4f7;  --t-lavender-ink:  #5a45c9;
+  --t-peach:     #fdf0e7;  --t-peach-line:     #f7dcc8;  --t-peach-ink:     #b25a1f;
+  --t-sky:       #e8f2fd;  --t-sky-line:       #cfe2fa;  --t-sky-ink:       #2264b8;
+  --t-rose:      #fcecf2;  --t-rose-line:      #f6d6e2;  --t-rose-ink:      #b23a68;
+  --t-butter:    #fdf5dd;  --t-butter-line:    #f6e6bd;  --t-butter-ink:    #916c16;
+
+  /* Brand. JAIN's gold stays the signature; the violet is the one thing that
      is clickable, so it never appears on anything that is not. */
-  --a-navy: #15132a;
-  --a-navy-soft: #221f3d;
-  --a-navy-deep: #0e0c1c;
-  --a-gold: #ffc53d;
-  --a-gold-deep: #d99500;
-  --a-gold-soft: #fff4d6;
+  --a-navy: #232043;
+  --a-navy-soft: #33305a;
+  --a-navy-deep: #1a1834;
+  --a-gold: #f0b429;
+  --a-gold-deep: #916c16;
+  --a-gold-soft: var(--t-butter);
   --a-violet: #6d5bf6;
   --a-violet-deep: #5344d6;
-  --a-violet-soft: #efecff;
+  --a-violet-soft: var(--t-lavender);
 
-  /* Ink and ground. The greys carry a little violet so they sit with the
-     accent instead of fighting it — a neutral mid-grey would read unchosen. */
-  --a-ink: #16152b;
-  --a-ink-soft: #3d3b58;
-  --a-muted: #6b6889;
-  --a-faint: #9d9ab8;
-  --a-bg: #f4f4fb;
+  /* Ink and ground. Warm-neutral greys with a touch of violet, so they sit
+     with the tints instead of greying them out. Body copy is deliberately not
+     black — on pale colour it reads heavy. */
+  --a-ink: #232135;
+  --a-ink-soft: #46435f;
+  --a-muted: #6e6b85;
+  --a-faint: #9c99b0;
+  --a-bg: #fbfbfe;
   --a-surface: #ffffff;
-  --a-surface-sunk: #f2f1fa;
-  --a-line: #e7e6f4;
-  --a-line-strong: #d6d4ea;
+  --a-surface-sunk: #f4f4f9;
+  --a-line: #ecebf3;
+  --a-line-strong: #dcdae8;
 
-  /* Semantics. Separate from the accent: violet means "you can press this",
-     these mean "this is how it is going". */
-  --a-up: #0f9d76;
-  --a-up-bg: #e2f8f1;
-  --a-down: #d93a4c;
-  --a-down-bg: #fdecee;
-  --a-wait: #b46a00;
-  --a-wait-bg: #fff3dc;
-  --a-info: #2f6fd0;
-  --a-info-bg: #e8f1fe;
+  /* Semantics, drawn from the same tint family so a status pill never looks
+     like it came from another design. */
+  --a-up: var(--t-mint-ink);      --a-up-bg: var(--t-mint);
+  --a-down: #c33a52;              --a-down-bg: var(--t-rose);
+  --a-wait: var(--t-peach-ink);   --a-wait-bg: var(--t-peach);
+  --a-info: var(--t-sky-ink);     --a-info-bg: var(--t-sky);
 
-  --a-radius: 16px;
-  --a-radius-sm: 10px;
-  --a-shadow: 0 1px 2px rgba(30, 25, 70, .06);
+  --a-radius: 18px;
+  --a-radius-sm: 11px;
+  --a-shadow: 0 1px 2px rgba(40, 35, 80, .04);
   --a-shadow-lift:
-    0 2px 6px -2px rgba(30, 25, 70, .10),
-    0 18px 34px -20px rgba(30, 25, 70, .34);
-  --a-shadow-rail: 0 24px 60px -30px rgba(14, 12, 28, .8);
+    0 2px 8px -3px rgba(40, 35, 80, .08),
+    0 16px 30px -22px rgba(40, 35, 80, .22);
+  --a-shadow-rail: none;
 
   --a-display: "Bricolage Grotesque", "Instrument Sans", system-ui, -apple-system,
                "Segoe UI", sans-serif;
   --a-body: "Instrument Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --a-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 
-  /* The label that sits above almost every number on these pages. */
-  --a-micro-size: 10.5px;
-  --a-micro-track: .11em;
+  /* The small coloured label above almost everything on these pages. */
+  --a-micro-size: 10px;
+  --a-micro-track: .12em;
 }
+
+/* A card wears its tint through these three variables, so one rule paints the
+   ground, the edge and the label together and they can never drift apart. */
+.tint-mint     { --tint: var(--t-mint);     --tint-line: var(--t-mint-line);     --tint-ink: var(--t-mint-ink) }
+.tint-lavender { --tint: var(--t-lavender); --tint-line: var(--t-lavender-line); --tint-ink: var(--t-lavender-ink) }
+.tint-peach    { --tint: var(--t-peach);    --tint-line: var(--t-peach-line);    --tint-ink: var(--t-peach-ink) }
+.tint-sky      { --tint: var(--t-sky);      --tint-line: var(--t-sky-line);      --tint-ink: var(--t-sky-ink) }
+.tint-rose     { --tint: var(--t-rose);     --tint-line: var(--t-rose-line);     --tint-ink: var(--t-rose-ink) }
+.tint-butter   { --tint: var(--t-butter);   --tint-line: var(--t-butter-line);   --tint-ink: var(--t-butter-ink) }
 
 /* ── Ground ──────────────────────────────────────────────────────────────── */
 body.admin-shell {
@@ -104,16 +125,16 @@ body.admin-shell .coh-card {
   background: var(--a-surface);
   border: 1px solid var(--a-line);
   border-radius: var(--a-radius);
-  box-shadow: var(--a-shadow);
+  box-shadow: none;
 }
 
 /* A panel's own title. Named .h-card for "heading, card" — it is the heading
    inside a card, not a card itself. */
 body.admin-shell .h-card {
   font-family: var(--a-display);
-  font-size: 14.5px;
-  font-weight: 700;
-  letter-spacing: -.02em;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -.015em;
   color: var(--a-ink);
 }
 
@@ -141,9 +162,9 @@ body.admin-shell .sub {
 .page-head { padding: 26px 26px 0 }
 .page-head #page-title {
   font-family: var(--a-display);
-  font-size: 26px;
-  font-weight: 700;
-  letter-spacing: -.03em;
+  font-size: 27px;
+  font-weight: 600;
+  letter-spacing: -.025em;
   color: var(--a-ink);
 }
 .page-head #page-sub {
@@ -153,69 +174,72 @@ body.admin-shell .sub {
 }
 
 /* ── Welcome banner ──────────────────────────────────────────────────────
-   The one full-bleed dark surface in the workspace: it opens the page, and
-   nothing else competes with it. */
+   The page opens on a lavender card. It was a dark slab; on a pale workspace
+   that reads as a hole rather than a headline, and the tint does the same job
+   more quietly. */
 .hero {
   position: relative;
   overflow: hidden;
-  background:
-    radial-gradient(120% 140% at 88% -10%, rgba(109, 91, 246, .55) 0%, transparent 58%),
-    radial-gradient(90% 120% at 8% 110%, rgba(255, 197, 61, .22) 0%, transparent 60%),
-    var(--a-navy);
-  color: #fff;
-  border: none;
+  background: var(--t-lavender);
+  border: 1px solid var(--t-lavender-line);
+  color: var(--a-ink);
   border-radius: var(--a-radius);
-  padding: 26px 28px;
-  box-shadow: var(--a-shadow-lift);
+  padding: 28px 30px;
+  box-shadow: none;
 }
 .hero > * { position: relative; z-index: 1 }
 
-/* A soft grain of light across the top edge, so the block is not a flat slab. */
+/* A wash of warmth in the far corner, so a large flat panel is not quite
+   flat. Deliberately faint — at full strength it becomes a gradient hero,
+   which is the thing this palette exists to avoid. */
 .hero::after {
   content: "";
   position: absolute;
-  inset: 0 0 auto 0;
-  height: 1px;
-  background: linear-gradient(90deg,
-    transparent, rgba(255, 255, 255, .5), transparent);
+  inset: auto -60px -80px auto;
+  width: 320px;
+  height: 320px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(240, 180, 41, .18), transparent 68%);
+  pointer-events: none;
 }
 
 .hero-title {
   font-family: var(--a-display);
-  font-size: clamp(20px, 2.6vw, 27px);
-  font-weight: 700;
-  letter-spacing: -.03em;
-  line-height: 1.15;
+  font-size: clamp(20px, 2.6vw, 28px);
+  font-weight: 600;
+  letter-spacing: -.02em;
+  line-height: 1.18;
+  color: var(--a-ink);
 }
 .hero-sub {
-  margin-top: 7px;
+  margin-top: 8px;
   font-size: 13.5px;
-  line-height: 1.55;
-  color: rgba(255, 255, 255, .72);
+  line-height: 1.6;
+  color: var(--a-ink-soft);
   max-width: 62ch;
 }
 
-.hero-actions { display: flex; gap: 9px; flex-wrap: wrap; margin-top: 18px }
-.hero-actions .btn { border: none }
+.hero-actions { display: flex; gap: 9px; flex-wrap: wrap; margin-top: 20px }
 .hero-actions .btn-cream {
-  background: #fff;
-  color: var(--a-navy);
-  font-weight: 700;
-}
-.hero-actions .btn-cream:hover { background: var(--a-gold-soft) }
-.hero-actions .btn-ink {
-  background: rgba(255, 255, 255, .12);
+  background: var(--a-violet);
+  border-color: var(--a-violet);
   color: #fff;
-  backdrop-filter: blur(6px);
+  font-weight: 650;
 }
-.hero-actions .btn-ink:hover { background: rgba(255, 255, 255, .2) }
+.hero-actions .btn-cream:hover { background: var(--a-violet-deep) }
+.hero-actions .btn-ink {
+  background: rgba(255, 255, 255, .72);
+  border-color: var(--t-lavender-line);
+  color: var(--a-ink);
+}
+.hero-actions .btn-ink:hover { background: #fff }
 
 /* The completion gauge sitting in the banner. */
 .hero-gauge { display: flex; align-items: center; gap: 14px }
 .hero-ring {
   position: relative;
-  width: 74px;
-  height: 74px;
+  width: 76px;
+  height: 76px;
   border-radius: 50%;
   display: grid;
   place-items: center;
@@ -224,34 +248,41 @@ body.admin-shell .sub {
 .hero-ring::after {
   content: "";
   position: absolute;
-  inset: 7px;
+  inset: 8px;
   border-radius: 50%;
-  background: var(--a-navy);
+  background: var(--t-lavender);
 }
 .hero-ring b {
   position: relative;
   z-index: 1;
   font-family: var(--a-display);
   font-size: 17px;
-  font-weight: 700;
-  color: #fff;
+  font-weight: 600;
+  color: var(--a-ink);
 }
 .hero-gauge-label {
   font-family: var(--a-mono);
   font-size: var(--a-micro-size);
   letter-spacing: var(--a-micro-track);
   text-transform: uppercase;
-  color: rgba(255, 255, 255, .6);
+  color: var(--t-lavender-ink);
   line-height: 1.5;
 }
 
 /* ── KPI cards ───────────────────────────────────────────────────────────
-   The row of headline figures. The number is the point, so it is set large
-   in the display face and everything around it is deliberately quiet. */
+   The row of headline figures. Each card takes the tint of its own icon —
+   registrations sky, baseline mint, post survey lavender, completion butter —
+   so the row reads as four different things rather than four copies. The
+   number is the point; everything around it stays quiet.
+
+   `:has()` lets the card take its colour from the icon the template already
+   puts inside it, so no markup had to change to gain a palette. A browser
+   without it simply shows a white card, which is the old look and not a
+   broken one. */
 .kpi-grid {
   display: grid;
-  gap: 14px;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
 }
 .kpi-row {
   display: flex;
@@ -262,56 +293,64 @@ body.admin-shell .sub {
 }
 
 .kpi {
+  /* Lavender by default: one card in the row carries no icon class, and a
+     single white tile among four tinted ones reads as one that failed to
+     load rather than one that is different. */
+  --tint: var(--t-lavender);
+  --tint-line: var(--t-lavender-line);
+  --tint-ink: var(--t-lavender-ink);
   position: relative;
-  background: var(--a-surface);
-  border: 1px solid var(--a-line);
+  background: var(--tint);
+  border: 1px solid var(--tint-line);
   border-radius: var(--a-radius);
-  padding: 18px 20px 16px;
-  box-shadow: var(--a-shadow);
-  transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+  padding: 20px 22px 18px;
+  box-shadow: none;
+  transition: transform .18s ease, box-shadow .18s ease;
 }
-.kpi:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--a-shadow-lift);
-  border-color: var(--a-line-strong);
-}
+.kpi:hover { transform: translateY(-2px); box-shadow: var(--a-shadow-lift) }
 
-.kpi-top { display: flex; align-items: center; gap: 9px; margin-bottom: 12px }
+body.admin-shell .kpi:has(.kpi-ico-blue)  { --tint: var(--t-sky);      --tint-line: var(--t-sky-line);      --tint-ink: var(--t-sky-ink) }
+body.admin-shell .kpi:has(.kpi-ico-green) { --tint: var(--t-mint);     --tint-line: var(--t-mint-line);     --tint-ink: var(--t-mint-ink) }
+body.admin-shell .kpi:has(.kpi-ico-amber) { --tint: var(--t-peach);    --tint-line: var(--t-peach-line);    --tint-ink: var(--t-peach-ink) }
+body.admin-shell .kpi:has(.kpi-ico-gold)  { --tint: var(--t-butter);   --tint-line: var(--t-butter-line);   --tint-ink: var(--t-butter-ink) }
+
+.kpi-top { display: flex; align-items: center; gap: 10px; margin-bottom: 14px }
 .kpi-label {
   font-family: var(--a-mono);
   font-size: var(--a-micro-size);
   font-weight: 500;
   letter-spacing: var(--a-micro-track);
   text-transform: uppercase;
-  color: var(--a-muted);
+  color: var(--tint-ink, var(--a-muted));
 }
 
 .kpi-ico {
-  width: 30px;
-  height: 30px;
+  width: 28px;
+  height: 28px;
   border-radius: 9px;
   display: grid;
   place-items: center;
   flex: none;
+  background: rgba(255, 255, 255, .8);
+  color: var(--tint-ink, var(--a-muted));
 }
 .kpi-ico svg { width: 15px; height: 15px }
-.kpi-ico-gold  { background: var(--a-gold-soft);   color: var(--a-gold-deep) }
-.kpi-ico-blue  { background: var(--a-info-bg);     color: var(--a-info) }
-.kpi-ico-green { background: var(--a-up-bg);       color: var(--a-up) }
-.kpi-ico-amber { background: var(--a-wait-bg);     color: var(--a-wait) }
+/* The four icon classes now only carry meaning; the colour comes from the
+   card's tint, so the two can never disagree. */
+.kpi-ico-gold, .kpi-ico-blue, .kpi-ico-green, .kpi-ico-amber {
+  background: rgba(255, 255, 255, .8);
+  color: var(--tint-ink, var(--a-muted));
+}
 
 .kpi-val {
   font-family: var(--a-display);
-  font-size: 33px;
-  font-weight: 700;
-  letter-spacing: -.035em;
+  font-size: 34px;
+  font-weight: 600;
+  letter-spacing: -.03em;
   line-height: 1;
   color: var(--a-ink);
 }
-.kpi-caption {
-  font-size: 12px;
-  color: var(--a-muted);
-}
+.kpi-caption { font-size: 12px; color: var(--a-ink-soft) }
 
 .kpi-delta {
   display: inline-flex;
@@ -319,32 +358,31 @@ body.admin-shell .sub {
   gap: 3px;
   font-size: 11.5px;
   font-weight: 700;
-  padding: 3px 8px;
+  padding: 3px 9px;
   border-radius: 999px;
   white-space: nowrap;
+  background: rgba(255, 255, 255, .78);
 }
-.kpi-delta.up   { color: var(--a-up);   background: var(--a-up-bg) }
-.kpi-delta.down { color: var(--a-down); background: var(--a-down-bg) }
-.kpi-delta.flat { color: var(--a-muted); background: var(--a-surface-sunk) }
+.kpi-delta.up   { color: var(--a-up) }
+.kpi-delta.down { color: var(--a-down) }
+.kpi-delta.flat { color: var(--a-muted) }
 
-.kpi-spark { width: 92px; height: 34px; flex: none; opacity: .95 }
+.kpi-spark { width: 96px; height: 34px; flex: none; opacity: .9 }
 .kpi-spark svg { width: 100%; height: 100%; display: block }
 
 .kpi-foot {
-  margin-top: 12px;
-  padding-top: 11px;
-  border-top: 1px solid var(--a-line);
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--tint-line, var(--a-line));
   font-size: 11.5px;
-  color: var(--a-faint);
+  color: var(--a-muted);
 }
 
-/* One card in the row carries the headline number, and wears the rail's
-   colours so the eye lands there first. */
+/* The headline card. On a pale board the loudest thing available is a solid
+   fill, so this one takes the violet at full strength and nothing else does. */
 .kpi-accent {
-  background:
-    radial-gradient(110% 130% at 92% -20%, rgba(109, 91, 246, .5) 0%, transparent 60%),
-    var(--a-navy);
-  border-color: transparent;
+  background: var(--a-violet);
+  border-color: var(--a-violet);
   color: #fff;
   overflow: hidden;
 }
@@ -352,17 +390,21 @@ body.admin-shell .sub {
 .kpi-accent::after {
   content: "";
   position: absolute;
-  inset: 0 0 auto 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .45), transparent);
+  inset: auto -40px -60px auto;
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, .16), transparent 70%);
 }
-.kpi-accent .kpi-label { color: rgba(255, 255, 255, .62) }
+.kpi-accent .kpi-label { color: rgba(255, 255, 255, .74) }
 .kpi-accent .kpi-val   { color: #fff }
-.kpi-accent .kpi-ico   { background: rgba(255, 255, 255, .13); color: var(--a-gold) }
-.kpi-accent .kpi-foot  { border-top-color: rgba(255, 255, 255, .14); color: rgba(255, 255, 255, .55) }
-.kpi-accent .kpi-delta.up   { background: rgba(15, 157, 118, .24); color: #7becc9 }
-.kpi-accent .kpi-delta.down { background: rgba(217, 58, 76, .26);  color: #ffabb4 }
-.kpi-accent .kpi-delta.flat { background: rgba(255, 255, 255, .14); color: rgba(255, 255, 255, .78) }
+.kpi-accent .kpi-ico   { background: rgba(255, 255, 255, .18); color: #fff }
+.kpi-accent .kpi-foot  { border-top-color: rgba(255, 255, 255, .22); color: rgba(255, 255, 255, .7) }
+.kpi-accent .kpi-caption { color: rgba(255, 255, 255, .8) }
+.kpi-accent .kpi-delta { background: rgba(255, 255, 255, .18) }
+.kpi-accent .kpi-delta.up   { color: #b6f0dc }
+.kpi-accent .kpi-delta.down { color: #ffc4cd }
+.kpi-accent .kpi-delta.flat { color: rgba(255, 255, 255, .85) }
 
 /* ── Leaderboard ─────────────────────────────────────────────────────────── */
 .rank {
@@ -394,9 +436,9 @@ body.admin-shell .sub {
   background: var(--a-surface-sunk);
 }
 /* The top three earn a colour; the rest stay quiet so the podium reads. */
-.rank:nth-child(1) .rank-n { background: var(--a-gold);   color: var(--a-navy) }
-.rank:nth-child(2) .rank-n { background: #d9d7ec;         color: var(--a-ink) }
-.rank:nth-child(3) .rank-n { background: #f2d9c0;         color: #8a5a2b }
+.rank:nth-child(1) .rank-n { background: var(--t-butter);   color: var(--t-butter-ink) }
+.rank:nth-child(2) .rank-n { background: var(--t-lavender); color: var(--t-lavender-ink) }
+.rank:nth-child(3) .rank-n { background: var(--t-peach);    color: var(--t-peach-ink) }
 
 .rank-name {
   font-weight: 600;
@@ -430,10 +472,10 @@ body.admin-shell .sub {
   display: block;
   height: 100%;
   border-radius: 999px;
-  background: linear-gradient(90deg, var(--a-violet), #9b8cff);
+  background: var(--a-violet);
   transition: width .5s cubic-bezier(.2, .8, .2, 1);
 }
-.bar.bar-gold > i { background: linear-gradient(90deg, var(--a-gold-deep), var(--a-gold)) }
+.bar.bar-gold > i { background: var(--a-gold) }
 
 /* ── Activity feed ───────────────────────────────────────────────────────── */
 .feed { position: relative; padding: 4px 22px 20px 34px }
@@ -485,8 +527,8 @@ body.admin-shell .sub {
    The strip above the workspace: brand, search, scope. It stays put while
    the page below it scrolls. */
 body.admin-shell header.admin-bar {
-  background: rgba(255, 255, 255, .82);
-  backdrop-filter: saturate(1.6) blur(12px);
+  background: rgba(251, 251, 254, .88);
+  backdrop-filter: saturate(1.4) blur(12px);
   border-bottom: 1px solid var(--a-line);
 }
 
@@ -562,12 +604,12 @@ body.admin-shell header.admin-bar select.field {
 #nav .nav-btn:hover { background: var(--a-surface-sunk); color: var(--a-ink) }
 .bar-nav .nav-btn.on,
 #nav .nav-btn.on {
-  background: var(--a-navy);
-  color: #fff;
+  background: var(--t-lavender);
+  color: var(--t-lavender-ink);
   font-weight: 700;
 }
 .bar-nav .nav-btn.on .nav-ico,
-#nav .nav-btn.on .nav-ico { opacity: 1; color: var(--a-gold) }
+#nav .nav-btn.on .nav-ico { opacity: 1; color: var(--t-lavender-ink) }
 .bar-nav .nav-chip,
 #nav .nav-chip {
   font-family: var(--a-mono);
@@ -579,71 +621,67 @@ body.admin-shell header.admin-bar select.field {
   color: var(--a-muted);
 }
 .bar-nav .nav-btn.on .nav-chip,
-#nav .nav-btn.on .nav-chip { background: rgba(255, 255, 255, .18); color: #fff }
+#nav .nav-btn.on .nav-chip { background: rgba(255, 255, 255, .8); color: var(--t-lavender-ink) }
 
-/* In the dark sidebar the rows fill their column, the palette inverts, and the
-   active row gets a lit edge rather than a filled block — a solid navy pill on
-   a navy rail would disappear. */
+/* The rail is pale now, so the sidebar inverts: dark text on a near-white
+   ground, and the active row is a lavender pill rather than a lit edge. */
 #nav { padding-bottom: 10px }
 #nav .nav-btn {
   width: 100%;
   justify-content: flex-start;
-  color: rgba(255, 255, 255, .62);
+  color: var(--a-muted);
   position: relative;
+  border-radius: 999px;
 }
-#nav .nav-btn:hover { background: rgba(255, 255, 255, .07); color: #fff }
+#nav .nav-btn:hover { background: var(--a-surface-sunk); color: var(--a-ink) }
 #nav .nav-btn.on {
-  background: linear-gradient(90deg, rgba(109, 91, 246, .34), rgba(109, 91, 246, .06));
-  color: #fff;
+  background: var(--t-lavender);
+  color: var(--t-lavender-ink);
+  font-weight: 700;
 }
-#nav .nav-btn.on::before {
-  content: "";
-  position: absolute;
-  left: -12px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 3px;
-  height: 18px;
-  border-radius: 0 3px 3px 0;
-  background: var(--a-gold);
-}
+#nav .nav-btn.on .nav-ico { opacity: 1; color: var(--t-lavender-ink) }
 #nav .nav-chip {
   margin-left: auto;
-  background: rgba(255, 255, 255, .1);
-  color: rgba(255, 255, 255, .78);
+  background: var(--a-surface-sunk);
+  color: var(--a-muted);
 }
-#nav .nav-btn.on .nav-chip { background: rgba(255, 255, 255, .2); color: #fff }
+#nav .nav-btn.on .nav-chip { background: rgba(255, 255, 255, .8); color: var(--t-lavender-ink) }
 #nav .nav-group {
-  padding: 15px 12px 5px;
+  padding: 16px 14px 6px;
   font-family: var(--a-mono);
   font-size: var(--a-micro-size);
   font-weight: 500;
   letter-spacing: var(--a-micro-track);
   text-transform: uppercase;
-  color: rgba(255, 255, 255, .38);
+  color: var(--a-faint);
 }
 
 /* Nothing else may blow an icon up to its intrinsic size. */
 .nav-ico { width: 16px; height: 16px; flex: none }
 
-/* The rail itself. The markup carries Tailwind's bg-slate-900, which is a
-   blue-grey and does not belong to this palette; this wins on specificity and
-   keeps the rail the same indigo as the hero and the active pills. */
+/* The rail itself. The markup carries Tailwind's bg-slate-900 and
+   text-slate-200 from when this was a dark rail; these win on specificity and
+   turn it pale without touching the templates. */
 body.admin-shell #sidebar {
-  background: var(--a-navy-deep);
-  border-right: 1px solid rgba(255, 255, 255, .07);
-  box-shadow: var(--a-shadow-rail);
+  background: var(--a-surface);
+  color: var(--a-ink);
+  border-right: 1px solid var(--a-line);
+  box-shadow: none;
 }
+body.admin-shell #sidebar .text-white { color: var(--a-ink) }
+body.admin-shell #sidebar .text-amber-400 { color: var(--a-gold-deep) }
+body.admin-shell #sidebar .text-slate-400 { color: var(--a-faint) }
+body.admin-shell #sidebar .border-white\/5 { border-color: var(--a-line) }
+body.admin-shell #sidebar .bg-white { background: var(--t-lavender) }
 
-/* Who is signed in, at the foot of the rail. Previously unstyled, so it read
-   as three loose lines of text under the menu. */
+/* Who is signed in, at the foot of the rail. */
 .who {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 11px;
+  padding: 11px 12px;
   border-radius: var(--a-radius-sm);
-  background: rgba(255, 255, 255, .06);
+  background: var(--a-surface-sunk);
 }
 .who-av {
   width: 32px;
@@ -655,13 +693,13 @@ body.admin-shell #sidebar {
   font-family: var(--a-mono);
   font-size: 11px;
   font-weight: 700;
-  color: var(--a-navy);
-  background: var(--a-gold);
+  color: var(--t-lavender-ink);
+  background: var(--t-lavender);
 }
 .who-name {
   font-size: 12.5px;
   font-weight: 650;
-  color: #fff;
+  color: var(--a-ink);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -670,7 +708,7 @@ body.admin-shell #sidebar {
   font-family: var(--a-mono);
   font-size: 10px;
   letter-spacing: .04em;
-  color: rgba(255, 255, 255, .52);
+  color: var(--a-faint);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -682,8 +720,8 @@ body.admin-shell .btn {
   align-items: center;
   justify-content: center;
   gap: 7px;
-  padding: 8px 14px;
-  border-radius: var(--a-radius-sm);
+  padding: 8px 15px;
+  border-radius: 999px;
   border: 1px solid var(--a-line-strong);
   background: var(--a-surface);
   color: var(--a-ink);
@@ -716,8 +754,8 @@ body.admin-shell .btn-primary:hover {
   border-color: var(--a-violet-deep);
 }
 body.admin-shell .btn-dark {
-  background: var(--a-navy);
-  border-color: var(--a-navy);
+  background: var(--a-ink);
+  border-color: var(--a-ink);
   color: #fff;
 }
 body.admin-shell .btn-green {
@@ -795,8 +833,8 @@ body.admin-shell .tabbtn {
 }
 body.admin-shell .tabbtn:hover { background: var(--a-surface-sunk); color: var(--a-ink) }
 body.admin-shell .tabbtn.on {
-  background: var(--a-navy);
-  color: #fff;
+  background: var(--t-lavender);
+  color: var(--t-lavender-ink);
 }
 
 body.admin-shell .coh-select,
@@ -989,17 +1027,25 @@ body.admin-shell .ori-tile:hover {
   background: var(--a-surface);
   border: 1px solid var(--a-line);
   border-radius: var(--a-radius);
-  padding: 20px 22px;
-  box-shadow: var(--a-shadow);
+  padding: 22px 24px;
 }
 
+/* One tint per group, so the kind of link is legible before the heading is
+   read: green for the forms students fill, sky for the office's own page,
+   lavender for the Deeksharambh report, rose for the public page, butter for
+   the outcome report. The colour is the point of the group, not decoration. */
 .share-group {
-  background: var(--a-surface);
-  border: 1px solid var(--a-line);
+  background: var(--tint, var(--a-surface));
+  border: 1px solid var(--tint-line, var(--a-line));
   border-radius: var(--a-radius);
-  padding: 20px 22px;
-  box-shadow: var(--a-shadow);
+  padding: 22px 24px;
+  box-shadow: none;
 }
+.share-group--students   { --tint: var(--t-mint);     --tint-line: var(--t-mint-line);     --tint-ink: var(--t-mint-ink) }
+.share-group--directory  { --tint: var(--t-sky);      --tint-line: var(--t-sky-line);      --tint-ink: var(--t-sky-ink) }
+.share-group--orientation{ --tint: var(--t-lavender); --tint-line: var(--t-lavender-line); --tint-ink: var(--t-lavender-ink) }
+.share-group--impact     { --tint: var(--t-rose);     --tint-line: var(--t-rose-line);     --tint-ink: var(--t-rose-ink) }
+.share-group--cohort     { --tint: var(--t-butter);   --tint-line: var(--t-butter-line);   --tint-ink: var(--t-butter-ink) }
 .share-group-head { display: flex; align-items: center; gap: 9px }
 .share-group-title {
   font-family: var(--a-display);
@@ -1011,18 +1057,18 @@ body.admin-shell .ori-tile:hover {
 }
 .share-group-count {
   font-family: var(--a-mono);
-  font-size: 10.5px;
+  font-size: 10px;
   font-weight: 700;
   padding: 2px 8px;
   border-radius: 999px;
-  background: var(--a-violet-soft);
-  color: var(--a-violet-deep);
+  background: rgba(255, 255, 255, .78);
+  color: var(--tint-ink, var(--a-muted));
 }
 .share-group-note {
   font-size: 12.5px;
-  line-height: 1.5;
-  color: var(--a-muted);
-  margin-top: 5px;
+  line-height: 1.55;
+  color: var(--a-ink-soft);
+  margin-top: 6px;
   max-width: 78ch;
 }
 
@@ -1036,8 +1082,8 @@ body.admin-shell .ori-tile:hover {
   grid-template-columns: minmax(200px, 1.1fr) minmax(0, 1fr) auto;
   align-items: center;
   gap: 16px;
-  padding: 13px 0;
-  border-top: 1px solid var(--a-line);
+  padding: 14px 0;
+  border-top: 1px solid var(--tint-line, var(--a-line));
 }
 .share-row:first-child { border-top: none }
 
@@ -1056,9 +1102,9 @@ body.admin-shell .ori-tile:hover {
 .share-row-url {
   font-family: var(--a-mono);
   font-size: 11px;
-  color: var(--a-muted);
-  background: var(--a-surface-sunk);
-  border: 1px solid var(--a-line);
+  color: var(--a-ink-soft);
+  background: rgba(255, 255, 255, .7);
+  border: 1px solid var(--tint-line, var(--a-line));
   border-radius: var(--a-radius-sm);
   padding: 7px 10px;
   overflow: hidden;
@@ -1074,9 +1120,12 @@ body.admin-shell .ori-tile:hover {
   justify-content: flex-end;
   flex-wrap: wrap;
 }
+.share-row-actions .btn { background: rgba(255, 255, 255, .82) }
+.share-row-actions .btn-primary { background: var(--a-violet) }
 .share-row-actions .btn.is-copied {
-  background: var(--a-up-bg);
+  background: #fff;
   color: var(--a-up);
+  border-color: var(--t-mint-line);
 }
 
 @media (max-width: 900px) {
@@ -1094,15 +1143,15 @@ body.admin-shell .ori-tile:hover {
 
 /* ── Notes and toasts ────────────────────────────────────────────────────── */
 body.admin-shell .note {
-  background: var(--a-violet-soft);
-  border: 1px solid #ddd7ff;
+  background: var(--t-lavender);
+  border: 1px solid var(--t-lavender-line);
   border-radius: var(--a-radius-sm);
   color: var(--a-ink-soft);
   font-size: 12.5px;
   padding: 11px 14px;
 }
 body.admin-shell #toast {
-  background: var(--a-navy);
+  background: var(--a-ink);
   color: #fff;
   border-radius: 999px;
   padding: 11px 20px;

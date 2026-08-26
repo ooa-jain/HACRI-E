@@ -2164,7 +2164,7 @@ async function loadLinks() {
         without a login — treat those as you would the figures themselves.</div>
     </div>
     ${data.groups.map(g => `
-      <section class="share-group">
+      <section class="share-group share-group--${e(g.key)}">
         <div class="share-group-head">
           <h3 class="share-group-title">${e(g.title)}</h3>
           <span class="share-group-count">${g.links.length}</span>
