@@ -60,10 +60,30 @@ async def survey_request_otp(request: Request, username: str = Form(...)):
         portal_name = "Deeksharambh Orientation Admin"
     else:
         # Show invalid username but don't reveal info
+        from app import db as _db
+        await _db.record_login_event(
+            username=username, outcome=_db.LOGIN_UNKNOWN,
+            ip=client_ip(request), agent=client_agent(request),
+            country=client_country(request), note="no such admin username")
         return request.app.state.templates.TemplateResponse(
             request, "admin_login.html",
             {"error": "Invalid username.", "title": "Admin Login", "otp_sent": False},
             status_code=401,
+        )
+
+    from app import db as _db
+    ip, agent, country = client_ip(request), client_agent(request), client_country(request)
+
+    if await _db.is_locked_out(ip):
+        await _db.record_login_event(username=username, outcome=_db.LOGIN_LOCKED,
+                                     ip=ip, agent=agent, country=country,
+                                     note="blocked at the OTP request")
+        return request.app.state.templates.TemplateResponse(
+            request, "admin_login.html",
+            {"error": f"Too many failed attempts from this address. Try again in "
+                      f"{_db.LOGIN_LOCK_MINUTES} minutes.",
+             "title": "Admin Login", "otp_sent": False},
+            status_code=429,
         )
 
     # Generate a 6-digit OTP and store it
@@ -87,6 +107,9 @@ async def survey_request_otp(request: Request, username: str = Form(...)):
         log.warning("OTP [%s] for %s NOT emailed — mail is off (%s).", otp, username,
                     "EMAIL_DRY_RUN is true" if settings.smtp_host
                     else "no SMTP_HOST configured")
+        await _db.record_login_event(username=username, outcome=_db.LOGIN_MAIL_OFF,
+                                     ip=ip, agent=agent, country=country,
+                                     portal=portal_name, note="mail is switched off")
 
     try:
         body = (
@@ -101,6 +124,9 @@ async def survey_request_otp(request: Request, username: str = Form(...)):
             body,
         )
         log.info("OTP [%s] sent to %s for %s", otp, email, username)
+        await _db.record_login_event(username=username, outcome=_db.LOGIN_OTP_SENT,
+                                     ip=ip, agent=agent, country=country,
+                                     portal=portal_name, note="code emailed")
     except Exception as exc:
         log.exception("Failed to send OTP email: %s", exc)
         hosts = ", ".join(a["hostname"] for a in emailer.smtp_accounts())
@@ -151,22 +177,84 @@ async def general_admin_login_get(request: Request):
     )
 
 
+def client_ip(request: Request) -> str:
+    """The address the request really came from.
+
+    Behind nginx every request appears to come from 127.0.0.1, so the proxy's
+    own headers are the only place the client's address survives.
+    X-Forwarded-For is a chain and the client is its first entry; the rest are
+    proxies. Anyone can forge the header, but they cannot forge it *past* our
+    nginx, which overwrites what it sets — so the first hop is trustworthy for
+    our own traffic and this is only ever used for rate limiting and for a log
+    a human reads, never for authorisation.
+    """
+    chain = request.headers.get("x-forwarded-for", "")
+    if chain:
+        return chain.split(",")[0].strip()[:64]
+    return (request.headers.get("x-real-ip")
+            or (request.client.host if request.client else "")).strip()[:64]
+
+
+def client_agent(request: Request) -> str:
+    return request.headers.get("user-agent", "")[:400]
+
+
+def client_country(request: Request) -> str:
+    """A country, only if something in front of us resolved one.
+
+    Nothing here guesses at a location from an address: that needs a GeoIP
+    database this app does not ship. If a CDN is ever put in front, its header
+    lands in the log automatically.
+    """
+    for header in ("cf-ipcountry", "x-country-code", "x-geo-country"):
+        value = request.headers.get(header, "").strip()
+        if value and value.upper() not in ("XX", "T1"):
+            return value.upper()[:8]
+    return ""
+
+
 @router.post("/admin/login")
 async def general_admin_login_post(
     request: Request,
     username: str = Form(...),
     password: str = Form(...)  # This acts as the password or OTP
 ):
+    from app import db as _db
+
     username = username.strip()
     otp = password.strip()
-    
+    ip, agent, country = client_ip(request), client_agent(request), client_country(request)
+
+    async def note(outcome: str, portal: str = "", detail: str = ""):
+        await _db.record_login_event(username=username, outcome=outcome, ip=ip,
+                                     agent=agent, portal=portal, country=country,
+                                     note=detail)
+
+    # Turn an address away once it has failed too often in a short window.
+    # Checked before the credentials are looked at, so a guesser learns nothing
+    # from how long the answer takes.
+    if await _db.is_locked_out(ip):
+        await note(_db.LOGIN_LOCKED, detail=f"blocked after "
+                                            f"{_db.LOGIN_FAIL_LIMIT} failures")
+        log.warning("Admin login blocked: %s has failed %d times in %d minutes",
+                    ip, _db.LOGIN_FAIL_LIMIT, _db.LOGIN_FAIL_WINDOW_MINUTES)
+        return request.app.state.templates.TemplateResponse(
+            request, "admin_login.html",
+            {"error": f"Too many failed attempts from this address. Try again in "
+                      f"{_db.LOGIN_LOCK_MINUTES} minutes.",
+             "title": "Admin Login", "otp_sent": False},
+            status_code=429,
+        )
+
     if username == settings.orientation_admin_username and otp == settings.orientation_admin_password:
+        await note(_db.LOGIN_OK, portal="orientation", detail="password")
         r = RedirectResponse(url="/admin/orientation", status_code=303)
         _set_cookie(r, _ORI_COOKIE, settings.cookie_secure, settings.cookie_samesite)
         return r
 
     if (username in (settings.survey_admin_username, settings.admin_username)) and \
        (otp in (settings.survey_admin_password, settings.admin_password)):
+        await note(_db.LOGIN_OK, portal="survey", detail="password")
         r = RedirectResponse(url="/admin/survey", status_code=303)
         _set_cookie(r, _SURVEY_COOKIE, settings.cookie_secure, settings.cookie_samesite)
         return r
@@ -175,15 +263,24 @@ async def general_admin_login_post(
     is_valid = await verify_admin_otp(username, otp)
     if is_valid:
         if username in (settings.survey_admin_username, settings.admin_username):
+            await note(_db.LOGIN_OK, portal="survey", detail="otp")
             r = RedirectResponse(url="/admin/survey", status_code=303)
             _set_cookie(r, _SURVEY_COOKIE, settings.cookie_secure, settings.cookie_samesite)
             return r
-        elif username == settings.orientation_admin_username:
+        if username == settings.orientation_admin_username:
+            await note(_db.LOGIN_OK, portal="orientation", detail="otp")
             r = RedirectResponse(url="/admin/orientation", status_code=303)
             _set_cookie(r, _ORI_COOKIE, settings.cookie_secure, settings.cookie_samesite)
             return r
-    else:
-        err_msg = "Invalid username or password / OTP."
+
+    # A valid OTP for a username that maps to no portal ends here too. The
+    # message is the same either way: telling the difference between "no such
+    # user" and "wrong code" hands a guesser half the answer.
+    known = username in (settings.survey_admin_username, settings.admin_username,
+                         settings.orientation_admin_username)
+    await note(_db.LOGIN_BAD if known else _db.LOGIN_UNKNOWN)
+    log.warning("Failed admin login for %r from %s", username, ip or "an unknown address")
+    err_msg = "Invalid username or password / OTP."
 
     return request.app.state.templates.TemplateResponse(
         request, "admin_login.html",
@@ -927,6 +1024,31 @@ async def api_cohort_share_links(request: Request):
             {"campus": ALL_CAMPUSES, "url": cohort_share_url(base, "")},
             *({"campus": name, "url": cohort_share_url(base, name)} for name in CAMPUSES),
         ]
+    })
+
+
+@router.get("/admin/api/security/logins")
+async def api_login_events(request: Request, limit: int = Query(default=150)):
+    """Who has signed in, who has tried, and from where.
+
+    The admin portal opens onto every student's contact details and every
+    department's figures. Until this existed nothing recorded who had opened
+    it, so a stolen password left no trace at all.
+    """
+    if not _is_survey_admin(request):
+        raise HTTPException(status_code=403)
+
+    from app import db as _db
+
+    return JSONResponse({
+        "events": await _db.list_login_events(limit=max(10, min(limit, 500))),
+        "summary": await _db.login_summary(),
+        "policy": {
+            "limit": _db.LOGIN_FAIL_LIMIT,
+            "window_minutes": _db.LOGIN_FAIL_WINDOW_MINUTES,
+            "lock_minutes": _db.LOGIN_LOCK_MINUTES,
+        },
+        "you": {"ip": client_ip(request), "country": client_country(request)},
     })
 
 

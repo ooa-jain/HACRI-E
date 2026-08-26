@@ -11,16 +11,27 @@ Collections:
 from __future__ import annotations
 import time
 import re
-from datetime import datetime, timezone
+import logging
+from datetime import datetime, timedelta, timezone
 from typing import Any
 from pymongo import AsyncMongoClient, ReturnDocument
 from app.settings import settings
+
+log = logging.getLogger("hacri-e.db")
 
 USERS = "users"
 PRE   = "pre_responses"
 POST  = "post_responses"
 ORI   = "orientation_responses"
 FLAGS = "feature_flags"
+LOGINS = "admin_login_events"
+
+# How many failures from one address, inside how long, before that address is
+# turned away. Six is generous for a typing mistake and short of useful for
+# anyone guessing.
+LOGIN_FAIL_LIMIT = 6
+LOGIN_FAIL_WINDOW_MINUTES = 15
+LOGIN_LOCK_MINUTES = 15
 
 STATUS_PRE_DONE  = "pre_done"
 STATUS_POST_DONE = "post_done"
@@ -127,6 +138,127 @@ async def init_indexes(allow_duplicate_email: bool = False):
     await _ensure_index(db[POST ], "email", name="post_email")
     await _ensure_index(db[ORI  ], "email", name="ori_email")
     await _ensure_index(db[FLAGS], "key",   name="flags_key", unique=True)
+    # The security page reads newest-first and counts recent failures per
+    # address; both are unusable without these once the log has any age.
+    await _ensure_index(db[LOGINS], [("at", -1)], name="logins_at")
+    await _ensure_index(db[LOGINS], [("ip", 1), ("at", -1)], name="logins_ip_at")
+
+
+# ── Admin sign-in log ─────────────────────────────────────────────────────────
+#
+# Every attempt on the admin portal, successful or not. The portal opens onto
+# every student's contact details and every department's figures, and until now
+# nothing recorded who had opened it or who had tried.
+#
+# What is stored is what the request itself carries: the address it came from,
+# the browser string it announced, the username it offered. No password or OTP
+# is ever written here — a log of failed attempts that contains the passwords
+# people tried is a worse liability than no log at all.
+
+# Outcomes, narrow on purpose so the page can colour them without guessing.
+LOGIN_OK          = "success"        # signed in
+LOGIN_BAD         = "bad_credentials"  # wrong username, password or OTP
+LOGIN_OTP_SENT    = "otp_requested"  # a code was issued
+LOGIN_UNKNOWN     = "unknown_user"   # no such admin username
+LOGIN_LOCKED      = "locked_out"     # refused: too many recent failures
+LOGIN_MAIL_OFF    = "otp_undelivered"  # code issued but mail is off or failed
+
+FAILURE_OUTCOMES = (LOGIN_BAD, LOGIN_UNKNOWN, LOGIN_LOCKED)
+
+
+async def record_login_event(
+    *, username: str, outcome: str, ip: str = "", agent: str = "",
+    portal: str = "", country: str = "", note: str = "",
+) -> None:
+    """Write one attempt to the log. Never raises — an audit trail that can
+    take the login down with it is not worth having."""
+    try:
+        await get_db()[LOGINS].insert_one({
+            "at": _now(),
+            "username": (username or "")[:120],
+            "outcome": outcome,
+            "ip": (ip or "")[:64],
+            "agent": (agent or "")[:400],
+            "portal": portal,
+            "country": country,
+            "note": note[:200],
+        })
+    except Exception:  # pragma: no cover - logging must not break signing in
+        log.exception("Could not record the admin login event")
+
+
+async def list_login_events(limit: int = 200, outcome: str | None = None) -> list[dict]:
+    """The log, newest first."""
+    query: dict[str, Any] = {}
+    if outcome:
+        query["outcome"] = outcome
+    rows = []
+    async for doc in get_db()[LOGINS].find(query).sort("at", -1).limit(limit):
+        doc.pop("_id", None)
+        doc["at"] = _fmt(doc.get("at"))
+        rows.append(doc)
+    return rows
+
+
+async def count_recent_failures(ip: str, minutes: int = LOGIN_FAIL_WINDOW_MINUTES) -> int:
+    """Failed attempts from one address inside the window."""
+    if not ip:
+        return 0
+    since = _now() - timedelta(minutes=minutes)
+    return await get_db()[LOGINS].count_documents({
+        "ip": ip, "at": {"$gte": since}, "outcome": {"$in": list(FAILURE_OUTCOMES)},
+    })
+
+
+async def is_locked_out(ip: str) -> bool:
+    return await count_recent_failures(ip) >= LOGIN_FAIL_LIMIT
+
+
+async def login_summary(hours: int = 24) -> dict:
+    """What the security page puts at the top: the shape of the last day."""
+    since = _now() - timedelta(hours=hours)
+    coll = get_db()[LOGINS]
+
+    signins = await coll.count_documents({"at": {"$gte": since}, "outcome": LOGIN_OK})
+    failures = await coll.count_documents(
+        {"at": {"$gte": since}, "outcome": {"$in": list(FAILURE_OUTCOMES)}})
+
+    addresses: dict[str, dict] = {}
+    async for doc in coll.find({"at": {"$gte": since}}):
+        ip = doc.get("ip") or "unknown"
+        row = addresses.setdefault(ip, {"ip": ip, "attempts": 0, "failures": 0,
+                                        "usernames": set(), "last": None})
+        row["attempts"] += 1
+        if doc.get("outcome") in FAILURE_OUTCOMES:
+            row["failures"] += 1
+        if doc.get("username"):
+            row["usernames"].add(doc["username"])
+        when = doc.get("at")
+        if row["last"] is None or (isinstance(when, datetime) and when > row["last"]):
+            row["last"] = when
+
+    offenders = []
+    for row in addresses.values():
+        if not row["failures"]:
+            continue
+        offenders.append({
+            "ip": row["ip"],
+            "attempts": row["attempts"],
+            "failures": row["failures"],
+            "usernames": sorted(row["usernames"])[:4],
+            "last": _fmt(row["last"]),
+            "locked": row["failures"] >= LOGIN_FAIL_LIMIT,
+        })
+    offenders.sort(key=lambda r: -r["failures"])
+
+    return {
+        "hours": hours,
+        "signins": signins,
+        "failures": failures,
+        "addresses": len(addresses),
+        "locked": sum(1 for o in offenders if o["locked"]),
+        "offenders": offenders[:20],
+    }
 
 
 def _now() -> datetime:

@@ -1281,6 +1281,31 @@ body.admin-shell .ori-tile:hover {
 #post-links-table td:nth-child(2) { white-space: nowrap }
 #post-links-table .field.link { min-width: 190px }
 
+/* ── Sign-in activity ────────────────────────────────────────────────────
+   An outcome pill and a monospaced address, the two things scanned for in a
+   log. The pill tones reuse the semantic set: this is "how it went", not
+   something to press. */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.pill.tone-ok   { background: var(--a-up-bg);   color: var(--a-up) }
+.pill.tone-bad  { background: var(--a-down-bg); color: var(--a-down) }
+.pill.tone-wait { background: var(--a-wait-bg); color: var(--a-wait) }
+.pill.tone-info { background: var(--a-info-bg); color: var(--a-info) }
+
+.mono-cell {
+  font-family: var(--a-mono);
+  font-size: 11.5px;
+  color: var(--a-ink);
+}
+
 /* ── Notes and toasts ────────────────────────────────────────────────────── */
 body.admin-shell .note {
   background: var(--t-lavender);

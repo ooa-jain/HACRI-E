@@ -843,6 +843,15 @@
       </div>
 
       <!-- ── SETTINGS ─────────────────────────────────────────────────── -->
+      <div class="panel" id="p-security">
+        <!-- The admin portal opens onto every student's contact details and
+             every department's figures. Until this page existed nothing
+             recorded who had opened it, so a stolen password left no trace. -->
+        <div id="security-body">
+          <div class="share-loading">Reading the sign-in log…</div>
+        </div>
+      </div>
+
       <div class="panel" id="p-settings">
         <div class="max-w-2xl space-y-5">
           <div class="card space-y-1">
@@ -1038,6 +1047,7 @@ function durationBetween(a, b) {
 // ═══════════════════════════════════════════════════════════════════════
 /** Line icons for the rail, drawn on a 24-grid and stroked in currentColor. */
 const ICONS = {
+  shield:      '<path d="M12 3l8 3v6c0 4.4-3.2 7.9-8 9-4.8-1.1-8-4.6-8-9V6z"/><path d="M9 12l2 2 4-4"/>',
   overview:    '<path d="M3 13h4v8H3zM10 3h4v18h-4zM17 9h4v12h-4z"/>',
   students:    '<path d="M16 20v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 20v-2a4 4 0 0 0-3-3.87"/>',
   emails:      '<rect x="2.5" y="4.5" width="19" height="15" rx="2"/><path d="M3 6l9 6 9-6"/>',
@@ -1053,6 +1063,11 @@ const navIcon = key =>
   `<svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"
         stroke-linecap="round" stroke-linejoin="round">${ICONS[key] || ''}</svg>`;
 
+/* The same glyphs, unsized, for use inside a card rather than the menu. */
+const icoSvg = key =>
+  `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"
+        stroke-linecap="round" stroke-linejoin="round">${ICONS[key] || ''}</svg>`;
+
 const PAGES = [
   { id: 'p-overview', icon: 'overview', group: 'Monitor', label: 'Overview',    title: 'Overview',            sub: 'Cohort progress at a glance' },
   { id: 'p-students', icon: 'students', label: 'Students',    title: 'Students',            sub: 'Status, time taken, timeline and orientation replies', load: () => renderStudents() },
@@ -1063,6 +1078,7 @@ const PAGES = [
   { id: 'p-cohort',   icon: 'cohort',   label: 'Outcome & impact', title: 'Outcome and impact', sub: 'Baseline, what changed after the workshop, and the journey between them', load: () => loadCohort() },
   { id: 'p-orientation', icon: 'orientation', label: 'Orientation', title: 'Orientation report', sub: 'Campus-wise Deeksharambh analysis, who filled it, and mailing', load: () => loadOrientationPanel() },
   { id: 'p-parents',  icon: 'parents',  label: 'Parents',     title: 'Parental background', sub: 'Occupations reported in the post survey', load: () => loadParents() },
+  { id: 'p-security', icon: 'shield',   group: 'System', label: 'Security',    title: 'Sign-in activity',    sub: 'Who has opened the admin portal, who has tried, and from where', load: () => loadSecurity() },
   { id: 'p-settings', icon: 'settings', group: 'System', label: 'Settings',    title: 'Settings',            sub: 'Gating, timing and automatic reminders' },
 ];
 
@@ -2174,6 +2190,134 @@ async function resendDept(btn, dept, type) {
 //  Links — department survey entry links
 // ═══════════════════════════════════════════════════════════════════════
 let linkData = null;
+
+/* ── Sign-in activity ─────────────────────────────────────────────────────
+   A log a human reads. Every row is one attempt on the admin portal: when,
+   which username was offered, from what address, and what happened. Nothing
+   here is used to decide anything — the lock-out is enforced server-side —
+   so it can be plain and legible rather than defensive. */
+const LOGIN_TONE = {
+  success:         ['Signed in',        'tone-ok'],
+  otp_requested:   ['Code sent',        'tone-info'],
+  otp_undelivered: ['Code not emailed', 'tone-wait'],
+  bad_credentials: ['Wrong code',       'tone-bad'],
+  unknown_user:    ['Unknown username', 'tone-bad'],
+  locked_out:      ['Blocked',          'tone-bad'],
+};
+
+/* Chrome 133 on Windows, out of forty characters of browser string. Enough to
+   recognise your own session in the list and no more. */
+function briefAgent(ua) {
+  if (!ua) return 'unknown device';
+  const browser = /Edg\//.test(ua) ? 'Edge'
+                : /OPR\//.test(ua) ? 'Opera'
+                : /Chrome\//.test(ua) ? 'Chrome'
+                : /Firefox\//.test(ua) ? 'Firefox'
+                : /Safari\//.test(ua) ? 'Safari' : 'Other browser';
+  const os = /Windows/.test(ua) ? 'Windows'
+           : /Android/.test(ua) ? 'Android'
+           : /iPhone|iPad/.test(ua) ? 'iOS'
+           : /Mac OS X/.test(ua) ? 'macOS'
+           : /Linux/.test(ua) ? 'Linux' : '';
+  return os ? `${browser} · ${os}` : browser;
+}
+
+async function loadSecurity() {
+  const body = $('security-body');
+  body.innerHTML = '<div class="share-loading">Reading the sign-in log…</div>';
+
+  let data;
+  try {
+    data = await api('/admin/api/security/logins');
+  } catch (err) {
+    body.innerHTML = '<div class="share-loading">Could not read the sign-in log.</div>';
+    return;
+  }
+
+  const s = data.summary, p = data.policy;
+  const offenders = s.offenders || [];
+
+  body.innerHTML = `
+    <div class="kpi-grid">
+      <article class="kpi"><div class="kpi-top">
+        <span class="kpi-ico kpi-ico-green">${icoSvg('shield')}</span>
+        <span class="kpi-label">Signed in</span></div>
+        <div class="kpi-row"><b class="kpi-val">${s.signins}</b></div>
+        <div class="kpi-foot">In the last ${s.hours} hours</div></article>
+
+      <article class="kpi"><div class="kpi-top">
+        <span class="kpi-ico kpi-ico-amber">${icoSvg('shield')}</span>
+        <span class="kpi-label">Failed attempts</span></div>
+        <div class="kpi-row"><b class="kpi-val">${s.failures}</b></div>
+        <div class="kpi-foot">Wrong code, unknown username or blocked</div></article>
+
+      <article class="kpi"><div class="kpi-top">
+        <span class="kpi-ico kpi-ico-blue">${icoSvg('shield')}</span>
+        <span class="kpi-label">Addresses seen</span></div>
+        <div class="kpi-row"><b class="kpi-val">${s.addresses}</b></div>
+        <div class="kpi-foot">Distinct IP addresses</div></article>
+
+      <article class="kpi"><div class="kpi-top">
+        <span class="kpi-ico kpi-ico-gold">${icoSvg('shield')}</span>
+        <span class="kpi-label">Blocked now</span></div>
+        <div class="kpi-row"><b class="kpi-val">${s.locked}</b></div>
+        <div class="kpi-foot">${p.limit} failures in ${p.window_minutes} min → ${p.lock_minutes} min block</div></article>
+    </div>
+
+    <div class="card mt-5">
+      <div class="panel-head">
+        <div><div class="h-card">Addresses that failed</div>
+          <div class="sub">Grouped by address, worst first. An address is turned away
+            automatically after ${p.limit} failures inside ${p.window_minutes} minutes.
+            You are on <b>${e(data.you.ip || 'an address the proxy did not pass on')}</b>.</div></div>
+      </div>
+      <div class="overflow-x-auto p-5 pt-4">
+        ${offenders.length ? `<table>
+          <thead><tr><th>Address</th><th>Usernames tried</th><th class="num">Attempts</th>
+            <th class="num">Failed</th><th>Last seen</th><th>State</th></tr></thead>
+          <tbody>${offenders.map(o => `
+            <tr>
+              <td><span class="mono-cell">${e(o.ip)}</span></td>
+              <td>${o.usernames.map(u => `<span class="badge">${e(u)}</span>`).join(' ') || '—'}</td>
+              <td class="num">${o.attempts}</td>
+              <td class="num"><b>${o.failures}</b></td>
+              <td>${e(o.last)}</td>
+              <td>${o.locked
+                    ? '<span class="pill tone-bad">Blocked</span>'
+                    : '<span class="pill tone-wait">Watching</span>'}</td>
+            </tr>`).join('')}</tbody></table>`
+          : '<div class="feed-empty">No failed attempts in the last day.</div>'}
+      </div>
+    </div>
+
+    <div class="card mt-5">
+      <div class="panel-head">
+        <div><div class="h-card">Every attempt</div>
+          <div class="sub">Newest first. Passwords and codes are never recorded —
+            only the username offered, the address, and what happened.</div></div>
+        <div class="panel-actions">
+          <button class="btn btn-soft" onclick="loadSecurity()">Refresh</button>
+        </div>
+      </div>
+      <div class="overflow-x-auto p-5 pt-4">
+        ${data.events.length ? `<table>
+          <thead><tr><th>When</th><th>Outcome</th><th>Username</th>
+            <th>Address</th><th>Device</th><th>Portal</th></tr></thead>
+          <tbody>${data.events.map(ev => {
+            const [label, tone] = LOGIN_TONE[ev.outcome] || [ev.outcome, 'tone-info'];
+            return `<tr>
+              <td>${e(ev.at)}</td>
+              <td><span class="pill ${tone}">${e(label)}</span></td>
+              <td>${e(ev.username || '—')}</td>
+              <td><span class="mono-cell">${e(ev.ip || '—')}</span>${
+                   ev.country ? ` <span class="badge">${e(ev.country)}</span>` : ''}</td>
+              <td>${e(briefAgent(ev.agent))}</td>
+              <td>${e(ev.portal || '—')}</td>
+            </tr>`; }).join('')}</tbody></table>`
+          : '<div class="feed-empty">Nothing recorded yet.</div>'}
+      </div>
+    </div>`;
+}
 
 /* ── The rail's progress card ────────────────────────────────────────────
    Registered, then baseline, then post: three steps of one funnel, each bar
