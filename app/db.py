@@ -932,6 +932,119 @@ async def department_full_report() -> dict:
     return {"summary": summary, "departments": departments}
 
 
+async def department_master_report() -> dict:
+    """Every question a student answered, and what they answered — Pre, Post
+    and Deeksharambh alike — grouped by department in the same descending
+    order as `department_registration_summary()`.
+
+    Unlike `department_full_report()` (done/not-done and a submission date),
+    this carries the raw answers themselves, so the workbook it feeds is a
+    full data dump rather than a completion tracker. Column sets are built
+    from every key actually seen across the whole cohort's submissions — the
+    scored Likert items first, in schema order, everything else after — so a
+    department tab never hides a question just because none of its own
+    students happened to be the one who answered it.
+    """
+    from app.hacri_e2_compat import SCHEMA
+    from app.orientation_analysis import QUESTIONS as ORI_QUESTIONS
+
+    db = get_db()
+
+    users_by_email: dict[str, dict] = {}
+    async for u in db[USERS].find({}):
+        email = (u.get("email") or "").strip().lower()
+        if email:
+            users_by_email[email] = u
+
+    async def _first_submission_full(collection: str, data_key: str) -> dict[str, dict]:
+        """Earliest submission per email, keeping both the timestamp and the
+        raw answers behind it."""
+        out: dict[str, dict] = {}
+        async for doc in db[collection].find({}, {"email": 1, "submitted_at": 1, data_key: 1}):
+            email = (doc.get("email") or "").strip().lower()
+            if not email:
+                continue
+            when = doc.get("submitted_at")
+            payload = doc.get(data_key) or {}
+            prev = out.get(email)
+            if prev is None or (isinstance(when, datetime) and isinstance(prev["at"], datetime)
+                                and when < prev["at"]):
+                out[email] = {"at": when, "data": payload}
+        return out
+
+    pre_sub = await _first_submission_full(PRE, "fields")
+    post_sub = await _first_submission_full(POST, "fields")
+    ori_sub = await _first_submission_full(ORI, "data")
+
+    def _ordered_keys(subs: dict[str, dict], preferred: list[str]) -> list[str]:
+        ordered = list(dict.fromkeys(preferred))
+        ordered_set = set(ordered)
+        extra: set[str] = set()
+        for entry in subs.values():
+            extra.update(entry["data"].keys())
+        ordered.extend(sorted(extra - ordered_set))
+        return ordered
+
+    schema_keys = list(SCHEMA.keys())
+    pre_keys = _ordered_keys(pre_sub, schema_keys)
+    post_keys = _ordered_keys(post_sub, schema_keys)
+    orientation_keys = _ordered_keys(ori_sub, list(ORI_QUESTIONS.keys()))
+
+    by_dept: dict[str, list[dict]] = {}
+    for email, u in users_by_email.items():
+        dept = (u.get("program") or "").strip() or "Other"
+        status = u.get("status")
+        by_dept.setdefault(dept, []).append({
+            "name": u.get("name") or "",
+            "email": u.get("email") or email,
+            "level": (u.get("ug_or_pg") or "ug").upper(),
+            "registered_at": u.get("created_at"),
+            "pre_done": status in (STATUS_PRE_DONE, STATUS_POST_DONE),
+            "pre_at": pre_sub.get(email, {}).get("at"),
+            "pre_fields": pre_sub.get(email, {}).get("data", {}),
+            "post_done": status == STATUS_POST_DONE,
+            "post_at": post_sub.get(email, {}).get("at"),
+            "post_fields": post_sub.get(email, {}).get("data", {}),
+            "orientation_done": email in ori_sub,
+            "orientation_at": ori_sub.get(email, {}).get("at"),
+            "orientation_data": ori_sub.get(email, {}).get("data", {}),
+        })
+
+    # A Deeksharambh reply from an email with no registration record at all —
+    # counted under "Other" in the summary, so it belongs on that tab too.
+    for email, entry in ori_sub.items():
+        if email in users_by_email:
+            continue
+        by_dept.setdefault("Other", []).append({
+            "name": "", "email": email, "level": "—", "registered_at": None,
+            "pre_done": False, "pre_at": None, "pre_fields": {},
+            "post_done": False, "post_at": None, "post_fields": {},
+            "orientation_done": True, "orientation_at": entry.get("at"),
+            "orientation_data": entry.get("data", {}),
+        })
+
+    summary = await department_registration_summary()
+    order = [r["dept"] for r in summary["departments"]]
+
+    departments = []
+    for dept in order:
+        students = sorted(by_dept.get(dept, []),
+                          key=lambda r: (r["name"] or r["email"]).lower())
+        departments.append({"dept": dept, "students": students})
+
+    orientation_labels = {k: ORI_QUESTIONS.get(k, (k, "", None))[0] for k in orientation_keys}
+
+    return {
+        "summary": summary,
+        "departments": departments,
+        "pre_keys": pre_keys,
+        "post_keys": post_keys,
+        "schema_keys": schema_keys,
+        "orientation_keys": orientation_keys,
+        "orientation_labels": orientation_labels,
+    }
+
+
 
 async def get_dept_students(dept: str) -> list[dict]:
     """Return all students for a given department with their pre/post status."""

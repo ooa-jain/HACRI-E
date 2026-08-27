@@ -1927,6 +1927,33 @@ async def admin_export_full_report(request: Request):
     )
 
 
+@router.get("/admin/survey/export-all-data")
+async def admin_export_all_data(request: Request):
+    """The heaviest export: department tabs carrying the actual
+    question-by-question answers behind the Full report's done/pending —
+    Pre, Post and Deeksharambh alike — plus the literacy/readiness scores
+    derived from them.
+    """
+    if not _is_survey_admin(request):
+        raise HTTPException(status_code=403)
+
+    from app.db import department_master_report
+    from app.excel_export import generate_master_data_excel
+    from app.routes.shared_analysis import _in_thread
+
+    report = await department_master_report()
+    generated_at = datetime.now().strftime("%d %b %Y, %H:%M")
+    book = await _in_thread(generate_master_data_excel, report,
+                            generated_at=generated_at)
+
+    filename = f"Deeksharambh_All_Data_{datetime.now():%Y%m%d}.xlsx"
+    return StreamingResponse(
+        io.BytesIO(book),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
 @router.get("/admin/survey/export-cohort")
 async def admin_export_cohort(
     request: Request,

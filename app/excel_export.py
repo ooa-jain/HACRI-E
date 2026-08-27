@@ -15,6 +15,8 @@ from openpyxl.utils import get_column_letter
 from openpyxl.chart import BarChart, PieChart, Reference
 from openpyxl.chart.label import DataLabelList
 
+from app.scoring import score_for_user
+
 # The only columns the roster sheets carry.
 ROSTER_HEADERS = ["Name", "Email", "Department", "Level", "Education Type"]
 _COLUMN_WIDTHS = [26, 32, 38, 10, 22]
@@ -524,6 +526,175 @@ def generate_full_report_excel(report: dict, *, generated_at: str = "") -> bytes
         _write_department_sheet(
             wb, st, used_names, dept,
             row_by_dept.get(dept, {}), entry.get("students") or [],
+        )
+
+    buffer = io.BytesIO()
+    wb.save(buffer)
+    return buffer.getvalue()
+
+
+def _fmt_answer(value):
+    """One cell's worth of an answer, whatever shape it was stored in.
+
+    Sliders and single-choice questions store a bare value; checkboxes and
+    multi-selects store a list; the two Deeksharambh matrix questions store a
+    {statement: answer} map. All three need to end up readable in one cell.
+    """
+    if value is None or value == "":
+        return "—"
+    if isinstance(value, list):
+        return "; ".join(str(x) for x in value) if value else "—"
+    if isinstance(value, dict):
+        return "; ".join(f"{k}: {v}" for k, v in value.items()) if value else "—"
+    return value
+
+
+def _write_master_department_sheet(
+    wb, st, used_names: set[str], dept: str, row: dict, students: list[dict],
+    pre_keys: list[str], post_keys: list[str], schema_keys: list[str],
+    orientation_keys: list[str], orientation_labels: dict[str, str],
+) -> None:
+    """One tab per department: its summary row, then every student's answers
+    — not just whether they filled Pre/Post/Deeksharambh, but exactly what
+    they said, question by question, plus the literacy/readiness scores
+    those Pre and Post answers work out to.
+    """
+    ws = wb.create_sheet(_safe_sheet_name(dept, used_names))
+
+    ws["A1"] = dept
+    ws["A1"].font = st["title_font"]
+    ws["A2"] = (
+        f"Registered {row.get('registered', 0)} · Baseline {row.get('pre_done', 0)} done, "
+        f"{row.get('pre_pending', 0)} pending · Post survey {row.get('post_done', 0)} done, "
+        f"{row.get('post_pending', 0)} pending · Deeksharambh {row.get('orientation_done', 0)} done, "
+        f"{row.get('orientation_pending', 0)} pending"
+    )
+    ws["A2"].font = st["normal_font"]
+
+    base_headers = ["Name", "Email", "Level", "Registered", "Baseline done", "Baseline date",
+                    "Post survey done", "Post survey date", "Deeksharambh done", "Deeksharambh date"]
+    score_headers = ["PRE Literacy", "PRE Readiness", "PRE Quadrant", "PRE Band",
+                      "POST Literacy", "POST Readiness", "POST Quadrant", "POST Band",
+                      "Δ Literacy", "Δ Readiness", "Movement"]
+    pre_headers = [f"PRE {k}" for k in pre_keys]
+    post_headers = [f"POST {k}" for k in post_keys]
+    delta_headers = [f"Δ {k}" for k in schema_keys]
+    ori_headers = [f"Deeksharambh: {orientation_labels.get(k, k)}" for k in orientation_keys]
+    headers = base_headers + score_headers + pre_headers + post_headers + delta_headers + ori_headers
+
+    header_row = 4
+    for col_idx, text in enumerate(headers, start=1):
+        cell = ws.cell(row=header_row, column=col_idx, value=text)
+        cell.font = st["white_font"]
+        cell.fill = st["navy"]
+        cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+    ws.row_dimensions[header_row].height = 34
+
+    def _fmt_dt(when) -> str:
+        try:
+            return when.strftime("%d %b %Y, %H:%M")
+        except AttributeError:
+            return "—"
+
+    for row_idx, s in enumerate(students, start=header_row + 1):
+        pre_f = s.get("pre_fields") or {}
+        post_f = s.get("post_fields") or {}
+        ori_d = s.get("orientation_data") or {}
+
+        pre_score = score_for_user(pre_f)
+        post_score = score_for_user(post_f)
+        d_lit = (round(post_score["lit"] - pre_score["lit"], 3)
+                 if pre_score["lit"] is not None and post_score["lit"] is not None else None)
+        d_read = (round(post_score["read"] - pre_score["read"], 3)
+                  if pre_score["read"] is not None and post_score["read"] is not None else None)
+        if d_lit is not None and d_read is not None:
+            if d_lit > 0 and d_read > 0:
+                movement = "Champion gain"
+            elif d_lit < 0 and d_read < 0:
+                movement = "Decline"
+            else:
+                movement = "Mixed change"
+        else:
+            movement = "Insufficient data"
+
+        values = [
+            s.get("name") or "—", s.get("email") or "—", s.get("level") or "—",
+            _fmt_dt(s.get("registered_at")),
+            "Yes" if s.get("pre_done") else "No", _fmt_dt(s.get("pre_at")),
+            "Yes" if s.get("post_done") else "No", _fmt_dt(s.get("post_at")),
+            "Yes" if s.get("orientation_done") else "No", _fmt_dt(s.get("orientation_at")),
+            pre_score["lit"] if pre_score["lit"] is not None else "—",
+            pre_score["read"] if pre_score["read"] is not None else "—",
+            pre_score["quadrant"] or "—", pre_score["band"] or "—",
+            post_score["lit"] if post_score["lit"] is not None else "—",
+            post_score["read"] if post_score["read"] is not None else "—",
+            post_score["quadrant"] or "—", post_score["band"] or "—",
+            d_lit if d_lit is not None else "—", d_read if d_read is not None else "—", movement,
+        ]
+        values += [_fmt_answer(pre_f.get(k)) for k in pre_keys]
+        values += [_fmt_answer(post_f.get(k)) for k in post_keys]
+        for k in schema_keys:
+            pv, ov = pre_f.get(k), post_f.get(k)
+            try:
+                pv_n = int(pv) if pv not in (None, "") else None
+                ov_n = int(ov) if ov not in (None, "") else None
+                values.append(ov_n - pv_n if pv_n is not None and ov_n is not None else "—")
+            except (TypeError, ValueError):
+                values.append("—")
+        values += [_fmt_answer(ori_d.get(k)) for k in orientation_keys]
+
+        for col_idx, value in enumerate(values, start=1):
+            cell = ws.cell(row=row_idx, column=col_idx, value=value)
+            cell.font = st["normal_font"]
+            cell.alignment = Alignment(horizontal="left" if col_idx in (1, 2) else "center")
+
+    if not students:
+        cell = ws.cell(row=header_row + 1, column=1, value="No students in this department")
+        cell.font = st["normal_font"]
+
+    ws.column_dimensions["A"].width = 26
+    ws.column_dimensions["B"].width = 32
+    for col_idx in range(3, len(headers) + 1):
+        ws.column_dimensions[get_column_letter(col_idx)].width = 14
+    # Rows 1-4 (title, subtitle, blank, header) and columns A-B (name, email)
+    # stay put — the only way a sheet this wide stays navigable.
+    ws.freeze_panes = ws.cell(row=header_row + 1, column=3)
+    last_row = header_row + len(students) if students else header_row + 1
+    ws.auto_filter.ref = f"A{header_row}:{get_column_letter(len(headers))}{last_row}"
+
+
+def generate_master_data_excel(report: dict, *, generated_at: str = "") -> bytes:
+    """The heaviest export: Overview, Charts, then one tab per department
+    with not just who has done what but exactly what they answered — every
+    Pre, Post and Deeksharambh question, plus the Pre/Post literacy and
+    readiness scores those answers work out to — so nothing behind the
+    summary numbers has to be looked up anywhere else.
+
+    `report` is a `department_master_report()` result.
+    """
+    st = _styles()
+    wb = Workbook()
+    wb.remove(wb.active)
+
+    summary = report.get("summary") or {}
+    rows = summary.get("departments") or []
+    totals = summary.get("totals") or {}
+
+    overview = wb.create_sheet("Overview")
+    _fill_department_summary_sheet(overview, st, summary, generated_at)
+
+    _write_charts_sheet(wb, st, rows, totals)
+
+    row_by_dept = {r["dept"]: r for r in rows}
+    used_names: set[str] = {"overview", "charts"}
+    for entry in report.get("departments") or []:
+        dept = entry["dept"]
+        _write_master_department_sheet(
+            wb, st, used_names, dept, row_by_dept.get(dept, {}),
+            entry.get("students") or [],
+            report.get("pre_keys") or [], report.get("post_keys") or [],
+            report.get("schema_keys") or [], report.get("orientation_keys") or [],
+            report.get("orientation_labels") or {},
         )
 
     buffer = io.BytesIO()
