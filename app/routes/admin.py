@@ -1900,6 +1900,33 @@ async def admin_export_department_summary(request: Request):
     )
 
 
+@router.get("/admin/survey/export-full-report")
+async def admin_export_full_report(request: Request):
+    """The "whole report" workbook: overview, charts, then one tab per
+    department (descending by registered count) with that department's
+    summary and every student behind it — everything the overview page's
+    quicker exports offer, plus the roster-level detail, in one file.
+    """
+    if not _is_survey_admin(request):
+        raise HTTPException(status_code=403)
+
+    from app.db import department_full_report
+    from app.excel_export import generate_full_report_excel
+    from app.routes.shared_analysis import _in_thread
+
+    report = await department_full_report()
+    generated_at = datetime.now().strftime("%d %b %Y, %H:%M")
+    book = await _in_thread(generate_full_report_excel, report,
+                            generated_at=generated_at)
+
+    filename = f"Deeksharambh_Full_Report_{datetime.now():%Y%m%d}.xlsx"
+    return StreamingResponse(
+        io.BytesIO(book),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
 @router.get("/admin/survey/export-cohort")
 async def admin_export_cohort(
     request: Request,

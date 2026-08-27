@@ -851,6 +851,87 @@ async def department_registration_summary() -> dict:
     return {"departments": rows, "totals": totals}
 
 
+async def department_full_report() -> dict:
+    """Everything the "whole report in one Excel" export needs: the same
+    per-department totals as `department_registration_summary()`, plus every
+    student behind those totals, grouped by department and ordered the same
+    descending-by-registered way — so a reader opens the cohort tab, sees
+    which department to look at first, and finds it in the same position
+    among the per-department tabs.
+
+    Whether a student counts as done for Pre/Post is read off `users.status`
+    — the same field `department_registration_summary()` uses — so a
+    student's row here always agrees with their contribution to the summary
+    counts. The response collections only supply the *date* they submitted,
+    since `status` alone doesn't carry a timestamp.
+    """
+    db = get_db()
+
+    users_by_email: dict[str, dict] = {}
+    async for u in db[USERS].find({}):
+        email = (u.get("email") or "").strip().lower()
+        if email:
+            users_by_email[email] = u
+
+    async def _first_submission(collection: str) -> dict[str, datetime]:
+        """Earliest `submitted_at` per email — when a student first did it,
+        not their latest resubmission."""
+        at: dict[str, datetime] = {}
+        async for doc in db[collection].find({}, {"email": 1, "submitted_at": 1}):
+            email = (doc.get("email") or "").strip().lower()
+            when = doc.get("submitted_at")
+            if email and (email not in at or (
+                    isinstance(when, datetime) and isinstance(at[email], datetime)
+                    and when < at[email])):
+                at[email] = when
+        return at
+
+    pre_at = await _first_submission(PRE)
+    post_at = await _first_submission(POST)
+    ori_at = await _first_submission(ORI)
+
+    by_dept: dict[str, list[dict]] = {}
+    for email, u in users_by_email.items():
+        dept = (u.get("program") or "").strip() or "Other"
+        status = u.get("status")
+        pre_done = status in (STATUS_PRE_DONE, STATUS_POST_DONE)
+        post_done = status == STATUS_POST_DONE
+        by_dept.setdefault(dept, []).append({
+            "name": u.get("name") or "",
+            "email": u.get("email") or email,
+            "level": (u.get("ug_or_pg") or "ug").upper(),
+            "registered_at": u.get("created_at"),
+            "pre_done": pre_done, "pre_at": pre_at.get(email),
+            "post_done": post_done, "post_at": post_at.get(email),
+            "orientation_done": email in ori_at, "orientation_at": ori_at.get(email),
+        })
+
+    # A Deeksharambh reply from an email with no registration record at all —
+    # counted under "Other" in the summary, so it belongs on that tab too.
+    for email, when in ori_at.items():
+        if email in users_by_email:
+            continue
+        by_dept.setdefault("Other", []).append({
+            "name": "", "email": email, "level": "—", "registered_at": None,
+            "pre_done": False, "pre_at": None, "post_done": False, "post_at": None,
+            "orientation_done": True, "orientation_at": when,
+        })
+
+    summary = await department_registration_summary()
+    # Already sorted descending by registered — the same order every tab in
+    # the workbook uses, so "top of the summary" and "first department tab"
+    # always mean the same department.
+    order = [r["dept"] for r in summary["departments"]]
+
+    departments = []
+    for dept in order:
+        students = sorted(by_dept.get(dept, []),
+                          key=lambda r: (r["name"] or r["email"]).lower())
+        departments.append({"dept": dept, "students": students})
+
+    return {"summary": summary, "departments": departments}
+
+
 
 async def get_dept_students(dept: str) -> list[dict]:
     """Return all students for a given department with their pre/post status."""

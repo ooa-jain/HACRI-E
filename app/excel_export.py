@@ -8,9 +8,12 @@ readable by the people who chase students.
 """
 from __future__ import annotations
 import io
+import re
 from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
+from openpyxl.chart import BarChart, PieChart, Reference
+from openpyxl.chart.label import DataLabelList
 
 # The only columns the roster sheets carry.
 ROSTER_HEADERS = ["Name", "Email", "Department", "Level", "Education Type"]
@@ -89,20 +92,12 @@ def _roster_sheet(wb, title: str, subtitle: str, users: list[dict], st, fill) ->
     ws.freeze_panes = ws.cell(row=header_row + 1, column=1)
 
 
-def generate_department_summary_excel(summary: dict, *, generated_at: str = "") -> bytes:
-    """One sheet, one row per department: Registered, Pre, Post, Deeksharambh.
+def _fill_department_summary_sheet(ws, st, summary: dict, generated_at: str = "") -> None:
+    """Write the Registered/Pre/Post/Deeksharambh table into `ws`.
 
-    The single-tab export the overview page offers — every department's four
-    headline counts side by side, so a reader can scan or sort the whole
-    cohort without opening a report per department. `summary` is a
-    `department_registration_summary()` result; the numbers are not
-    recomputed here.
+    Shared by the standalone single-tab export and the "Overview" tab of the
+    full report, so the two can never drift apart on numbers or layout.
     """
-    st = _styles()
-    wb = Workbook()
-    ws = wb.active
-    ws.title = "Department Summary"
-
     ws["A1"] = "Deeksharambh 2026 — Department Summary"
     ws["A1"].font = st["title_font"]
     ws["A2"] = f"Registered, baseline, post survey and Deeksharambh, per department."                + (f"  Generated {generated_at}." if generated_at else "")
@@ -155,6 +150,22 @@ def generate_department_summary_excel(summary: dict, *, generated_at: str = "") 
         ws.column_dimensions[get_column_letter(col_idx)].width = width
     ws.freeze_panes = ws.cell(row=header_row + 2, column=1)
     ws.auto_filter.ref = f"A{header_row}:H{header_row + len(rows) + 1}"
+
+
+def generate_department_summary_excel(summary: dict, *, generated_at: str = "") -> bytes:
+    """One sheet, one row per department: Registered, Pre, Post, Deeksharambh.
+
+    The single-tab export the overview page offers — every department's four
+    headline counts side by side, so a reader can scan or sort the whole
+    cohort without opening a report per department. `summary` is a
+    `department_registration_summary()` result; the numbers are not
+    recomputed here.
+    """
+    st = _styles()
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Department Summary"
+    _fill_department_summary_sheet(ws, st, summary, generated_at)
 
     buffer = io.BytesIO()
     wb.save(buffer)
@@ -319,3 +330,202 @@ def _write_dept_breakdown(wb, dept_rows, navy_fill, gold_fill, gray_fill,
     for col_idx in range(2, len(headers) + 1):
         ws.column_dimensions[get_column_letter(col_idx)].width = 15
     ws.freeze_panes = ws.cell(row=header_row + 1, column=1)
+
+
+def _safe_sheet_name(name: str, used: set[str]) -> str:
+    """A legal, unique Excel sheet name derived from a department name.
+
+    Excel forbids `\\ / * ? : [ ]` in sheet names and caps them at 31
+    characters; several department names in this cohort are longer than
+    that, and some pairs (UG/PG variants of the same department) are
+    identical once truncated. `used` tracks names already claimed
+    (lowercased) across the workbook so a collision gets a numeric suffix
+    instead of silently overwriting the earlier sheet.
+    """
+    cleaned = re.sub(r'[\\/*?:\[\]]', "", name or "").strip() or "Department"
+    base = cleaned[:31]
+    candidate = base
+    suffix_n = 2
+    while candidate.lower() in used:
+        suffix = f" ({suffix_n})"
+        candidate = base[: 31 - len(suffix)] + suffix
+        suffix_n += 1
+    used.add(candidate.lower())
+    return candidate
+
+
+def _write_charts_sheet(wb, st, rows: list[dict], totals: dict) -> None:
+    """"Charts" tab: cohort completion split (pie) and per-department
+    volumes (bar), both driven by small backing tables on the same sheet
+    so the charts stay editable in Excel rather than baked-in images.
+    """
+    ws = wb.create_sheet("Charts")
+    ws["A1"] = "Deeksharambh 2026 — Charts"
+    ws["A1"].font = st["title_font"]
+    ws["A2"] = "Cohort completion split and per-department volumes"
+    ws["A2"].font = st["normal_font"]
+
+    # --- Pie: cohort completion split ---------------------------------
+    registered = totals.get("registered", 0)
+    pre_done = totals.get("pre_done", 0)
+    post_done = totals.get("post_done", 0)
+    pie_data = [
+        ("Both surveys done", post_done),
+        ("Baseline only", max(0, pre_done - post_done)),
+        ("Not started baseline", max(0, registered - pre_done)),
+    ]
+    pie_header_row = 4
+    ws.cell(row=pie_header_row, column=1, value="Status").font = st["white_font"]
+    ws.cell(row=pie_header_row, column=1).fill = st["navy"]
+    ws.cell(row=pie_header_row, column=2, value="Students").font = st["white_font"]
+    ws.cell(row=pie_header_row, column=2).fill = st["navy"]
+    for i, (label, value) in enumerate(pie_data, start=pie_header_row + 1):
+        ws.cell(row=i, column=1, value=label).font = st["normal_font"]
+        ws.cell(row=i, column=2, value=value).font = st["normal_font"]
+    pie_last_row = pie_header_row + len(pie_data)
+
+    pie = PieChart()
+    pie.title = "Cohort completion split"
+    pie_labels = Reference(ws, min_col=1, min_row=pie_header_row + 1, max_row=pie_last_row)
+    pie_values = Reference(ws, min_col=2, min_row=pie_header_row, max_row=pie_last_row)
+    pie.add_data(pie_values, titles_from_data=True)
+    pie.set_categories(pie_labels)
+    pie.dataLabels = DataLabelList()
+    pie.dataLabels.showPercent = True
+    pie.height, pie.width = 9, 14
+    ws.add_chart(pie, "D4")
+
+    # --- Bar: registered / baseline / post / Deeksharambh per department --
+    bar_header_row = pie_last_row + 3
+    bar_headers = ["Department", "Registered", "Baseline done", "Post survey done", "Deeksharambh done"]
+    for col_idx, text in enumerate(bar_headers, start=1):
+        cell = ws.cell(row=bar_header_row, column=col_idx, value=text)
+        cell.font = st["white_font"]
+        cell.fill = st["navy"]
+        cell.alignment = Alignment(horizontal="center", wrap_text=True)
+
+    for i, row in enumerate(rows, start=bar_header_row + 1):
+        ws.cell(row=i, column=1, value=row["dept"]).font = st["normal_font"]
+        ws.cell(row=i, column=2, value=row.get("registered", 0)).font = st["normal_font"]
+        ws.cell(row=i, column=3, value=row.get("pre_done", 0)).font = st["normal_font"]
+        ws.cell(row=i, column=4, value=row.get("post_done", 0)).font = st["normal_font"]
+        ws.cell(row=i, column=5, value=row.get("orientation_done", 0)).font = st["normal_font"]
+    bar_last_row = bar_header_row + len(rows)
+
+    if rows:
+        bar = BarChart()
+        bar.type = "bar"
+        bar.title = "Departments by registered — descending"
+        bar.y_axis.title = "Students"
+        bar.x_axis.title = "Department"
+        data = Reference(ws, min_col=2, max_col=5, min_row=bar_header_row, max_row=bar_last_row)
+        cats = Reference(ws, min_col=1, min_row=bar_header_row + 1, max_row=bar_last_row)
+        bar.add_data(data, titles_from_data=True)
+        bar.set_categories(cats)
+        # openpyxl's x_axis is always the category axis (regardless of
+        # bar vs col orientation) — reversing it puts the top row of the
+        # backing table, the highest-registered department, at the top
+        # of the chart instead of the bottom.
+        bar.x_axis.scaling.orientation = "maxMin"
+        bar.height = max(9, 1.1 * len(rows))
+        bar.width = 22
+        ws.add_chart(bar, f"D{pie_last_row + 3}")
+
+    ws.column_dimensions["A"].width = 40
+    for col in "BCDE":
+        ws.column_dimensions[col].width = 16
+
+
+def _write_department_sheet(wb, st, used_names: set[str], dept: str, row: dict, students: list[dict]) -> None:
+    """One tab per department: its summary row, then every student behind it."""
+    ws = wb.create_sheet(_safe_sheet_name(dept, used_names))
+
+    ws["A1"] = dept
+    ws["A1"].font = st["title_font"]
+    ws["A2"] = (
+        f"Registered {row.get('registered', 0)} · Baseline {row.get('pre_done', 0)} done, "
+        f"{row.get('pre_pending', 0)} pending · Post survey {row.get('post_done', 0)} done, "
+        f"{row.get('post_pending', 0)} pending · Deeksharambh {row.get('orientation_done', 0)} done, "
+        f"{row.get('orientation_pending', 0)} pending"
+    )
+    ws["A2"].font = st["normal_font"]
+
+    headers = ["Name", "Email", "Level", "Registered", "Baseline done", "Baseline date",
+               "Post survey done", "Post survey date", "Deeksharambh done", "Deeksharambh date"]
+    header_row = 4
+    for col_idx, text in enumerate(headers, start=1):
+        cell = ws.cell(row=header_row, column=col_idx, value=text)
+        cell.font = st["white_font"]
+        cell.fill = st["navy"]
+        cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+        cell.border = st["border"]
+    ws.row_dimensions[header_row].height = 30
+
+    def _fmt(when) -> str:
+        try:
+            return when.strftime("%d %b %Y, %H:%M")
+        except AttributeError:
+            return "—"
+
+    for row_idx, s in enumerate(students, start=header_row + 1):
+        values = [
+            s.get("name") or "—",
+            s.get("email") or "—",
+            s.get("level") or "—",
+            _fmt(s.get("registered_at")),
+            "Yes" if s.get("pre_done") else "No", _fmt(s.get("pre_at")),
+            "Yes" if s.get("post_done") else "No", _fmt(s.get("post_at")),
+            "Yes" if s.get("orientation_done") else "No", _fmt(s.get("orientation_at")),
+        ]
+        for col_idx, value in enumerate(values, start=1):
+            cell = ws.cell(row=row_idx, column=col_idx, value=value)
+            cell.font = st["normal_font"]
+            cell.border = st["border"]
+            cell.alignment = Alignment(horizontal="left" if col_idx in (1, 2) else "center")
+
+    if not students:
+        cell = ws.cell(row=header_row + 1, column=1, value="No students in this department")
+        cell.font = st["normal_font"]
+
+    widths = [26, 32, 8, 18, 12, 18, 14, 18, 16, 18]
+    for col_idx, width in enumerate(widths, start=1):
+        ws.column_dimensions[get_column_letter(col_idx)].width = width
+    ws.freeze_panes = ws.cell(row=header_row + 1, column=1)
+    ws.auto_filter.ref = f"A{header_row}:J{header_row + len(students)}"
+
+
+def generate_full_report_excel(report: dict, *, generated_at: str = "") -> bytes:
+    """The "whole report in one Excel": overview, charts, then one tab per
+    department (descending by registered count) with that department's
+    summary and every student behind it.
+
+    `report` is a `department_full_report()` result — `summary` (the same
+    shape `generate_department_summary_excel` consumes) plus `departments`
+    (each department's student list, already in the same descending order
+    as the summary rows).
+    """
+    st = _styles()
+    wb = Workbook()
+    wb.remove(wb.active)
+
+    summary = report.get("summary") or {}
+    rows = summary.get("departments") or []
+    totals = summary.get("totals") or {}
+
+    overview = wb.create_sheet("Overview")
+    _fill_department_summary_sheet(overview, st, summary, generated_at)
+
+    _write_charts_sheet(wb, st, rows, totals)
+
+    row_by_dept = {r["dept"]: r for r in rows}
+    used_names: set[str] = {"overview", "charts"}
+    for entry in report.get("departments") or []:
+        dept = entry["dept"]
+        _write_department_sheet(
+            wb, st, used_names, dept,
+            row_by_dept.get(dept, {}), entry.get("students") or [],
+        )
+
+    buffer = io.BytesIO()
+    wb.save(buffer)
+    return buffer.getvalue()
