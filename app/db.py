@@ -780,6 +780,77 @@ async def get_dept_stats() -> list[dict]:
     return data["departments"]
 
 
+async def department_registration_summary() -> dict:
+    """One row per department: registered, baseline, post survey, Deeksharambh.
+
+    Built for the single-tab export the admin overview offers — every count on
+    one row, drawn from the same student → department map, so the four
+    columns can be read side by side without the department itself drifting
+    between them. `get_dept_analysis_data()` computes registered/pre/post the
+    same way but as three sheets; this adds the fourth figure (Deeksharambh)
+    and flattens all four onto one row per department instead.
+
+    A student counts once in `orientation_done` no matter how many times they
+    resubmitted the form — distinct emails, not response rows.
+    """
+    db = get_db()
+
+    email_to_dept: dict[str, str] = {}
+    counts: dict[str, dict[str, int]] = {}
+
+    def bucket(dept: str) -> dict:
+        return counts.setdefault(dept, {
+            "registered": 0, "pre_done": 0, "post_done": 0, "orientation_done": 0,
+        })
+
+    async for u in db[USERS].find({}, {"email": 1, "program": 1, "status": 1}):
+        email = (u.get("email") or "").strip().lower()
+        if not email:
+            continue
+        dept = (u.get("program") or "").strip() or "Other"
+        email_to_dept[email] = dept
+        row = bucket(dept)
+        row["registered"] += 1
+        status = u.get("status")
+        if status in (STATUS_PRE_DONE, STATUS_POST_DONE):
+            row["pre_done"] += 1
+        if status == STATUS_POST_DONE:
+            row["post_done"] += 1
+
+    seen_ori: set[str] = set()
+    async for doc in db[ORI].find({}, {"email": 1}):
+        email = (doc.get("email") or "").strip().lower()
+        if not email or email in seen_ori:
+            continue
+        seen_ori.add(email)
+        # A reply from a student we have no registration record for still
+        # counts — filed under "Other" rather than dropped, the same rule the
+        # rest of this file uses for an unmatched program.
+        bucket(email_to_dept.get(email, "Other"))["orientation_done"] += 1
+
+    rows = []
+    for dept, c in counts.items():
+        reg = c["registered"]
+        rows.append({
+            "dept": dept,
+            "registered": reg,
+            "pre_done": c["pre_done"],
+            "pre_pending": max(0, reg - c["pre_done"]),
+            "post_done": c["post_done"],
+            "post_pending": max(0, c["pre_done"] - c["post_done"]),
+            "orientation_done": c["orientation_done"],
+            "orientation_pending": max(0, reg - c["orientation_done"]),
+        })
+    rows.sort(key=lambda r: (-r["registered"], r["dept"].lower()))
+
+    totals = {
+        key: sum(r[key] for r in rows)
+        for key in ("registered", "pre_done", "pre_pending", "post_done",
+                    "post_pending", "orientation_done", "orientation_pending")
+    }
+    return {"departments": rows, "totals": totals}
+
+
 
 async def get_dept_students(dept: str) -> list[dict]:
     """Return all students for a given department with their pre/post status."""

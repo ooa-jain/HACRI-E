@@ -25,6 +25,7 @@ OTP Login for Survey Admin:
   POST /admin/login               → verifies OTP (or static password for orientation)
 """
 from __future__ import annotations
+import io
 import logging
 import secrets
 import time
@@ -1870,6 +1871,33 @@ async def api_send_results(
     from app.routes.surveys import _after_post_submit
     background_tasks.add_task(_after_post_submit, user["email"], user["name"])
     return JSONResponse({"ok": True, "message": f"Results email queued for {email}"})
+
+
+@router.get("/admin/survey/export-department-summary")
+async def admin_export_department_summary(request: Request):
+    """One workbook, one sheet: Registered / Baseline / Post / Deeksharambh,
+    department by department. The single-tab export the overview page offers
+    next to the roster export — a scan-and-sort view of the whole cohort
+    rather than a report per department.
+    """
+    if not _is_survey_admin(request):
+        raise HTTPException(status_code=403)
+
+    from app.db import department_registration_summary
+    from app.excel_export import generate_department_summary_excel
+    from app.routes.shared_analysis import _in_thread
+
+    summary = await department_registration_summary()
+    generated_at = datetime.now().strftime("%d %b %Y, %H:%M")
+    book = await _in_thread(generate_department_summary_excel, summary,
+                            generated_at=generated_at)
+
+    filename = f"Deeksharambh_Department_Summary_{datetime.now():%Y%m%d}.xlsx"
+    return StreamingResponse(
+        io.BytesIO(book),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @router.get("/admin/survey/export-cohort")

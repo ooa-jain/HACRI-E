@@ -89,6 +89,78 @@ def _roster_sheet(wb, title: str, subtitle: str, users: list[dict], st, fill) ->
     ws.freeze_panes = ws.cell(row=header_row + 1, column=1)
 
 
+def generate_department_summary_excel(summary: dict, *, generated_at: str = "") -> bytes:
+    """One sheet, one row per department: Registered, Pre, Post, Deeksharambh.
+
+    The single-tab export the overview page offers — every department's four
+    headline counts side by side, so a reader can scan or sort the whole
+    cohort without opening a report per department. `summary` is a
+    `department_registration_summary()` result; the numbers are not
+    recomputed here.
+    """
+    st = _styles()
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Department Summary"
+
+    ws["A1"] = "Deeksharambh 2026 — Department Summary"
+    ws["A1"].font = st["title_font"]
+    ws["A2"] = f"Registered, baseline, post survey and Deeksharambh, per department."                + (f"  Generated {generated_at}." if generated_at else "")
+    ws["A2"].font = st["normal_font"]
+
+    headers = ["Department", "Registered",
+               "Baseline done", "Baseline pending",
+               "Post survey done", "Post survey pending",
+               "Deeksharambh done", "Deeksharambh pending"]
+    header_row = 4
+    for col_idx, text in enumerate(headers, start=1):
+        cell = ws.cell(row=header_row, column=col_idx, value=text)
+        cell.font = st["white_font"]
+        cell.fill = st["navy"]
+        cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+        cell.border = st["border"]
+    ws.row_dimensions[header_row].height = 32
+
+    rows = summary.get("departments") or []
+    totals = summary.get("totals") or {}
+
+    def _row(row_idx, dept, r, *, bold=False, fill=None):
+        values = [
+            dept, r.get("registered", 0),
+            r.get("pre_done", 0), r.get("pre_pending", 0),
+            r.get("post_done", 0), r.get("post_pending", 0),
+            r.get("orientation_done", 0), r.get("orientation_pending", 0),
+        ]
+        for col_idx, value in enumerate(values, start=1):
+            cell = ws.cell(row=row_idx, column=col_idx, value=value)
+            cell.font = st["bold_font"] if bold else st["normal_font"]
+            cell.border = st["border"]
+            cell.alignment = Alignment(horizontal="left" if col_idx == 1 else "center")
+            if fill:
+                cell.fill = fill
+
+    # The cohort total leads, so a reader gets the whole picture before the
+    # per-department breakdown — and it stays visible under a frozen header
+    # even after the sheet is sorted, since freeze_panes below sits under it.
+    _row(header_row + 1, "All departments", totals, bold=True, fill=st["gray"])
+    for i, row in enumerate(rows, start=header_row + 2):
+        _row(i, row["dept"], row)
+
+    if not rows:
+        cell = ws.cell(row=header_row + 2, column=1, value="No departments registered yet")
+        cell.font = st["normal_font"]
+
+    widths = [40, 12, 14, 16, 17, 19, 18, 20]
+    for col_idx, width in enumerate(widths, start=1):
+        ws.column_dimensions[get_column_letter(col_idx)].width = width
+    ws.freeze_panes = ws.cell(row=header_row + 2, column=1)
+    ws.auto_filter.ref = f"A{header_row}:H{header_row + len(rows) + 1}"
+
+    buffer = io.BytesIO()
+    wb.save(buffer)
+    return buffer.getvalue()
+
+
 def generate_cohort_excel(
     dept_name: str,
     users_list: list[dict],
