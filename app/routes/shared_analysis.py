@@ -169,6 +169,10 @@ async def _department_breakdown_rows() -> list[dict]:
     mail_stats = {row["dept"]: row for row in await get_email_notification_stats()}
 
     from app.routes.post_link import dept_slug
+    from app.db import FLAG_POST_DELAY, get_setting_int, list_dept_post_delays
+
+    delays = await list_dept_post_delays()
+    portal_delay = await get_setting_int(FLAG_POST_DELAY, default=0)
 
     rows = []
     for item in analysis["departments"]:
@@ -198,6 +202,7 @@ async def _department_breakdown_rows() -> list[dict]:
             # The student-facing survey link, for drafting mails from the
             # directory page.
             "student_post_path": f"/post/{dept_slug(dept)}",
+            "post_delay_days": delays.get(dept, portal_delay),
         })
     return rows
 
@@ -212,7 +217,7 @@ async def shared_analysis_get(
     if not verify_token(dept, token, survey_type):
         raise HTTPException(status_code=403, detail="Access denied: Invalid or expired sharing link.")
 
-    from app.db import get_dept_analysis_data
+    from app.db import effective_post_delay, get_dept_analysis_data
     from app.routes.post_link import dept_slug
 
     analysis_data = await get_dept_analysis_data()
@@ -260,6 +265,7 @@ async def shared_analysis_get(
             "student_post_path": "/post/all" if _is_overall(dept)
                                  else f"/post/{dept_slug(dept)}",
             "mail_history": await _mail_history(dept),
+            "post_delay_days": await effective_post_delay(dept),
         }
     )
 
@@ -690,7 +696,7 @@ async def shared_departments_list(request: Request, token: str = Query(...)):
     if not hmac.compare_digest(get_directory_token(), token):
         raise HTTPException(status_code=403, detail="Access denied: Invalid or expired sharing link.")
 
-    from app.db import get_dept_analysis_data
+    from app.db import FLAG_POST_DELAY, get_dept_analysis_data, get_setting_int
 
     analysis_data = await get_dept_analysis_data()
     rows = await _department_breakdown_rows()
@@ -717,6 +723,7 @@ async def shared_departments_list(request: Request, token: str = Query(...)):
         "token_pre": ov.get("token_pre"),
         "token_post": ov.get("token_post"),
         "student_post_path": "/post/all",
+        "post_delay_days": await get_setting_int(FLAG_POST_DELAY, default=0),
     }
 
     # Each department also gets its own Deeksharambh link, locked to it.

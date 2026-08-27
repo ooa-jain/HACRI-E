@@ -27,6 +27,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from app.departments import DEPARTMENTS
 from app.db import (
     FLAG_PRE_SURVEY,
+    effective_post_delay,
     NO_DEPARTMENT,
     STATUS_POST_DONE,
     STATUS_PRE_DONE,
@@ -188,7 +189,7 @@ async def post_entry_post(request: Request, slug: str, email: str = Form(...)):
 
     # The post survey can still be time-locked after the baseline. Say so here
     # instead of bouncing the student to a page they cannot act on.
-    delay_days = await get_setting_int("post_delay_days", default=0)
+    delay_days = await effective_post_delay(user.get("program", "") or dept)
     if delay_days > 0:
         start = user.get("pre_submitted_at") or user.get("created_at")
         if isinstance(start, datetime):

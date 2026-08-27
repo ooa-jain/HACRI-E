@@ -347,6 +347,15 @@ body {
     <div class="action-info">
       <h2>{% if survey_type == 'post' %}Post-Workshop{% else %}Pre-Survey (Baseline){% endif %} Report & Exports</h2>
       <p>Download the PowerPoint deck, export detailed response sheets, or mail this report on.</p>
+      {% if survey_type == 'post' %}
+      <p style="margin-top:6px;font-weight:600;color:#0d2147">
+        {% if post_delay_days %}
+          Post survey opens {{ post_delay_days }} day{{ '' if post_delay_days == 1 else 's' }} after a student completes the baseline.
+        {% else %}
+          Post survey opens as soon as a student completes the baseline.
+        {% endif %}
+      </p>
+      {% endif %}
     </div>
     <div class="btn-group">
       <a href="/shared/analysis/export-excel?dept={{ dept|urlencode }}&token={{ token }}&type={{ survey_type }}" class="btn btn-green">
@@ -716,6 +725,7 @@ document.getElementById('btn-mail-report').addEventListener('click', () => {
     enc: encodeURIComponent({{ dept | tojson }}),
     token: {{ token | tojson }},
     studentPath: {{ student_post_path | tojson }},
+    delayDays: {{ post_delay_days | tojson }},
     stats: {
       registered: {{ total | tojson }},
       pre_done: {{ pre_done | tojson }},

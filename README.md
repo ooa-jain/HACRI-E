@@ -288,6 +288,21 @@ Entering through a post link counts as a personal invitation, so it works even
 while `post_survey_enabled` is off for everyone else (the same way a reminder
 email does).
 
+#### How long after the baseline the post survey opens
+
+Every row on the **Links** page has a **Post opens after** box: the number of
+days after a student finishes their baseline before their post survey unlocks.
+Leave it empty and the department follows the portal-wide delay set on the
+**Settings** page; type a number (0–365) and that department uses its own —
+`0` opens the post survey the moment the baseline is submitted.
+
+The number applies wherever the post survey is gated: the department post link,
+the `/survey/post` page and the submit endpoint all read it, so a student who
+arrives early is told the date theirs opens rather than let in. The shared
+department directory and the analysis report both state the wait next to the
+post link, and a mail drafted from either carries it in the link's description
+— so nobody hands out a link expecting it to open straight away.
+
 Department names live in `app/departments.py` — the registration dropdown, the
 link slugs and the admin table all read from that one list, so a link always
 files students under the exact official spelling. Add a department there and it

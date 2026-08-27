@@ -178,10 +178,16 @@
     const q = `dept=${ctx.enc}&token=${ctx.token}&type=${ctx.kind}`;
     const out = [];
     if (ctx.kind === 'post' && ctx.studentPath) {
+      const wait = Number(ctx.delayDays || 0);
       out.push({
         short: 'Post-workshop survey',
         label: `${ctx.dept} — Post-Workshop Survey`,
-        note: 'Students enter the email they registered with, and the survey opens straight away.',
+        // The department can hold the post survey shut for a few days after a
+        // student's baseline; say so on the link, so nobody shares it thinking
+        // it opens the moment it lands.
+        note: wait > 0
+          ? `Students enter the email they registered with. The survey opens ${wait} day${wait === 1 ? '' : 's'} after they complete the baseline.`
+          : 'Students enter the email they registered with, and the survey opens straight away.',
         url: `${origin}${ctx.studentPath}`,
       });
     }

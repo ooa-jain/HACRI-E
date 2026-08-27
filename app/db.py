@@ -281,6 +281,71 @@ async def get_setting_int(key: str, default: int = 0) -> int:
     return default
 
 
+# ── Per-department settings ───────────────────────────────────────────────────
+#
+# A department can open its post survey on its own schedule. The number stored
+# here is how many days after a student finishes the baseline their post survey
+# unlocks; without one, the portal-wide post_delay_days applies.
+DEPT_SETTINGS = "dept_settings"
+
+
+async def get_dept_post_delay(dept: str) -> int | None:
+    """Days this department waits after a student's baseline, or None."""
+    if not (dept or "").strip():
+        return None
+    doc = await get_db()[DEPT_SETTINGS].find_one({"dept": dept.strip()})
+    if doc and doc.get("post_delay_days") is not None:
+        try:
+            return max(0, int(doc["post_delay_days"]))
+        except (ValueError, TypeError):
+            pass
+    return None
+
+
+async def set_dept_post_delay(dept: str, days: int | None) -> None:
+    """Set, or clear with None so the portal-wide setting applies again."""
+    dept = (dept or "").strip()
+    if not dept:
+        return
+    if days is None:
+        await get_db()[DEPT_SETTINGS].update_one(
+            {"dept": dept},
+            {"$unset": {"post_delay_days": ""},
+             "$set": {"dept": dept, "updated_at": _now()}},
+            upsert=True,
+        )
+        return
+    await get_db()[DEPT_SETTINGS].update_one(
+        {"dept": dept},
+        {"$set": {"dept": dept, "post_delay_days": max(0, int(days)),
+                  "updated_at": _now()}},
+        upsert=True,
+    )
+
+
+async def list_dept_post_delays() -> dict[str, int]:
+    """Every department that has its own delay, as {dept: days}."""
+    out: dict[str, int] = {}
+    async for doc in get_db()[DEPT_SETTINGS].find({}):
+        dept = (doc.get("dept") or "").strip()
+        value = doc.get("post_delay_days")
+        if not dept or value is None:
+            continue
+        try:
+            out[dept] = max(0, int(value))
+        except (ValueError, TypeError):
+            continue
+    return out
+
+
+async def effective_post_delay(dept: str) -> int:
+    """The wait that actually applies to a student in this department."""
+    own = await get_dept_post_delay(dept)
+    if own is not None:
+        return own
+    return await get_setting_int(FLAG_POST_DELAY, default=0)
+
+
 async def set_flag(key: str, enabled: bool) -> None:
     await get_db()[FLAGS].update_one(
         {"key": key},

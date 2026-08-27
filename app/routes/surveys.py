@@ -23,6 +23,7 @@ from app import charts as chart_helpers
 from app import deps, emailer
 from app.db import (
     STATUS_POST_DONE,
+    effective_post_delay,
     STATUS_PRE_DONE,
     FLAG_SURVEY,
     FLAG_PRE_SURVEY,
@@ -395,7 +396,7 @@ async def post_get(
         if status_v not in (STATUS_PRE_DONE, STATUS_POST_DONE):
             return RedirectResponse(url="/survey/pre?msg=complete_pre_first", status_code=303)
 
-    delay_days = await get_setting_int("post_delay_days", default=0)
+    delay_days = await effective_post_delay(user.get("program", ""))
     if delay_days > 0:
         start_time = user.get("pre_submitted_at") or user.get("created_at")
         if start_time:
@@ -477,7 +478,7 @@ async def post_post(
         if status_v not in (STATUS_PRE_DONE, STATUS_POST_DONE):
             return RedirectResponse(url="/survey/pre?msg=complete_pre_first", status_code=303)
 
-    delay_days = await get_setting_int("post_delay_days", default=0)
+    delay_days = await effective_post_delay(user.get("program", ""))
     if delay_days > 0:
         start_time = user.get("pre_submitted_at") or user.get("created_at")
         if start_time:

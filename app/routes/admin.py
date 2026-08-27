@@ -672,12 +672,17 @@ async def api_survey_post_links(request: Request):
     if not _is_survey_admin(request):
         raise HTTPException(status_code=403)
 
-    from app.db import get_department_summary
+    from app.db import (
+        FLAG_POST_DELAY, get_department_summary, get_setting_int,
+        list_dept_post_delays,
+    )
     from app.departments import DEPARTMENTS
     from app.routes.post_link import ALL_SLUG, dept_post_url, dept_pre_url, dept_slug
 
     base_url = str(request.base_url).rstrip("/")
     summary = {row["dept"]: row for row in await get_department_summary()}
+    own_delays = await list_dept_post_delays()
+    portal_delay = await get_setting_int(FLAG_POST_DELAY, default=0)
 
     # Every official department gets links, even before anyone registers under
     # it — that is exactly when an admin needs the baseline link to hand out.
@@ -700,6 +705,10 @@ async def api_survey_post_links(request: Request):
             "pre_done": row["pre_done"],
             "post_done": row["post_done"],
             "pending_post": row["pending_post"],
+            # How long after their baseline this department's students wait.
+            # None means it follows the portal-wide setting.
+            "post_delay_days": own_delays.get(dept),
+            "effective_delay_days": own_delays.get(dept, portal_delay),
         })
 
     from app.routes.shared_analysis import directory_url
@@ -710,8 +719,46 @@ async def api_survey_post_links(request: Request):
         "pre_all_url": f"{base_url}/",
         # One shareable page covering every department at once.
         "directory_url": directory_url(base_url),
+        "portal_delay_days": portal_delay,
         "totals": totals,
         "links": links,
+    })
+
+
+@router.post("/admin/api/survey/post-delay")
+async def api_set_post_delay(request: Request):
+    """Set how many days after their baseline a department's post survey opens.
+
+    Sending null clears it, so that department follows the portal-wide setting
+    again.
+    """
+    if not _is_survey_admin(request):
+        raise HTTPException(status_code=403)
+
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid payload")
+
+    dept = (body.get("dept") or "").strip()
+    if not dept:
+        raise HTTPException(status_code=400, detail="Which department?")
+
+    raw = body.get("days")
+    if raw is None or raw == "":
+        days = None
+    else:
+        try:
+            days = max(0, min(365, int(raw)))
+        except (TypeError, ValueError):
+            raise HTTPException(status_code=400, detail="Days must be a number")
+
+    from app.db import FLAG_POST_DELAY, get_setting_int, set_dept_post_delay
+    await set_dept_post_delay(dept, days)
+    portal_delay = await get_setting_int(FLAG_POST_DELAY, default=0)
+    return JSONResponse({
+        "ok": True, "dept": dept, "post_delay_days": days,
+        "effective_delay_days": portal_delay if days is None else days,
     })
 
 

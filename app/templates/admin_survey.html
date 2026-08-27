@@ -2444,9 +2444,25 @@ function renderPostLinks() {
       <a href="${e(url)}" target="_blank" class="btn-xs ${tone}">Open</a>
     </div>`;
 
+  // How long after a student's baseline this department's post survey opens.
+  // Blank means it follows the portal-wide setting on the Settings page.
+  const delayCell = (row) => {
+    const portal = linkData.portal_delay_days || 0;
+    const own = row.post_delay_days;
+    return `
+      <div class="flex items-center gap-1.5">
+        <input type="number" min="0" max="365" class="field w-16 text-center"
+               value="${own === null || own === undefined ? '' : own}"
+               placeholder="${portal}" title="Days after the student's baseline"
+               onchange="saveDeptDelay(this, '${e(row.dept)}')">
+        <span class="text-[11px] text-slate-500">${own === null || own === undefined
+          ? `days (portal: ${portal})` : 'days'}</span>
+      </div>`;
+  };
+
   table('post-links-table',
     ['#', 'Department', 'Registered', 'Baseline done', 'Post done', 'Post pending',
-     '📝 Outcome Survey 1 — Baseline', '📊 Impact — Post Survey', ''],
+     'Post opens after', '📝 Outcome Survey 1 — Baseline', '📊 Impact — Post Survey', ''],
     rows, (row, i) => [
       i + 1,
       `<span class="font-semibold text-slate-900">${e(row.dept)}</span>`,
@@ -2454,10 +2470,33 @@ function renderPostLinks() {
       `<span class="font-bold text-blue-700">${row.pre_done}</span>`,
       `<span class="font-bold text-emerald-700">${row.post_done}</span>`,
       row.pending_post > 0 ? `<span class="badge b-amber">${row.pending_post} waiting</span>` : '<span class="badge b-gray">0</span>',
+      delayCell(row),
       linkCell(row.pre_url, 'btn-primary'),
       linkCell(row.post_url, 'btn-green'),
       `<button class="btn-xs btn-green" onclick="mailDept(this,'${e(row.dept)}')">Mail dept</button>`,
     ], 'No departments match this filter');
+}
+
+/** Save one department's wait; blank clears it back to the portal setting. */
+async function saveDeptDelay(input, dept) {
+  const raw = input.value.trim();
+  try {
+    const d = await api('/admin/api/survey/post-delay', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dept: dept, days: raw === '' ? null : raw }),
+    });
+    const row = linkData.links.find(l => l.dept === dept);
+    if (row) {
+      row.post_delay_days = d.post_delay_days;
+      row.effective_delay_days = d.effective_delay_days;
+    }
+    toast(d.post_delay_days === null
+      ? `${dept} follows the portal setting (${d.effective_delay_days} days)`
+      : `${dept}: post survey opens ${d.post_delay_days} day(s) after the baseline`);
+    renderPostLinks();
+  } catch (err) {
+    toast('Could not save that wait');
+  }
 }
 
 async function mailDept(btn, dept) {
