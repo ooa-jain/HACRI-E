@@ -2215,7 +2215,7 @@ const LOGIN_TONE = {
   success:         ['Signed in',        'tone-ok'],
   otp_requested:   ['Code sent',        'tone-info'],
   otp_undelivered: ['Code not emailed', 'tone-wait'],
-  bad_credentials: ['Wrong code',       'tone-bad'],
+  bad_credentials: ['Wrong password or code', 'tone-bad'],
   unknown_user:    ['Unknown username', 'tone-bad'],
   locked_out:      ['Blocked',          'tone-bad'],
 };
@@ -2276,20 +2276,23 @@ async function loadSecurity() {
         <span class="kpi-ico kpi-ico-gold">${icoSvg('shield')}</span>
         <span class="kpi-label">Blocked now</span></div>
         <div class="kpi-row"><b class="kpi-val">${s.locked}</b></div>
-        <div class="kpi-foot">${p.limit} failures in ${p.window_minutes} min → ${p.lock_minutes} min block</div></article>
+        <div class="kpi-foot">${s.blocked_by_hand
+          ? `${s.blocked_by_hand} blocked by hand · ${p.limit} failures in ${p.window_minutes} min blocks the rest`
+          : `${p.limit} failures in ${p.window_minutes} min → ${p.lock_minutes} min block`}</div></article>
     </div>
 
     <div class="card mt-5">
       <div class="panel-head">
         <div><div class="h-card">Addresses that failed</div>
           <div class="sub">Grouped by address, worst first. An address is turned away
-            automatically after ${p.limit} failures inside ${p.window_minutes} minutes.
+            automatically after ${p.limit} failures inside ${p.window_minutes} minutes —
+            <b>Block</b> shuts one out for as long as you choose instead.
             You are on <b>${e(data.you.ip || 'an address the proxy did not pass on')}</b>.</div></div>
       </div>
       <div class="overflow-x-auto p-5 pt-4">
         ${offenders.length ? `<table>
           <thead><tr><th>Address</th><th>Usernames tried</th><th class="num">Attempts</th>
-            <th class="num">Failed</th><th>Last seen</th><th>State</th></tr></thead>
+            <th class="num">Failed</th><th>Last seen</th><th>State</th><th></th></tr></thead>
           <tbody>${offenders.map(o => `
             <tr>
               <td><span class="mono-cell">${e(o.ip)}</span></td>
@@ -2297,11 +2300,55 @@ async function loadSecurity() {
               <td class="num">${o.attempts}</td>
               <td class="num"><b>${o.failures}</b></td>
               <td>${e(o.last)}</td>
-              <td>${o.locked
+              <td>${o.blocked_by_hand
+                    ? `<span class="pill tone-bad">Blocked by you</span>${
+                        o.block_until ? `<div class="sub">until ${e(o.block_until)}</div>` : ''}`
+                    : o.locked
                     ? '<span class="pill tone-bad">Blocked</span>'
                     : '<span class="pill tone-wait">Watching</span>'}</td>
+              <td>${o.ip === data.you.ip
+                    ? '<span class="sub">this is you</span>'
+                    : o.blocked_by_hand
+                    ? `<button class="btn btn-soft" data-unblock="${e(o.ip)}">Unblock</button>`
+                    : `<button class="btn btn-soft" data-block="${e(o.ip)}">Block</button>`}</td>
             </tr>`).join('')}</tbody></table>`
           : '<div class="feed-empty">No failed attempts in the last day.</div>'}
+      </div>
+    </div>
+
+    <div class="card mt-5">
+      <div class="panel-head">
+        <div><div class="h-card">Blocked by hand</div>
+          <div class="sub">Addresses you have shut out of the login. They stay out until
+            you lift the block or it runs out — the automatic ${p.lock_minutes}-minute
+            lock-out does not apply to them.</div></div>
+      </div>
+      <div class="p-5 pt-4 space-y-4">
+        <div class="flex flex-wrap items-end gap-2">
+          <div><label class="sub block mb-1">Address</label>
+            <input id="block-ip" class="field" style="width:190px" placeholder="e.g. 146.70.202.116"></div>
+          <div><label class="sub block mb-1">Why (optional)</label>
+            <input id="block-reason" class="field" style="width:260px" placeholder="e.g. SQL injection attempts"></div>
+          <div><label class="sub block mb-1">For how long</label>
+            <select id="block-hours" class="field" style="width:150px">
+              <option value="24">24 hours</option>
+              <option value="1">1 hour</option>
+              <option value="168">7 days</option>
+              <option value="forever" selected>Until I lift it</option>
+            </select></div>
+          <button class="btn btn-primary" data-block="">Block address</button>
+        </div>
+        ${(s.blocks || []).length ? `<div class="overflow-x-auto"><table>
+          <thead><tr><th>Address</th><th>Reason</th><th>Blocked</th><th>Until</th><th></th></tr></thead>
+          <tbody>${s.blocks.map(b => `
+            <tr>
+              <td><span class="mono-cell">${e(b.ip)}</span></td>
+              <td>${e(b.reason) || '<span class="sub">—</span>'}</td>
+              <td>${e(b.at)}</td>
+              <td>${b.forever ? '<span class="pill tone-bad">Until lifted</span>' : e(b.until)}</td>
+              <td><button class="btn btn-soft" data-unblock="${e(b.ip)}">Unblock</button></td>
+            </tr>`).join('')}</tbody></table></div>`
+          : '<div class="feed-empty">No address is blocked by hand.</div>'}
       </div>
     </div>
 
@@ -2322,7 +2369,8 @@ async function loadSecurity() {
             const [label, tone] = LOGIN_TONE[ev.outcome] || [ev.outcome, 'tone-info'];
             return `<tr>
               <td>${e(ev.at)}</td>
-              <td><span class="pill ${tone}">${e(label)}</span></td>
+              <td><span class="pill ${tone}">${e(label)}</span>${
+                   ev.note ? `<div class="sub">${e(ev.note)}</div>` : ''}</td>
               <td>${e(ev.username || '—')}</td>
               <td><span class="mono-cell">${e(ev.ip || '—')}</span>${
                    ev.country ? ` <span class="badge">${e(ev.country)}</span>` : ''}</td>
@@ -2332,6 +2380,53 @@ async function loadSecurity() {
           : '<div class="feed-empty">Nothing recorded yet.</div>'}
       </div>
     </div>`;
+}
+
+/* Blocking is delegated rather than wired into each button: an address comes
+   out of a request header, so it is never spliced into a handler. */
+document.addEventListener('click', ev => {
+  const block = ev.target.closest('[data-block]');
+  if (block) return blockAddress(block.dataset.block);
+  const unblock = ev.target.closest('[data-unblock]');
+  if (unblock) return unblockAddress(unblock.dataset.unblock);
+});
+
+async function postBlock(payload, done) {
+  try {
+    const r = await fetch('/admin/api/security/block', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    // Refusals say why ("that is the address you are on"), so show the
+    // server's own words rather than a status code.
+    const body = await r.json().catch(() => ({}));
+    if (!r.ok) { toast(body.detail || `Could not do that (${r.status})`); return; }
+    toast(done);
+    loadSecurity();
+  } catch (err) {
+    toast('Could not reach the server');
+  }
+}
+
+/** Shut one address out. Called from a row, or from the box below the table. */
+function blockAddress(ip) {
+  const typed = $('block-ip');
+  const address = (ip || (typed ? typed.value : '')).trim();
+  if (!address) { toast('Enter the address to block'); return; }
+
+  const hours = ($('block-hours') || {}).value || 'forever';
+  const reason = (($('block-reason') || {}).value || '').trim();
+  const forHow = hours === 'forever' ? 'until you lift it' : `for ${hours} hour(s)`;
+  if (!confirm(`Block ${address} from the admin login ${forHow}?`)) return;
+
+  if (typed) typed.value = '';
+  postBlock({ ip: address, action: 'block', hours: hours, reason: reason },
+            `${address} is blocked ${forHow}`);
+}
+
+function unblockAddress(ip) {
+  if (!ip || !confirm(`Let ${ip} try to sign in again?`)) return;
+  postBlock({ ip: ip, action: 'unblock' }, `${ip} can try again`);
 }
 
 /* ── The rail's progress card ────────────────────────────────────────────

@@ -47,59 +47,102 @@ router = APIRouter()
 _admin_otp_store: dict[str, tuple[str, float]] = {}
 _OTP_TTL = 10 * 60  # 10 minutes
 
+# ── Two steps to sign in ─────────────────────────────────────────────────────
+#
+# The password alone opens nothing. It is the first of two steps: get it right
+# and a six-digit code goes to the admin mailbox, and only that code finishes
+# the sign-in. Whoever ends up with the password still needs the mailbox.
+#
+# What carries a half-finished sign-in from the first step to the second is
+# this cookie: signed, short-lived and naming only the username and the portal
+# the password matched. It is not a session — nothing reads it except the OTP
+# step, which checks it before it will look at a code at all.
+_PENDING_COOKIE = "admin_login_pending"
 
-# ── OTP request endpoint ──────────────────────────────────────────────────────
-@router.post("/admin/survey/request-otp")
-async def survey_request_otp(request: Request, username: str = Form(...)):
-    """Generate & email a 6-digit OTP to the admin email, then redirect back to login form."""
-    username = username.strip()
+_SURVEY_PORTAL = "survey"
+_ORI_PORTAL = "orientation"
+
+PORTAL_NAMES = {
+    _SURVEY_PORTAL: "HACRI-E Survey Admin",
+    _ORI_PORTAL: "Deeksharambh Orientation Admin",
+}
+
+
+def _portal_for(username: str) -> str | None:
+    """Which portal a username belongs to, or None if it is not an admin."""
     if username in (settings.survey_admin_username, settings.admin_username):
-        email = settings.survey_admin_otp_email
-        portal_name = "HACRI-E Survey Admin"
-    elif username == settings.orientation_admin_username:
-        email = settings.orientation_admin_otp_email
-        portal_name = "Deeksharambh Orientation Admin"
-    else:
-        # Show invalid username but don't reveal info
-        from app import db as _db
-        await _db.record_login_event(
-            username=username, outcome=_db.LOGIN_UNKNOWN,
-            ip=client_ip(request), agent=client_agent(request),
-            country=client_country(request), note="no such admin username")
-        return request.app.state.templates.TemplateResponse(
-            request, "admin_login.html",
-            {"error": "Invalid username.", "title": "Admin Login", "otp_sent": False},
-            status_code=401,
-        )
+        return _SURVEY_PORTAL
+    if username == settings.orientation_admin_username:
+        return _ORI_PORTAL
+    return None
 
-    from app import db as _db
+
+def _password_matches(username: str, password: str) -> bool:
+    if username in (settings.survey_admin_username, settings.admin_username):
+        return password in (settings.survey_admin_password, settings.admin_password)
+    if username == settings.orientation_admin_username:
+        return password == settings.orientation_admin_password
+    return False
+
+
+def _otp_email(portal: str) -> str:
+    return (settings.orientation_admin_otp_email if portal == _ORI_PORTAL
+            else settings.survey_admin_otp_email)
+
+
+def _issue_pending(response, username: str, portal: str) -> None:
+    """Remember that the password step was passed, for as long as the code lasts."""
+    from app.deps import _sign
+    response.set_cookie(
+        _PENDING_COOKIE,
+        _sign({"u": username, "p": portal, "exp": time.time() + _OTP_TTL}),
+        httponly=True, secure=settings.cookie_secure,
+        samesite=settings.cookie_samesite, max_age=_OTP_TTL,
+    )
+
+
+def _read_pending(request: Request) -> dict | None:
+    """The half-finished sign-in this browser is carrying, if it is still good."""
+    from app.deps import _unsign
+
+    token = request.cookies.get(_PENDING_COOKIE)
+    if not token:
+        return None
+    data = _unsign(token)
+    if not data or not data.get("u") or float(data.get("exp", 0)) < time.time():
+        return None
+    return data
+
+
+def _login_page(request: Request, *, status_code: int = 200, **context):
+    base = {"title": "Admin Login", "otp_sent": False, "error": None}
+    base.update(context)
+    return request.app.state.templates.TemplateResponse(
+        request, "admin_login.html", base, status_code=status_code)
+
+
+def _mask_email(email: str) -> str:
+    """sa***h@jainuniversity.ac.in — enough to recognise your own mailbox."""
+    parts = email.split("@")
+    if len(parts) != 2:
+        return "registered admin email"
+    userpart, domain = parts
+    masked = userpart[:2] + "***" + userpart[-1] if len(userpart) > 3 else "***"
+    return f"{masked}@{domain}"
+
+
+async def _send_admin_otp(request: Request, username: str, portal: str):
+    """Issue a code and mail it. Returns the rendered next page."""
+    from app import db as _db, emailer
+
+    portal_name = PORTAL_NAMES[portal]
+    email = _otp_email(portal)
     ip, agent, country = client_ip(request), client_agent(request), client_country(request)
 
-    if await _db.is_locked_out(ip):
-        await _db.record_login_event(username=username, outcome=_db.LOGIN_LOCKED,
-                                     ip=ip, agent=agent, country=country,
-                                     note="blocked at the OTP request")
-        return request.app.state.templates.TemplateResponse(
-            request, "admin_login.html",
-            {"error": f"Too many failed attempts from this address. Try again in "
-                      f"{_db.LOGIN_LOCK_MINUTES} minutes.",
-             "title": "Admin Login", "otp_sent": False},
-            status_code=429,
-        )
-
-    # Generate a 6-digit OTP and store it
     otp = str(secrets.randbelow(900000) + 100000)  # 100000–999999
-    expiry = time.time() + _OTP_TTL
     from app.db import save_admin_otp
-    await save_admin_otp(username, otp, expiry)
+    await save_admin_otp(username, otp, time.time() + _OTP_TTL)
 
-    # Send email.
-    #
-    # This is the one button in the app whose success depends on mail going
-    # out: the OTP is the login. In dry-run there is no mail, so telling the
-    # admin "we sent it" leaves them waiting for something that was written to
-    # a log file — say so instead, and say where to find the code.
-    from app import emailer
     # Mail off is a normal state in development, where the code goes to the log
     # and the flow carries on. What it must not do is claim the OTP was emailed:
     # in production that leaves an admin waiting for a message nobody sent.
@@ -118,52 +161,70 @@ async def survey_request_otp(request: Request, username: str = Form(...)):
             f"This OTP is valid for 10 minutes.\n\n"
             f"If you did not request this, please ignore this email."
         )
-        await emailer.send_simple_email(
-            email,
-            portal_name,
-            f"{portal_name} Login OTP",
-            body,
-        )
+        await emailer.send_simple_email(email, portal_name,
+                                        f"{portal_name} Login OTP", body)
         log.info("OTP [%s] sent to %s for %s", otp, email, username)
         await _db.record_login_event(username=username, outcome=_db.LOGIN_OTP_SENT,
                                      ip=ip, agent=agent, country=country,
-                                     portal=portal_name, note="code emailed")
+                                     portal=portal_name,
+                                     note="password accepted, code emailed")
     except Exception as exc:
         log.exception("Failed to send OTP email: %s", exc)
         hosts = ", ".join(a["hostname"] for a in emailer.smtp_accounts())
-        return request.app.state.templates.TemplateResponse(
-            request, "admin_login.html",
-            {"error": f"Could not send the OTP. Tried: {hosts}. Last error: {exc}"
-                      + ("" if len(emailer.smtp_accounts()) > 1 else
-                         " Configuring SMTP_FALLBACK_HOST would give this a second "
-                         "mailbox to try."),
-             "title": "Admin Login", "otp_sent": False},
-            status_code=500,
-        )
+        return _login_page(
+            request, status_code=500,
+            error=f"Could not send the OTP. Tried: {hosts}. Last error: {exc}"
+                  + ("" if len(emailer.smtp_accounts()) > 1 else
+                     " Configuring SMTP_FALLBACK_HOST would give this a second "
+                     "mailbox to try."))
 
-    # Mask email hint for privacy, e.g. "sa***.ks@jainuniversity.ac.in"
-    email_parts = email.split("@")
-    if len(email_parts) == 2:
-        userpart, domain = email_parts
-        if len(userpart) > 3:
-            masked_user = userpart[:2] + "***" + userpart[-1]
-        else:
-            masked_user = "***"
-        masked_email = f"{masked_user}@{domain}"
-    else:
-        masked_email = "registered admin email"
+    response = _login_page(
+        request, otp_sent=True, otp_username=username,
+        otp_email_hint=_mask_email(email), mail_off=mail_off)
+    _issue_pending(response, username, portal)
+    return response
 
-    return request.app.state.templates.TemplateResponse(
-        request, "admin_login.html",
-        {
-            "title": "Admin Login",
-            "otp_sent": True,
-            "otp_username": username,
-            "otp_email_hint": masked_email,
-            "mail_off": mail_off,
-            "error": None,
-        },
-    )
+
+# ── Resending the code ────────────────────────────────────────────────────────
+@router.post("/admin/survey/request-otp")
+async def survey_request_otp(request: Request, username: str = Form(default="")):
+    """Send the code again — only to a browser that already passed the password.
+
+    A code that could be requested with a username alone would be a login of
+    its own, and the point of the second step is that it is a *second* step.
+    """
+    from app import db as _db
+
+    ip, agent, country = client_ip(request), client_agent(request), client_country(request)
+
+    if await _db.is_locked_out(ip):
+        await _db.record_login_event(username=username.strip(), outcome=_db.LOGIN_LOCKED,
+                                     ip=ip, agent=agent, country=country,
+                                     note="blocked at the OTP request")
+        return _login_page(request, status_code=429, error=_blocked_message(await _block_note(ip)))
+
+    pending = _read_pending(request)
+    if not pending:
+        return _login_page(
+            request, status_code=401,
+            error="Your sign-in timed out. Please enter your password again.")
+
+    return await _send_admin_otp(request, pending["u"], pending["p"])
+
+
+async def _block_note(ip: str) -> dict | None:
+    from app import db as _db
+    return await _db.get_ip_block(ip)
+
+
+def _blocked_message(block: dict | None) -> str:
+    """What a turned-away address is told. Never why it was blocked by hand."""
+    from app import db as _db
+    if block:
+        return ("This address has been blocked by an administrator. "
+                "Contact the Office of Academics if you believe this is a mistake.")
+    return (f"Too many failed attempts from this address. Try again in "
+            f"{_db.LOGIN_LOCK_MINUTES} minutes.")
 
 
 @router.get("/admin/login", response_class=HTMLResponse)
@@ -214,16 +275,35 @@ def client_country(request: Request) -> str:
     return ""
 
 
+def _open_portal(portal: str):
+    """The response that actually signs someone in."""
+    if portal == _ORI_PORTAL:
+        response = RedirectResponse(url="/admin/orientation", status_code=303)
+        _set_cookie(response, _ORI_COOKIE, settings.cookie_secure, settings.cookie_samesite)
+    else:
+        response = RedirectResponse(url="/admin/survey", status_code=303)
+        _set_cookie(response, _SURVEY_COOKIE, settings.cookie_secure, settings.cookie_samesite)
+    response.delete_cookie(_PENDING_COOKIE)
+    return response
+
+
 @router.post("/admin/login")
 async def general_admin_login_post(
     request: Request,
-    username: str = Form(...),
-    password: str = Form(...)  # This acts as the password or OTP
+    username: str = Form(default=""),
+    password: str = Form(...),   # the password on step one, the code on step two
+    stage: str = Form(default="password"),
 ):
+    """Sign in, in two steps: the password, then the code it triggers.
+
+    Which step this is comes from the pending cookie, not from the form: a
+    browser that has not passed the password has nothing for the code step to
+    check against, so a code on its own can never be a login.
+    """
     from app import db as _db
 
     username = username.strip()
-    otp = password.strip()
+    submitted = password.strip()
     ip, agent, country = client_ip(request), client_agent(request), client_country(request)
 
     async def note(outcome: str, portal: str = "", detail: str = ""):
@@ -231,69 +311,73 @@ async def general_admin_login_post(
                                      agent=agent, portal=portal, country=country,
                                      note=detail)
 
-    # Turn an address away once it has failed too often in a short window.
-    # Checked before the credentials are looked at, so a guesser learns nothing
-    # from how long the answer takes.
+    # Turn an address away once it has failed too often in a short window, or
+    # because an admin blocked it by hand. Checked before the credentials are
+    # looked at, so a guesser learns nothing from how long the answer takes.
     if await _db.is_locked_out(ip):
-        await note(_db.LOGIN_LOCKED, detail=f"blocked after "
-                                            f"{_db.LOGIN_FAIL_LIMIT} failures")
-        log.warning("Admin login blocked: %s has failed %d times in %d minutes",
-                    ip, _db.LOGIN_FAIL_LIMIT, _db.LOGIN_FAIL_WINDOW_MINUTES)
-        return request.app.state.templates.TemplateResponse(
-            request, "admin_login.html",
-            {"error": f"Too many failed attempts from this address. Try again in "
-                      f"{_db.LOGIN_LOCK_MINUTES} minutes.",
-             "title": "Admin Login", "otp_sent": False},
-            status_code=429,
-        )
+        block = await _block_note(ip)
+        await note(_db.LOGIN_LOCKED,
+                   detail="blocked by an administrator" if block
+                          else f"blocked after {_db.LOGIN_FAIL_LIMIT} failures")
+        log.warning("Admin login blocked: %s (%s)", ip,
+                    "blocked by hand" if block else
+                    f"{_db.LOGIN_FAIL_LIMIT} failures in {_db.LOGIN_FAIL_WINDOW_MINUTES} min")
+        return _login_page(request, status_code=429, error=_blocked_message(block))
 
-    if username == settings.orientation_admin_username and otp == settings.orientation_admin_password:
-        await note(_db.LOGIN_OK, portal="orientation", detail="password")
-        r = RedirectResponse(url="/admin/orientation", status_code=303)
-        _set_cookie(r, _ORI_COOKIE, settings.cookie_secure, settings.cookie_samesite)
-        return r
+    # ── Step two: the code ───────────────────────────────────────────────────
+    #
+    # Only the code form posts stage=otp. Someone who goes back and types their
+    # password again starts a fresh sign-in instead of having it read as a
+    # wrong code.
+    pending = _read_pending(request) if stage == "otp" else None
+    if pending:
+        username = username or pending["u"]
+        if username != pending["u"]:
+            return _login_page(
+                request, status_code=401,
+                error="That sign-in was started for a different username. "
+                      "Please start again.")
 
-    if (username in (settings.survey_admin_username, settings.admin_username)) and \
-       (otp in (settings.survey_admin_password, settings.admin_password)):
-        await note(_db.LOGIN_OK, portal="survey", detail="password")
-        r = RedirectResponse(url="/admin/survey", status_code=303)
-        _set_cookie(r, _SURVEY_COOKIE, settings.cookie_secure, settings.cookie_samesite)
-        return r
+        from app.db import verify_admin_otp
+        if await verify_admin_otp(pending["u"], submitted):
+            await note(_db.LOGIN_OK, portal=PORTAL_NAMES[pending["p"]],
+                       detail="password and emailed code")
+            return _open_portal(pending["p"])
 
-    from app.db import verify_admin_otp
-    is_valid = await verify_admin_otp(username, otp)
-    if is_valid:
-        if username in (settings.survey_admin_username, settings.admin_username):
-            await note(_db.LOGIN_OK, portal="survey", detail="otp")
-            r = RedirectResponse(url="/admin/survey", status_code=303)
-            _set_cookie(r, _SURVEY_COOKIE, settings.cookie_secure, settings.cookie_samesite)
-            return r
-        if username == settings.orientation_admin_username:
-            await note(_db.LOGIN_OK, portal="orientation", detail="otp")
-            r = RedirectResponse(url="/admin/orientation", status_code=303)
-            _set_cookie(r, _ORI_COOKIE, settings.cookie_secure, settings.cookie_samesite)
-            return r
+        await note(_db.LOGIN_BAD, portal=PORTAL_NAMES[pending["p"]], detail="wrong code")
+        log.warning("Wrong admin OTP for %r from %s", pending["u"], ip or "an unknown address")
+        return _login_page(
+            request, status_code=401, otp_sent=True, otp_username=pending["u"],
+            otp_email_hint=_mask_email(_otp_email(pending["p"])),
+            error="That code is not right, or it has expired. "
+                  "Check the latest email, or send a new code.")
 
-    # A valid OTP for a username that maps to no portal ends here too. The
-    # message is the same either way: telling the difference between "no such
-    # user" and "wrong code" hands a guesser half the answer.
-    known = username in (settings.survey_admin_username, settings.admin_username,
-                         settings.orientation_admin_username)
-    await note(_db.LOGIN_BAD if known else _db.LOGIN_UNKNOWN)
+    if stage == "otp":
+        # The code step with nothing behind it: the pending cookie ran out, or
+        # the code was posted straight at the endpoint.
+        await note(_db.LOGIN_BAD, detail="code submitted with no password step")
+        return _login_page(
+            request, status_code=401,
+            error="Your sign-in timed out. Please enter your password again.")
+
+    # ── Step one: the password ───────────────────────────────────────────────
+    portal = _portal_for(username)
+    if portal and _password_matches(username, submitted):
+        if not settings.admin_require_otp:
+            # The escape hatch for a server whose mail is down. Off by default,
+            # and the log says plainly that the code was skipped.
+            await note(_db.LOGIN_OK, portal=PORTAL_NAMES[portal],
+                       detail="password only — ADMIN_REQUIRE_OTP is off")
+            log.warning("Admin signed in without an OTP: ADMIN_REQUIRE_OTP is false")
+            return _open_portal(portal)
+        return await _send_admin_otp(request, username, portal)
+
+    # The message is the same either way: telling the difference between "no
+    # such user" and "wrong password" hands a guesser half the answer.
+    await note(_db.LOGIN_BAD if portal else _db.LOGIN_UNKNOWN)
     log.warning("Failed admin login for %r from %s", username, ip or "an unknown address")
-    err_msg = "Invalid username or password / OTP."
-
-    return request.app.state.templates.TemplateResponse(
-        request, "admin_login.html",
-        {
-            "error": err_msg,
-            "title": "Admin Login",
-            "otp_sent": False,
-            "otp_username": username,
-            "otp_email_hint": "registered admin email"
-        },
-        status_code=401,
-    )
+    return _login_page(request, status_code=401, otp_username=username,
+                       error="Invalid username or password.")
 
 
 @router.get("/admin")
@@ -1098,6 +1182,58 @@ async def api_login_events(request: Request, limit: int = Query(default=150)):
         },
         "you": {"ip": client_ip(request), "country": client_country(request)},
     })
+
+
+@router.post("/admin/api/security/block")
+async def api_block_address(request: Request):
+    """Shut one address out of the admin login, or let it back in.
+
+    The automatic lock-out lasts fifteen minutes, which is right for someone
+    fumbling their own password and useless against a scanner that comes back
+    all day. This is the admin saying: that one, not any more.
+    """
+    if not _is_survey_admin(request):
+        raise HTTPException(status_code=403)
+
+    from app import db as _db
+
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid payload")
+
+    ip = (body.get("ip") or "").strip()
+    if not ip:
+        raise HTTPException(status_code=400, detail="Which address?")
+
+    action = (body.get("action") or "block").strip().lower()
+    if action == "unblock":
+        lifted = await _db.unblock_ip(ip)
+        log.info("Admin lifted the block on %s (had one: %s)", ip, lifted)
+        return JSONResponse({"ok": True, "ip": ip, "blocked": False,
+                             "lifted": lifted, "blocks": await _db.list_ip_blocks()})
+
+    # Blocking the address you are sitting on locks you out of your own next
+    # sign-in, and the message you would get then says nothing about why.
+    if ip == client_ip(request):
+        raise HTTPException(
+            status_code=400,
+            detail="That is the address you are on — blocking it would lock you out.")
+
+    hours_raw = body.get("hours")
+    try:
+        hours = float(hours_raw) if hours_raw not in (None, "", "forever") else None
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=400, detail="How long, in hours?")
+    if hours is not None and hours <= 0:
+        hours = None
+
+    await _db.block_ip(ip, by=client_ip(request),
+                       reason=(body.get("reason") or "").strip(), hours=hours)
+    log.warning("Admin blocked %s from the login%s", ip,
+                f" for {hours} hours" if hours else " until it is lifted")
+    return JSONResponse({"ok": True, "ip": ip, "blocked": True,
+                         "blocks": await _db.list_ip_blocks()})
 
 
 @router.get("/admin/api/share-links")

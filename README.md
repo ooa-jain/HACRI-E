@@ -73,6 +73,24 @@ registration record when it is known.
 Two portals share one login page (`/admin/login`): the survey admin lands on
 `/admin/survey`, the orientation admin on `/admin/orientation`.
 
+### Signing in takes two steps
+
+The password alone opens nothing. Get it right and a six-digit code goes to the
+portal's registered mailbox (`SURVEY_ADMIN_OTP_EMAIL` /
+`ORIENTATION_ADMIN_OTP_EMAIL`); that code finishes the sign-in. Whoever ends up
+with the password still needs the mailbox.
+
+- The code is valid for ten minutes and is spent the moment it is used.
+- **Send it again** only works for a browser that already passed the password —
+  a code cannot be requested with a username alone, because that would be a
+  login of its own.
+- Both halves land in the sign-in log: *Code sent*, then *Signed in*.
+
+`ADMIN_REQUIRE_OTP=false` in the `.env` falls back to password-only sign-in.
+That is the way back in when mail is down, and nothing else — with it off, a
+stolen password is the whole login again. The log says plainly when a sign-in
+skipped the code.
+
 ### Survey admin pages (`/admin/survey`)
 The department and level selectors in the top bar scope every page below them.
 
@@ -85,10 +103,26 @@ The department and level selectors in the top bar scope every page below them.
 | **Departments** | Literacy / readiness averages, rankings, bar chart, per-department report links |
 | **Parents** | Parental occupation breakdown from the post survey |
 | **Calendar** | Month grid, daily submission chart, day-by-day log (click a date for the department breakdown) |
+| **Security** | Who has signed in and who has tried, grouped by address, with a **Block** button per address |
 | **Settings** | Feature toggles, post-survey delay, automatic reminder schedule |
 
 Cohort data exports (CSV or Excel) come from the **Export** button, which
 follows the current filters and lets you pick which columns to include.
+
+### Turning an address away
+
+Six failures from one address inside fifteen minutes blocks it automatically for
+fifteen minutes — right for someone fumbling their own password, useless against
+a scanner that comes back all day. The **Security** page adds the manual version:
+
+- **Block** on any row in *Addresses that failed*, or type an address into the
+  box under *Blocked by hand* with an optional reason.
+- Choose 1 hour, 24 hours, 7 days, or until you lift it. A timed block clears
+  itself; the rest stay until **Unblock**.
+- A blocked address is refused at the password step, before the credentials are
+  read, so the right password gets it nowhere.
+- You cannot block the address you are sitting on — that would lock you out of
+  your own next sign-in.
 
 ### Writing a mail yourself
 

@@ -171,8 +171,10 @@ async def test_the_otp_screen_does_not_claim_a_mail_that_was_never_sent(monkeypa
         await db.init_indexes(allow_duplicate_email=True)
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as c:
-            r = await c.post("/admin/survey/request-otp",
-                             data={"username": live.survey_admin_username})
+            # The password is what triggers the code, so that is the step to make.
+            r = await c.post("/admin/login",
+                             data={"username": live.survey_admin_username,
+                                   "password": live.survey_admin_password})
         assert r.status_code == 200
         assert "no OTP was emailed" in r.text
         assert "EMAIL_DRY_RUN=false" in r.text

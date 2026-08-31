@@ -25,6 +25,7 @@ POST  = "post_responses"
 ORI   = "orientation_responses"
 FLAGS = "feature_flags"
 LOGINS = "admin_login_events"
+IP_BLOCKS = "admin_ip_blocks"
 
 # How many failures from one address, inside how long, before that address is
 # turned away. Six is generous for a typing mistake and short of useful for
@@ -210,7 +211,85 @@ async def count_recent_failures(ip: str, minutes: int = LOGIN_FAIL_WINDOW_MINUTE
     })
 
 
+# ── Blocking an address by hand ──────────────────────────────────────────────
+#
+# The automatic lock-out clears itself after fifteen minutes, which is right
+# for someone fumbling their own password and useless against a scanner that
+# comes back all day. An admin who recognises one of those in the log can shut
+# the address out for as long as they choose.
+
+async def block_ip(ip: str, *, by: str = "", reason: str = "",
+                   hours: float | None = None) -> dict | None:
+    """Turn one address away from the admin login.
+
+    `hours` is how long the block lasts; None means until it is lifted.
+    """
+    ip = (ip or "").strip()[:64]
+    if not ip:
+        return None
+    until = _now() + timedelta(hours=hours) if hours else None
+    doc = {
+        "ip": ip,
+        "by": (by or "")[:64],
+        "reason": (reason or "")[:200],
+        "at": _now(),
+        "until": until,
+    }
+    await get_db()[IP_BLOCKS].update_one({"ip": ip}, {"$set": doc}, upsert=True)
+    return doc
+
+
+async def unblock_ip(ip: str) -> bool:
+    """Lift a block. True if there was one to lift."""
+    ip = (ip or "").strip()[:64]
+    if not ip:
+        return False
+    result = await get_db()[IP_BLOCKS].delete_one({"ip": ip})
+    return bool(getattr(result, "deleted_count", 0))
+
+
+async def get_ip_block(ip: str) -> dict | None:
+    """The block on this address, if one is still in force."""
+    ip = (ip or "").strip()
+    if not ip:
+        return None
+    doc = await get_db()[IP_BLOCKS].find_one({"ip": ip})
+    if not doc:
+        return None
+    until = doc.get("until")
+    if isinstance(until, datetime):
+        if until.tzinfo is None:
+            until = until.replace(tzinfo=timezone.utc)
+        if until <= _now():
+            # Expired: clear it rather than leaving a dead row in the list.
+            await get_db()[IP_BLOCKS].delete_one({"ip": ip})
+            return None
+    return doc
+
+
+async def list_ip_blocks() -> list[dict]:
+    """Every block still in force, newest first."""
+    rows = []
+    async for doc in get_db()[IP_BLOCKS].find({}):
+        ip = doc.get("ip", "")
+        if not await get_ip_block(ip):     # drops the expired ones as it goes
+            continue
+        rows.append({
+            "ip": ip,
+            "by": doc.get("by", ""),
+            "reason": doc.get("reason", ""),
+            "at": _fmt(doc.get("at")),
+            "until": _fmt(doc.get("until")) if doc.get("until") else "",
+            "forever": not doc.get("until"),
+        })
+    rows.sort(key=lambda r: r["at"], reverse=True)
+    return rows
+
+
 async def is_locked_out(ip: str) -> bool:
+    """Is this address refused right now — by hand or by the failure count?"""
+    if await get_ip_block(ip):
+        return True
     return await count_recent_failures(ip) >= LOGIN_FAIL_LIMIT
 
 
@@ -237,19 +316,38 @@ async def login_summary(hours: int = 24) -> dict:
         if row["last"] is None or (isinstance(when, datetime) and when > row["last"]):
             row["last"] = when
 
+    blocks = await list_ip_blocks()
+    by_ip = {b["ip"]: b for b in blocks}
+
     offenders = []
     for row in addresses.values():
         if not row["failures"]:
             continue
+        held = by_ip.get(row["ip"])
         offenders.append({
             "ip": row["ip"],
             "attempts": row["attempts"],
             "failures": row["failures"],
             "usernames": sorted(row["usernames"])[:4],
             "last": _fmt(row["last"]),
-            "locked": row["failures"] >= LOGIN_FAIL_LIMIT,
+            "locked": row["failures"] >= LOGIN_FAIL_LIMIT or bool(held),
+            # An address an admin shut out stays shut out until they lift it,
+            # which is a different state from the automatic fifteen minutes.
+            "blocked_by_hand": bool(held),
+            "block_until": (held or {}).get("until", ""),
+            "block_reason": (held or {}).get("reason", ""),
         })
-    offenders.sort(key=lambda r: -r["failures"])
+    offenders.sort(key=lambda r: (-r["blocked_by_hand"], -r["failures"]))
+
+    # An address blocked by hand belongs on the page even if it has not come
+    # back since — that it stopped trying is the point of the block.
+    for block in blocks:
+        if block["ip"] not in addresses:
+            offenders.append({
+                "ip": block["ip"], "attempts": 0, "failures": 0, "usernames": [],
+                "last": block["at"], "locked": True, "blocked_by_hand": True,
+                "block_until": block["until"], "block_reason": block["reason"],
+            })
 
     return {
         "hours": hours,
@@ -257,7 +355,9 @@ async def login_summary(hours: int = 24) -> dict:
         "failures": failures,
         "addresses": len(addresses),
         "locked": sum(1 for o in offenders if o["locked"]),
-        "offenders": offenders[:20],
+        "blocked_by_hand": len(blocks),
+        "blocks": blocks,
+        "offenders": offenders[:30],
     }
 
 

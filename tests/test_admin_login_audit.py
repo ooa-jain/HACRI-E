@@ -58,12 +58,15 @@ async def test_a_failed_attempt_is_recorded_with_its_address(client):
 
 @pytest.mark.asyncio
 async def test_a_successful_sign_in_is_recorded(client):
+    """The password is step one of two, so what it produces is a mailed code."""
     await _try_login(client, username=settings.orientation_admin_username,
                      otp=settings.orientation_admin_password)
 
-    ev = (await db.list_login_events())[0]
-    assert ev["outcome"] == db.LOGIN_OK
-    assert ev["portal"] == "orientation"
+    outcomes = [ev["outcome"] for ev in await db.list_login_events()]
+    assert db.LOGIN_OTP_SENT in outcomes
+    ev = next(e for e in await db.list_login_events()
+              if e["outcome"] == db.LOGIN_OTP_SENT)
+    assert "Deeksharambh" in ev["portal"]
 
 
 @pytest.mark.asyncio
@@ -131,7 +134,9 @@ async def test_another_address_is_unaffected(client):
         data={"username": settings.orientation_admin_username,
               "password": settings.orientation_admin_password},
         headers={"X-Forwarded-For": "198.51.100.7"}, follow_redirects=False)
-    assert other.status_code == 303
+    # Not turned away: the password is accepted and the code step opens.
+    assert other.status_code == 200
+    assert "One-Time Password" in other.text
 
 
 # ── The page that reads it ───────────────────────────────────────────────────

@@ -31,6 +31,11 @@ class Settings(BaseSettings):
     survey_admin_otp_email: str = "santosh.ks@jainuniversity.ac.in"
     orientation_admin_otp_email: str = "santosh.ks@jainuniversity.ac.in"
 
+    # Signing in takes the password *and* a mailed code: the password alone
+    # opens nothing. Set ADMIN_REQUIRE_OTP=false only to get back in when mail
+    # is down — a stolen password is then the whole login again.
+    admin_require_otp: bool = True
+
     # SMTP
     smtp_host: str | None = None
     smtp_port: int = 465

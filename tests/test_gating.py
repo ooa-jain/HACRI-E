@@ -260,53 +260,37 @@ async def test_unified_admin_login_flow(client: AsyncClient):
         assert r.status_code in (303, 307)
         assert "/admin/login" in r.headers["location"]
 
-    # 4. POST with Survey Admin credentials redirects to /admin/survey (via OTP flow)
+    # 4. Signing in takes two steps: the password, then the code it mails out.
     from app.settings import settings
-    resp_otp_req = await client.post(
-        "/admin/survey/request-otp",
-        data={"username": settings.survey_admin_username},
-        follow_redirects=False
-    )
-    assert resp_otp_req.status_code == 200
-    
     from app.db import get_db
-    db = get_db()
-    otp_doc = await db["admin_otps"].find_one({"username": settings.survey_admin_username})
-    assert otp_doc is not None
-    otp = otp_doc["otp"]
 
-    resp_survey_login = await client.post(
-        "/admin/login",
-        data={
-            "username": settings.survey_admin_username,
-            "password": otp
-        },
-        follow_redirects=False
-    )
+    async def sign_in(username, password):
+        first = await client.post(
+            "/admin/login", data={"username": username, "password": password},
+            follow_redirects=False)
+        assert first.status_code == 200, first.text
+        assert "One-Time Password" in first.text
+        otp_doc = await get_db()["admin_otps"].find_one({"username": username})
+        assert otp_doc is not None
+        return await client.post(
+            "/admin/login",
+            data={"username": username, "password": otp_doc["otp"], "stage": "otp"},
+            follow_redirects=False)
+
+    resp_survey_login = await sign_in(settings.survey_admin_username,
+                                      settings.survey_admin_password)
     assert resp_survey_login.status_code in (303, 307)
     assert "/admin/survey" in resp_survey_login.headers["location"]
 
-    # 5. POST with Orientation Admin credentials redirects to /admin/orientation
-    resp_ori_login = await client.post(
-        "/admin/login",
-        data={
-            "username": settings.orientation_admin_username,
-            "password": settings.orientation_admin_password
-        },
-        follow_redirects=False
-    )
+    # 5. Orientation admin lands on its own portal.
+    resp_ori_login = await sign_in(settings.orientation_admin_username,
+                                   settings.orientation_admin_password)
     assert resp_ori_login.status_code in (303, 307)
     assert "/admin/orientation" in resp_ori_login.headers["location"]
 
-    # 5c. POST with primary admin credentials (admin / admin123) redirects to /admin/survey
-    resp_admin123_login = await client.post(
-        "/admin/login",
-        data={
-            "username": settings.admin_username,
-            "password": settings.admin_password
-        },
-        follow_redirects=False
-    )
+    # 5c. The primary admin account (admin / admin123) opens the survey portal.
+    resp_admin123_login = await sign_in(settings.admin_username,
+                                        settings.admin_password)
     assert resp_admin123_login.status_code in (303, 307)
     assert "/admin/survey" in resp_admin123_login.headers["location"]
 
