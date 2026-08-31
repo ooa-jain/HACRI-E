@@ -244,59 +244,61 @@ async def test_orientation_completed_gating_behavior(client: AsyncClient):
 @pytest.mark.asyncio
 async def test_unified_admin_login_flow(client: AsyncClient):
     """Test that unified admin login correctly routes users based on their credentials."""
-    # 1. Unauthenticated GET /admin redirects to /admin/login
-    resp = await client.get("/admin", follow_redirects=False)
-    assert resp.status_code in (303, 307)
-    assert "/admin/login" in resp.headers["location"]
-
-    # 2. Unauthenticated GET /admin/login returns 200
-    resp_login = await client.get("/admin/login")
-    assert resp_login.status_code == 200
-    assert "Admin Username" in resp_login.text
-
-    # 3. GET legacy routes redirect to /admin/login
-    for path in ["/admin/survey/login", "/admin/orientation/login"]:
-        r = await client.get(path, follow_redirects=False)
-        assert r.status_code in (303, 307)
-        assert "/admin/login" in r.headers["location"]
-
-    # 4. Signing in takes two steps: the password, then the code it mails out.
     from app.settings import settings
     from app.db import get_db
 
+    admin = settings.admin_path      # the portal lives behind ADMIN_PATH
+
+    # 1. Unauthenticated GET of the portal root redirects to its login page
+    resp = await client.get(admin, follow_redirects=False)
+    assert resp.status_code in (303, 307)
+    assert resp.headers["location"] == admin + "/login"
+
+    # 2. Unauthenticated GET of the login page returns 200
+    resp_login = await client.get(admin + "/login")
+    assert resp_login.status_code == 200
+    assert "Admin Username" in resp_login.text
+
+    # 3. GET legacy routes redirect to the login page
+    for path in ["/survey/login", "/orientation/login"]:
+        r = await client.get(admin + path, follow_redirects=False)
+        assert r.status_code in (303, 307)
+        assert r.headers["location"] == admin + "/login"
+
+    # 4. Signing in takes two steps: the password, then the code it mails out.
     async def sign_in(username, password):
         first = await client.post(
-            "/admin/login", data={"username": username, "password": password},
+            admin + "/login", data={"username": username, "password": password},
             follow_redirects=False)
         assert first.status_code == 200, first.text
         assert "One-Time Password" in first.text
         otp_doc = await get_db()["admin_otps"].find_one({"username": username})
         assert otp_doc is not None
         return await client.post(
-            "/admin/login",
+            admin + "/login",
             data={"username": username, "password": otp_doc["otp"], "stage": "otp"},
             follow_redirects=False)
 
     resp_survey_login = await sign_in(settings.survey_admin_username,
                                       settings.survey_admin_password)
     assert resp_survey_login.status_code in (303, 307)
-    assert "/admin/survey" in resp_survey_login.headers["location"]
+    assert resp_survey_login.headers["location"] == admin + "/survey"
 
     # 5. Orientation admin lands on its own portal.
     resp_ori_login = await sign_in(settings.orientation_admin_username,
                                    settings.orientation_admin_password)
     assert resp_ori_login.status_code in (303, 307)
-    assert "/admin/orientation" in resp_ori_login.headers["location"]
+    assert resp_ori_login.headers["location"] == admin + "/orientation"
 
     # 5c. The primary admin account (admin / admin123) opens the survey portal.
     resp_admin123_login = await sign_in(settings.admin_username,
                                         settings.admin_password)
     assert resp_admin123_login.status_code in (303, 307)
-    assert "/admin/survey" in resp_admin123_login.headers["location"]
+    assert resp_admin123_login.headers["location"] == admin + "/survey"
 
     # 6. POST with invalid credentials returns 401
     resp_invalid = await client.post(
-        "/admin/login",
+        admin + "/login",
         data={
             "username": "wrong",
             "password": "wrong"

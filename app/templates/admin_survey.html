@@ -2635,20 +2635,10 @@ function renderDepts() {
   set('d-lit-pre', score(ov.avg_lit_pre)); set('d-read-pre', score(ov.avg_read_pre));
   set('d-lit-post', score(ov.avg_lit_post)); set('d-read-post', score(ov.avg_read_post));
 
-  // Overall report links (also shown on the Links page).
-  const linkFor = (type) => ({
-    share: type === 'pre' ? ov.share_url_pre : ov.share_url_post,
-    token: type === 'pre' ? ov.token_pre : ov.token_post,
-  });
-  ['pre', 'post'].forEach(type => {
-    const { share, token } = linkFor(type);
-    if (!share) return;
-    const q = `dept=Overall&token=${encodeURIComponent(token)}&type=${type}`;
-    $(`overall-${type}-link`).value  = share;
-    $(`overall-${type}-view`).href   = share;
-    $(`overall-${type}-excel`).href  = '/shared/analysis/export-excel?' + q;
-    $(`overall-${type}-ppt`).href    = '/shared/analysis/download-ppt?' + q;
-  });
+  // The overall report links used to be repeated here; they live on the Links
+  // page now, and the boxes this filled are gone. Writing to them threw before
+  // anything below ran, which is why this page showed its headline numbers and
+  // then no rankings, no chart and an empty table.
 
   renderRankings();
   renderDeptChart(depts);

@@ -59,6 +59,16 @@ _OTP_TTL = 10 * 60  # 10 minutes
 # step, which checks it before it will look at a code at all.
 _PENDING_COOKIE = "admin_login_pending"
 
+
+def admin_url(suffix: str = "") -> str:
+    """A link back to a page that moved behind ADMIN_PATH.
+
+    The routes are still written as /admin/... — a middleware rewrites the
+    secret path onto them — so every URL sent to a browser has to be built
+    here, or it points at the door that now answers 404.
+    """
+    return f"{settings.admin_path}{suffix}"
+
 _SURVEY_PORTAL = "survey"
 _ORI_PORTAL = "orientation"
 
@@ -115,7 +125,8 @@ def _read_pending(request: Request) -> dict | None:
 
 
 def _login_page(request: Request, *, status_code: int = 200, **context):
-    base = {"title": "Admin Login", "otp_sent": False, "error": None}
+    base = {"title": "Admin Login", "otp_sent": False, "error": None,
+            "admin_path": settings.admin_path}
     base.update(context)
     return request.app.state.templates.TemplateResponse(
         request, "admin_login.html", base, status_code=status_code)
@@ -230,9 +241,9 @@ def _blocked_message(block: dict | None) -> str:
 @router.get("/admin/login", response_class=HTMLResponse)
 async def general_admin_login_get(request: Request):
     if _is_survey_admin(request):
-        return RedirectResponse(url="/admin/survey", status_code=303)
+        return RedirectResponse(url=admin_url("/survey"), status_code=303)
     if _is_ori_admin(request):
-        return RedirectResponse(url="/admin/orientation", status_code=303)
+        return RedirectResponse(url=admin_url("/orientation"), status_code=303)
     return request.app.state.templates.TemplateResponse(
         request, "admin_login.html",
         {"error": None, "title": "Admin Login", "otp_sent": False},
@@ -278,10 +289,10 @@ def client_country(request: Request) -> str:
 def _open_portal(portal: str):
     """The response that actually signs someone in."""
     if portal == _ORI_PORTAL:
-        response = RedirectResponse(url="/admin/orientation", status_code=303)
+        response = RedirectResponse(url=admin_url("/orientation"), status_code=303)
         _set_cookie(response, _ORI_COOKIE, settings.cookie_secure, settings.cookie_samesite)
     else:
-        response = RedirectResponse(url="/admin/survey", status_code=303)
+        response = RedirectResponse(url=admin_url("/survey"), status_code=303)
         _set_cookie(response, _SURVEY_COOKIE, settings.cookie_secure, settings.cookie_samesite)
     response.delete_cookie(_PENDING_COOKIE)
     return response
@@ -383,23 +394,23 @@ async def general_admin_login_post(
 @router.get("/admin")
 async def general_admin(request: Request):
     if _is_survey_admin(request):
-        return RedirectResponse(url="/admin/survey", status_code=303)
+        return RedirectResponse(url=admin_url("/survey"), status_code=303)
     if _is_ori_admin(request):
-        return RedirectResponse(url="/admin/orientation", status_code=303)
-    return RedirectResponse(url="/admin/login", status_code=303)
+        return RedirectResponse(url=admin_url("/orientation"), status_code=303)
+    return RedirectResponse(url=admin_url("/login"), status_code=303)
 
 
 # Redirect legacy login routes
 @router.get("/admin/survey/login")
 @router.post("/admin/survey/login")
 async def old_survey_login_redirect():
-    return RedirectResponse(url="/admin/login", status_code=303)
+    return RedirectResponse(url=admin_url("/login"), status_code=303)
 
 
 @router.get("/admin/orientation/login")
 @router.post("/admin/orientation/login")
 async def old_ori_login_redirect():
-    return RedirectResponse(url="/admin/login", status_code=303)
+    return RedirectResponse(url=admin_url("/login"), status_code=303)
 
 
 _SURVEY_COOKIE = "survey_admin_session"
@@ -426,14 +437,14 @@ def _del_cookie(response, key):
 # ══════════════════════════════════════════════════════════════════════════════
 @router.get("/admin/survey/logout")
 async def survey_logout():
-    r = RedirectResponse(url="/admin/login", status_code=303)
+    r = RedirectResponse(url=admin_url("/login"), status_code=303)
     _del_cookie(r, _SURVEY_COOKIE)
     return r
 
 @router.get("/admin/survey", response_class=HTMLResponse)
 async def survey_dashboard(request: Request):
     if not _is_survey_admin(request):
-        return RedirectResponse(url="/admin/login", status_code=303)
+        return RedirectResponse(url=admin_url("/login"), status_code=303)
     flags = await get_all_flags()
     public_url = str(settings.public_base_url).rstrip('/')
     orientation_share_url = f"{public_url}/deeksharambh"
@@ -450,14 +461,14 @@ async def survey_dashboard(request: Request):
 # ══════════════════════════════════════════════════════════════════════════════
 @router.get("/admin/orientation/logout")
 async def ori_logout():
-    r = RedirectResponse(url="/admin/login", status_code=303)
+    r = RedirectResponse(url=admin_url("/login"), status_code=303)
     _del_cookie(r, _ORI_COOKIE)
     return r
 
 @router.get("/admin/orientation", response_class=HTMLResponse)
 async def ori_dashboard(request: Request):
     if not _is_ori_admin(request):
-        return RedirectResponse(url="/admin/login", status_code=303)
+        return RedirectResponse(url=admin_url("/login"), status_code=303)
     flags = await get_all_flags()
     return request.app.state.templates.TemplateResponse(
         request, "admin_orientation.html", {"flags": flags},

@@ -8,8 +8,8 @@ Routes:
   /results/<slug>         → Personal results + JAIN Star
   /deeksharambh           → Deeksharambh landing (name + email + program)
   /orientation            → Deeksharambh form
-  /admin/survey           → Survey admin dashboard
-  /admin/orientation      → Orientation admin dashboard
+  <ADMIN_PATH>/survey     → Survey admin dashboard (ADMIN_PATH, not /admin)
+  <ADMIN_PATH>/orientation→ Orientation admin dashboard
 
 Run:
   python run.py              (dev, Windows)
@@ -90,8 +90,55 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# ── The admin portal answers somewhere else ──────────────────────────────────
+#
+# Every install of everything has an /admin/login, which is why the sign-in log
+# fills up with addresses that have never done anything but knock on it. The
+# admin's own door is moved to ADMIN_PATH and the well-known one is closed:
+#
+#   <ADMIN_PATH>/login   → the login page, rewritten internally to /admin/login
+#   /admin/login         → 404, exactly like a site that has no admin at all
+#
+# Only the pages a person opens move. Everything behind them — the JSON API,
+# the exports, signing out — stays at /admin/... where the dashboard's own
+# scripts already ask for it, and stays locked behind the session cookie. A
+# scanner that guesses those gets 403 and has nothing to guess *at*: there is
+# no password to try anywhere but the door it cannot find.
+HIDDEN_ADMIN_PAGES = frozenset({
+    "/admin",
+    "/admin/",
+    "/admin/login",
+    "/admin/survey",
+    "/admin/orientation",
+    "/admin/survey/login",
+    "/admin/orientation/login",
+    "/admin/survey/request-otp",
+})
+
+
+@app.middleware("http")
+async def admin_door(request: Request, call_next):
+    secret = settings.admin_path
+    path = request.scope.get("path", "")
+
+    if secret != "/admin" and (path == secret or path.startswith(secret + "/")):
+        # Behind the secret door the app is its ordinary self: rewrite the path
+        # and let the normal /admin routes answer it.
+        inner = path[len(secret):] or "/"
+        request.scope["path"] = "/admin" + ("" if inner == "/" else inner)
+        return await call_next(request)
+
+    if secret != "/admin" and path.rstrip("/") in HIDDEN_ADMIN_PAGES:
+        return JSONResponse({"detail": "Not Found"}, status_code=404)
+
+    return await call_next(request)
+
+
 BASE_DIR  = Path(__file__).parent
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
+# Every link back to a page that moved is built from this, so changing
+# ADMIN_PATH moves the portal without leaving a link pointing at the old door.
+templates.env.globals["admin_path"] = settings.admin_path
 # The department list is the same everywhere it is offered, so expose it to
 # every template instead of threading it through each route's context.
 from app.departments import DEPARTMENTS  # noqa: E402

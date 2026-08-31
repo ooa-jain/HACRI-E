@@ -344,7 +344,7 @@
     {% endif %}
   </div>
 
-  <form method="post" action="/admin/login" id="login-form">
+  <form method="post" action="{{ admin_path }}/login" id="login-form">
     <input type="hidden" name="username" value="{{ otp_username }}" />
     <input type="hidden" name="stage" value="otp" />
     <input type="hidden" name="password" id="otp-final-value" />
@@ -372,17 +372,17 @@
 
   <div class="otp-note">
     Didn't receive the code?
-    <form method="post" action="/admin/survey/request-otp" style="display:inline">
+    <form method="post" action="{{ admin_path }}/survey/request-otp" style="display:inline">
       <input type="hidden" name="username" value="{{ otp_username }}" />
       <button type="submit" class="resend-btn">Send it again</button>
     </form>
     <br>
-    <a href="/admin/login" class="toggle-link" style="font-size:12.5px">Start again</a>
+    <a href="{{ admin_path }}/login" class="toggle-link" style="font-size:12.5px">Start again</a>
   </div>
 
   {% else %}
   <!-- ── Step 1: Login with Username & Password ────────────────── -->
-  <form method="post" action="/admin/login" id="login-direct-form">
+  <form method="post" action="{{ admin_path }}/login" id="login-direct-form">
     <div class="field">
       <label>Admin Username</label>
       <div class="input-wrapper">

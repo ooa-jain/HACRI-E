@@ -36,6 +36,12 @@ class Settings(BaseSettings):
     # is down — a stolen password is then the whole login again.
     admin_require_otp: bool = True
 
+    # Where the admin portal answers. Anything under /admin that a person opens
+    # — the login page and the two dashboards — lives here instead, and the old
+    # /admin address returns a plain 404. Scanners hammer /admin/login because
+    # every install has one; this one does not.
+    admin_path: str = "/ooajain/adminooa@"
+
     # SMTP
     smtp_host: str | None = None
     smtp_port: int = 465
@@ -110,6 +116,14 @@ class Settings(BaseSettings):
                 if found is not None:
                     data[canonical] = found
                     break
+
+        # ADMIN_PATH is typed by a person into a .env, so accept it written
+        # with or without the leading slash and with or without a trailing one.
+        for key in ("admin_path", "ADMIN_PATH"):
+            raw = data.get(key)
+            if isinstance(raw, str) and raw.strip():
+                cleaned = "/" + raw.strip().strip("/")
+                data[key] = cleaned
         return data
 
 

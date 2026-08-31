@@ -12,7 +12,7 @@ FastAPI app combining the AI Literacy Survey (HACRI-E) and Deeksharambh 2026 Ori
 /pre/<dept-slug>     → Department baseline link (registration, department locked)
 /post/<dept-slug>    → Department post-survey link (email → post survey)
 /results/<slug>      → Personal results + JAIN Star charts
-/admin               → Admin dashboard
+<ADMIN_PATH>         → Admin dashboard (not /admin — see below)
 ```
 
 ## MongoDB Collections
@@ -68,10 +68,32 @@ step embedded in the post survey) shows them back as read-only pills and asks
 only for the **campus — Bangalore or Kochi** — pre-selected from the
 registration record when it is known.
 
-## Admin Dashboard (`/admin`)
+## Admin Dashboard
 
-Two portals share one login page (`/admin/login`): the survey admin lands on
-`/admin/survey`, the orientation admin on `/admin/orientation`.
+### The portal is not at /admin
+
+Every install of everything has an `/admin/login`, which is why the sign-in log
+fills with addresses that have never done anything but knock on it. The pages a
+person opens live behind **`ADMIN_PATH`** instead:
+
+| Address | What answers |
+|---------|--------------|
+| `<ADMIN_PATH>` | the login page |
+| `<ADMIN_PATH>/survey` | the survey dashboard |
+| `<ADMIN_PATH>/orientation` | the Deeksharambh dashboard |
+| `/admin`, `/admin/login`, `/admin/survey` | **404**, like a site with no admin at all |
+
+The default is `/ooajain/adminooa@` — change `ADMIN_PATH` in the `.env` to move
+it again, written with or without the leading slash. Bookmark it: there is no
+link to it from anywhere on the public site, which is the point.
+
+Only the doors moved. The JSON API, the exports and signing out stay at
+`/admin/...` where the dashboard's own scripts ask for them, guarded as before
+by the session cookie. Someone who guesses those gets 403 and has nothing to
+guess *at* — there is no password to try anywhere but the door they cannot find.
+
+Two portals share one login page: the survey admin lands on
+`<ADMIN_PATH>/survey`, the orientation admin on `<ADMIN_PATH>/orientation`.
 
 ### Signing in takes two steps
 
@@ -91,7 +113,7 @@ That is the way back in when mail is down, and nothing else — with it off, a
 stolen password is the whole login again. The log says plainly when a sign-in
 skipped the code.
 
-### Survey admin pages (`/admin/survey`)
+### Survey admin pages (`<ADMIN_PATH>/survey`)
 The department and level selectors in the top bar scope every page below them.
 
 | Page | What it does |

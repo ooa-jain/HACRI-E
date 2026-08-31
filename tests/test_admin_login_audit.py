@@ -17,6 +17,9 @@ from mongomock_motor import AsyncMongoMockClient
 from app import db
 from app.settings import settings
 
+# The portal answers behind ADMIN_PATH, so that is the door to knock on.
+ADMIN = settings.admin_path
+
 REAL_IP = {"X-Forwarded-For": "203.0.113.44, 10.0.0.1",
            "User-Agent": "Mozilla/5.0 (Windows NT 10.0) Chrome/133.0 Safari/537.36"}
 
@@ -35,7 +38,7 @@ async def client() -> AsyncIterator[AsyncClient]:
 
 
 async def _try_login(client, username="survey", otp="000000", **kw):
-    return await client.post("/admin/login",
+    return await client.post(ADMIN + "/login",
                              data={"username": username, "password": otp},
                              headers=REAL_IP, follow_redirects=False, **kw)
 
@@ -130,7 +133,7 @@ async def test_another_address_is_unaffected(client):
         await _try_login(client, otp="000000")
 
     other = await client.post(
-        "/admin/login",
+        ADMIN + "/login",
         data={"username": settings.orientation_admin_username,
               "password": settings.orientation_admin_password},
         headers={"X-Forwarded-For": "198.51.100.7"}, follow_redirects=False)
@@ -150,7 +153,7 @@ async def test_the_log_is_not_readable_without_an_admin_session(client):
 async def test_the_summary_groups_failures_by_address(client):
     for _ in range(3):
         await _try_login(client, username="survey", otp="000000")
-    await client.post("/admin/login", data={"username": "x", "password": "y"},
+    await client.post(ADMIN + "/login", data={"username": "x", "password": "y"},
                       headers={"X-Forwarded-For": "198.51.100.9"},
                       follow_redirects=False)
 
@@ -169,6 +172,6 @@ async def test_the_summary_groups_failures_by_address(client):
 
 @pytest.mark.asyncio
 async def test_x_real_ip_is_used_when_there_is_no_forwarded_chain(client):
-    await client.post("/admin/login", data={"username": "survey", "password": "1"},
+    await client.post(ADMIN + "/login", data={"username": "survey", "password": "1"},
                       headers={"X-Real-IP": "192.0.2.10"}, follow_redirects=False)
     assert (await db.list_login_events())[0]["ip"] == "192.0.2.10"

@@ -19,6 +19,9 @@ from mongomock_motor import AsyncMongoMockClient
 from app import db
 from app.settings import settings
 
+# The portal answers behind ADMIN_PATH, so that is the door to knock on.
+ADMIN = settings.admin_path
+
 SURVEY = settings.survey_admin_username
 SURVEY_PW = settings.survey_admin_password
 ORI = settings.orientation_admin_username
@@ -41,14 +44,14 @@ async def client() -> AsyncIterator[AsyncClient]:
 
 
 async def _password_step(client, username=SURVEY, password=SURVEY_PW, **kw):
-    return await client.post("/admin/login",
+    return await client.post(ADMIN + "/login",
                              data={"username": username, "password": password},
                              headers=FROM, follow_redirects=False, **kw)
 
 
 async def _code_step(client, code, username=SURVEY, **kw):
     return await client.post(
-        "/admin/login",
+        ADMIN + "/login",
         data={"username": username, "password": code, "stage": "otp"},
         headers=FROM, follow_redirects=False, **kw)
 
@@ -78,7 +81,7 @@ async def test_the_code_finishes_the_sign_in(client):
     resp = await _code_step(client, await _issued_code())
 
     assert resp.status_code == 303
-    assert resp.headers["location"] == "/admin/survey"
+    assert resp.headers["location"] == ADMIN + "/survey"
     assert resp.cookies.get("survey_admin_session") == "1"
 
     # Both halves are named in the log, so a sign-in can be told from a try.
@@ -93,7 +96,7 @@ async def test_the_orientation_portal_takes_the_same_two_steps(client):
     resp = await _code_step(client, await _issued_code(ORI), username=ORI)
 
     assert resp.status_code == 303
-    assert resp.headers["location"] == "/admin/orientation"
+    assert resp.headers["location"] == ADMIN + "/orientation"
     assert resp.cookies.get("orientation_admin_session") == "1"
 
 
@@ -107,7 +110,7 @@ async def test_a_code_on_its_own_is_not_a_login(client):
     async with AsyncClient(transport=ASGITransport(app=client._transport.app),
                            base_url="http://test") as stranger:
         resp = await stranger.post(
-            "/admin/login",
+            ADMIN + "/login",
             data={"username": SURVEY, "password": code, "stage": "otp"},
             headers=FROM, follow_redirects=False)
 
@@ -141,7 +144,7 @@ async def test_the_wrong_password_never_reaches_the_code_step(client):
 @pytest.mark.asyncio
 async def test_a_code_cannot_be_requested_with_a_username_alone(client):
     """Resending is for a browser that already passed the password."""
-    resp = await client.post("/admin/survey/request-otp",
+    resp = await client.post(ADMIN + "/survey/request-otp",
                              data={"username": SURVEY}, headers=FROM,
                              follow_redirects=False)
 
@@ -150,7 +153,7 @@ async def test_a_code_cannot_be_requested_with_a_username_alone(client):
 
     # After the password, the same button sends a fresh code.
     await _password_step(client)
-    again = await client.post("/admin/survey/request-otp",
+    again = await client.post(ADMIN + "/survey/request-otp",
                               data={"username": SURVEY}, headers=FROM,
                               follow_redirects=False)
     assert again.status_code == 200
@@ -202,7 +205,7 @@ async def test_a_blocked_address_is_turned_away_at_the_password_step(admin):
     assert (await db.list_login_events())[0]["outcome"] == db.LOGIN_LOCKED
 
     # Another address is unaffected.
-    other = await admin.post("/admin/login",
+    other = await admin.post(ADMIN + "/login",
                              data={"username": SURVEY, "password": SURVEY_PW},
                              headers={"X-Forwarded-For": "198.51.100.7"},
                              follow_redirects=False)
