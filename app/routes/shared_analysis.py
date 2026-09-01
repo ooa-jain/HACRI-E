@@ -45,6 +45,31 @@ def get_directory_token() -> str:
     return get_dept_token(DIRECTORY_KEY, "directory")
 
 
+# ── School reports ───────────────────────────────────────────────────────────
+#
+# Keyed on the school's own name, so a link built for one school cannot be
+# edited into another's, and neither can be turned into a department link.
+SCHOOL_KEY = "__school__"
+SCHOOLS_DIRECTORY_KEY = "__all_schools__"
+
+
+def get_school_token(school: str, survey_type: str = "pre") -> str:
+    return get_dept_token(f"{SCHOOL_KEY}:{school}", survey_type)
+
+
+def verify_school_token(school: str, token: str, survey_type: str = "pre") -> bool:
+    return hmac.compare_digest(get_school_token(school, survey_type), token or "")
+
+
+def get_schools_directory_token() -> str:
+    """Token for the one link that opens every school at once."""
+    return get_dept_token(SCHOOLS_DIRECTORY_KEY, "directory")
+
+
+def schools_directory_url(base_url: str) -> str:
+    return f"{base_url.rstrip('/')}/shared/schools?token={get_schools_directory_token()}"
+
+
 # ── Deeksharambh orientation report ──────────────────────────────────────────
 ORIENTATION_KEY = "__orientation__"
 
@@ -742,6 +767,75 @@ async def shared_departments_list(request: Request, token: str = Query(...)):
             "overall": overall_row,
             "generated_at": datetime.now().strftime("%d %b %Y, %H:%M"),
         }
+    )
+
+
+@router.get("/shared/schools", response_class=HTMLResponse)
+async def shared_schools(request: Request, token: str = Query(...)):
+    """One shareable page covering every school.
+
+    The whole university folded up one level: how many students each school
+    registered, how far through the two surveys they are, which schools are
+    filling now and which have stalled — with a link through to each school's
+    own report. Reachable only with the schools directory token.
+    """
+    if not hmac.compare_digest(get_schools_directory_token(), token):
+        raise HTTPException(status_code=403,
+                            detail="Access denied: Invalid or expired sharing link.")
+
+    from app.db import get_school_analysis_data
+
+    data = await get_school_analysis_data()
+    return request.app.state.templates.TemplateResponse(
+        request, "shared_schools.html",
+        {
+            "schools": data["schools"],
+            # The charts plot three numbers per school; sending the department
+            # detail with them would be most of the payload for none of the ink.
+            "chart_rows": [
+                {"school": s["school"], "registered": s["registered"],
+                 "pre_done": s["pre_done"], "post_done": s["post_done"]}
+                for s in data["schools"]
+            ],
+            "overall": data["overall"],
+            "highlights": data["highlights"],
+            "generated_at": datetime.now().strftime("%d %b %Y, %H:%M"),
+        },
+    )
+
+
+@router.get("/shared/school", response_class=HTMLResponse)
+async def shared_school(request: Request, school: str = Query(...),
+                        token: str = Query(...), type: str = Query(default="pre")):
+    """One school's report: its own figures, then the departments inside it.
+
+    The token is minted from the school's name, so a dean handed their own
+    school's link cannot edit it into another school's.
+    """
+    survey_type = "post" if (type or "").lower() == "post" else "pre"
+    if not verify_school_token(school, token, survey_type):
+        raise HTTPException(status_code=403,
+                            detail="Access denied: Invalid or expired sharing link.")
+
+    from app.db import get_school_analysis_data
+
+    data = await get_school_analysis_data()
+    row = next((s for s in data["schools"] if s["school"] == school), None)
+    if row is None:
+        raise HTTPException(status_code=404, detail="No such school.")
+
+    return request.app.state.templates.TemplateResponse(
+        request, "shared_school.html",
+        {
+            "school": row,
+            "chart_rows": [
+                {"name": d["dept"], "value": d["pre_done"] + d["post_done"]}
+                for d in row["departments"]
+            ],
+            "survey_type": survey_type,
+            "overall": data["overall"],
+            "generated_at": datetime.now().strftime("%d %b %Y, %H:%M"),
+        },
     )
 
 

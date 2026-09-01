@@ -748,6 +748,15 @@ async def api_survey_dept_analysis(request: Request):
     return JSONResponse(await get_dept_analysis_data())
 
 
+@router.get("/admin/api/survey/school-analysis")
+async def api_survey_school_analysis(request: Request):
+    """Every school: its departments folded up, plus what came in this week."""
+    if not _is_survey_admin(request):
+        raise HTTPException(status_code=403)
+    from app.db import get_school_analysis_data
+    return JSONResponse(await get_school_analysis_data())
+
+
 @router.get("/admin/api/survey/date-analysis")
 async def api_survey_date_analysis(request: Request):
     if not _is_survey_admin(request):
@@ -1270,7 +1279,8 @@ async def api_all_share_links(request: Request):
     )
     from app.routes.post_link import dept_post_url, dept_pre_url
     from app.routes.shared_analysis import (
-        cohort_share_url, directory_url, orientation_share_url, vibe_share_url,
+        cohort_share_url, directory_url, orientation_share_url,
+        schools_directory_url, vibe_share_url,
     )
 
     base = str(request.base_url).rstrip("/")
@@ -1308,6 +1318,10 @@ async def api_all_share_links(request: Request):
         "title": "For the office",
         "note": "Every department on one page, with its own exports. Opens without a login.",
         "links": [
+            {"label": "School directory",
+             "sub": "Every school, the departments folded into it, and which are "
+                    "filling now — with a link through to each school's own report.",
+             "url": schools_directory_url(base)},
             {"label": "Department directory",
              "sub": "Counts, reminder-mail outcomes and average scores for every department.",
              "url": directory_url(base)},

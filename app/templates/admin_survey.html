@@ -475,6 +475,16 @@
       </div>
 
       <!-- ── DEPARTMENTS ──────────────────────────────────────────────── -->
+      <!-- ── SCHOOLS ──────────────────────────────────────────────────────
+           A department is what a student picks; a school is the unit a dean
+           asks about. Same numbers, folded up one level, so a school total
+           can never disagree with the departments under it. -->
+      <div class="panel" id="p-schools">
+        <div id="schools-body" class="space-y-5">
+          <div class="share-loading">Gathering every school…</div>
+        </div>
+      </div>
+
       <div class="panel" id="p-depts">
         <div class="space-y-5">
           <div class="card">
@@ -1089,7 +1099,8 @@ const PAGES = [
   { id: 'p-calendar', icon: 'calendar', label: 'Calendar',    title: 'Calendar',            sub: 'When students filled the surveys', load: () => loadCalendar() },
   { id: 'p-emails',   icon: 'emails', group: 'Outreach', label: 'Emails',      title: 'Emails',              sub: 'Send reminders, write your own mail, track delivery', load: () => { updateTargetCount(); initComposer(); loadEmailStats(); } },
   { id: 'p-links',    icon: 'links',    label: 'Links',       title: 'Links',               sub: 'Department links for both surveys, plus shareable reports', load: () => loadLinks() },
-  { id: 'p-depts',    icon: 'depts', group: 'Analysis', label: 'Departments', title: 'Departments',         sub: 'Literacy and readiness averages per department', load: () => loadDepts() },
+  { id: 'p-schools',  icon: 'depts', group: 'Analysis', label: 'Schools',     title: 'Schools',             sub: 'Every school, the departments inside it, and who is filling now', load: () => loadSchools() },
+  { id: 'p-depts',    icon: 'depts',    label: 'Departments', title: 'Departments',         sub: 'Literacy and readiness averages per department', load: () => loadDepts() },
   { id: 'p-cohort',   icon: 'cohort',   label: 'Outcome & impact', title: 'Outcome and impact', sub: 'Baseline, what changed after the workshop, and the journey between them', load: () => loadCohort() },
   { id: 'p-orientation', icon: 'orientation', label: 'Orientation', title: 'Orientation report', sub: 'Campus-wise Deeksharambh analysis, who filled it, and mailing', load: () => loadOrientationPanel() },
   { id: 'p-parents',  icon: 'parents',  label: 'Parents',     title: 'Parental background', sub: 'Occupations reported in the post survey', load: () => loadParents() },
@@ -2713,6 +2724,284 @@ function viewDept(dept) {
   applyFilters();
   show('p-students');
 }
+
+// ═══════════════════════════════════════════════════════════════════════
+//  Schools — the departments folded up one level
+// ═══════════════════════════════════════════════════════════════════════
+let schoolData = null;
+let schoolShareCharts = { donut: null, bar: null };
+let openSchool = null;
+
+/* The six categorical hues, assigned in fixed order and never cycled. A
+   seventh school folds into "Other schools" rather than inventing a hue that
+   nobody with colour-blindness could tell from the first six. */
+const SCHOOL_HUES = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300'];
+const SCHOOL_REST = '#8a8a82';
+
+async function loadSchools() {
+  const body = $('schools-body');
+  if (!schoolData) {
+    body.innerHTML = '<div class="share-loading">Gathering every school…</div>';
+    try { schoolData = await api('/admin/api/survey/school-analysis'); }
+    catch (err) {
+      body.innerHTML = '<div class="share-loading">Could not load the school figures.</div>';
+      return;
+    }
+  }
+  renderSchools();
+}
+
+/** Top five schools by submissions, with the tail folded into one slice. */
+function schoolSlices(rows) {
+  const scored = rows
+    .map(r => ({ name: r.school, value: r.pre_done + r.post_done }))
+    .filter(r => r.value > 0)
+    .sort((a, b) => b.value - a.value);
+  if (scored.length <= 6) return scored;
+  const head = scored.slice(0, 5);
+  const tail = scored.slice(5);
+  head.push({ name: `Other schools (${tail.length})`,
+              value: tail.reduce((s, r) => s + r.value, 0), rest: true });
+  return head;
+}
+
+function renderSchools() {
+  const rows = schoolData.schools, ov = schoolData.overall, hi = schoolData.highlights;
+  const slices = schoolSlices(rows);
+  const share = v => ov.submissions ? Math.round(100 * v / ov.submissions) : 0;
+
+  // Written out in full rather than composed: the stylesheet is a build, and a
+  // class name assembled at runtime is not in it.
+  const TONES = {
+    emerald: ['bg-emerald-50 border-emerald-200', 'text-emerald-800', 'text-emerald-950', 'text-emerald-700'],
+    rose:    ['bg-rose-50 border-rose-200',       'text-rose-800',    'text-rose-950',    'text-rose-700'],
+    amber:   ['bg-amber-50 border-amber-200',     'text-amber-800',   'text-amber-950',   'text-amber-700'],
+    teal:    ['bg-teal-50 border-teal-200',       'text-teal-800',    'text-teal-950',    'text-teal-700'],
+  };
+  const card = (tone, label, row, extra) => {
+    if (!row) return '';
+    const [box, head, name, foot] = TONES[tone];
+    return `
+      <div class="${box} border rounded-xl p-3">
+        <div class="text-[11px] font-extrabold ${head} uppercase">${label}</div>
+        <div class="text-sm font-extrabold ${name} mt-1">${e(row.school)}</div>
+        <div class="text-xs font-bold ${foot}">${extra(row)}</div>
+      </div>`;
+  };
+
+  $('schools-body').innerHTML = `
+    <div class="card space-y-4">
+      <div class="panel-head">
+        <div><div class="h-card">🏛️ Every school</div>
+          <div class="sub">${ov.schools_listed} schools · ${ov.school_count} with students
+            registered. Departments that belong to no school are grouped under
+            <b>Other</b>.</div></div>
+        <div class="panel-actions">
+          <button class="btn btn-soft" onclick="copy('${e(ov.directory_url)}')">Copy all-schools link</button>
+          <a class="btn btn-primary" target="_blank" href="${e(ov.directory_url)}">Open shared page</a>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div class="stat border-l-slate-800"><b>${num(ov.registered)}</b><s>Registered</s></div>
+        <div class="stat border-l-teal-600"><b class="text-teal-600">${num(ov.pre_done)}</b><s>Baseline done</s></div>
+        <div class="stat border-l-emerald-600"><b class="text-emerald-600">${num(ov.post_done)}</b><s>Post done</s></div>
+        <div class="stat border-l-blue-600"><b class="text-blue-700">${num(ov.submissions)}</b><s>Total submissions</s></div>
+        <div class="stat border-l-amber-500"><b class="text-amber-600">${num(ov.recent_total)}</b><s>Filled in ${ov.recent_days} days</s></div>
+        <div class="stat border-l-slate-400"><b>${ov.school_count}</b><s>Schools taking part</s></div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        ${card('emerald', '🏆 Most submissions', hi.most_submissions,
+               r => `${r.pre_done + r.post_done} submissions · ${share(r.pre_done + r.post_done)}% of all`)}
+        ${card('rose', '⚠️ Fewest submissions', hi.fewest_submissions,
+               r => `${r.pre_done + r.post_done} submissions from ${r.registered} registered`)}
+        ${card('amber', '🐢 Lowest completion', hi.lowest_completion,
+               r => `${r.registered ? Math.round(100 * r.pre_done / r.registered) : 0}% of ${r.registered} finished the baseline`)}
+        ${card('teal', '🔥 Filling now', hi.most_recent,
+               r => `${r.recent_total} in the last ${ov.recent_days} days · last ${e(r.last_submission || '—')}`)}
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+      <div class="card">
+        <div class="h-card">🥧 Share of all submissions</div>
+        <div class="sub mb-3">Part of the whole, at a glance. The tail is folded into one
+          slice — six is as many as a ring can be read at.</div>
+        <div style="height:300px"><canvas id="school-donut"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="h-card">📊 Submissions by school</div>
+        <div class="sub mb-3">Which is highest and which is lowest, ranked — a ring
+          cannot be read that way, so the same numbers are also bars.</div>
+        <div style="height:300px; overflow-y:auto"><canvas id="school-bars"></canvas></div>
+      </div>
+    </div>
+
+    <div class="card space-y-3">
+      <div class="panel-head">
+        <div><div class="h-card">📋 School by school</div>
+          <div class="sub">Click a school to open its departments. Every school has its own
+            shareable report link.</div></div>
+      </div>
+      <div id="school-table"></div>
+    </div>
+
+    <div id="school-detail"></div>`;
+
+  table('school-table',
+    ['#', 'School', 'Depts', 'Registered', 'Baseline', 'Post', 'Submissions',
+     `Last ${ov.recent_days} days`, 'Avg lit / read (pre)', 'Report link'],
+    rows, (r, i) => {
+      const subs = r.pre_done + r.post_done;
+      const pct = r.registered ? Math.round(100 * r.pre_done / r.registered) : 0;
+      return [
+        i + 1,
+        `<button class="font-semibold text-slate-900 hover:text-blue-700 text-left"
+                 data-school="${e(r.school)}">${e(r.school)}</button>`,
+        r.dept_count || '<span class="text-slate-400">0</span>',
+        r.registered,
+        `<span class="font-bold text-blue-700">${r.pre_done}</span>
+         <span class="text-slate-400">/ ${pct}%</span>`,
+        `<span class="font-bold text-emerald-700">${r.post_done}</span>
+         <span class="text-slate-400">/ ${r.post_pending} left</span>`,
+        `<b>${subs}</b>`,
+        r.recent_total
+          ? `<span class="badge b-amber">${r.recent_total} new</span>`
+          : '<span class="text-slate-400">—</span>',
+        `${score(r.avg_lit_pre)} / ${score(r.avg_read_pre)}`,
+        ['pre', 'post'].map(type => `
+          <div class="flex items-center gap-1.5 mb-1">
+            <span class="text-[10px] font-bold text-slate-500 w-8">${type.toUpperCase()}</span>
+            <button class="btn-xs btn-soft" data-copy-school="${e(type === 'pre' ? r.share_url_pre : r.share_url_post)}">Copy</button>
+            <a class="btn-xs btn-primary" target="_blank"
+               href="${e(type === 'pre' ? r.share_url_pre : r.share_url_post)}">View</a>
+          </div>`).join(''),
+      ];
+    }, 'No schools yet');
+
+  drawSchoolCharts(rows, slices);
+  if (openSchool) showSchoolDetail(openSchool);
+}
+
+function drawSchoolCharts(rows, slices) {
+  if (typeof Chart === 'undefined') return;
+
+  const donut = $('school-donut');
+  if (donut) {
+    if (schoolShareCharts.donut) schoolShareCharts.donut.destroy();
+    schoolShareCharts.donut = new Chart(donut.getContext('2d'), {
+      type: 'doughnut',
+      data: {
+        labels: slices.map(s => s.name),
+        datasets: [{
+          data: slices.map(s => s.value),
+          backgroundColor: slices.map((s, i) => s.rest ? SCHOOL_REST : SCHOOL_HUES[i]),
+          // A 2px surface gap between segments, so adjacent fills never touch.
+          borderColor: '#ffffff', borderWidth: 2,
+        }],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, cutout: '58%',
+        plugins: {
+          legend: { position: 'right', labels: { boxWidth: 12, font: { size: 11 } } },
+          tooltip: { callbacks: { label: c => `${c.label}: ${c.parsed} submissions` } },
+        },
+      },
+    });
+  }
+
+  // Ranked, horizontal, one hue: this compares magnitude, so it is not the
+  // place for six colours. Long school names need the room a y-axis gives.
+  const bars = $('school-bars');
+  if (bars) {
+    const ranked = rows.filter(r => r.registered)
+                       .map(r => ({ name: r.school, value: r.pre_done + r.post_done }))
+                       .sort((a, b) => b.value - a.value);
+    bars.parentElement.style.height = Math.max(300, ranked.length * 34) + 'px';
+    if (schoolShareCharts.bar) schoolShareCharts.bar.destroy();
+    schoolShareCharts.bar = new Chart(bars.getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: ranked.map(r => r.name),
+        datasets: [{ label: 'Submissions', data: ranked.map(r => r.value),
+                     backgroundColor: '#2a78d6', borderRadius: 4, barThickness: 14 }],
+      },
+      options: {
+        indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { beginAtZero: true, grid: { color: '#f1f5f9' } },
+          y: { grid: { display: false }, ticks: { font: { size: 10 } } },
+        },
+      },
+    });
+  }
+}
+
+/** One school opened up: its departments, with each one's own links. */
+function showSchoolDetail(school) {
+  const row = (schoolData.schools || []).find(s => s.school === school);
+  const host = $('school-detail');
+  if (!row || !host) return;
+  openSchool = school;
+
+  host.innerHTML = `
+    <div class="card space-y-3">
+      <div class="panel-head">
+        <div><div class="h-card">🏫 ${e(row.school)}</div>
+          <div class="sub">${row.dept_count} department${row.dept_count === 1 ? '' : 's'} ·
+            ${row.registered} registered · ${row.pre_done} baseline · ${row.post_done} post
+            ${row.recent_total ? ` · <b>${row.recent_total} filled in the last ${schoolData.overall.recent_days} days</b>` : ''}</div></div>
+        <div class="panel-actions">
+          <a class="btn btn-primary" target="_blank" href="${e(row.share_url_pre)}">Open school report</a>
+          <button class="btn btn-soft" onclick="closeSchoolDetail()">Close</button>
+        </div>
+      </div>
+      <div id="school-dept-table"></div>
+    </div>`;
+
+  table('school-dept-table',
+    ['#', 'Department', 'Registered', 'Baseline', 'Post', 'Avg pre (lit / read)',
+     'Avg post (lit / read)', 'Reports'],
+    row.departments, (d, i) => [
+      i + 1,
+      `<button class="font-semibold text-slate-900 hover:text-blue-700 text-left"
+               data-view-dept="${e(d.dept)}">${e(d.dept)}</button>`,
+      d.registered,
+      `<span class="font-bold text-blue-700">${d.pre_done}</span>
+       <span class="text-slate-400">/ ${d.pre_pending} left</span>`,
+      `<span class="font-bold text-emerald-700">${d.post_done}</span>
+       <span class="text-slate-400">/ ${d.post_pending} left</span>`,
+      `${score(d.avg_lit_pre)} / ${score(d.avg_read_pre)}`,
+      `${score(d.avg_lit_post)} / ${score(d.avg_read_post)}`,
+      ['pre', 'post'].map(type => `
+        <div class="flex items-center gap-1.5 mb-1">
+          <span class="text-[10px] font-bold text-slate-500 w-8">${type.toUpperCase()}</span>
+          <a class="btn-xs btn-primary" target="_blank"
+             href="${e(type === 'pre' ? d.share_url_pre : d.share_url_post)}">View</a>
+        </div>`).join(''),
+    ], 'No department registers under this school yet');
+
+  host.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function closeSchoolDetail() {
+  openSchool = null;
+  const host = $('school-detail');
+  if (host) host.innerHTML = '';
+}
+
+/* Delegated, because a school name is data: it is never spliced into a
+   handler attribute. */
+document.addEventListener('click', ev => {
+  const open = ev.target.closest('[data-school]');
+  if (open) return showSchoolDetail(open.dataset.school);
+  const copyLink = ev.target.closest('[data-copy-school]');
+  if (copyLink) return copy(copyLink.dataset.copySchool);
+  const dept = ev.target.closest('[data-view-dept]');
+  if (dept) return viewDept(dept.dataset.viewDept);
+});
 
 // ═══════════════════════════════════════════════════════════════════════
 //  Outcome and impact — one page, drawn by /static/js/cohort_report.js

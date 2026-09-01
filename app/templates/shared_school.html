@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ school.school }} – HACRI-E School Report</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="{{ asset('/static/vendor/chart.umd.js') }}"></script>
+  <style>
+    :root {
+      --navy: #1B2A4A; --border: #E2E8F0; --bg: #F8FAFC;
+      --teal: #0f766e; --green: #15803d; --gray: #64748b;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg); color: var(--navy); min-height: 100vh; padding: 40px 20px;
+    }
+    .container { max-width: 1180px; margin: 0 auto; }
+    .header { text-align: center; margin-bottom: 32px; }
+    .header .tag {
+      display: inline-block; padding: 4px 14px; border-radius: 20px; font-size: 12px;
+      font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: #fff;
+      margin-bottom: 10px;
+      background: {% if survey_type == 'post' %}#16a34a{% else %}#0d9488{% endif %};
+    }
+    .header h1 { font-size: 28px; font-weight: 800; margin-bottom: 8px; letter-spacing: -.5px; }
+    .header p { font-size: 15px; color: var(--gray); }
+    .card {
+      background: #fff; border: 1px solid var(--border); border-radius: 16px;
+      box-shadow: 0 4px 6px -1px rgba(0,0,0,.05), 0 2px 4px -1px rgba(0,0,0,.03);
+      padding: 24px; margin-bottom: 24px;
+    }
+    .card h2 { font-size: 17px; font-weight: 700; margin-bottom: 4px; }
+    .card .sub { font-size: 13px; color: var(--gray); margin-bottom: 18px; }
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 14px; }
+    .stat {
+      background: #fff; border: 1px solid var(--border); border-left: 4px solid var(--navy);
+      border-radius: 12px; padding: 16px;
+    }
+    .stat b { display: block; font-size: 26px; font-weight: 800; line-height: 1.1; }
+    .stat s { display: block; font-size: 11.5px; color: var(--gray); margin-top: 5px; text-decoration: none; }
+    .stat.teal  { border-left-color: var(--teal); }  .stat.teal b  { color: var(--teal); }
+    .stat.green { border-left-color: var(--green); } .stat.green b { color: var(--green); }
+    .stat.blue  { border-left-color: #2a78d6; }      .stat.blue b  { color: #2a78d6; }
+    .stat.amber { border-left-color: #b45309; }      .stat.amber b { color: #b45309; }
+    .chart-box { position: relative; }
+    .scroll { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; text-align: left; min-width: 900px; }
+    th {
+      padding: 14px; font-weight: 700; font-size: 12.5px; color: var(--gray);
+      text-transform: uppercase; letter-spacing: .5px; border-bottom: 2px solid var(--border);
+      white-space: nowrap;
+    }
+    td { padding: 14px; border-bottom: 1px solid var(--border); font-size: 14px; vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    .dept-name { font-weight: 700; min-width: 260px; }
+    .num { text-align: right; font-variant-numeric: tabular-nums; }
+    .badge { display: inline-block; padding: 4px 9px; border-radius: 6px; font-size: 12px; font-weight: 700; }
+    .badge-gray  { background: #F1F5F9; color: #475569; }
+    .badge-blue  { background: #E0F2FE; color: #0369a1; }
+    .badge-green { background: #DCFCE7; color: #15803d; }
+    .btn {
+      display: inline-flex; align-items: center; gap: 5px; padding: 6px 11px;
+      border-radius: 7px; font-size: 12px; font-weight: 700; text-decoration: none; border: none;
+    }
+    .btn-pre  { background: var(--teal); color: #fff; }
+    .btn-post { background: var(--green); color: #fff; }
+    .empty { text-align: center; padding: 40px; color: var(--gray); font-size: 14px; }
+    .foot { text-align: center; font-size: 12.5px; color: var(--gray); margin-top: 28px; line-height: 1.7; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <div class="header">
+    <div class="tag">{% if survey_type == 'post' %}Post-Workshop{% else %}Baseline{% endif %} · School Report</div>
+    <h1>{{ school.school }}</h1>
+    <p>{{ school.dept_count }} department{{ '' if school.dept_count == 1 else 's' }} ·
+       HACRI-E AI Literacy Assessment</p>
+  </div>
+
+  <div class="card">
+    <h2>Where this school stands</h2>
+    <p class="sub">
+      Every number here is the departments below added up — a school total can never
+      disagree with the departments inside it.
+      {% if school.registered %}
+        This school is {{ 100 * school.registered // overall.registered if overall.registered else 0 }}%
+        of the {{ overall.registered }} students registered university-wide.
+      {% endif %}
+    </p>
+    <div class="stats">
+      <div class="stat"><b>{{ school.registered }}</b><s>Registered students</s></div>
+      <div class="stat teal"><b>{{ school.pre_done }}</b><s>Baseline done</s></div>
+      <div class="stat green"><b>{{ school.post_done }}</b><s>Post survey done</s></div>
+      <div class="stat"><b>{{ school.pre_pending }}</b><s>Baseline still pending</s></div>
+      <div class="stat"><b>{{ school.post_pending }}</b><s>Post survey still pending</s></div>
+      <div class="stat amber"><b>{{ school.recent_total }}</b><s>Filled in the last {{ overall.recent_days }} days</s></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>AI literacy and readiness</h2>
+    <p class="sub">
+      Averaged over students, not over departments — a department of three does not
+      weigh the same as one of three hundred. Scored out of 5.
+      {% if school.last_submission %}Last submission {{ school.last_submission }}.{% endif %}
+    </p>
+    <div class="stats">
+      <div class="stat blue"><b>{{ school.avg_lit_pre if school.avg_lit_pre is not none else '—' }}</b><s>Avg literacy (baseline)</s></div>
+      <div class="stat blue"><b>{{ school.avg_read_pre if school.avg_read_pre is not none else '—' }}</b><s>Avg readiness (baseline)</s></div>
+      <div class="stat green"><b>{{ school.avg_lit_post if school.avg_lit_post is not none else '—' }}</b><s>Avg literacy (post)</s></div>
+      <div class="stat green"><b>{{ school.avg_read_post if school.avg_read_post is not none else '—' }}</b><s>Avg readiness (post)</s></div>
+    </div>
+  </div>
+
+  {% if school.departments %}
+  <div class="card">
+    <h2>📊 Submissions by department</h2>
+    <p class="sub">Ranked highest to lowest, so the department that has stalled is
+      the one at the bottom.</p>
+    <div class="chart-box" id="bar-box"><canvas id="bars"></canvas></div>
+  </div>
+  {% endif %}
+
+  <div class="card">
+    <h2>Department by department</h2>
+    <p class="sub">Each department's own report opens on its own link.</p>
+    <div class="scroll">
+      {% if school.departments %}
+      <table>
+        <thead>
+          <tr>
+            <th>#</th><th>Department</th><th class="num">Registered</th>
+            <th class="num">Baseline</th><th class="num">Post</th>
+            <th>Avg pre (lit / read)</th><th>Avg post (lit / read)</th><th>Report</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for d in school.departments %}
+          <tr>
+            <td class="num">{{ loop.index }}</td>
+            <td class="dept-name">{{ d.dept }}</td>
+            <td class="num">{{ d.registered }}</td>
+            <td class="num"><span class="badge badge-blue">{{ d.pre_done }}</span>
+              <small style="color:var(--gray)">/ {{ d.pre_pending }} left</small></td>
+            <td class="num"><span class="badge badge-green">{{ d.post_done }}</span>
+              <small style="color:var(--gray)">/ {{ d.post_pending }} left</small></td>
+            <td>{{ d.avg_lit_pre if d.avg_lit_pre is not none else '—' }} /
+                {{ d.avg_read_pre if d.avg_read_pre is not none else '—' }}</td>
+            <td>{{ d.avg_lit_post if d.avg_lit_post is not none else '—' }} /
+                {{ d.avg_read_post if d.avg_read_post is not none else '—' }}</td>
+            <td>
+              <a class="btn btn-pre" target="_blank" href="{{ d.share_url_pre }}">Baseline</a>
+              <a class="btn btn-post" target="_blank" href="{{ d.share_url_post }}">Post</a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="empty">No department registers under this school yet.</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <p class="foot">
+    Generated {{ generated_at }} · figures update every time this page is opened.<br>
+    JAIN (Deemed-to-be University) · Office of Academics — aggregate figures only,
+    no student is named on this page.
+  </p>
+</div>
+
+<script>
+// One series comparing magnitude, so one hue — colour here would encode nothing.
+const DEPTS = {{ chart_rows | tojson }};
+if (window.Chart && DEPTS.length) {
+  const ranked = DEPTS.slice().sort((a, b) => b.value - a.value);
+  document.getElementById('bar-box').style.height =
+    Math.max(200, ranked.length * 34) + 'px';
+  new Chart(document.getElementById('bars').getContext('2d'), {
+    type: 'bar',
+    data: { labels: ranked.map(d => d.name), datasets: [{
+      label: 'Submissions', data: ranked.map(d => d.value),
+      backgroundColor: '#2a78d6', borderRadius: 4, barThickness: 14,
+    }] },
+    options: {
+      indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { beginAtZero: true, grid: { color: '#f1f5f9' } },
+        y: { grid: { display: false }, ticks: { font: { size: 10 } } },
+      },
+    },
+  });
+}
+</script>
+
+</body>
+</html>

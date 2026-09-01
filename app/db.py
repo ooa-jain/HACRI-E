@@ -945,6 +945,151 @@ async def get_dept_stats() -> list[dict]:
     return data["departments"]
 
 
+# ── School-wide figures ──────────────────────────────────────────────────────
+#
+# A department is what a student picks; a school is the unit a dean asks about.
+# These are the department figures folded up one level, from exactly the same
+# numbers, so a school total can never disagree with the departments under it.
+
+RECENT_DAYS = 7
+
+
+async def get_school_analysis_data() -> dict[str, Any]:
+    """Every school: its departments, its totals, and what came in this week."""
+    from urllib.parse import quote
+
+    from app.routes.shared_analysis import get_school_token, get_schools_directory_token
+    from app.schools import OTHER_SCHOOL, SCHOOL_NAMES, school_of, school_slug
+
+    dept_data = await get_dept_analysis_data()
+    base_url = str(settings.public_base_url).rstrip("/")
+
+    # How many submissions landed in the last week, per school. "Filling now"
+    # is the question the page answers, and a total answers it badly: a school
+    # that finished in June and one filling today look identical in a total.
+    since = _now() - timedelta(days=RECENT_DAYS)
+    dept_of_email: dict[str, str] = {}
+    async for user in get_db()[USERS].find({}, {"email": 1, "program": 1}):
+        if user.get("email"):
+            dept_of_email[user["email"]] = (user.get("program") or "").strip()
+
+    recent: dict[str, dict[str, Any]] = {}
+    for collection, key in ((PRE, "recent_pre"), (POST, "recent_post")):
+        async for doc in get_db()[collection].find({"submitted_at": {"$gte": since}}):
+            school = school_of(dept_of_email.get(doc.get("email", ""), ""))
+            row = recent.setdefault(school, {"recent_pre": 0, "recent_post": 0,
+                                             "last": None})
+            row[key] += 1
+            when = doc.get("submitted_at")
+            if isinstance(when, datetime):
+                if when.tzinfo is None:
+                    when = when.replace(tzinfo=timezone.utc)
+                if row["last"] is None or when > row["last"]:
+                    row["last"] = when
+
+    # Fold the department rows into their school.
+    buckets: dict[str, dict[str, Any]] = {}
+    for name in [*SCHOOL_NAMES, OTHER_SCHOOL]:
+        buckets[name] = {
+            "school": name, "departments": [], "registered": 0,
+            "pre_done": 0, "post_done": 0,
+            "pre_lit": [], "pre_read": [], "post_lit": [], "post_read": [],
+            "pre_count": 0, "post_count": 0,
+        }
+
+    for dept in dept_data["departments"]:
+        bucket = buckets.setdefault(school_of(dept["dept"]), {
+            "school": school_of(dept["dept"]), "departments": [], "registered": 0,
+            "pre_done": 0, "post_done": 0,
+            "pre_lit": [], "pre_read": [], "post_lit": [], "post_read": [],
+            "pre_count": 0, "post_count": 0,
+        })
+        bucket["departments"].append(dept)
+        for field in ("registered", "pre_done", "post_done", "pre_count", "post_count"):
+            bucket[field] += dept.get(field, 0) or 0
+        # Averaged over students, not over departments: a department of three
+        # must not weigh the same as one of three hundred.
+        for src, dst, count_key in (("avg_lit_pre", "pre_lit", "pre_count"),
+                                    ("avg_read_pre", "pre_read", "pre_count"),
+                                    ("avg_lit_post", "post_lit", "post_count"),
+                                    ("avg_read_post", "post_read", "post_count")):
+            value, weight = dept.get(src), dept.get(count_key, 0) or 0
+            if value is not None and weight:
+                bucket[dst].append((float(value), weight))
+
+    def weighted(pairs: list[tuple[float, int]]) -> float | None:
+        total = sum(w for _, w in pairs)
+        return round(sum(v * w for v, w in pairs) / total, 2) if total else None
+
+    rows = []
+    for name, bucket in buckets.items():
+        seen = recent.get(name, {})
+        token_pre = get_school_token(name, "pre")
+        token_post = get_school_token(name, "post")
+        rows.append({
+            "school": name,
+            "slug": school_slug(name),
+            "dept_count": len(bucket["departments"]),
+            "departments": sorted(bucket["departments"],
+                                  key=lambda d: -d.get("registered", 0)),
+            "registered": bucket["registered"],
+            "pre_done": bucket["pre_done"],
+            "post_done": bucket["post_done"],
+            "pre_pending": max(0, bucket["registered"] - bucket["pre_done"]),
+            "post_pending": max(0, bucket["pre_done"] - bucket["post_done"]),
+            "pre_count": bucket["pre_count"],
+            "post_count": bucket["post_count"],
+            "avg_lit_pre": weighted(bucket["pre_lit"]),
+            "avg_read_pre": weighted(bucket["pre_read"]),
+            "avg_lit_post": weighted(bucket["post_lit"]),
+            "avg_read_post": weighted(bucket["post_read"]),
+            "recent_pre": seen.get("recent_pre", 0),
+            "recent_post": seen.get("recent_post", 0),
+            "recent_total": seen.get("recent_pre", 0) + seen.get("recent_post", 0),
+            "last_submission": _fmt(seen.get("last")),
+            "token_pre": token_pre,
+            "token_post": token_post,
+            "share_url_pre": f"{base_url}/shared/school?school={quote(name)}&token={token_pre}&type=pre",
+            "share_url_post": f"{base_url}/shared/school?school={quote(name)}&token={token_post}&type=post",
+        })
+
+    # A school nobody registered under still exists; it just goes last, so the
+    # top of the table is where the students are.
+    rows.sort(key=lambda r: (-r["registered"], r["school"]))
+
+    overall = dept_data["overall"]
+    submissions = overall["pre_done"] + overall["post_done"]
+    active = [r for r in rows if r["registered"]]
+    by_submissions = sorted(active, key=lambda r: -(r["pre_done"] + r["post_done"]))
+
+    def rate(row: dict) -> float:
+        return (row["pre_done"] / row["registered"]) if row["registered"] else 0.0
+
+    by_rate = sorted([r for r in active if r["registered"] >= 1], key=rate)
+
+    return {
+        "schools": rows,
+        "overall": {
+            **overall,
+            "school_count": len(active),
+            "schools_listed": len(rows),
+            "submissions": submissions,
+            "recent_days": RECENT_DAYS,
+            "recent_total": sum(r["recent_total"] for r in rows),
+            "directory_token": get_schools_directory_token(),
+            "directory_url": f"{base_url}/shared/schools?token={get_schools_directory_token()}",
+        },
+        "highlights": {
+            "most_submissions": by_submissions[0] if by_submissions else None,
+            "fewest_submissions": by_submissions[-1] if by_submissions else None,
+            "lowest_completion": by_rate[0] if by_rate else None,
+            "highest_completion": by_rate[-1] if by_rate else None,
+            "most_recent": max(rows, key=lambda r: r["recent_total"], default=None)
+                           if any(r["recent_total"] for r in rows) else None,
+        },
+    }
+
+
 async def department_registration_summary() -> dict:
     """One row per department: registered, baseline, post survey, Deeksharambh.
 

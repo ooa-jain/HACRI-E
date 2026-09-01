@@ -122,6 +122,7 @@ The department and level selectors in the top bar scope every page below them.
 | **Students** | One table, four views — status, time taken, timeline, orientation replies — with search and status filter |
 | **Emails** | Send reminders to a chosen cohort, draft a mail to open in Gmail, then track delivery, clicks and completions per department |
 | **Links** | Department post-survey links, shareable analysis reports, student entry points |
+| **Schools** | Every school, the departments folded into it, share-of-submissions donut, ranked bars, and a shareable report link per school |
 | **Departments** | Literacy / readiness averages, rankings, bar chart, per-department report links |
 | **Parents** | Parental occupation breakdown from the post survey |
 | **Calendar** | Month grid, daily submission chart, day-by-day log (click a date for the department breakdown) |
@@ -130,6 +131,43 @@ The department and level selectors in the top bar scope every page below them.
 
 Cohort data exports (CSV or Excel) come from the **Export** button, which
 follows the current filters and lets you pick which columns to include.
+
+### Schools
+
+A department is what a student picks at registration; a school is the unit a
+dean asks about. `app/schools.py` holds the Office of Academics' own mapping —
+13 schools over 31 departments — and the **Schools** page folds the department
+figures up one level. The numbers come from the same aggregation the
+Departments page uses, so a school total can never disagree with the
+departments inside it.
+
+Averages are weighted **by students, not by department**: a department of three
+does not weigh the same as one of three hundred.
+
+Each row shows registered / baseline / post / total submissions, how many came
+in **in the last 7 days** ("filling now"), and average literacy and readiness.
+Click a school to open its departments underneath. Four cards name the school
+with the most submissions, the fewest, the worst completion rate, and the one
+filling fastest right now.
+
+Two charts, because they answer different questions: a **donut** for share of
+all submissions (top five schools plus a folded "Other schools" slice — six is
+as many as a ring can be read at), and **ranked horizontal bars** for which
+school is highest and which is lowest, which a ring cannot show.
+
+| Link | Opens |
+|------|-------|
+| `/shared/schools?token=…` | every school on one page, with the same charts and a link into each |
+| `/shared/school?school=…&token=…&type=pre\|post` | one school: its figures, then the departments inside it |
+
+Both open without a login and name no student. A school's token is minted from
+its own name, so a dean handed their school's link cannot edit it into another
+school's, or into the other survey.
+
+**A department the mapping does not name lands in "Other"** rather than
+disappearing, so every registered student is counted under exactly one school.
+Seeing a real department sitting in "Other" is the signal to add it to
+`SCHOOLS` in `app/schools.py`. Today that is `CeRSSE` alone.
 
 ### Turning an address away
 

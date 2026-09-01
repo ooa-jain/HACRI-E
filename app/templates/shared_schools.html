@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>School-wise Analysis – JAIN University</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="{{ asset('/static/vendor/chart.umd.js') }}"></script>
+  <style>
+    :root {
+      --navy: #1B2A4A; --navy-light: #2A3E68; --border: #E2E8F0; --bg: #F8FAFC;
+      --teal: #0f766e; --green: #15803d; --gray: #64748b;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg); color: var(--navy); min-height: 100vh; padding: 40px 20px;
+    }
+    .container { max-width: 1360px; margin: 0 auto; }
+    .header { text-align: center; margin-bottom: 32px; }
+    .header .tag {
+      display: inline-block; padding: 4px 14px; border-radius: 20px; font-size: 12px;
+      font-weight: 700; text-transform: uppercase; letter-spacing: .5px;
+      background: var(--navy); color: #fff; margin-bottom: 10px;
+    }
+    .header h1 { font-size: 28px; font-weight: 800; margin-bottom: 8px; letter-spacing: -.5px; }
+    .header p { font-size: 15px; color: var(--gray); }
+    .card {
+      background: #fff; border: 1px solid var(--border); border-radius: 16px;
+      box-shadow: 0 4px 6px -1px rgba(0,0,0,.05), 0 2px 4px -1px rgba(0,0,0,.03);
+      padding: 24px; margin-bottom: 24px;
+    }
+    .card h2 { font-size: 17px; font-weight: 700; margin-bottom: 4px; }
+    .card .sub { font-size: 13px; color: var(--gray); margin-bottom: 18px; }
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; }
+    .stat {
+      background: #fff; border: 1px solid var(--border); border-left: 4px solid var(--navy);
+      border-radius: 12px; padding: 16px;
+    }
+    .stat b { display: block; font-size: 26px; font-weight: 800; line-height: 1.1; }
+    .stat s { display: block; font-size: 11.5px; color: var(--gray); margin-top: 5px; text-decoration: none; }
+    .stat.teal   { border-left-color: var(--teal); }  .stat.teal b   { color: var(--teal); }
+    .stat.green  { border-left-color: var(--green); } .stat.green b  { color: var(--green); }
+    .stat.blue   { border-left-color: #2a78d6; }      .stat.blue b   { color: #2a78d6; }
+    .stat.amber  { border-left-color: #b45309; }      .stat.amber b  { color: #b45309; }
+    .highlights { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; }
+    .hl { border-radius: 12px; padding: 14px; border: 1px solid; }
+    .hl .lbl { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .4px; }
+    .hl .name { font-size: 14.5px; font-weight: 800; margin-top: 4px; line-height: 1.3; }
+    .hl .foot { font-size: 12.5px; font-weight: 600; margin-top: 3px; }
+    .hl-good { background: #ECFDF5; border-color: #A7F3D0; color: #065F46; }
+    .hl-bad  { background: #FFF1F2; border-color: #FECDD3; color: #9F1239; }
+    .hl-warn { background: #FFFBEB; border-color: #FDE68A; color: #92400E; }
+    .hl-live { background: #F0FDFA; border-color: #99F6E4; color: #115E59; }
+    .charts { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+    @media (max-width: 900px) { .charts { grid-template-columns: 1fr; } }
+    .chart-box { position: relative; height: 340px; }
+    .scroll { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; text-align: left; min-width: 1080px; }
+    th {
+      padding: 14px; font-weight: 700; font-size: 12.5px; color: var(--gray);
+      text-transform: uppercase; letter-spacing: .5px; border-bottom: 2px solid var(--border);
+      white-space: nowrap;
+    }
+    td { padding: 14px; border-bottom: 1px solid var(--border); font-size: 14px; vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    .school-name { font-weight: 700; min-width: 250px; }
+    .school-name small { display: block; font-weight: 500; font-size: 12px; color: var(--gray); margin-top: 2px; }
+    .num { text-align: right; font-variant-numeric: tabular-nums; }
+    .badge {
+      display: inline-block; padding: 4px 9px; border-radius: 6px;
+      font-size: 12px; font-weight: 700;
+    }
+    .badge-gray  { background: #F1F5F9; color: #475569; }
+    .badge-blue  { background: #E0F2FE; color: #0369a1; }
+    .badge-green { background: #DCFCE7; color: #15803d; }
+    .badge-amber { background: #FEF3C7; color: #92400e; }
+    .btn {
+      display: inline-flex; align-items: center; gap: 5px; padding: 6px 11px;
+      border-radius: 7px; font-size: 12px; font-weight: 700; text-decoration: none;
+      border: none; cursor: pointer; font-family: inherit;
+    }
+    .btn-pre  { background: var(--teal); color: #fff; }
+    .btn-post { background: var(--green); color: #fff; }
+    .swatch {
+      display: inline-block; width: 10px; height: 10px; border-radius: 2px;
+      margin-right: 7px; vertical-align: middle;
+    }
+    .foot { text-align: center; font-size: 12.5px; color: var(--gray); margin-top: 28px; line-height: 1.7; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <div class="header">
+    <div class="tag">All Schools</div>
+    <h1><span style="color:var(--teal)">OoA</span> · HACRI-E School Report</h1>
+    <p>Every school in the university, its departments folded into one row</p>
+  </div>
+
+  <!-- The whole university in six numbers. -->
+  <div class="card">
+    <h2>The university at a glance</h2>
+    <p class="sub">
+      {{ overall.schools_listed }} schools listed · {{ overall.school_count }} with
+      students registered. Departments belonging to no school are grouped under
+      <b>Other</b>, so every registered student is counted exactly once.
+    </p>
+    <div class="stats">
+      <div class="stat"><b>{{ overall.registered }}</b><s>Registered students</s></div>
+      <div class="stat teal"><b>{{ overall.pre_done }}</b><s>Baseline done</s></div>
+      <div class="stat green"><b>{{ overall.post_done }}</b><s>Post survey done</s></div>
+      <div class="stat blue"><b>{{ overall.submissions }}</b><s>Total submissions</s></div>
+      <div class="stat amber"><b>{{ overall.recent_total }}</b><s>Filled in the last {{ overall.recent_days }} days</s></div>
+      <div class="stat"><b>{{ overall.school_count }}</b><s>Schools taking part</s></div>
+    </div>
+  </div>
+
+  {% if highlights.most_submissions %}
+  <div class="card">
+    <h2>Who is ahead, who has stalled</h2>
+    <p class="sub">Read together: a school can be highest on submissions and still
+      have the lowest share of its own students finished.</p>
+    <div class="highlights">
+      <div class="hl hl-good">
+        <div class="lbl">🏆 Most submissions</div>
+        <div class="name">{{ highlights.most_submissions.school }}</div>
+        <div class="foot">{{ highlights.most_submissions.pre_done + highlights.most_submissions.post_done }} submissions
+          from {{ highlights.most_submissions.registered }} registered</div>
+      </div>
+      <div class="hl hl-bad">
+        <div class="lbl">⚠️ Fewest submissions</div>
+        <div class="name">{{ highlights.fewest_submissions.school }}</div>
+        <div class="foot">{{ highlights.fewest_submissions.pre_done + highlights.fewest_submissions.post_done }} submissions
+          from {{ highlights.fewest_submissions.registered }} registered</div>
+      </div>
+      {% if highlights.lowest_completion %}
+      <div class="hl hl-warn">
+        <div class="lbl">🐢 Lowest completion</div>
+        <div class="name">{{ highlights.lowest_completion.school }}</div>
+        <div class="foot">
+          {{ (100 * highlights.lowest_completion.pre_done // highlights.lowest_completion.registered)
+             if highlights.lowest_completion.registered else 0 }}%
+          of {{ highlights.lowest_completion.registered }} finished the baseline</div>
+      </div>
+      {% endif %}
+      {% if highlights.most_recent %}
+      <div class="hl hl-live">
+        <div class="lbl">🔥 Filling now</div>
+        <div class="name">{{ highlights.most_recent.school }}</div>
+        <div class="foot">{{ highlights.most_recent.recent_total }} in the last
+          {{ overall.recent_days }} days{% if highlights.most_recent.last_submission %} ·
+          last {{ highlights.most_recent.last_submission }}{% endif %}</div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="charts">
+    <div class="card">
+      <h2>🥧 Share of all submissions</h2>
+      <p class="sub">Part of the whole, at a glance. The tail is folded into one
+        slice — six is as many as a ring can be read at.</p>
+      <div class="chart-box"><canvas id="donut"></canvas></div>
+    </div>
+    <div class="card">
+      <h2>📊 Submissions by school</h2>
+      <p class="sub">Which is highest and which is lowest, ranked. A ring cannot
+        be read that way, so the same numbers are also bars.</p>
+      <div class="chart-box" id="bar-box"><canvas id="bars"></canvas></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>School by school</h2>
+    <p class="sub">Ordered by how many students registered. Each school's own report
+      opens on its own link, which can be forwarded to that school on its own.</p>
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th><th>School</th><th class="num">Depts</th><th class="num">Registered</th>
+            <th class="num">Baseline</th><th class="num">Post</th><th class="num">Submissions</th>
+            <th>Last {{ overall.recent_days }} days</th><th>Avg lit / read (pre)</th><th>Report</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in schools %}
+          <tr>
+            <td class="num">{{ loop.index }}</td>
+            <td class="school-name">
+              <span class="swatch" data-school="{{ s.school }}"></span>{{ s.school }}
+              <small>{{ s.dept_count }} department{{ '' if s.dept_count == 1 else 's' }}</small>
+            </td>
+            <td class="num">{{ s.dept_count }}</td>
+            <td class="num">{{ s.registered }}</td>
+            <td class="num">
+              <span class="badge badge-blue">{{ s.pre_done }}</span>
+              {% if s.registered %}<small style="color:var(--gray)">
+                {{ 100 * s.pre_done // s.registered }}%</small>{% endif %}
+            </td>
+            <td class="num"><span class="badge badge-green">{{ s.post_done }}</span></td>
+            <td class="num"><b>{{ s.pre_done + s.post_done }}</b></td>
+            <td>{% if s.recent_total %}<span class="badge badge-amber">{{ s.recent_total }} new</span>
+                {% else %}<span class="badge badge-gray">—</span>{% endif %}</td>
+            <td>{{ s.avg_lit_pre if s.avg_lit_pre is not none else '—' }} /
+                {{ s.avg_read_pre if s.avg_read_pre is not none else '—' }}</td>
+            <td>
+              <a class="btn btn-pre" target="_blank" href="{{ s.share_url_pre }}">Baseline</a>
+              <a class="btn btn-post" target="_blank" href="{{ s.share_url_post }}">Post</a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <p class="foot">
+    Generated {{ generated_at }} · figures update every time this page is opened.<br>
+    JAIN (Deemed-to-be University) · Office of Academics — aggregate figures only,
+    no student is named on this page.
+  </p>
+</div>
+
+<script>
+// The six categorical hues, in fixed order, never cycled: a seventh school
+// folds into "Other schools" rather than inventing a hue nobody with
+// colour-blindness could tell from the first six.
+const HUES = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300'];
+const REST = '#8a8a82';
+// Only what the two charts need — the department detail behind each school is
+// a lot of JSON for a page that only plots three numbers per row.
+const SCHOOLS = {{ chart_rows | tojson }};
+
+const scored = SCHOOLS
+  .map(s => ({ name: s.school, value: s.pre_done + s.post_done }))
+  .filter(s => s.value > 0)
+  .sort((a, b) => b.value - a.value);
+
+let slices = scored;
+if (scored.length > 6) {
+  const tail = scored.slice(5);
+  slices = scored.slice(0, 5).concat([{
+    name: 'Other schools (' + tail.length + ')',
+    value: tail.reduce((sum, s) => sum + s.value, 0), rest: true,
+  }]);
+}
+
+if (window.Chart && slices.length) {
+  new Chart(document.getElementById('donut').getContext('2d'), {
+    type: 'doughnut',
+    data: { labels: slices.map(s => s.name), datasets: [{
+      data: slices.map(s => s.value),
+      backgroundColor: slices.map((s, i) => s.rest ? REST : HUES[i]),
+      // A 2px surface gap, so adjacent fills never touch.
+      borderColor: '#ffffff', borderWidth: 2,
+    }] },
+    options: {
+      responsive: true, maintainAspectRatio: false, cutout: '58%',
+      plugins: {
+        legend: { position: 'right', labels: { boxWidth: 12, font: { size: 11 } } },
+        tooltip: { callbacks: { label: c => c.label + ': ' + c.parsed + ' submissions' } },
+      },
+    },
+  });
+
+  // Ranked, horizontal, one hue: this compares magnitude, so it is not the
+  // place for six colours, and long school names need the room a y-axis gives.
+  const ranked = SCHOOLS.filter(s => s.registered)
+    .map(s => ({ name: s.school, value: s.pre_done + s.post_done }))
+    .sort((a, b) => b.value - a.value);
+  document.getElementById('bar-box').style.height =
+    Math.max(340, ranked.length * 34) + 'px';
+  new Chart(document.getElementById('bars').getContext('2d'), {
+    type: 'bar',
+    data: { labels: ranked.map(s => s.name), datasets: [{
+      label: 'Submissions', data: ranked.map(s => s.value),
+      backgroundColor: '#2a78d6', borderRadius: 4, barThickness: 14,
+    }] },
+    options: {
+      indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { beginAtZero: true, grid: { color: '#f1f5f9' } },
+        y: { grid: { display: false }, ticks: { font: { size: 10 } } },
+      },
+    },
+  });
+}
+
+// Paint each table row's swatch to match its slice, so the ring and the table
+// name the same school the same way. A school in the folded tail gets the same
+// grey its slice has.
+const sliceColour = {};
+slices.forEach((s, i) => { if (!s.rest) sliceColour[s.name] = HUES[i]; });
+document.querySelectorAll('.swatch[data-school]').forEach(el => {
+  el.style.background = sliceColour[el.dataset.school] || REST;
+});
+</script>
+
+</body>
+</html>
