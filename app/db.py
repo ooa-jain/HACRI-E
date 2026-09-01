@@ -974,11 +974,12 @@ async def get_school_analysis_data() -> dict[str, Any]:
             dept_of_email[user["email"]] = (user.get("program") or "").strip()
 
     recent: dict[str, dict[str, Any]] = {}
-    for collection, key in ((PRE, "recent_pre"), (POST, "recent_post")):
+    for collection, key in ((PRE, "recent_pre"), (POST, "recent_post"),
+                            (ORI, "recent_ori")):
         async for doc in get_db()[collection].find({"submitted_at": {"$gte": since}}):
             school = school_of(dept_of_email.get(doc.get("email", ""), ""))
             row = recent.setdefault(school, {"recent_pre": 0, "recent_post": 0,
-                                             "last": None})
+                                             "recent_ori": 0, "last": None})
             row[key] += 1
             when = doc.get("submitted_at")
             if isinstance(when, datetime):
@@ -987,12 +988,28 @@ async def get_school_analysis_data() -> dict[str, Any]:
                 if row["last"] is None or when > row["last"]:
                     row["last"] = when
 
+    # Deeksharambh, per department, so it folds up the same way the two surveys
+    # do. A student counts once however many times they resubmitted the form —
+    # distinct emails, not response rows — and a reply from someone with no
+    # registration record is filed under the no-department bucket rather than
+    # dropped, which is the rule the rest of this file uses.
+    ori_by_dept: dict[str, int] = {}
+    seen_ori: set[str] = set()
+    lower_to_dept = {e.strip().lower(): d for e, d in dept_of_email.items()}
+    async for doc in get_db()[ORI].find({}, {"email": 1}):
+        email = (doc.get("email") or "").strip().lower()
+        if not email or email in seen_ori:
+            continue
+        seen_ori.add(email)
+        dept = lower_to_dept.get(email, "")
+        ori_by_dept[dept] = ori_by_dept.get(dept, 0) + 1
+
     # Fold the department rows into their school.
     buckets: dict[str, dict[str, Any]] = {}
     for name in [*SCHOOL_NAMES, OTHER_SCHOOL]:
         buckets[name] = {
             "school": name, "departments": [], "registered": 0,
-            "pre_done": 0, "post_done": 0,
+            "pre_done": 0, "post_done": 0, "ori_done": 0,
             "pre_lit": [], "pre_read": [], "post_lit": [], "post_read": [],
             "pre_count": 0, "post_count": 0,
         }
@@ -1000,12 +1017,17 @@ async def get_school_analysis_data() -> dict[str, Any]:
     for dept in dept_data["departments"]:
         bucket = buckets.setdefault(school_of(dept["dept"]), {
             "school": school_of(dept["dept"]), "departments": [], "registered": 0,
-            "pre_done": 0, "post_done": 0,
+            "pre_done": 0, "post_done": 0, "ori_done": 0,
             "pre_lit": [], "pre_read": [], "post_lit": [], "post_read": [],
             "pre_count": 0, "post_count": 0,
         })
+        # The department carries its own Deeksharambh count too, so a school
+        # page can break the third survey down the way it breaks the other two.
+        dept["ori_done"] = ori_by_dept.get(dept["dept"], 0)
+        dept["ori_pending"] = max(0, dept["registered"] - dept["ori_done"])
         bucket["departments"].append(dept)
-        for field in ("registered", "pre_done", "post_done", "pre_count", "post_count"):
+        for field in ("registered", "pre_done", "post_done", "ori_done",
+                      "pre_count", "post_count"):
             bucket[field] += dept.get(field, 0) or 0
         # Averaged over students, not over departments: a department of three
         # must not weigh the same as one of three hundred.
@@ -1035,8 +1057,10 @@ async def get_school_analysis_data() -> dict[str, Any]:
             "registered": bucket["registered"],
             "pre_done": bucket["pre_done"],
             "post_done": bucket["post_done"],
+            "ori_done": bucket["ori_done"],
             "pre_pending": max(0, bucket["registered"] - bucket["pre_done"]),
             "post_pending": max(0, bucket["pre_done"] - bucket["post_done"]),
+            "ori_pending": max(0, bucket["registered"] - bucket["ori_done"]),
             "pre_count": bucket["pre_count"],
             "post_count": bucket["post_count"],
             "avg_lit_pre": weighted(bucket["pre_lit"]),
@@ -1045,7 +1069,9 @@ async def get_school_analysis_data() -> dict[str, Any]:
             "avg_read_post": weighted(bucket["post_read"]),
             "recent_pre": seen.get("recent_pre", 0),
             "recent_post": seen.get("recent_post", 0),
-            "recent_total": seen.get("recent_pre", 0) + seen.get("recent_post", 0),
+            "recent_ori": seen.get("recent_ori", 0),
+            "recent_total": (seen.get("recent_pre", 0) + seen.get("recent_post", 0)
+                             + seen.get("recent_ori", 0)),
             "last_submission": _fmt(seen.get("last")),
             "token": token,
             "share_url": f"{base_url}/shared/school?school={quote(name)}&token={token}",
@@ -1057,9 +1083,14 @@ async def get_school_analysis_data() -> dict[str, Any]:
     rows.sort(key=lambda r: (-r["registered"], r["school"]))
 
     overall = dept_data["overall"]
-    submissions = overall["pre_done"] + overall["post_done"]
+    ori_total = sum(r["ori_done"] for r in rows)
+    submissions = overall["pre_done"] + overall["post_done"] + ori_total
     active = [r for r in rows if r["registered"]]
-    by_submissions = sorted(active, key=lambda r: -(r["pre_done"] + r["post_done"]))
+    def filled(row: dict) -> int:
+        """All three surveys together — the page counts submissions, not students."""
+        return row["pre_done"] + row["post_done"] + row["ori_done"]
+
+    by_submissions = sorted(active, key=lambda r: -filled(r))
 
     def rate(row: dict) -> float:
         return (row["pre_done"] / row["registered"]) if row["registered"] else 0.0
@@ -1072,6 +1103,8 @@ async def get_school_analysis_data() -> dict[str, Any]:
             **overall,
             "school_count": len(active),
             "schools_listed": len(rows),
+            "ori_done": ori_total,
+            "ori_pending": max(0, overall["registered"] - ori_total),
             "submissions": submissions,
             "recent_days": RECENT_DAYS,
             "recent_total": sum(r["recent_total"] for r in rows),

@@ -12,11 +12,11 @@
 
 <div class="container">
   <div class="header">
-    <div class="tag">School Report · Baseline &amp; Post Survey</div>
+    <div class="tag">School Report · Pre &amp; Post AI Survey · Deeksharambh</div>
     <h1>{{ school.school }}</h1>
     <p>{{ school.dept_count }} department{{ '' if school.dept_count == 1 else 's' }} ·
-       HACRI-E AI Literacy Assessment. Where this school stood before the workshop,
-       and where it stood after.</p>
+       All three surveys: the Pre AI Survey, the Post AI Survey, and Deeksharambh.
+       Where this school stood before the workshop, and where it stood after.</p>
   </div>
 
   <div class="card">
@@ -37,18 +37,22 @@
     </div>
     <div class="stats">
       <div class="stat"><b>{{ school.registered }}</b><s>Registered students</s></div>
-      <div class="stat pre"><b>{{ school.pre_done }}</b><s>Baseline done</s></div>
-      <div class="stat post"><b>{{ school.post_done }}</b><s>Post survey done</s></div>
-      <div class="stat"><b>{{ school.pre_pending }}</b><s>Baseline still pending</s></div>
-      <div class="stat"><b>{{ school.post_pending }}</b><s>Post survey still pending</s></div>
+      <div class="stat pre"><b>{{ school.pre_done }}</b><s>Pre AI Survey done</s></div>
+      <div class="stat post"><b>{{ school.post_done }}</b><s>Post AI Survey done</s></div>
+      <div class="stat blue"><b>{{ school.ori_done }}</b><s>Deeksharambh done</s></div>
       <div class="stat amber"><b>{{ school.recent_total }}</b><s>Filled in the last {{ overall.recent_days }} days</s></div>
+    </div>
+    <div class="stats" style="margin-top:12px">
+      <div class="stat"><b>{{ school.pre_pending }}</b><s>Pre AI Survey pending</s></div>
+      <div class="stat"><b>{{ school.post_pending }}</b><s>Post AI Survey pending</s></div>
+      <div class="stat"><b>{{ school.ori_pending }}</b><s>Deeksharambh pending</s></div>
     </div>
   </div>
 
   <!-- The whole reason for running the survey twice: what moved. -->
   <div class="card">
     <div class="section-tag"><b>02</b> What changed</div>
-    <h2>Baseline &rarr; Post</h2>
+    <h2>Pre AI Survey &rarr; Post AI Survey</h2>
     <p class="sub">
       Both surveys on one page, scored out of 5. Averaged over students, not over
       departments — a department of three does not weigh the same as one of three
@@ -62,12 +66,12 @@
         <div class="name">{{ m[0] }}</div>
         <div class="pair">
           <div class="side b">
-            <div class="lbl">Baseline</div>
+            <div class="lbl">Pre AI Survey</div>
             <div class="val">{{ m[1] if m[1] is not none else '—' }}</div>
           </div>
           <div class="arrow">→</div>
           <div class="side p">
-            <div class="lbl">Post-workshop</div>
+            <div class="lbl">Post AI Survey</div>
             <div class="val">{{ m[2] if m[2] is not none else '—' }}</div>
           </div>
         </div>
@@ -88,9 +92,9 @@
   {% if school.departments %}
   <div class="card">
     <div class="section-tag"><b>03</b> By department</div>
-    <h2>Baseline and post, department by department</h2>
-    <p class="sub">Both surveys on the same bars, so the gap between them is the
-      department's outstanding post surveys.</p>
+    <h2>All three surveys, department by department</h2>
+    <p class="sub">The three surveys on the same bars, so the gap between them is
+      what a department still owes.</p>
     <div class="chart-box" id="bar-box"><canvas id="bars"></canvas></div>
   </div>
   {% endif %}
@@ -98,8 +102,9 @@
   <div class="card">
     <div class="section-tag"><b>04</b> The table</div>
     <h2>Every department in this school</h2>
-    <p class="sub">Baseline and post side by side, with the change. Each department's
-      own report opens on its own link.</p>
+    <p class="sub">The Pre AI Survey, the Post AI Survey and Deeksharambh side by
+      side, with the change between the two AI surveys. Each department's own report
+      opens on its own link.</p>
     <div class="scroll">
       {% if school.departments %}
       <table>
@@ -107,9 +112,10 @@
           <tr>
             <th rowspan="2">#</th><th rowspan="2">Department</th>
             <th rowspan="2" class="num">Registered</th>
-            <th colspan="2" class="grp grp-pre sep">Baseline</th>
-            <th colspan="2" class="grp grp-post sep">Post</th>
+            <th colspan="2" class="grp grp-pre sep">Pre AI Survey</th>
+            <th colspan="2" class="grp grp-post sep">Post AI Survey</th>
             <th colspan="2" class="grp sep">Change</th>
+            <th rowspan="2" class="mid sep">Deeksharambh</th>
             <th rowspan="2">Report</th>
           </tr>
           <tr>
@@ -134,7 +140,7 @@
             <td class="mid">{{ d.avg_lit_post if d.avg_lit_post is not none else '—' }} /
                 {{ d.avg_read_post if d.avg_read_post is not none else '—' }}</td>
             <td class="mid sep">
-              {% if c.lit is none %}<span class="badge badge-gray">—</span>
+              {% if c.lit is none %}<span class="badge badge-gray">&mdash;</span>
               {% elif c.lit > 0 %}<span class="up">▲ {{ '%.2f'|format(c.lit) }}</span>
               {% elif c.lit < 0 %}<span class="down">▼ {{ '%.2f'|format(-c.lit) }}</span>
               {% else %}<span style="color:var(--gray)">0.00</span>{% endif %}
@@ -145,8 +151,12 @@
               {% elif c.read < 0 %}<span class="down">▼ {{ '%.2f'|format(-c.read) }}</span>
               {% else %}<span style="color:var(--gray)">0.00</span>{% endif %}
             </td>
+            <td class="mid sep">
+              <span class="badge badge-blue">{{ d.ori_done }}</span>
+              <small style="color:var(--r-muted)">/ {{ d.ori_pending }} left</small>
+            </td>
             <td>
-              <a class="btn btn-pre btn-sm" target="_blank" href="{{ d.share_url_pre }}">Baseline</a>
+              <a class="btn btn-pre btn-sm" target="_blank" href="{{ d.share_url_pre }}">Pre</a>
               <a class="btn btn-post btn-sm" target="_blank" href="{{ d.share_url_post }}">Post</a>
             </td>
           </tr>
@@ -171,18 +181,21 @@
 // hues, direct-labelled by the legend, and a 2px gap between adjacent bars.
 const DEPTS = {{ chart_rows | tojson }};
 if (window.Chart && DEPTS.length) {
-  const ranked = DEPTS.slice().sort((a, b) => (b.pre + b.post) - (a.pre + a.post));
+  const ranked = DEPTS.slice()
+    .sort((a, b) => (b.pre + b.post + b.ori) - (a.pre + a.post + a.ori));
   document.getElementById('bar-box').style.height =
-    Math.max(220, ranked.length * 52) + 'px';
+    Math.max(240, ranked.length * 64) + 'px';
   new Chart(document.getElementById('bars').getContext('2d'), {
     type: 'bar',
     data: {
       labels: ranked.map(d => d.name),
       datasets: [
-        { label: 'Baseline done', data: ranked.map(d => d.pre),
+        { label: 'Pre AI Survey', data: ranked.map(d => d.pre),
           backgroundColor: '#4c3fd6', borderRadius: 3, barThickness: 12 },
-        { label: 'Post done', data: ranked.map(d => d.post),
+        { label: 'Post AI Survey', data: ranked.map(d => d.post),
           backgroundColor: '#1d7a41', borderRadius: 3, barThickness: 12 },
+        { label: 'Deeksharambh', data: ranked.map(d => d.ori),
+          backgroundColor: '#d99a1f', borderRadius: 3, barThickness: 12 },
       ],
     },
     options: {

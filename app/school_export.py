@@ -3,8 +3,9 @@ school_export.py — the school workbook.
 
 One file that opens the way the pages read: the whole university first, then
 every department on one sheet, then a tab per school carrying the departments
-inside it. Baseline and post sit side by side in every table with the change
-between them, because the change is the point of running the survey twice.
+inside it. All three surveys — the Pre AI Survey, the Post AI Survey and
+Deeksharambh — sit side by side in every table, with the change between the two
+AI surveys, because that change is the point of running one of them twice.
 """
 from __future__ import annotations
 
@@ -58,7 +59,7 @@ def _safe_sheet_name(name: str, used: set[str]) -> str:
 
 
 def _delta(post, pre):
-    """Post minus baseline, or None when either side has no answers yet."""
+    """Post minus pre, or None when either side has no answers yet."""
     if post is None or pre is None:
         return None
     return round(float(post) - float(pre), 2)
@@ -110,28 +111,33 @@ def _write_row(ws, st, row_idx: int, values: list, *, bold_first=False,
 
 
 SCHOOL_HEADERS = [
-    "School", "Departments", "Registered", "Baseline done", "Post done",
-    "Baseline pending", "Post pending", "Total submissions", "Filled recently",
-    "Last submission", "Avg literacy (baseline)", "Avg literacy (post)",
-    "Literacy change", "Avg readiness (baseline)", "Avg readiness (post)",
-    "Readiness change",
+    "School", "Departments", "Registered",
+    "Pre AI Survey done", "Post AI Survey done", "Deeksharambh done",
+    "Pre AI Survey pending", "Post AI Survey pending", "Deeksharambh pending",
+    "Total submissions", "Filled recently", "Last submission",
+    "Avg literacy (pre)", "Avg literacy (post)", "Literacy change",
+    "Avg readiness (pre)", "Avg readiness (post)", "Readiness change",
 ]
-SCHOOL_WIDTHS = [42, 12, 12, 14, 12, 15, 13, 16, 14, 20, 18, 16, 15, 19, 17, 16]
+SCHOOL_WIDTHS = [42, 12, 12, 17, 18, 17, 19, 20, 19, 16, 14, 20,
+                 17, 17, 15, 19, 19, 16]
 
 DEPT_HEADERS = [
-    "School", "Department", "Registered", "Baseline done", "Post done",
-    "Baseline pending", "Post pending", "Total submissions",
-    "Avg literacy (baseline)", "Avg literacy (post)", "Literacy change",
-    "Avg readiness (baseline)", "Avg readiness (post)", "Readiness change",
+    "School", "Department", "Registered",
+    "Pre AI Survey done", "Post AI Survey done", "Deeksharambh done",
+    "Pre AI Survey pending", "Post AI Survey pending", "Deeksharambh pending",
+    "Total submissions",
+    "Avg literacy (pre)", "Avg literacy (post)", "Literacy change",
+    "Avg readiness (pre)", "Avg readiness (post)", "Readiness change",
 ]
-DEPT_WIDTHS = [38, 42, 12, 14, 12, 15, 13, 16, 18, 16, 15, 19, 17, 16]
+DEPT_WIDTHS = [38, 42, 12, 17, 18, 17, 19, 20, 19, 16, 17, 17, 15, 19, 19, 16]
 
 
 def _school_values(s: dict) -> list:
     return [
-        s["school"], s["dept_count"], s["registered"], s["pre_done"],
-        s["post_done"], s["pre_pending"], s["post_pending"],
-        s["pre_done"] + s["post_done"], s["recent_total"],
+        s["school"], s["dept_count"], s["registered"],
+        s["pre_done"], s["post_done"], s["ori_done"],
+        s["pre_pending"], s["post_pending"], s["ori_pending"],
+        s["pre_done"] + s["post_done"] + s["ori_done"], s["recent_total"],
         s.get("last_submission") or "—",
         s.get("avg_lit_pre"), s.get("avg_lit_post"),
         _delta(s.get("avg_lit_post"), s.get("avg_lit_pre")),
@@ -142,8 +148,10 @@ def _school_values(s: dict) -> list:
 
 def _dept_values(school: str, d: dict) -> list:
     return [
-        school, d["dept"], d["registered"], d["pre_done"], d["post_done"],
-        d["pre_pending"], d["post_pending"], d["pre_done"] + d["post_done"],
+        school, d["dept"], d["registered"],
+        d["pre_done"], d["post_done"], d.get("ori_done", 0),
+        d["pre_pending"], d["post_pending"], d.get("ori_pending", 0),
+        d["pre_done"] + d["post_done"] + d.get("ori_done", 0),
         d.get("avg_lit_pre"), d.get("avg_lit_post"),
         _delta(d.get("avg_lit_post"), d.get("avg_lit_pre")),
         d.get("avg_read_pre"), d.get("avg_read_post"),
@@ -168,21 +176,23 @@ def _all_schools_sheet(wb, st, data: dict, generated_at: str) -> None:
 
     row = _header(
         ws, st, "HACRI-E — All Schools",
-        f"Baseline and post side by side, with the change between them. "
+        f"Pre AI Survey, Post AI Survey and Deeksharambh side by side, with the "
+        f"change between the two AI surveys. "
         f"{ov['schools_listed']} schools · {ov['school_count']} with students · "
         f"generated {generated_at}",
         SCHOOL_HEADERS, SCHOOL_WIDTHS)
 
     for school in data["schools"]:
         _write_row(ws, st, row, _school_values(school), bold_first=True,
-                   delta_cols=(13, 16))
+                   delta_cols=(15, 18))
         row += 1
 
     _totals_row(ws, st, row, "TOTAL — all schools", [
         sum(s["dept_count"] for s in data["schools"]),
-        ov["registered"], ov["pre_done"], ov["post_done"],
+        ov["registered"], ov["pre_done"], ov["post_done"], ov["ori_done"],
         max(0, ov["registered"] - ov["pre_done"]),
         max(0, ov["pre_done"] - ov["post_done"]),
+        ov["ori_pending"],
         ov["submissions"], ov["recent_total"], "",
         ov.get("avg_lit_pre"), ov.get("avg_lit_post"),
         _delta(ov.get("avg_lit_post"), ov.get("avg_lit_pre")),
@@ -205,7 +215,7 @@ def _all_departments_sheet(wb, st, data: dict, generated_at: str) -> None:
     for school in data["schools"]:
         for dept in school["departments"]:
             _write_row(ws, st, row, _dept_values(school["school"], dept),
-                       delta_cols=(11, 14))
+                       delta_cols=(13, 16))
             row += 1
 
 
@@ -217,13 +227,14 @@ def _one_school_sheet(wb, st, school: dict, used: set[str],
         ws, st, school["school"],
         f"{school['dept_count']} department"
         f"{'' if school['dept_count'] == 1 else 's'} · "
-        f"{school['registered']} registered · {school['pre_done']} baseline · "
-        f"{school['post_done']} post · generated {generated_at}",
+        f"{school['registered']} registered · {school['pre_done']} pre · "
+        f"{school['post_done']} post · {school['ori_done']} Deeksharambh · "
+        f"generated {generated_at}",
         DEPT_HEADERS[1:], DEPT_WIDTHS[1:])
 
     for dept in school["departments"]:
         _write_row(ws, st, row, _dept_values("", dept)[1:], bold_first=True,
-                   delta_cols=(10, 13))
+                   delta_cols=(12, 15))
         row += 1
 
     if not school["departments"]:
@@ -233,9 +244,10 @@ def _one_school_sheet(wb, st, school: dict, used: set[str],
         row += 1
 
     _totals_row(ws, st, row, f"TOTAL — {school['school']}", [
-        school["registered"], school["pre_done"], school["post_done"],
-        school["pre_pending"], school["post_pending"],
-        school["pre_done"] + school["post_done"],
+        school["registered"],
+        school["pre_done"], school["post_done"], school["ori_done"],
+        school["pre_pending"], school["post_pending"], school["ori_pending"],
+        school["pre_done"] + school["post_done"] + school["ori_done"],
         school.get("avg_lit_pre"), school.get("avg_lit_post"),
         _delta(school.get("avg_lit_post"), school.get("avg_lit_pre")),
         school.get("avg_read_pre"), school.get("avg_read_post"),
@@ -279,13 +291,14 @@ def generate_one_school_excel(school: dict, *, generated_at: str = "") -> bytes:
         ws, st, school["school"],
         f"{school['dept_count']} department"
         f"{'' if school['dept_count'] == 1 else 's'} · "
-        f"{school['registered']} registered · {school['pre_done']} baseline · "
-        f"{school['post_done']} post · generated {generated_at}",
+        f"{school['registered']} registered · {school['pre_done']} pre · "
+        f"{school['post_done']} post · {school['ori_done']} Deeksharambh · "
+        f"generated {generated_at}",
         DEPT_HEADERS[1:], DEPT_WIDTHS[1:])
 
     for dept in school["departments"]:
         _write_row(ws, st, row, _dept_values("", dept)[1:], bold_first=True,
-                   delta_cols=(10, 13))
+                   delta_cols=(12, 15))
         row += 1
 
     if not school["departments"]:
@@ -295,9 +308,10 @@ def generate_one_school_excel(school: dict, *, generated_at: str = "") -> bytes:
         row += 1
 
     _totals_row(ws, st, row, f"TOTAL — {school['school']}", [
-        school["registered"], school["pre_done"], school["post_done"],
-        school["pre_pending"], school["post_pending"],
-        school["pre_done"] + school["post_done"],
+        school["registered"],
+        school["pre_done"], school["post_done"], school["ori_done"],
+        school["pre_pending"], school["post_pending"], school["ori_pending"],
+        school["pre_done"] + school["post_done"] + school["ori_done"],
         school.get("avg_lit_pre"), school.get("avg_lit_post"),
         _delta(school.get("avg_lit_post"), school.get("avg_lit_pre")),
         school.get("avg_read_pre"), school.get("avg_read_post"),

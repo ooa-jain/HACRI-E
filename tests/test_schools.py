@@ -326,7 +326,8 @@ async def test_the_school_report_shows_baseline_and_post_together(client: AsyncC
     assert page.status_code == 200
 
     text = page.text
-    assert "Baseline" in text and "Post-workshop" in text
+    assert "Pre AI Survey" in text and "Post AI Survey" in text
+    assert "Deeksharambh" in text                # the third survey, on the same page
     assert "What changed" in text                # the section it lives under
     assert "after the workshop" in text          # the change, in words
     assert "Export Excel" in text
@@ -394,7 +395,11 @@ async def test_every_department_appears_on_the_departments_sheet(app_with_mock):
 
     # Baseline and post sit side by side with the change between them.
     headers = [c.value for c in ws[4]]
-    assert "Avg literacy (baseline)" in headers
+    # All three surveys, and the change between the two AI ones.
+    assert "Pre AI Survey done" in headers
+    assert "Post AI Survey done" in headers
+    assert "Deeksharambh done" in headers
+    assert "Avg literacy (pre)" in headers
     assert "Avg literacy (post)" in headers
     assert "Literacy change" in headers
 
@@ -455,3 +460,100 @@ async def test_the_exports_are_not_open_to_anyone_without_the_link(client: Async
                              params={"token": "guessed"})).status_code == 403
     assert (await client.get("/shared/school/export-excel",
                              params={"school": LAW, "token": "guessed"})).status_code == 403
+
+
+# ── All three surveys ────────────────────────────────────────────────────────
+
+async def _orientation(email: str, *, days_ago: float = 1) -> None:
+    when = datetime.now(timezone.utc) - timedelta(days=days_ago)
+    await db.get_db()["orientation_responses"].insert_one({
+        "email": email, "name": email, "submitted_at": when,
+        "data": {"goal": "Learn AI"}})
+
+
+@pytest.mark.asyncio
+async def test_deeksharambh_folds_up_the_same_way_the_surveys_do(app_with_mock):
+    await _student("a@x.com", program="Department of Law", status=db.STATUS_PRE_DONE)
+    await _student("b@x.com", program="Department of Law")
+    await _student("c@x.com", program="Department of Forensic Science",
+                   status=db.STATUS_POST_DONE)
+    await _orientation("a@x.com")
+    await _orientation("c@x.com")
+
+    data = await db.get_school_analysis_data()
+    rows = {r["school"]: r for r in data["schools"]}
+
+    assert rows[LAW]["ori_done"] == 1
+    assert rows[LAW]["ori_pending"] == 1          # two registered, one answered
+    assert rows[SCIENCES]["ori_done"] == 1
+    # And the school equals the sum of its own departments, as the other two do.
+    assert rows[LAW]["ori_done"] == sum(d["ori_done"] for d in rows[LAW]["departments"])
+
+    # Submissions now count all three surveys, not two.
+    assert data["overall"]["ori_done"] == 2
+    assert data["overall"]["submissions"] == (
+        data["overall"]["pre_done"] + data["overall"]["post_done"] + 2)
+
+
+@pytest.mark.asyncio
+async def test_a_student_who_resubmitted_deeksharambh_counts_once(app_with_mock):
+    await _student("twice@x.com", program="Department of Law", status=db.STATUS_PRE_DONE)
+    await _orientation("twice@x.com")
+    await _orientation("twice@x.com", days_ago=2)
+
+    rows = {r["school"]: r for r in (await db.get_school_analysis_data())["schools"]}
+    assert rows[LAW]["ori_done"] == 1
+
+
+@pytest.mark.asyncio
+async def test_recent_activity_counts_deeksharambh_too(app_with_mock):
+    await _student("d@x.com", program="Department of Law", status=db.STATUS_PRE_DONE,
+                   days_ago=60)
+    await _orientation("d@x.com", days_ago=1)
+
+    rows = {r["school"]: r for r in (await db.get_school_analysis_data())["schools"]}
+    assert rows[LAW]["recent_pre"] == 0            # the survey was months ago
+    assert rows[LAW]["recent_ori"] == 1            # but Deeksharambh came in this week
+    assert rows[LAW]["recent_total"] == 1
+
+
+@pytest.mark.asyncio
+async def test_the_pages_say_pre_and_post_ai_survey_not_baseline(client: AsyncClient):
+    from app.routes.shared_analysis import get_school_token, get_schools_directory_token
+
+    await _student("a@x.com", program="Department of Law", status=db.STATUS_PRE_DONE)
+    await _orientation("a@x.com")
+
+    for url, params in (
+        ("/shared/schools", {"token": get_schools_directory_token()}),
+        ("/shared/school", {"school": LAW, "token": get_school_token(LAW)}),
+    ):
+        page = await client.get(url, params=params)
+        assert page.status_code == 200
+        assert "Deeksharambh" in page.text
+        # "Baseline" was the old name for the pre survey and is gone from the
+        # words a reader sees.
+        assert "Baseline" not in page.text, url
+
+
+@pytest.mark.asyncio
+async def test_the_workbook_carries_all_three_surveys(app_with_mock):
+    import io as _io
+    from openpyxl import load_workbook
+    from app.school_export import generate_schools_excel
+
+    await _student("a@x.com", program="Department of Law", status=db.STATUS_POST_DONE)
+    await _orientation("a@x.com")
+
+    data = await db.get_school_analysis_data()
+    wb = load_workbook(_io.BytesIO(generate_schools_excel(data, generated_at="t")))
+
+    headers = [c.value for c in wb["All Schools"][4]]
+    assert headers[3:6] == ["Pre AI Survey done", "Post AI Survey done",
+                            "Deeksharambh done"]
+    assert "Baseline done" not in headers
+
+    law = next(r for r in wb["All Schools"].iter_rows(min_row=5, values_only=True)
+               if r[0] == LAW)
+    assert law[3] == 1 and law[4] == 1 and law[5] == 1     # pre, post, Deeksharambh
+    assert law[9] == 3                                     # total submissions

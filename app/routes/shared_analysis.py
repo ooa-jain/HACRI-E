@@ -802,7 +802,8 @@ async def shared_schools(request: Request, token: str = Query(...)):
             # detail with them would be most of the payload for none of the ink.
             "chart_rows": [
                 {"school": s["school"], "registered": s["registered"],
-                 "pre_done": s["pre_done"], "post_done": s["post_done"]}
+                 "pre_done": s["pre_done"], "post_done": s["post_done"],
+                 "ori_done": s["ori_done"]}
                 for s in data["schools"]
             ],
             "overall": data["overall"],
@@ -848,7 +849,8 @@ async def shared_school(request: Request, school: str = Query(...),
         {
             "school": row,
             "chart_rows": [
-                {"name": d["dept"], "pre": d["pre_done"], "post": d["post_done"]}
+                {"name": d["dept"], "pre": d["pre_done"], "post": d["post_done"],
+                 "ori": d.get("ori_done", 0)}
                 for d in row["departments"]
             ],
             "lit_change": delta(row.get("avg_lit_post"), row.get("avg_lit_pre")),

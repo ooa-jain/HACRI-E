@@ -1099,7 +1099,7 @@ const PAGES = [
   { id: 'p-calendar', icon: 'calendar', label: 'Calendar',    title: 'Calendar',            sub: 'When students filled the surveys', load: () => loadCalendar() },
   { id: 'p-emails',   icon: 'emails', group: 'Outreach', label: 'Emails',      title: 'Emails',              sub: 'Send reminders, write your own mail, track delivery', load: () => { updateTargetCount(); initComposer(); loadEmailStats(); } },
   { id: 'p-links',    icon: 'links',    label: 'Links',       title: 'Links',               sub: 'Department links for both surveys, plus shareable reports', load: () => loadLinks() },
-  { id: 'p-schools',  icon: 'depts', group: 'Analysis', label: 'Schools',     title: 'Schools',             sub: 'Every school, the departments inside it, and who is filling now', load: () => loadSchools() },
+  { id: 'p-schools',  icon: 'depts', group: 'Analysis', label: 'Schools',     title: 'Schools',             sub: 'Every school: Pre AI Survey, Post AI Survey and Deeksharambh, and who is filling now', load: () => loadSchools() },
   { id: 'p-depts',    icon: 'depts',    label: 'Departments', title: 'Departments',         sub: 'Literacy and readiness averages per department', load: () => loadDepts() },
   { id: 'p-cohort',   icon: 'cohort',   label: 'Outcome & impact', title: 'Outcome and impact', sub: 'Baseline, what changed after the workshop, and the journey between them', load: () => loadCohort() },
   { id: 'p-orientation', icon: 'orientation', label: 'Orientation', title: 'Orientation report', sub: 'Campus-wise Deeksharambh analysis, who filled it, and mailing', load: () => loadOrientationPanel() },
@@ -2805,9 +2805,10 @@ function renderSchools() {
 
       <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         <div class="stat border-l-slate-800"><b>${num(ov.registered)}</b><s>Registered</s></div>
-        <div class="stat border-l-teal-600"><b class="text-teal-600">${num(ov.pre_done)}</b><s>Baseline done</s></div>
-        <div class="stat border-l-emerald-600"><b class="text-emerald-600">${num(ov.post_done)}</b><s>Post done</s></div>
-        <div class="stat border-l-blue-600"><b class="text-blue-700">${num(ov.submissions)}</b><s>Total submissions</s></div>
+        <div class="stat border-l-teal-600"><b class="text-teal-600">${num(ov.pre_done)}</b><s>Pre AI Survey done</s></div>
+        <div class="stat border-l-emerald-600"><b class="text-emerald-600">${num(ov.post_done)}</b><s>Post AI Survey done</s></div>
+        <div class="stat border-l-indigo-600"><b class="text-indigo-700">${num(ov.ori_done)}</b><s>Deeksharambh done</s></div>
+        <div class="stat border-l-slate-500"><b>${num(ov.submissions)}</b><s>Total submissions</s></div>
         <div class="stat border-l-amber-500"><b class="text-amber-600">${num(ov.recent_total)}</b><s>Filled in ${ov.recent_days} days</s></div>
         <div class="stat border-l-slate-400"><b>${ov.school_count}</b><s>Schools taking part</s></div>
       </div>
@@ -2851,10 +2852,11 @@ function renderSchools() {
     <div id="school-detail"></div>`;
 
   table('school-table',
-    ['#', 'School', 'Depts', 'Registered', 'Baseline', 'Post', 'Submissions',
-     `Last ${ov.recent_days} days`, 'Avg lit / read (pre → post)', 'Report link'],
+    ['#', 'School', 'Depts', 'Registered', 'Pre AI', 'Post AI', 'Deeksharambh',
+     'Submissions', `Last ${ov.recent_days} days`,
+     'Avg lit / read (pre → post)', 'Report link'],
     rows, (r, i) => {
-      const subs = r.pre_done + r.post_done;
+      const subs = r.pre_done + r.post_done + r.ori_done;
       const pct = r.registered ? Math.round(100 * r.pre_done / r.registered) : 0;
       return [
         i + 1,
@@ -2866,6 +2868,8 @@ function renderSchools() {
          <span class="text-slate-400">/ ${pct}%</span>`,
         `<span class="font-bold text-emerald-700">${r.post_done}</span>
          <span class="text-slate-400">/ ${r.post_pending} left</span>`,
+        `<span class="font-bold text-indigo-700">${r.ori_done}</span>
+         <span class="text-slate-400">/ ${r.ori_pending} left</span>`,
         `<b>${subs}</b>`,
         r.recent_total
           ? `<span class="badge b-amber">${r.recent_total} new</span>`
@@ -2952,7 +2956,8 @@ function showSchoolDetail(school) {
       <div class="panel-head">
         <div><div class="h-card">🏫 ${e(row.school)}</div>
           <div class="sub">${row.dept_count} department${row.dept_count === 1 ? '' : 's'} ·
-            ${row.registered} registered · ${row.pre_done} baseline · ${row.post_done} post
+            ${row.registered} registered · ${row.pre_done} pre · ${row.post_done} post ·
+            ${row.ori_done} Deeksharambh
             ${row.recent_total ? ` · <b>${row.recent_total} filled in the last ${schoolData.overall.recent_days} days</b>` : ''}</div></div>
         <div class="panel-actions">
           <a class="btn btn-soft" href="${e(row.excel_url)}">⬇ Excel</a>
@@ -2964,8 +2969,8 @@ function showSchoolDetail(school) {
     </div>`;
 
   table('school-dept-table',
-    ['#', 'Department', 'Registered', 'Baseline', 'Post', 'Avg pre (lit / read)',
-     'Avg post (lit / read)', 'Reports'],
+    ['#', 'Department', 'Registered', 'Pre AI', 'Post AI', 'Deeksharambh',
+     'Avg pre (lit / read)', 'Avg post (lit / read)', 'Reports'],
     row.departments, (d, i) => [
       i + 1,
       `<button class="font-semibold text-slate-900 hover:text-blue-700 text-left"
@@ -2975,6 +2980,8 @@ function showSchoolDetail(school) {
        <span class="text-slate-400">/ ${d.pre_pending} left</span>`,
       `<span class="font-bold text-emerald-700">${d.post_done}</span>
        <span class="text-slate-400">/ ${d.post_pending} left</span>`,
+      `<span class="font-bold text-indigo-700">${d.ori_done}</span>
+       <span class="text-slate-400">/ ${d.ori_pending} left</span>`,
       `${score(d.avg_lit_pre)} / ${score(d.avg_read_pre)}`,
       `${score(d.avg_lit_post)} / ${score(d.avg_read_post)}`,
       ['pre', 'post'].map(type => `

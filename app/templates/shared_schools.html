@@ -36,9 +36,10 @@
     </div>
     <div class="stats">
       <div class="stat"><b>{{ overall.registered }}</b><s>Registered students</s></div>
-      <div class="stat teal"><b>{{ overall.pre_done }}</b><s>Baseline done</s></div>
-      <div class="stat green"><b>{{ overall.post_done }}</b><s>Post survey done</s></div>
-      <div class="stat blue"><b>{{ overall.submissions }}</b><s>Total submissions</s></div>
+      <div class="stat pre"><b>{{ overall.pre_done }}</b><s>Pre AI Survey done</s></div>
+      <div class="stat post"><b>{{ overall.post_done }}</b><s>Post AI Survey done</s></div>
+      <div class="stat blue"><b>{{ overall.ori_done }}</b><s>Deeksharambh done</s></div>
+      <div class="stat"><b>{{ overall.submissions }}</b><s>Total submissions</s></div>
       <div class="stat amber"><b>{{ overall.recent_total }}</b><s>Filled in the last {{ overall.recent_days }} days</s></div>
       <div class="stat"><b>{{ overall.school_count }}</b><s>Schools taking part</s></div>
     </div>
@@ -70,7 +71,7 @@
         <div class="foot">
           {{ (100 * highlights.lowest_completion.pre_done // highlights.lowest_completion.registered)
              if highlights.lowest_completion.registered else 0 }}%
-          of {{ highlights.lowest_completion.registered }} finished the baseline</div>
+          of {{ highlights.lowest_completion.registered }} finished the Pre AI Survey</div>
       </div>
       {% endif %}
       {% if highlights.most_recent %}
@@ -114,9 +115,10 @@
         <thead>
           <tr>
             <th>#</th><th>School</th><th class="num">Depts</th><th class="num">Registered</th>
-            <th class="num">Baseline</th><th class="num">Post</th><th class="num">Submissions</th>
+            <th class="num">Pre AI</th><th class="num">Post AI</th>
+            <th class="num">Deeksharambh</th><th class="num">Submissions</th>
             <th>Last {{ overall.recent_days }} days</th>
-            <th>Avg lit / read (pre → post)</th><th>Report</th>
+            <th>Avg lit / read (pre &rarr; post)</th><th>Report</th>
           </tr>
         </thead>
         <tbody>
@@ -135,7 +137,8 @@
                 {{ 100 * s.pre_done // s.registered }}%</small>{% endif %}
             </td>
             <td class="num"><span class="badge badge-green">{{ s.post_done }}</span></td>
-            <td class="num"><b>{{ s.pre_done + s.post_done }}</b></td>
+            <td class="num"><span class="badge badge-blue">{{ s.ori_done }}</span></td>
+            <td class="num"><b>{{ s.pre_done + s.post_done + s.ori_done }}</b></td>
             <td>{% if s.recent_total %}<span class="badge badge-amber">{{ s.recent_total }} new</span>
                 {% else %}<span class="badge badge-gray">—</span>{% endif %}</td>
             <td class="scores">
@@ -174,7 +177,7 @@ const REST = '#8a8a82';
 const SCHOOLS = {{ chart_rows | tojson }};
 
 const scored = SCHOOLS
-  .map(s => ({ name: s.school, value: s.pre_done + s.post_done }))
+  .map(s => ({ name: s.school, value: s.pre_done + s.post_done + s.ori_done }))
   .filter(s => s.value > 0)
   .sort((a, b) => b.value - a.value);
 
@@ -208,7 +211,7 @@ if (window.Chart && slices.length) {
   // Ranked, horizontal, one hue: this compares magnitude, so it is not the
   // place for six colours, and long school names need the room a y-axis gives.
   const ranked = SCHOOLS.filter(s => s.registered)
-    .map(s => ({ name: s.school, value: s.pre_done + s.post_done }))
+    .map(s => ({ name: s.school, value: s.pre_done + s.post_done + s.ori_done }))
     .sort((a, b) => b.value - a.value);
   document.getElementById('bar-box').style.height =
     Math.max(340, ranked.length * 34) + 'px';

@@ -122,7 +122,7 @@ The department and level selectors in the top bar scope every page below them.
 | **Students** | One table, four views — status, time taken, timeline, orientation replies — with search and status filter |
 | **Emails** | Send reminders to a chosen cohort, draft a mail to open in Gmail, then track delivery, clicks and completions per department |
 | **Links** | Department post-survey links, shareable analysis reports, student entry points |
-| **Schools** | Every school, the departments folded into it, share-of-submissions donut, ranked bars, and a shareable report link per school |
+| **Schools** | Every school with all three surveys (Pre AI, Post AI, Deeksharambh), the departments folded into it, share-of-submissions donut, ranked bars, and a shareable report link per school |
 | **Departments** | Literacy / readiness averages, rankings, bar chart, per-department report links |
 | **Parents** | Parental occupation breakdown from the post survey |
 | **Calendar** | Month grid, daily submission chart, day-by-day log (click a date for the department breakdown) |
@@ -144,8 +144,9 @@ departments inside it.
 Averages are weighted **by students, not by department**: a department of three
 does not weigh the same as one of three hundred.
 
-Each row shows registered / baseline / post / total submissions, how many came
-in **in the last 7 days** ("filling now"), and average literacy and readiness.
+Each row shows registered / Pre AI Survey / Post AI Survey / Deeksharambh /
+total submissions, how many came in **in the last 7 days** ("filling now"), and
+average literacy and readiness.
 Click a school to open its departments underneath. Four cards name the school
 with the most submissions, the fewest, the worst completion rate, and the one
 filling fastest right now.
@@ -155,11 +156,18 @@ all submissions (top five schools plus a folded "Other schools" slice — six is
 as many as a ring can be read at), and **ranked horizontal bars** for which
 school is highest and which is lowest, which a ring cannot show.
 
-**One link per school, both surveys.** Two links meant reading the change
-between baseline and post by opening two tabs and subtracting by eye — which is
-the one number the exercise exists to produce. The school report now shows
-baseline and post side by side with the change stated, on the school as a whole
-and on every department in it.
+**One link per school, all three surveys.** Two links meant reading the change
+between the Pre and Post AI Surveys by opening two tabs and subtracting by eye —
+which is the one number the exercise exists to produce. The school report now
+carries the **Pre AI Survey**, the **Post AI Survey** and **Deeksharambh** side
+by side with the change stated, on the school as a whole and on every department
+in it. ("Baseline" was the old name for the Pre AI Survey and is gone from every
+shared page.)
+
+Deeksharambh counts a student once however many times they resubmitted the form
+— distinct emails, not response rows — and a reply from someone with no
+registration record is grouped rather than dropped, the same rule the two
+surveys follow.
 
 | Link | Opens |
 |------|-------|
@@ -178,8 +186,9 @@ open the merged one.
 **Export Excel** on the Schools page, on the shared all-schools page, or per
 school. The sheets come in the order the question gets asked:
 
-1. **All Schools** — one row per school, baseline and post side by side with the
-   change, plus a totals row for the university
+1. **All Schools** — one row per school: Pre AI Survey, Post AI Survey and
+   Deeksharambh done and pending, the change between the two AI surveys, plus a
+   totals row for the university
 2. **Departments** — every department in the university on one sheet, named by
    its school
 3. **One tab per school** — that school's departments, with the school's own
