@@ -757,6 +757,28 @@ async def api_survey_school_analysis(request: Request):
     return JSONResponse(await get_school_analysis_data())
 
 
+@router.get("/admin/survey/export-schools")
+async def admin_export_schools(request: Request):
+    """The school workbook: all schools, every department, then a tab each."""
+    if not _is_survey_admin(request):
+        raise HTTPException(status_code=403)
+
+    from app.db import get_school_analysis_data
+    from app.school_export import generate_schools_excel
+    from app.routes.shared_analysis import _in_thread
+
+    data = await get_school_analysis_data()
+    generated_at = datetime.now().strftime("%d %b %Y, %H:%M")
+    book = await _in_thread(generate_schools_excel, data, generated_at=generated_at)
+
+    filename = f"HACRI-E_All_Schools_{datetime.now():%Y%m%d}.xlsx"
+    return StreamingResponse(
+        io.BytesIO(book),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
 @router.get("/admin/api/survey/date-analysis")
 async def api_survey_date_analysis(request: Request):
     if not _is_survey_admin(request):

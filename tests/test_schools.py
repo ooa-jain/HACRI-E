@@ -233,8 +233,10 @@ async def test_the_admin_page_offers_a_link_per_school_and_one_for_all(admin: As
     assert "/shared/schools?token=" in body["overall"]["directory_url"]
 
     law = next(r for r in body["schools"] if r["school"] == LAW)
-    assert "/shared/school?school=" in law["share_url_pre"]
-    assert law["share_url_pre"] != law["share_url_post"]
+    # One link per school, covering both surveys, plus its own workbook.
+    assert "/shared/school?school=" in law["share_url"]
+    assert "/shared/school/export-excel?school=" in law["excel_url"]
+    assert law["token"] in law["share_url"] and law["token"] in law["excel_url"]
 
 
 # ── The shared pages ─────────────────────────────────────────────────────────
@@ -260,15 +262,20 @@ async def test_one_schools_link_cannot_be_edited_into_anothers(client: AsyncClie
 
     await _student("a@x.com", program="Department of Law", status=db.STATUS_PRE_DONE)
 
-    law_token = get_school_token(LAW, "pre")
+    law_token = get_school_token(LAW)
     assert (await client.get("/shared/school",
                              params={"school": LAW, "token": law_token})).status_code == 200
-    # The same token pointed at another school, and at the other survey.
+    # The same token pointed at another school opens nothing.
     assert (await client.get("/shared/school",
                              params={"school": SCIENCES, "token": law_token})).status_code == 403
     assert (await client.get("/shared/school",
-                             params={"school": LAW, "token": law_token,
-                                     "type": "post"})).status_code == 403
+                             params={"school": LAW, "token": "guessed"})).status_code == 403
+    # Links handed out before the two reports were merged still open the
+    # merged one, rather than becoming dead mail.
+    for old in ("pre", "post"):
+        assert (await client.get(
+            "/shared/school",
+            params={"school": LAW, "token": get_school_token(LAW, old)})).status_code == 200
 
 
 @pytest.mark.asyncio
@@ -282,7 +289,7 @@ async def test_a_school_page_lists_the_departments_inside_it(client: AsyncClient
 
     page = await client.get("/shared/school",
                             params={"school": SCIENCES,
-                                    "token": get_school_token(SCIENCES, "pre")})
+                                    "token": get_school_token(SCIENCES)})
     assert page.status_code == 200
     assert "Department of Forensic Science" in page.text
     assert "Department of Physics and Electronics" in page.text
@@ -296,5 +303,155 @@ async def test_an_unknown_school_is_not_found(client: AsyncClient):
 
     resp = await client.get("/shared/school",
                             params={"school": "School of Atlantis",
-                                    "token": get_school_token("School of Atlantis", "pre")})
+                                    "token": get_school_token("School of Atlantis")})
     assert resp.status_code == 404
+
+
+# ── One report, both surveys ─────────────────────────────────────────────────
+
+@pytest.mark.asyncio
+async def test_the_school_report_shows_baseline_and_post_together(client: AsyncClient):
+    """Reading the change used to mean opening two tabs and subtracting by eye."""
+    from app.routes.shared_analysis import get_school_token
+
+    await _student("low@x.com", program="Department of Law",
+                   status=db.STATUS_POST_DONE, score=2)
+    # Nudge the post answers up, so there is a change to state.
+    from app.hacri_e2_compat import SCHEMA
+    await db.get_db()["post_responses"].update_one(
+        {"email": "low@x.com"}, {"$set": {"fields": {k: 4 for k in SCHEMA}}})
+
+    page = await client.get("/shared/school",
+                            params={"school": LAW, "token": get_school_token(LAW)})
+    assert page.status_code == 200
+
+    text = page.text
+    assert "Baseline" in text and "Post-workshop" in text
+    assert "what changed" in text
+    assert "after the workshop" in text          # the change, in words
+    assert "Export Excel" in text
+
+
+@pytest.mark.asyncio
+async def test_the_change_is_not_invented_when_only_one_survey_is_in(client: AsyncClient):
+    from app.routes.shared_analysis import get_school_token
+
+    await _student("only@x.com", program="Department of Law",
+                   status=db.STATUS_PRE_DONE)
+
+    page = await client.get("/shared/school",
+                            params={"school": LAW, "token": get_school_token(LAW)})
+    assert "Waiting on both surveys" in page.text
+    assert "after the workshop" not in page.text
+
+
+# ── The workbook ─────────────────────────────────────────────────────────────
+
+def _sheets(book: bytes) -> list[str]:
+    import io as _io
+    from openpyxl import load_workbook
+    return load_workbook(_io.BytesIO(book)).sheetnames
+
+
+@pytest.mark.asyncio
+async def test_the_workbook_opens_all_schools_then_departments_then_a_tab_each(app_with_mock):
+    from app.school_export import generate_schools_excel
+
+    await _student("a@x.com", program="Department of Law", status=db.STATUS_PRE_DONE)
+    await _student("b@x.com", program="Department of Forensic Science",
+                   status=db.STATUS_POST_DONE)
+    await _student("c@x.com", program="Department of Physics and Electronics")
+
+    data = await db.get_school_analysis_data()
+    names = _sheets(generate_schools_excel(data, generated_at="today"))
+
+    assert names[0] == "All Schools"
+    assert names[1] == "Departments"
+    assert LAW in names and SCIENCES in names
+    # A school nobody registered under has nothing to put on a tab.
+    assert "School of Aviation and Aerospace Management" not in names
+
+
+@pytest.mark.asyncio
+async def test_every_department_appears_on_the_departments_sheet(app_with_mock):
+    import io as _io
+    from openpyxl import load_workbook
+    from app.school_export import generate_schools_excel
+
+    await _student("a@x.com", program="Department of Law", status=db.STATUS_PRE_DONE)
+    await _student("b@x.com", program="Department of Forensic Science",
+                   status=db.STATUS_PRE_DONE)
+    await _student("c@x.com", program="CeRSSE")
+
+    data = await db.get_school_analysis_data()
+    wb = load_workbook(_io.BytesIO(generate_schools_excel(data, generated_at="t")))
+    ws = wb["Departments"]
+
+    listed = {row[1] for row in ws.iter_rows(min_row=5, values_only=True) if row[1]}
+    assert "Department of Law" in listed
+    assert "Department of Forensic Science" in listed
+    assert "CeRSSE" in listed            # the unmapped one is not dropped
+
+    # Baseline and post sit side by side with the change between them.
+    headers = [c.value for c in ws[4]]
+    assert "Avg literacy (baseline)" in headers
+    assert "Avg literacy (post)" in headers
+    assert "Literacy change" in headers
+
+
+@pytest.mark.asyncio
+async def test_a_school_tab_totals_its_own_departments(app_with_mock):
+    import io as _io
+    from openpyxl import load_workbook
+    from app.school_export import generate_schools_excel
+
+    for i in range(3):
+        await _student(f"f{i}@x.com", program="Department of Forensic Science",
+                       status=db.STATUS_PRE_DONE)
+    await _student("p@x.com", program="Department of Physics and Electronics",
+                   status=db.STATUS_POST_DONE)
+
+    data = await db.get_school_analysis_data()
+    wb = load_workbook(_io.BytesIO(generate_schools_excel(data, generated_at="t")))
+    ws = wb[SCIENCES]
+
+    rows = [r for r in ws.iter_rows(min_row=5, values_only=True) if r[0]]
+    total = next(r for r in rows if str(r[0]).startswith("TOTAL"))
+    departments = [r for r in rows if not str(r[0]).startswith("TOTAL")]
+
+    assert len(departments) == 2
+    assert total[1] == sum(d[1] for d in departments)     # registered
+    assert total[2] == sum(d[2] for d in departments)     # baseline done
+
+
+@pytest.mark.asyncio
+async def test_the_workbooks_download_from_the_admin_and_the_shared_links(admin: AsyncClient):
+    from app.routes.shared_analysis import get_school_token, get_schools_directory_token
+
+    await _student("a@x.com", program="Department of Law", status=db.STATUS_PRE_DONE)
+
+    XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+
+    from_admin = await admin.get("/admin/survey/export-schools")
+    assert from_admin.status_code == 200
+    assert from_admin.headers["content-type"] == XLSX
+    assert "All Schools" in _sheets(from_admin.content)
+
+    shared = await admin.get("/shared/schools/export-excel",
+                             params={"token": get_schools_directory_token()})
+    assert shared.status_code == 200
+    assert _sheets(shared.content)[0] == "All Schools"
+
+    one = await admin.get("/shared/school/export-excel",
+                          params={"school": LAW, "token": get_school_token(LAW)})
+    assert one.status_code == 200
+    assert _sheets(one.content) == [LAW]
+
+
+@pytest.mark.asyncio
+async def test_the_exports_are_not_open_to_anyone_without_the_link(client: AsyncClient):
+    assert (await client.get("/admin/survey/export-schools")).status_code == 403
+    assert (await client.get("/shared/schools/export-excel",
+                             params={"token": "guessed"})).status_code == 403
+    assert (await client.get("/shared/school/export-excel",
+                             params={"school": LAW, "token": "guessed"})).status_code == 403

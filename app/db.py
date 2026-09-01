@@ -1024,8 +1024,8 @@ async def get_school_analysis_data() -> dict[str, Any]:
     rows = []
     for name, bucket in buckets.items():
         seen = recent.get(name, {})
-        token_pre = get_school_token(name, "pre")
-        token_post = get_school_token(name, "post")
+        # One report per school covers both surveys, so one token opens it.
+        token = get_school_token(name, "both")
         rows.append({
             "school": name,
             "slug": school_slug(name),
@@ -1047,10 +1047,9 @@ async def get_school_analysis_data() -> dict[str, Any]:
             "recent_post": seen.get("recent_post", 0),
             "recent_total": seen.get("recent_pre", 0) + seen.get("recent_post", 0),
             "last_submission": _fmt(seen.get("last")),
-            "token_pre": token_pre,
-            "token_post": token_post,
-            "share_url_pre": f"{base_url}/shared/school?school={quote(name)}&token={token_pre}&type=pre",
-            "share_url_post": f"{base_url}/shared/school?school={quote(name)}&token={token_post}&type=post",
+            "token": token,
+            "share_url": f"{base_url}/shared/school?school={quote(name)}&token={token}",
+            "excel_url": f"{base_url}/shared/school/export-excel?school={quote(name)}&token={token}",
         })
 
     # A school nobody registered under still exists; it just goes last, so the
@@ -1078,6 +1077,7 @@ async def get_school_analysis_data() -> dict[str, Any]:
             "recent_total": sum(r["recent_total"] for r in rows),
             "directory_token": get_schools_directory_token(),
             "directory_url": f"{base_url}/shared/schools?token={get_schools_directory_token()}",
+            "directory_excel_url": f"{base_url}/shared/schools/export-excel?token={get_schools_directory_token()}",
         },
         "highlights": {
             "most_submissions": by_submissions[0] if by_submissions else None,

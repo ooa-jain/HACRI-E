@@ -155,14 +155,38 @@ all submissions (top five schools plus a folded "Other schools" slice — six is
 as many as a ring can be read at), and **ranked horizontal bars** for which
 school is highest and which is lowest, which a ring cannot show.
 
+**One link per school, both surveys.** Two links meant reading the change
+between baseline and post by opening two tabs and subtracting by eye — which is
+the one number the exercise exists to produce. The school report now shows
+baseline and post side by side with the change stated, on the school as a whole
+and on every department in it.
+
 | Link | Opens |
 |------|-------|
-| `/shared/schools?token=…` | every school on one page, with the same charts and a link into each |
-| `/shared/school?school=…&token=…&type=pre\|post` | one school: its figures, then the departments inside it |
+| `/shared/schools?token=…` | every school on one page, with the charts and a link into each |
+| `/shared/school?school=…&token=…` | one school: baseline vs post, the change, then the departments inside it |
+| `/shared/schools/export-excel?token=…` | the whole university as a workbook |
+| `/shared/school/export-excel?school=…&token=…` | one school as a workbook |
 
-Both open without a login and name no student. A school's token is minted from
-its own name, so a dean handed their school's link cannot edit it into another
-school's, or into the other survey.
+Both pages open without a login and name no student. A school's token is minted
+from its own name, so a dean handed their school's link cannot edit it into
+another school's. Links handed out before the two reports were merged still
+open the merged one.
+
+### The school workbook
+
+**Export Excel** on the Schools page, on the shared all-schools page, or per
+school. The sheets come in the order the question gets asked:
+
+1. **All Schools** — one row per school, baseline and post side by side with the
+   change, plus a totals row for the university
+2. **Departments** — every department in the university on one sheet, named by
+   its school
+3. **One tab per school** — that school's departments, with the school's own
+   total at the bottom
+
+A school nobody registered under has nothing to put on a tab; it still appears
+on the first sheet with its zeros.
 
 **A department the mapping does not name lands in "Other"** rather than
 disappearing, so every registered student is counted under exactly one school.

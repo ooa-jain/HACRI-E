@@ -10,19 +10,19 @@
     :root {
       --navy: #1B2A4A; --border: #E2E8F0; --bg: #F8FAFC;
       --teal: #0f766e; --green: #15803d; --gray: #64748b;
+      --pre: #2a78d6; --post: #1baf7a; --up: #15803d; --down: #9f1239;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
       background: var(--bg); color: var(--navy); min-height: 100vh; padding: 40px 20px;
     }
-    .container { max-width: 1180px; margin: 0 auto; }
+    .container { max-width: 1220px; margin: 0 auto; }
     .header { text-align: center; margin-bottom: 32px; }
     .header .tag {
       display: inline-block; padding: 4px 14px; border-radius: 20px; font-size: 12px;
       font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: #fff;
-      margin-bottom: 10px;
-      background: {% if survey_type == 'post' %}#16a34a{% else %}#0d9488{% endif %};
+      margin-bottom: 10px; background: var(--navy);
     }
     .header h1 { font-size: 28px; font-weight: 800; margin-bottom: 8px; letter-spacing: -.5px; }
     .header p { font-size: 15px; color: var(--gray); }
@@ -32,7 +32,13 @@
       padding: 24px; margin-bottom: 24px;
     }
     .card h2 { font-size: 17px; font-weight: 700; margin-bottom: 4px; }
-    .card .sub { font-size: 13px; color: var(--gray); margin-bottom: 18px; }
+    .card .sub { font-size: 13px; color: var(--gray); margin-bottom: 18px; line-height: 1.6; }
+    /* The heading takes the room it needs; the button stays on the right
+       until the screen is too narrow for both. */
+    .head-row { display: flex; align-items: flex-start; justify-content: space-between;
+                gap: 16px; flex-wrap: wrap; margin-bottom: 18px; }
+    .head-row > div:first-child { flex: 1 1 320px; min-width: 0; }
+    .head-row .sub { margin-bottom: 0; }
     .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 14px; }
     .stat {
       background: #fff; border: 1px solid var(--border); border-left: 4px solid var(--navy);
@@ -40,30 +46,60 @@
     }
     .stat b { display: block; font-size: 26px; font-weight: 800; line-height: 1.1; }
     .stat s { display: block; font-size: 11.5px; color: var(--gray); margin-top: 5px; text-decoration: none; }
-    .stat.teal  { border-left-color: var(--teal); }  .stat.teal b  { color: var(--teal); }
-    .stat.green { border-left-color: var(--green); } .stat.green b { color: var(--green); }
-    .stat.blue  { border-left-color: #2a78d6; }      .stat.blue b  { color: #2a78d6; }
+    .stat.pre   { border-left-color: var(--pre); }   .stat.pre b   { color: var(--pre); }
+    .stat.post  { border-left-color: var(--post); }  .stat.post b  { color: var(--post); }
     .stat.amber { border-left-color: #b45309; }      .stat.amber b { color: #b45309; }
+
+    /* Baseline → post, side by side, with the change between them. Two tabs
+       and a subtraction by eye was the old way to read this. */
+    .compare { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px; }
+    .measure { border: 1px solid var(--border); border-radius: 14px; padding: 18px; }
+    .measure .name { font-size: 12px; font-weight: 800; text-transform: uppercase;
+                     letter-spacing: .5px; color: var(--gray); margin-bottom: 14px; }
+    .pair { display: flex; align-items: center; gap: 14px; }
+    .pair .side { flex: 1; }
+    .pair .side .lbl { font-size: 11.5px; font-weight: 700; color: var(--gray); }
+    .pair .side .val { font-size: 30px; font-weight: 800; line-height: 1.1; }
+    .pair .side.b .val { color: var(--pre); }
+    .pair .side.p .val { color: var(--post); }
+    .arrow { font-size: 20px; color: #cbd5e1; }
+    .chg {
+      margin-top: 12px; font-size: 13.5px; font-weight: 700; padding: 7px 10px;
+      border-radius: 8px; text-align: center;
+    }
+    .chg-up   { background: #ECFDF5; color: var(--up); }
+    .chg-down { background: #FFF1F2; color: var(--down); }
+    .chg-flat { background: #F1F5F9; color: var(--gray); }
     .chart-box { position: relative; }
     .scroll { overflow-x: auto; }
-    table { width: 100%; border-collapse: collapse; text-align: left; min-width: 900px; }
+    table { width: 100%; border-collapse: collapse; text-align: left; min-width: 1000px; }
     th {
-      padding: 14px; font-weight: 700; font-size: 12.5px; color: var(--gray);
+      padding: 13px; font-weight: 700; font-size: 12px; color: var(--gray);
       text-transform: uppercase; letter-spacing: .5px; border-bottom: 2px solid var(--border);
       white-space: nowrap;
     }
-    td { padding: 14px; border-bottom: 1px solid var(--border); font-size: 14px; vertical-align: middle; }
+    th.grp { text-align: center; border-bottom: 1px solid var(--border); font-size: 11px; }
+    th.grp-pre  { color: var(--pre); }
+    th.grp-post { color: var(--post); }
+    td { padding: 13px; border-bottom: 1px solid var(--border); font-size: 14px; vertical-align: middle; }
     tr:last-child td { border-bottom: none; }
-    .dept-name { font-weight: 700; min-width: 260px; }
+    .dept-name { font-weight: 700; min-width: 250px; }
     .num { text-align: right; font-variant-numeric: tabular-nums; }
+    .mid { text-align: center; }
+    .sep { border-left: 2px solid #EEF2F7; }
     .badge { display: inline-block; padding: 4px 9px; border-radius: 6px; font-size: 12px; font-weight: 700; }
-    .badge-gray  { background: #F1F5F9; color: #475569; }
-    .badge-blue  { background: #E0F2FE; color: #0369a1; }
-    .badge-green { background: #DCFCE7; color: #15803d; }
+    .badge-pre  { background: #E0F2FE; color: #0369a1; }
+    .badge-post { background: #DCFCE7; color: #15803d; }
+    .badge-gray { background: #F1F5F9; color: #475569; }
+    .up   { color: var(--up); font-weight: 700; }
+    .down { color: var(--down); font-weight: 700; }
     .btn {
-      display: inline-flex; align-items: center; gap: 5px; padding: 6px 11px;
-      border-radius: 7px; font-size: 12px; font-weight: 700; text-decoration: none; border: none;
+      display: inline-flex; align-items: center; gap: 6px; padding: 9px 15px;
+      border-radius: 9px; font-size: 13px; font-weight: 700; text-decoration: none;
+      border: none; white-space: nowrap;
     }
+    .btn-excel { background: #047857; color: #fff; }
+    .btn-sm { padding: 5px 10px; font-size: 12px; border-radius: 7px; }
     .btn-pre  { background: var(--teal); color: #fff; }
     .btn-post { background: var(--green); color: #fff; }
     .empty { text-align: center; padding: 40px; color: var(--gray); font-size: 14px; }
@@ -74,86 +110,137 @@
 
 <div class="container">
   <div class="header">
-    <div class="tag">{% if survey_type == 'post' %}Post-Workshop{% else %}Baseline{% endif %} · School Report</div>
+    <div class="tag">School Report · Baseline &amp; Post</div>
     <h1>{{ school.school }}</h1>
     <p>{{ school.dept_count }} department{{ '' if school.dept_count == 1 else 's' }} ·
        HACRI-E AI Literacy Assessment</p>
   </div>
 
   <div class="card">
-    <h2>Where this school stands</h2>
-    <p class="sub">
-      Every number here is the departments below added up — a school total can never
-      disagree with the departments inside it.
-      {% if school.registered %}
-        This school is {{ 100 * school.registered // overall.registered if overall.registered else 0 }}%
-        of the {{ overall.registered }} students registered university-wide.
-      {% endif %}
-    </p>
+    <div class="head-row">
+      <div>
+        <h2>Where this school stands</h2>
+        <p class="sub">
+          Every number here is the departments below added up — a school total can never
+          disagree with the departments inside it.
+          {% if school.registered %}
+            This school is {{ 100 * school.registered // overall.registered if overall.registered else 0 }}%
+            of the {{ overall.registered }} students registered university-wide.
+          {% endif %}
+        </p>
+      </div>
+      <a class="btn btn-excel" href="{{ school.excel_url }}">⬇ Export Excel</a>
+    </div>
     <div class="stats">
       <div class="stat"><b>{{ school.registered }}</b><s>Registered students</s></div>
-      <div class="stat teal"><b>{{ school.pre_done }}</b><s>Baseline done</s></div>
-      <div class="stat green"><b>{{ school.post_done }}</b><s>Post survey done</s></div>
+      <div class="stat pre"><b>{{ school.pre_done }}</b><s>Baseline done</s></div>
+      <div class="stat post"><b>{{ school.post_done }}</b><s>Post survey done</s></div>
       <div class="stat"><b>{{ school.pre_pending }}</b><s>Baseline still pending</s></div>
       <div class="stat"><b>{{ school.post_pending }}</b><s>Post survey still pending</s></div>
       <div class="stat amber"><b>{{ school.recent_total }}</b><s>Filled in the last {{ overall.recent_days }} days</s></div>
     </div>
   </div>
 
+  <!-- The whole reason for running the survey twice: what moved. -->
   <div class="card">
-    <h2>AI literacy and readiness</h2>
+    <h2>Baseline → Post: what changed</h2>
     <p class="sub">
-      Averaged over students, not over departments — a department of three does not
-      weigh the same as one of three hundred. Scored out of 5.
-      {% if school.last_submission %}Last submission {{ school.last_submission }}.{% endif %}
+      Both surveys on one page, scored out of 5. Averaged over students, not over
+      departments — a department of three does not weigh the same as one of three
+      hundred.{% if school.last_submission %} Last submission {{ school.last_submission }}.{% endif %}
     </p>
-    <div class="stats">
-      <div class="stat blue"><b>{{ school.avg_lit_pre if school.avg_lit_pre is not none else '—' }}</b><s>Avg literacy (baseline)</s></div>
-      <div class="stat blue"><b>{{ school.avg_read_pre if school.avg_read_pre is not none else '—' }}</b><s>Avg readiness (baseline)</s></div>
-      <div class="stat green"><b>{{ school.avg_lit_post if school.avg_lit_post is not none else '—' }}</b><s>Avg literacy (post)</s></div>
-      <div class="stat green"><b>{{ school.avg_read_post if school.avg_read_post is not none else '—' }}</b><s>Avg readiness (post)</s></div>
+    <div class="compare">
+      {% for m in [
+           ('AI literacy', school.avg_lit_pre, school.avg_lit_post, lit_change),
+           ('AI readiness', school.avg_read_pre, school.avg_read_post, read_change)] %}
+      <div class="measure">
+        <div class="name">{{ m[0] }}</div>
+        <div class="pair">
+          <div class="side b">
+            <div class="lbl">Baseline</div>
+            <div class="val">{{ m[1] if m[1] is not none else '—' }}</div>
+          </div>
+          <div class="arrow">→</div>
+          <div class="side p">
+            <div class="lbl">Post-workshop</div>
+            <div class="val">{{ m[2] if m[2] is not none else '—' }}</div>
+          </div>
+        </div>
+        {% if m[3] is none %}
+          <div class="chg chg-flat">Waiting on both surveys before a change can be read</div>
+        {% elif m[3] > 0 %}
+          <div class="chg chg-up">▲ up {{ '%.2f'|format(m[3]) }} after the workshop</div>
+        {% elif m[3] < 0 %}
+          <div class="chg chg-down">▼ down {{ '%.2f'|format(-m[3]) }} after the workshop</div>
+        {% else %}
+          <div class="chg chg-flat">No change</div>
+        {% endif %}
+      </div>
+      {% endfor %}
     </div>
   </div>
 
   {% if school.departments %}
   <div class="card">
-    <h2>📊 Submissions by department</h2>
-    <p class="sub">Ranked highest to lowest, so the department that has stalled is
-      the one at the bottom.</p>
+    <h2>📊 Baseline and post by department</h2>
+    <p class="sub">Both surveys on the same bars, so the gap between them is the
+      department's outstanding post surveys.</p>
     <div class="chart-box" id="bar-box"><canvas id="bars"></canvas></div>
   </div>
   {% endif %}
 
   <div class="card">
     <h2>Department by department</h2>
-    <p class="sub">Each department's own report opens on its own link.</p>
+    <p class="sub">Baseline and post side by side, with the change. Each department's
+      own report opens on its own link.</p>
     <div class="scroll">
       {% if school.departments %}
       <table>
         <thead>
           <tr>
-            <th>#</th><th>Department</th><th class="num">Registered</th>
-            <th class="num">Baseline</th><th class="num">Post</th>
-            <th>Avg pre (lit / read)</th><th>Avg post (lit / read)</th><th>Report</th>
+            <th rowspan="2">#</th><th rowspan="2">Department</th>
+            <th rowspan="2" class="num">Registered</th>
+            <th colspan="2" class="grp grp-pre sep">Baseline</th>
+            <th colspan="2" class="grp grp-post sep">Post</th>
+            <th colspan="2" class="grp sep">Change</th>
+            <th rowspan="2">Report</th>
+          </tr>
+          <tr>
+            <th class="mid sep">Done</th><th class="mid">Avg lit / read</th>
+            <th class="mid sep">Done</th><th class="mid">Avg lit / read</th>
+            <th class="mid sep">Literacy</th><th class="mid">Readiness</th>
           </tr>
         </thead>
         <tbody>
           {% for d in school.departments %}
+          {% set c = dept_changes.get(d.dept, {}) %}
           <tr>
             <td class="num">{{ loop.index }}</td>
             <td class="dept-name">{{ d.dept }}</td>
             <td class="num">{{ d.registered }}</td>
-            <td class="num"><span class="badge badge-blue">{{ d.pre_done }}</span>
+            <td class="mid sep"><span class="badge badge-pre">{{ d.pre_done }}</span>
               <small style="color:var(--gray)">/ {{ d.pre_pending }} left</small></td>
-            <td class="num"><span class="badge badge-green">{{ d.post_done }}</span>
-              <small style="color:var(--gray)">/ {{ d.post_pending }} left</small></td>
-            <td>{{ d.avg_lit_pre if d.avg_lit_pre is not none else '—' }} /
+            <td class="mid">{{ d.avg_lit_pre if d.avg_lit_pre is not none else '—' }} /
                 {{ d.avg_read_pre if d.avg_read_pre is not none else '—' }}</td>
-            <td>{{ d.avg_lit_post if d.avg_lit_post is not none else '—' }} /
+            <td class="mid sep"><span class="badge badge-post">{{ d.post_done }}</span>
+              <small style="color:var(--gray)">/ {{ d.post_pending }} left</small></td>
+            <td class="mid">{{ d.avg_lit_post if d.avg_lit_post is not none else '—' }} /
                 {{ d.avg_read_post if d.avg_read_post is not none else '—' }}</td>
+            <td class="mid sep">
+              {% if c.lit is none %}<span class="badge badge-gray">—</span>
+              {% elif c.lit > 0 %}<span class="up">▲ {{ '%.2f'|format(c.lit) }}</span>
+              {% elif c.lit < 0 %}<span class="down">▼ {{ '%.2f'|format(-c.lit) }}</span>
+              {% else %}<span style="color:var(--gray)">0.00</span>{% endif %}
+            </td>
+            <td class="mid">
+              {% if c.read is none %}<span class="badge badge-gray">—</span>
+              {% elif c.read > 0 %}<span class="up">▲ {{ '%.2f'|format(c.read) }}</span>
+              {% elif c.read < 0 %}<span class="down">▼ {{ '%.2f'|format(-c.read) }}</span>
+              {% else %}<span style="color:var(--gray)">0.00</span>{% endif %}
+            </td>
             <td>
-              <a class="btn btn-pre" target="_blank" href="{{ d.share_url_pre }}">Baseline</a>
-              <a class="btn btn-post" target="_blank" href="{{ d.share_url_post }}">Post</a>
+              <a class="btn btn-pre btn-sm" target="_blank" href="{{ d.share_url_pre }}">Baseline</a>
+              <a class="btn btn-post btn-sm" target="_blank" href="{{ d.share_url_post }}">Post</a>
             </td>
           </tr>
           {% endfor %}
@@ -173,21 +260,27 @@
 </div>
 
 <script>
-// One series comparing magnitude, so one hue — colour here would encode nothing.
+// Two series that ARE the subject — baseline and post — so two categorical
+// hues, direct-labelled by the legend, and a 2px gap between adjacent bars.
 const DEPTS = {{ chart_rows | tojson }};
 if (window.Chart && DEPTS.length) {
-  const ranked = DEPTS.slice().sort((a, b) => b.value - a.value);
+  const ranked = DEPTS.slice().sort((a, b) => (b.pre + b.post) - (a.pre + a.post));
   document.getElementById('bar-box').style.height =
-    Math.max(200, ranked.length * 34) + 'px';
+    Math.max(220, ranked.length * 52) + 'px';
   new Chart(document.getElementById('bars').getContext('2d'), {
     type: 'bar',
-    data: { labels: ranked.map(d => d.name), datasets: [{
-      label: 'Submissions', data: ranked.map(d => d.value),
-      backgroundColor: '#2a78d6', borderRadius: 4, barThickness: 14,
-    }] },
+    data: {
+      labels: ranked.map(d => d.name),
+      datasets: [
+        { label: 'Baseline done', data: ranked.map(d => d.pre),
+          backgroundColor: '#2a78d6', borderRadius: 4, barThickness: 13 },
+        { label: 'Post done', data: ranked.map(d => d.post),
+          backgroundColor: '#1baf7a', borderRadius: 4, barThickness: 13 },
+      ],
+    },
     options: {
       indexAxis: 'y', responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
+      plugins: { legend: { position: 'top', labels: { boxWidth: 12, font: { size: 11 } } } },
       scales: {
         x: { beginAtZero: true, grid: { color: '#f1f5f9' } },
         y: { grid: { display: false }, ticks: { font: { size: 10 } } },

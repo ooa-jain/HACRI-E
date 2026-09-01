@@ -2797,6 +2797,7 @@ function renderSchools() {
             registered. Departments that belong to no school are grouped under
             <b>Other</b>.</div></div>
         <div class="panel-actions">
+          <a class="btn btn-soft" href="/admin/survey/export-schools">⬇ Export Excel</a>
           <button class="btn btn-soft" onclick="copy('${e(ov.directory_url)}')">Copy all-schools link</button>
           <a class="btn btn-primary" target="_blank" href="${e(ov.directory_url)}">Open shared page</a>
         </div>
@@ -2851,7 +2852,7 @@ function renderSchools() {
 
   table('school-table',
     ['#', 'School', 'Depts', 'Registered', 'Baseline', 'Post', 'Submissions',
-     `Last ${ov.recent_days} days`, 'Avg lit / read (pre)', 'Report link'],
+     `Last ${ov.recent_days} days`, 'Avg lit / read (pre → post)', 'Report link'],
     rows, (r, i) => {
       const subs = r.pre_done + r.post_done;
       const pct = r.registered ? Math.round(100 * r.pre_done / r.registered) : 0;
@@ -2869,14 +2870,14 @@ function renderSchools() {
         r.recent_total
           ? `<span class="badge b-amber">${r.recent_total} new</span>`
           : '<span class="text-slate-400">—</span>',
-        `${score(r.avg_lit_pre)} / ${score(r.avg_read_pre)}`,
-        ['pre', 'post'].map(type => `
-          <div class="flex items-center gap-1.5 mb-1">
-            <span class="text-[10px] font-bold text-slate-500 w-8">${type.toUpperCase()}</span>
-            <button class="btn-xs btn-soft" data-copy-school="${e(type === 'pre' ? r.share_url_pre : r.share_url_post)}">Copy</button>
-            <a class="btn-xs btn-primary" target="_blank"
-               href="${e(type === 'pre' ? r.share_url_pre : r.share_url_post)}">View</a>
-          </div>`).join(''),
+        `<span class="text-blue-700 font-semibold">${score(r.avg_lit_pre)} / ${score(r.avg_read_pre)}</span>
+         <span class="text-slate-300">&rarr;</span>
+         <span class="text-emerald-700 font-semibold">${score(r.avg_lit_post)} / ${score(r.avg_read_post)}</span>`,
+        `<div class="flex items-center gap-1.5">
+           <button class="btn-xs btn-soft" data-copy-school="${e(r.share_url)}">Copy</button>
+           <a class="btn-xs btn-primary" target="_blank" href="${e(r.share_url)}">View</a>
+           <a class="btn-xs btn-green" href="${e(r.excel_url)}">Excel</a>
+         </div>`,
       ];
     }, 'No schools yet');
 
@@ -2954,7 +2955,8 @@ function showSchoolDetail(school) {
             ${row.registered} registered · ${row.pre_done} baseline · ${row.post_done} post
             ${row.recent_total ? ` · <b>${row.recent_total} filled in the last ${schoolData.overall.recent_days} days</b>` : ''}</div></div>
         <div class="panel-actions">
-          <a class="btn btn-primary" target="_blank" href="${e(row.share_url_pre)}">Open school report</a>
+          <a class="btn btn-soft" href="${e(row.excel_url)}">⬇ Excel</a>
+          <a class="btn btn-primary" target="_blank" href="${e(row.share_url)}">Open school report</a>
           <button class="btn btn-soft" onclick="closeSchoolDetail()">Close</button>
         </div>
       </div>

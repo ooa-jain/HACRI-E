@@ -8,6 +8,7 @@ import asyncio
 import hmac
 import hashlib
 import io
+import re
 from pathlib import Path
 from typing import Any
 from datetime import datetime, timezone
@@ -53,12 +54,19 @@ SCHOOL_KEY = "__school__"
 SCHOOLS_DIRECTORY_KEY = "__all_schools__"
 
 
-def get_school_token(school: str, survey_type: str = "pre") -> str:
+def get_school_token(school: str, survey_type: str = "both") -> str:
     return get_dept_token(f"{SCHOOL_KEY}:{school}", survey_type)
 
 
-def verify_school_token(school: str, token: str, survey_type: str = "pre") -> bool:
-    return hmac.compare_digest(get_school_token(school, survey_type), token or "")
+def verify_school_token(school: str, token: str) -> bool:
+    """One school report now covers both surveys, so one token opens it.
+
+    The separate baseline and post tokens are still accepted: links already
+    handed out keep working, and they open the same merged report.
+    """
+    token = token or ""
+    return any(hmac.compare_digest(get_school_token(school, kind), token)
+               for kind in ("both", "pre", "post"))
 
 
 def get_schools_directory_token() -> str:
@@ -804,16 +812,9 @@ async def shared_schools(request: Request, token: str = Query(...)):
     )
 
 
-@router.get("/shared/school", response_class=HTMLResponse)
-async def shared_school(request: Request, school: str = Query(...),
-                        token: str = Query(...), type: str = Query(default="pre")):
-    """One school's report: its own figures, then the departments inside it.
-
-    The token is minted from the school's name, so a dean handed their own
-    school's link cannot edit it into another school's.
-    """
-    survey_type = "post" if (type or "").lower() == "post" else "pre"
-    if not verify_school_token(school, token, survey_type):
+async def _school_row(school: str, token: str) -> tuple[dict, dict]:
+    """Check the link, then find the school. Shared by the page and the export."""
+    if not verify_school_token(school, token):
         raise HTTPException(status_code=403,
                             detail="Access denied: Invalid or expired sharing link.")
 
@@ -823,20 +824,82 @@ async def shared_school(request: Request, school: str = Query(...),
     row = next((s for s in data["schools"] if s["school"] == school), None)
     if row is None:
         raise HTTPException(status_code=404, detail="No such school.")
+    return row, data
+
+
+@router.get("/shared/school", response_class=HTMLResponse)
+async def shared_school(request: Request, school: str = Query(...),
+                        token: str = Query(...)):
+    """One school's report — baseline and post on the same page.
+
+    Two links per school meant reading the change between the surveys by
+    opening two tabs and subtracting by eye, which is the one number the whole
+    exercise exists to produce. One link now, both surveys, and the change
+    stated. The token is minted from the school's name, so a dean handed their
+    own school's link cannot edit it into another school's.
+    """
+    row, data = await _school_row(school, token)
+
+    def delta(post, pre):
+        return None if post is None or pre is None else round(post - pre, 2)
 
     return request.app.state.templates.TemplateResponse(
         request, "shared_school.html",
         {
             "school": row,
             "chart_rows": [
-                {"name": d["dept"], "value": d["pre_done"] + d["post_done"]}
+                {"name": d["dept"], "pre": d["pre_done"], "post": d["post_done"]}
                 for d in row["departments"]
             ],
-            "survey_type": survey_type,
+            "lit_change": delta(row.get("avg_lit_post"), row.get("avg_lit_pre")),
+            "read_change": delta(row.get("avg_read_post"), row.get("avg_read_pre")),
+            "dept_changes": {
+                d["dept"]: {
+                    "lit": delta(d.get("avg_lit_post"), d.get("avg_lit_pre")),
+                    "read": delta(d.get("avg_read_post"), d.get("avg_read_pre")),
+                } for d in row["departments"]
+            },
             "overall": data["overall"],
             "generated_at": datetime.now().strftime("%d %b %Y, %H:%M"),
         },
     )
+
+
+def _xlsx(book: bytes, filename: str) -> StreamingResponse:
+    return StreamingResponse(
+        io.BytesIO(book),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.get("/shared/schools/export-excel")
+async def shared_schools_excel(token: str = Query(...)):
+    """The whole university as a workbook: all schools, every department,
+    then a tab per school."""
+    if not hmac.compare_digest(get_schools_directory_token(), token):
+        raise HTTPException(status_code=403,
+                            detail="Access denied: Invalid or expired sharing link.")
+
+    from app.db import get_school_analysis_data
+    from app.school_export import generate_schools_excel
+
+    data = await get_school_analysis_data()
+    generated_at = datetime.now().strftime("%d %b %Y, %H:%M")
+    book = await _in_thread(generate_schools_excel, data, generated_at=generated_at)
+    return _xlsx(book, f"HACRI-E_All_Schools_{datetime.now():%Y%m%d}.xlsx")
+
+
+@router.get("/shared/school/export-excel")
+async def shared_school_excel(school: str = Query(...), token: str = Query(...)):
+    """One school as a workbook: its departments, baseline and post together."""
+    from app.school_export import generate_one_school_excel
+
+    row, _ = await _school_row(school, token)
+    generated_at = datetime.now().strftime("%d %b %Y, %H:%M")
+    book = await _in_thread(generate_one_school_excel, row, generated_at=generated_at)
+    safe = re.sub(r"[^A-Za-z0-9]+", "_", school).strip("_") or "School"
+    return _xlsx(book, f"HACRI-E_{safe}_{datetime.now():%Y%m%d}.xlsx")
 
 
 @router.get("/shared/impact", response_class=HTMLResponse)

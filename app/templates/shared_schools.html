@@ -80,8 +80,20 @@
       border-radius: 7px; font-size: 12px; font-weight: 700; text-decoration: none;
       border: none; cursor: pointer; font-family: inherit;
     }
-    .btn-pre  { background: var(--teal); color: #fff; }
-    .btn-post { background: var(--green); color: #fff; }
+    .btn-pre   { background: var(--teal); color: #fff; }
+    .btn-post  { background: var(--green); color: #fff; }
+    .btn-excel { background: #047857; color: #fff; }
+    .btn-lg    { padding: 9px 15px; font-size: 13px; border-radius: 9px; }
+    /* The heading takes the room it needs; the button stays on the right
+       until the screen is too narrow for both. */
+    .head-row { display: flex; align-items: flex-start; justify-content: space-between;
+                gap: 16px; flex-wrap: wrap; margin-bottom: 18px; }
+    .head-row > div:first-child { flex: 1 1 320px; min-width: 0; }
+    .head-row .sub { margin-bottom: 0; }
+    .scores { white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .pre-score  { color: #2a78d6; font-weight: 700; }
+    .post-score { color: #1baf7a; font-weight: 700; }
+    .scores .arrow { color: #cbd5e1; margin: 0 5px; }
     .swatch {
       display: inline-block; width: 10px; height: 10px; border-radius: 2px;
       margin-right: 7px; vertical-align: middle;
@@ -100,12 +112,16 @@
 
   <!-- The whole university in six numbers. -->
   <div class="card">
-    <h2>The university at a glance</h2>
-    <p class="sub">
+    <div class="head-row">
+      <div>
+        <h2>The university at a glance</h2>
       {{ overall.schools_listed }} schools listed · {{ overall.school_count }} with
       students registered. Departments belonging to no school are grouped under
       <b>Other</b>, so every registered student is counted exactly once.
-    </p>
+        </p>
+      </div>
+      <a class="btn btn-excel btn-lg" href="{{ overall.directory_excel_url }}">⬇ Export Excel</a>
+    </div>
     <div class="stats">
       <div class="stat"><b>{{ overall.registered }}</b><s>Registered students</s></div>
       <div class="stat teal"><b>{{ overall.pre_done }}</b><s>Baseline done</s></div>
@@ -174,15 +190,17 @@
 
   <div class="card">
     <h2>School by school</h2>
-    <p class="sub">Ordered by how many students registered. Each school's own report
-      opens on its own link, which can be forwarded to that school on its own.</p>
+    <p class="sub">Ordered by how many students registered. One link per school opens
+      its own report — baseline and post together, with the change between them — and
+      can be forwarded to that school on its own.</p>
     <div class="scroll">
       <table>
         <thead>
           <tr>
             <th>#</th><th>School</th><th class="num">Depts</th><th class="num">Registered</th>
             <th class="num">Baseline</th><th class="num">Post</th><th class="num">Submissions</th>
-            <th>Last {{ overall.recent_days }} days</th><th>Avg lit / read (pre)</th><th>Report</th>
+            <th>Last {{ overall.recent_days }} days</th>
+            <th>Avg lit / read (pre → post)</th><th>Report</th>
           </tr>
         </thead>
         <tbody>
@@ -204,11 +222,16 @@
             <td class="num"><b>{{ s.pre_done + s.post_done }}</b></td>
             <td>{% if s.recent_total %}<span class="badge badge-amber">{{ s.recent_total }} new</span>
                 {% else %}<span class="badge badge-gray">—</span>{% endif %}</td>
-            <td>{{ s.avg_lit_pre if s.avg_lit_pre is not none else '—' }} /
-                {{ s.avg_read_pre if s.avg_read_pre is not none else '—' }}</td>
+            <td class="scores">
+              <span class="pre-score">{{ s.avg_lit_pre if s.avg_lit_pre is not none else '—' }} /
+                {{ s.avg_read_pre if s.avg_read_pre is not none else '—' }}</span>
+              <span class="arrow">&rarr;</span>
+              <span class="post-score">{{ s.avg_lit_post if s.avg_lit_post is not none else '—' }} /
+                {{ s.avg_read_post if s.avg_read_post is not none else '—' }}</span>
+            </td>
             <td>
-              <a class="btn btn-pre" target="_blank" href="{{ s.share_url_pre }}">Baseline</a>
-              <a class="btn btn-post" target="_blank" href="{{ s.share_url_post }}">Post</a>
+              <a class="btn btn-pre" target="_blank" href="{{ s.share_url }}">Open report</a>
+              <a class="btn btn-excel" href="{{ s.excel_url }}">Excel</a>
             </td>
           </tr>
           {% endfor %}
