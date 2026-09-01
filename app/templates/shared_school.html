@@ -1,125 +1,29 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  {% include "_report_head.html" %}
   <title>{{ school.school }} – HACRI-E School Report</title>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="{{ asset('/static/vendor/chart.umd.js') }}"></script>
   <style>
-    :root {
-      --navy: #1B2A4A; --border: #E2E8F0; --bg: #F8FAFC;
-      --teal: #0f766e; --green: #15803d; --gray: #64748b;
-      --pre: #2a78d6; --post: #1baf7a; --up: #15803d; --down: #9f1239;
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
-      background: var(--bg); color: var(--navy); min-height: 100vh; padding: 40px 20px;
-    }
-    .container { max-width: 1220px; margin: 0 auto; }
-    .header { text-align: center; margin-bottom: 32px; }
-    .header .tag {
-      display: inline-block; padding: 4px 14px; border-radius: 20px; font-size: 12px;
-      font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: #fff;
-      margin-bottom: 10px; background: var(--navy);
-    }
-    .header h1 { font-size: 28px; font-weight: 800; margin-bottom: 8px; letter-spacing: -.5px; }
-    .header p { font-size: 15px; color: var(--gray); }
-    .card {
-      background: #fff; border: 1px solid var(--border); border-radius: 16px;
-      box-shadow: 0 4px 6px -1px rgba(0,0,0,.05), 0 2px 4px -1px rgba(0,0,0,.03);
-      padding: 24px; margin-bottom: 24px;
-    }
-    .card h2 { font-size: 17px; font-weight: 700; margin-bottom: 4px; }
-    .card .sub { font-size: 13px; color: var(--gray); margin-bottom: 18px; line-height: 1.6; }
-    /* The heading takes the room it needs; the button stays on the right
-       until the screen is too narrow for both. */
-    .head-row { display: flex; align-items: flex-start; justify-content: space-between;
-                gap: 16px; flex-wrap: wrap; margin-bottom: 18px; }
-    .head-row > div:first-child { flex: 1 1 320px; min-width: 0; }
-    .head-row .sub { margin-bottom: 0; }
-    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 14px; }
-    .stat {
-      background: #fff; border: 1px solid var(--border); border-left: 4px solid var(--navy);
-      border-radius: 12px; padding: 16px;
-    }
-    .stat b { display: block; font-size: 26px; font-weight: 800; line-height: 1.1; }
-    .stat s { display: block; font-size: 11.5px; color: var(--gray); margin-top: 5px; text-decoration: none; }
-    .stat.pre   { border-left-color: var(--pre); }   .stat.pre b   { color: var(--pre); }
-    .stat.post  { border-left-color: var(--post); }  .stat.post b  { color: var(--post); }
-    .stat.amber { border-left-color: #b45309; }      .stat.amber b { color: #b45309; }
-
-    /* Baseline → post, side by side, with the change between them. Two tabs
-       and a subtraction by eye was the old way to read this. */
-    .compare { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px; }
-    .measure { border: 1px solid var(--border); border-radius: 14px; padding: 18px; }
-    .measure .name { font-size: 12px; font-weight: 800; text-transform: uppercase;
-                     letter-spacing: .5px; color: var(--gray); margin-bottom: 14px; }
-    .pair { display: flex; align-items: center; gap: 14px; }
-    .pair .side { flex: 1; }
-    .pair .side .lbl { font-size: 11.5px; font-weight: 700; color: var(--gray); }
-    .pair .side .val { font-size: 30px; font-weight: 800; line-height: 1.1; }
-    .pair .side.b .val { color: var(--pre); }
-    .pair .side.p .val { color: var(--post); }
-    .arrow { font-size: 20px; color: #cbd5e1; }
-    .chg {
-      margin-top: 12px; font-size: 13.5px; font-weight: 700; padding: 7px 10px;
-      border-radius: 8px; text-align: center;
-    }
-    .chg-up   { background: #ECFDF5; color: var(--up); }
-    .chg-down { background: #FFF1F2; color: var(--down); }
-    .chg-flat { background: #F1F5F9; color: var(--gray); }
-    .chart-box { position: relative; }
-    .scroll { overflow-x: auto; }
-    table { width: 100%; border-collapse: collapse; text-align: left; min-width: 1000px; }
-    th {
-      padding: 13px; font-weight: 700; font-size: 12px; color: var(--gray);
-      text-transform: uppercase; letter-spacing: .5px; border-bottom: 2px solid var(--border);
-      white-space: nowrap;
-    }
-    th.grp { text-align: center; border-bottom: 1px solid var(--border); font-size: 11px; }
-    th.grp-pre  { color: var(--pre); }
-    th.grp-post { color: var(--post); }
-    td { padding: 13px; border-bottom: 1px solid var(--border); font-size: 14px; vertical-align: middle; }
-    tr:last-child td { border-bottom: none; }
-    .dept-name { font-weight: 700; min-width: 250px; }
-    .num { text-align: right; font-variant-numeric: tabular-nums; }
-    .mid { text-align: center; }
-    .sep { border-left: 2px solid #EEF2F7; }
-    .badge { display: inline-block; padding: 4px 9px; border-radius: 6px; font-size: 12px; font-weight: 700; }
-    .badge-pre  { background: #E0F2FE; color: #0369a1; }
-    .badge-post { background: #DCFCE7; color: #15803d; }
-    .badge-gray { background: #F1F5F9; color: #475569; }
-    .up   { color: var(--up); font-weight: 700; }
-    .down { color: var(--down); font-weight: 700; }
-    .btn {
-      display: inline-flex; align-items: center; gap: 6px; padding: 9px 15px;
-      border-radius: 9px; font-size: 13px; font-weight: 700; text-decoration: none;
-      border: none; white-space: nowrap;
-    }
-    .btn-excel { background: #047857; color: #fff; }
-    .btn-sm { padding: 5px 10px; font-size: 12px; border-radius: 7px; }
-    .btn-pre  { background: var(--teal); color: #fff; }
-    .btn-post { background: var(--green); color: #fff; }
-    .empty { text-align: center; padding: 40px; color: var(--gray); font-size: 14px; }
-    .foot { text-align: center; font-size: 12.5px; color: var(--gray); margin-top: 28px; line-height: 1.7; }
+    table { min-width: 1000px; }
   </style>
 </head>
-<body>
+<body class="report-shell">
 
 <div class="container">
   <div class="header">
-    <div class="tag">School Report · Baseline &amp; Post</div>
+    <div class="tag">School Report · Baseline &amp; Post Survey</div>
     <h1>{{ school.school }}</h1>
     <p>{{ school.dept_count }} department{{ '' if school.dept_count == 1 else 's' }} ·
-       HACRI-E AI Literacy Assessment</p>
+       HACRI-E AI Literacy Assessment. Where this school stood before the workshop,
+       and where it stood after.</p>
   </div>
 
   <div class="card">
     <div class="head-row">
       <div>
-        <h2>Where this school stands</h2>
+        <div class="section-tag"><b>01</b> Where this school stands</div>
+        <h2>Registration and completion</h2>
         <p class="sub">
           Every number here is the departments below added up — a school total can never
           disagree with the departments inside it.
@@ -129,7 +33,7 @@
           {% endif %}
         </p>
       </div>
-      <a class="btn btn-excel" href="{{ school.excel_url }}">⬇ Export Excel</a>
+      <a class="btn btn-excel" href="{{ school.excel_url }}">Export Excel ↓</a>
     </div>
     <div class="stats">
       <div class="stat"><b>{{ school.registered }}</b><s>Registered students</s></div>
@@ -143,7 +47,8 @@
 
   <!-- The whole reason for running the survey twice: what moved. -->
   <div class="card">
-    <h2>Baseline → Post: what changed</h2>
+    <div class="section-tag"><b>02</b> What changed</div>
+    <h2>Baseline &rarr; Post</h2>
     <p class="sub">
       Both surveys on one page, scored out of 5. Averaged over students, not over
       departments — a department of three does not weigh the same as one of three
@@ -182,7 +87,8 @@
 
   {% if school.departments %}
   <div class="card">
-    <h2>📊 Baseline and post by department</h2>
+    <div class="section-tag"><b>03</b> By department</div>
+    <h2>Baseline and post, department by department</h2>
     <p class="sub">Both surveys on the same bars, so the gap between them is the
       department's outstanding post surveys.</p>
     <div class="chart-box" id="bar-box"><canvas id="bars"></canvas></div>
@@ -190,7 +96,8 @@
   {% endif %}
 
   <div class="card">
-    <h2>Department by department</h2>
+    <div class="section-tag"><b>04</b> The table</div>
+    <h2>Every department in this school</h2>
     <p class="sub">Baseline and post side by side, with the change. Each department's
       own report opens on its own link.</p>
     <div class="scroll">
@@ -273,16 +180,16 @@ if (window.Chart && DEPTS.length) {
       labels: ranked.map(d => d.name),
       datasets: [
         { label: 'Baseline done', data: ranked.map(d => d.pre),
-          backgroundColor: '#2a78d6', borderRadius: 4, barThickness: 13 },
+          backgroundColor: '#4c3fd6', borderRadius: 3, barThickness: 12 },
         { label: 'Post done', data: ranked.map(d => d.post),
-          backgroundColor: '#1baf7a', borderRadius: 4, barThickness: 13 },
+          backgroundColor: '#1d7a41', borderRadius: 3, barThickness: 12 },
       ],
     },
     options: {
       indexAxis: 'y', responsive: true, maintainAspectRatio: false,
       plugins: { legend: { position: 'top', labels: { boxWidth: 12, font: { size: 11 } } } },
       scales: {
-        x: { beginAtZero: true, grid: { color: '#f1f5f9' } },
+        x: { beginAtZero: true, grid: { color: '#e3e2d8' } },
         y: { grid: { display: false }, ticks: { font: { size: 10 } } },
       },
     },

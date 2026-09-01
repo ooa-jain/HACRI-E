@@ -327,7 +327,7 @@ async def test_the_school_report_shows_baseline_and_post_together(client: AsyncC
 
     text = page.text
     assert "Baseline" in text and "Post-workshop" in text
-    assert "what changed" in text
+    assert "What changed" in text                # the section it lives under
     assert "after the workshop" in text          # the change, in words
     assert "Export Excel" in text
 

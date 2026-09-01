@@ -1,370 +1,669 @@
 /*
- * report_shell.css — the look of the public shared pages.
+ * report_shell.css — the look of every page we hand out.
  *
- * The department directory and the analysis reports are handed out by link to
- * people who never see the admin, so they carry the same design as the admin
- * console: the same ground and card material, the same KPI treatment, the same
- * tables and buttons. Only the frame differs — a report opens with a navy
- * cover band rather than a navigation rail.
+ * The school reports, the department directory, the analysis reports and the
+ * cohort pages go to people who never see the admin, and they used to be six
+ * pages that each invented their own colours and type. This is the one sheet
+ * they share.
  *
- * Like admin_shell.css this restyles the classes the templates already use
- * (.card, .summary, .stat-card, .btn, .badge, tables) instead of asking the
- * markup to change. It is scoped to `body.report-shell` so it outweighs each
+ * The look: a lavender-to-lime wash behind near-black cards, lime as the only
+ * accent, monospace on anything that labels a number, and one very heavy
+ * display face for headings. Corners are nearly square and rules are hairline
+ * — it should read as an instrument panel, not a brochure.
+ *
+ * Like admin_shell.css it restyles the classes the templates already use
+ * (.card, .summary, .stat, .btn, .badge, tables) instead of asking the markup
+ * to change, and it is scoped to `body.report-shell` so it outweighs each
  * template's own inline <style> regardless of load order.
  */
 
 :root {
-  --r-navy: #1f1a12;
-  --r-navy-soft: #2e271c;
-  --r-navy-deep: #14110c;
-  --r-gold: #d9a441;
+  --r-ink: #131317;          /* near-black: cards, type, buttons */
+  --r-ink-soft: #1e1e26;
+  --r-ink-line: #2b2b35;
+  --r-surface: #fbfaf5;      /* the card face */
+  --r-surface-sunk: #f1f0e8; /* plots, table heads, inset panels */
+  --r-line: #e3e2d8;
+  --r-line-strong: #cfcec2;
+  --r-muted: #6f6f78;
+  --r-faint: #9a9aa4;
 
-  --r-ink: #1c1917;
-  --r-ink-soft: #443c33;
-  --r-muted: #7c7266;
-  --r-faint: #a89e90;
-  --r-bg: #f7f2e8;
-  --r-surface: #fffdf9;
-  --r-surface-sunk: #f9f4ea;
-  --r-line: #ece3d4;
-  --r-line-strong: #ddd0bb;
-  --r-accent: #b9862c;
+  --r-lime: #d7f24f;         /* the one accent */
+  --r-lime-deep: #b6cf2c;
+  --r-violet: #4c3fd6;       /* the rule down a card, and the baseline series */
+  --r-violet-pale: #c9c2f2;
+  --r-up: #1d7a41;           /* and the post series */
+  --r-down: #c02c46;
 
-  --r-radius: 20px;
-  --r-shadow: 0 1px 2px rgba(60, 45, 20, .05);
-  --r-shadow-lift: 0 6px 14px -4px rgba(60, 45, 20, .12), 0 20px 36px -22px rgba(60, 45, 20, .3);
+  /* Kept so anything still asking for the old names lands somewhere sane. */
+  --r-navy: #131317;
+  --r-navy-soft: #1e1e26;
+  --r-navy-deep: #0c0c10;
+  --r-gold: #d7f24f;
+  --r-bg: #efece0;
+  --r-accent: #4c3fd6;
+
+  --r-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --r-body: 'Instrument Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --r-display: 'Archivo Black', 'Arial Black', 'Helvetica Neue', sans-serif;
+
+  --r-radius: 3px;
+  --r-shadow: 0 1px 2px rgba(19, 19, 23, .06);
+  --r-shadow-lift: 0 6px 16px -6px rgba(19, 19, 23, .18);
 }
 
-/* ── Ground ──────────────────────────────────────────────────────────────── */
+/* ── Ground ──────────────────────────────────────────────────────────────
+   The wash sits behind everything and does not scroll away. It is painted on
+   the root as well, so a page taller than the viewport never shows a bare
+   band below the fold. */
+html:has(body.report-shell) {
+  background: linear-gradient(135deg,
+              #bdb2ec 0%, #d3cbe9 22%, #efece0 52%, #e7ecc2 78%, #d5e58f 100%)
+              fixed;
+}
 body.report-shell {
-  background: var(--r-bg);
+  background: linear-gradient(135deg,
+              #bdb2ec 0%, #d3cbe9 22%, #efece0 52%, #e7ecc2 78%, #d5e58f 100%)
+              fixed;
   color: var(--r-ink);
-  font-family: 'Inter', 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: var(--r-body);
   -webkit-font-smoothing: antialiased;
-  /* The cover runs edge to edge, so the page's own padding moves inward to
-     the container that holds the content. */
   padding: 0;
+  min-height: 100vh;
 }
-body.report-shell .container {
-  padding-left: 20px;
-  padding-right: 20px;
-  padding-bottom: 40px;
+body.report-shell .container,
+body.report-shell .wrap {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 0 20px 48px;
 }
 
-/* ── Cover band ──────────────────────────────────────────────────────────
-   Every shared page opens the same way: a navy cover carrying the title,
-   released into the page by a wave rather than a ruled edge. The wave is an
-   inline SVG filled with the page ground, so it needs no image request and
-   stays exact at any width. */
+/* ── Masthead ────────────────────────────────────────────────────────────
+   No cover band: the wash is the cover. A highlighter stroke marks the kind
+   of report, then the title lands as heavy as it can. */
 body.report-shell .header {
-  position: relative;
-  background: linear-gradient(135deg, var(--r-navy) 0%, var(--r-navy-deep) 100%);
+  background: none;
   border-bottom: none;
-  padding: 40px 20px 62px;
-  text-align: center;
-  color: #fff;
-  margin-bottom: 26px;
+  padding: 46px 20px 8px;
+  margin: 0 auto 30px;
+  max-width: 1180px;
+  text-align: left;
+  color: var(--r-ink);
 }
-body.report-shell .header::after {
-  content: '';
-  position: absolute;
-  left: 0; right: 0; bottom: -1px;
-  height: 44px;
-  background: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 44' preserveAspectRatio='none'%3E%3Cpath d='M0 26c180 24 340-16 520-8s300 30 470 20 270-30 450-14v20H0z' fill='%23f7f2e8'/%3E%3C/svg%3E")
-              bottom center / 100% 100% no-repeat;
-  pointer-events: none;
-}
-body.report-shell .header h1 {
-  font-size: 25px;
+body.report-shell .header::after { content: none; }
+
+body.report-shell .header .tag,
+body.report-shell .eyebrow {
+  display: inline-block;
+  background: var(--r-lime);
+  color: var(--r-ink);
+  font-family: var(--r-mono);
+  font-size: 10.5px;
   font-weight: 700;
-  letter-spacing: -.5px;
-  margin: 0 0 6px;
-  /* The directory's own sheet paints this navy, which on the cover is
-     navy on navy. */
-  color: #fff;
-}
-body.report-shell .header h1 span { color: var(--r-gold); font-weight: 700; }
-body.report-shell .header p {
-  color: rgba(255, 255, 255, .6);
-  font-size: 13.5px;
-  font-weight: 400;
+  letter-spacing: 1.1px;
+  text-transform: uppercase;
+  padding: 4px 9px;
+  border-radius: 2px;
+  margin-bottom: 14px;
 }
 
-/* ── Panels ──────────────────────────────────────────────────────────────── */
+body.report-shell .header h1 {
+  font-family: var(--r-display);
+  font-size: clamp(29px, 4.4vw, 50px);
+  font-weight: 400;         /* Archivo Black has one weight */
+  line-height: .98;
+  letter-spacing: -1px;
+  text-transform: uppercase;
+  color: var(--r-ink);
+  margin: 0 0 12px;
+}
+body.report-shell .header h1 span { color: var(--r-violet); }
+body.report-shell .header p {
+  font-size: 13.5px;
+  line-height: 1.65;
+  color: #4a4a55;
+  font-weight: 400;
+  max-width: 66ch;
+}
+
+/* ── Panels ──────────────────────────────────────────────────────────────
+   The heavy sides are what make a card read as an instrument panel. */
 body.report-shell .card,
+body.report-shell .panel,
 body.report-shell .charts-card,
 body.report-shell .action-banner,
 body.report-shell .table-card {
   background: var(--r-surface);
   border: 1px solid var(--r-line);
+  border-left: 3px solid var(--r-violet);
+  border-right: 3px solid var(--r-violet);
   border-radius: var(--r-radius);
   box-shadow: var(--r-shadow);
-}
-body.report-shell .charts-title {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--r-ink);
-  letter-spacing: -.2px;
-  border-bottom: 1px solid var(--r-line);
-  padding-bottom: 12px;
-  margin-bottom: 20px;
-}
-body.report-shell .chart-item {
-  background: var(--r-surface-sunk);
-  border: 1px solid var(--r-line);
-  border-radius: 12px;
-}
-body.report-shell .action-info h2 { font-size: 15px; font-weight: 700; color: var(--r-ink); }
-body.report-shell .action-info p { font-size: 12.5px; color: var(--r-muted); }
-
-/* ── Figures ─────────────────────────────────────────────────────────────
-   The directory's `.summary div` and the report's `.stat-card` become the
-   same object as the console's KPI card: label above, figure below, an
-   accent kept as a top rule. */
-body.report-shell .summary {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-  gap: 14px;
+  padding: 24px;
   margin-bottom: 22px;
 }
+
+body.report-shell .card h2,
+body.report-shell .panel h2,
+body.report-shell .charts-title,
+body.report-shell .action-info h2 {
+  font-family: var(--r-display);
+  font-weight: 400;
+  font-size: 17px;
+  line-height: 1.2;
+  letter-spacing: -.2px;
+  text-transform: uppercase;
+  color: var(--r-ink);
+  border-bottom: none;
+  padding-bottom: 0;
+  margin-bottom: 6px;
+}
+body.report-shell .card .sub,
+body.report-shell .panel .sub,
+body.report-shell .action-info p {
+  font-size: 12.5px;
+  line-height: 1.65;
+  color: var(--r-muted);
+  margin-bottom: 18px;
+}
+
+/* A numbered section marker, the way a printed report labels its sections. */
+body.report-shell .section-tag {
+  display: inline-block;
+  background: var(--r-ink);
+  color: var(--r-lime);
+  font-family: var(--r-mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 1.1px;
+  text-transform: uppercase;
+  padding: 5px 10px;
+  border-radius: 2px;
+  margin-bottom: 13px;
+}
+body.report-shell .section-tag b { color: #fff; margin-right: 7px; }
+
+body.report-shell .chart-item,
+body.report-shell .chart-box,
+body.report-shell .pie-card {
+  background: var(--r-surface-sunk);
+  border: 1px solid var(--r-line);
+  border-radius: 2px;
+}
+
+/* ── Figures ─────────────────────────────────────────────────────────────
+   Dark blocks with a lime number. The figures are the point of every one of
+   these pages, so they carry the strongest contrast on it. The label reads
+   first, so it sits above the number whichever order the markup uses. */
+body.report-shell .summary,
+body.report-shell .stats,
+body.report-shell .stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(158px, 1fr));
+  gap: 12px;
+  margin-bottom: 0;
+}
+
 body.report-shell .summary div,
+body.report-shell .stat,
 body.report-shell .stat-card {
   position: relative;
   overflow: hidden;
-  /* These sit in a grid beside a taller chart card and get stretched to
-     match it, so the figure is centred rather than stranded at the top. */
   display: flex;
-  flex-direction: column;
-  justify-content: center;
-  background: var(--r-surface);
-  border: 1px solid var(--r-line);
-  border-left: 1px solid var(--r-line);
+  flex-direction: column-reverse;
+  justify-content: flex-end;
+  background: var(--r-ink);
+  border: 1px solid var(--r-ink-line);
+  border-left: 3px solid var(--r-violet);
   border-radius: var(--r-radius);
-  box-shadow: var(--r-shadow);
-  padding: 16px 18px;
+  box-shadow: none;
+  padding: 15px 16px 16px;
   text-align: left;
-  transition: transform .16s ease, box-shadow .16s ease;
+  transition: transform .16s ease;
 }
 body.report-shell .summary div:hover,
-body.report-shell .stat-card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--r-shadow-lift);
-}
-/* The templates set the accent through border-left-color or ::after; keep
-   both working, drawn as one rule along the top. */
-body.report-shell .summary div::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 3px;
-  background: currentColor;
-  opacity: .85;
-}
-body.report-shell .stat-card::after { height: 3px; }
+body.report-shell .stat:hover,
+body.report-shell .stat-card:hover { transform: translateY(-2px); box-shadow: none; }
+body.report-shell .summary div::before,
+body.report-shell .stat-card::after { content: none; }
 
 body.report-shell .summary b,
+body.report-shell .stat b,
 body.report-shell .stat-val {
   display: block;
-  font-size: 26px;
-  font-weight: 800;
-  line-height: 1.05;
-  letter-spacing: -1px;
-  color: var(--r-ink);
-  margin: 0 0 5px;
-}
-body.report-shell .summary span,
-body.report-shell .stat-lbl {
-  display: block;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--r-muted);
-  text-transform: uppercase;
-  letter-spacing: .4px;
+  font-family: var(--r-display);
+  font-weight: 400;
+  font-size: 30px;
+  line-height: 1;
+  letter-spacing: -.5px;
+  color: var(--r-lime);
   margin: 0;
 }
+body.report-shell .summary span,
+body.report-shell .stat s,
+body.report-shell .stat-lbl {
+  display: block;
+  font-family: var(--r-mono);
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: .9px;
+  text-transform: uppercase;
+  color: var(--r-faint);
+  text-decoration: none;
+  margin: 0 0 9px;
+}
 
-/* ── Tables ──────────────────────────────────────────────────────────────── */
-body.report-shell th {
-  padding: 12px 14px;
-  font-size: 10.5px;
+/* A series still has to be told from the other at a glance. */
+body.report-shell .stat.pre,   body.report-shell .stat-card.pre   { border-left-color: var(--r-violet); }
+body.report-shell .stat.pre b, body.report-shell .stat-card.pre .stat-val { color: #b9b0ff; }
+body.report-shell .stat.post,  body.report-shell .stat-card.post  { border-left-color: var(--r-lime-deep); }
+body.report-shell .stat.green, body.report-shell .stat.teal { border-left-color: var(--r-lime-deep); }
+body.report-shell .stat.blue  { border-left-color: #5c8dff; }
+body.report-shell .stat.blue b { color: #9ec2ff; }
+body.report-shell .stat.amber { border-left-color: #e8a33c; }
+body.report-shell .stat.amber b { color: #ffce7a; }
+body.report-shell .stat-card.registered { border-left-color: var(--r-faint); }
+body.report-shell .stat-card.pending    { border-left-color: #e8a33c; }
+
+/* ── Highlight cards (best / worst / stalled / filling now) ─────────────── */
+body.report-shell .highlights {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(228px, 1fr));
+  gap: 12px;
+}
+body.report-shell .hl {
+  border: 1px solid var(--r-line);
+  border-left: 3px solid var(--r-faint);
+  border-radius: var(--r-radius);
+  padding: 14px 15px;
+  background: var(--r-surface-sunk);
+}
+body.report-shell .hl .lbl {
+  font-family: var(--r-mono);
+  font-size: 9.5px;
   font-weight: 700;
-  letter-spacing: .5px;
+  letter-spacing: .9px;
   text-transform: uppercase;
   color: var(--r-muted);
-  background: var(--r-surface-sunk);
-  border-bottom: 1px solid var(--r-line);
 }
+body.report-shell .hl .name {
+  font-family: var(--r-display);
+  font-weight: 400;
+  font-size: 14px;
+  line-height: 1.25;
+  text-transform: uppercase;
+  margin-top: 7px;
+  color: var(--r-ink);
+}
+body.report-shell .hl .foot {
+  font-family: var(--r-mono);
+  font-size: 11px;
+  margin-top: 5px;
+  color: var(--r-muted);
+  text-align: left;
+}
+body.report-shell .hl-good { border-left-color: var(--r-up);     background: #f2f8ee; color: inherit; }
+body.report-shell .hl-bad  { border-left-color: var(--r-down);   background: #fdf1f3; color: inherit; }
+body.report-shell .hl-warn { border-left-color: #d99a1f;         background: #fdf8ec; color: inherit; }
+body.report-shell .hl-live { border-left-color: var(--r-violet); background: #f2f0fd; color: inherit; }
+
+/* ── Baseline → post ─────────────────────────────────────────────────────
+   The change is the one number running the survey twice exists to produce, so
+   it gets the dark treatment the headline figures get. */
+body.report-shell .compare {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+  gap: 14px;
+}
+body.report-shell .measure {
+  background: var(--r-ink);
+  border: 1px solid var(--r-ink-line);
+  border-left: 3px solid var(--r-violet);
+  border-radius: var(--r-radius);
+  padding: 18px;
+}
+body.report-shell .measure .name {
+  font-family: var(--r-mono);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--r-faint);
+  margin-bottom: 16px;
+}
+body.report-shell .pair { display: flex; align-items: center; gap: 12px; }
+body.report-shell .pair .side { flex: 1; }
+body.report-shell .pair .side .lbl {
+  font-family: var(--r-mono);
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: .8px;
+  text-transform: uppercase;
+  color: var(--r-faint);
+}
+body.report-shell .pair .side .val {
+  font-family: var(--r-display);
+  font-weight: 400;
+  font-size: 32px;
+  line-height: 1.05;
+  margin-top: 3px;
+}
+body.report-shell .pair .side.b .val { color: #b9b0ff; }
+body.report-shell .pair .side.p .val { color: var(--r-lime); }
+body.report-shell .pair .arrow { color: #55555f; font-size: 18px; }
+body.report-shell .chg {
+  margin-top: 14px;
+  font-family: var(--r-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .6px;
+  text-transform: uppercase;
+  padding: 7px 10px;
+  border-radius: 2px;
+  text-align: center;
+}
+body.report-shell .chg-up   { background: rgba(215, 242, 79, .16); color: var(--r-lime); }
+body.report-shell .chg-down { background: rgba(255, 120, 145, .14); color: #ff9fb0; }
+body.report-shell .chg-flat { background: rgba(255, 255, 255, .07); color: var(--r-faint); }
+
+/* ── Tables ──────────────────────────────────────────────────────────────
+   Mono on anything that labels or counts, so columns line up by eye. */
+body.report-shell th {
+  font-family: var(--r-mono);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: .9px;
+  text-transform: uppercase;
+  color: var(--r-muted);
+  background: none;
+  padding: 12px 13px;
+  border-bottom: 2px solid var(--r-ink);
+  vertical-align: bottom;
+}
+body.report-shell th.grp { text-align: center; border-bottom: 1px solid var(--r-line); }
+body.report-shell th.grp-pre  { color: var(--r-violet); }
+body.report-shell th.grp-post { color: var(--r-up); }
 body.report-shell td {
-  padding: 12px 14px;
-  font-size: 13px;
+  padding: 12px 13px;
+  font-size: 13.5px;
   border-bottom: 1px solid var(--r-line);
   vertical-align: middle;
 }
 body.report-shell tbody tr { transition: background .12s ease; }
 body.report-shell tbody tr:hover { background: var(--r-surface-sunk); }
-body.report-shell .dept-name { font-weight: 650; color: var(--r-ink); }
+body.report-shell tbody tr:last-child td { border-bottom: none; }
+
+body.report-shell .num, body.report-shell td.num, body.report-shell th.num {
+  text-align: right;
+  font-family: var(--r-mono);
+  font-variant-numeric: tabular-nums;
+}
+body.report-shell .mid { text-align: center; }
+body.report-shell .sep { border-left: 2px solid var(--r-line); }
+
+body.report-shell .dept-name,
+body.report-shell .school-name {
+  font-family: var(--r-display);
+  font-weight: 400;
+  font-size: 12.5px;
+  line-height: 1.35;
+  letter-spacing: -.1px;
+  text-transform: uppercase;
+  color: var(--r-ink);
+}
+body.report-shell .school-name small,
+body.report-shell .dept-name small {
+  display: block;
+  font-family: var(--r-mono);
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--r-muted);
+  margin-top: 3px;
+}
 
 /* ── Badges ──────────────────────────────────────────────────────────────── */
 body.report-shell .badge {
-  border-radius: 7px;
-  font-size: 12px;
+  display: inline-block;
+  font-family: var(--r-mono);
+  font-size: 10.5px;
   font-weight: 700;
-  padding: 3px 9px;
-}
-body.report-shell .badge-gray  { background: #f2ede2; color: #5c5347 }
-body.report-shell .badge-blue  { background: #f6e9cf; color: #8a6320 }
-body.report-shell .badge-green { background: #e6f4e6; color: #15803d }
-body.report-shell .badge-amber { background: #fbf1da; color: #a16207 }
-body.report-shell .badge-rose  { background: #fceee6; color: #c2410c }
-
-/* ── Buttons ─────────────────────────────────────────────────────────────
-   Minimal: one filled action per group carries the eye, everything beside it
-   is a quiet outline. The old sheets painted every button a different colour,
-   which made a row of exports read as a rainbow. */
-body.report-shell .btn {
-  border-radius: 9px;
-  font-weight: 600;
-  letter-spacing: .1px;
-  box-shadow: none;
-  border: 1px solid transparent;
-  transition: background .14s ease, border-color .14s ease, color .14s ease;
-}
-body.report-shell .btn:hover { transform: none; box-shadow: none; }
-
-/* The one filled action. */
-body.report-shell .btn-pre,
-body.report-shell .btn-post,
-body.report-shell .btn-green {
-  background: var(--r-navy);
-  border-color: var(--r-navy);
-  color: #fff;
-}
-body.report-shell .btn-pre:hover,
-body.report-shell .btn-post:hover,
-body.report-shell .btn-green:hover {
-  background: var(--r-navy-soft);
-  border-color: var(--r-navy-soft);
-}
-
-/* Everything else: outline. */
-body.report-shell .btn-excel,
-body.report-shell .btn-ppt,
-body.report-shell .btn-gold,
-body.report-shell .btn-mail {
-  background: var(--r-surface);
-  border-color: var(--r-line-strong);
-  color: var(--r-ink-soft);
-}
-body.report-shell .btn-excel:hover,
-body.report-shell .btn-ppt:hover,
-body.report-shell .btn-gold:hover,
-body.report-shell .btn-mail:hover {
+  letter-spacing: .4px;
+  padding: 3px 7px;
+  border-radius: 2px;
+  border: 1px solid var(--r-line);
   background: var(--r-surface-sunk);
-  border-color: var(--r-muted);
   color: var(--r-ink);
 }
+body.report-shell .badge-gray  { background: var(--r-surface-sunk); color: var(--r-muted); }
+body.report-shell .badge-blue,
+body.report-shell .badge-pre   { background: #e7e4fb; color: var(--r-violet); border-color: #cdc6f5; }
+body.report-shell .badge-green,
+body.report-shell .badge-post  { background: #e8f5ec; color: var(--r-up); border-color: #c4e5cf; }
+body.report-shell .badge-amber { background: #fdf3dc; color: #8a5f10; border-color: #f0dfb0; }
+body.report-shell .badge-rose  { background: #fdeaee; color: var(--r-down); border-color: #f5ccd5; }
 
-body.report-shell .foot { color: var(--r-faint); font-size: 12px }
+body.report-shell .up   { color: var(--r-up);   font-family: var(--r-mono); font-weight: 700; }
+body.report-shell .down { color: var(--r-down); font-family: var(--r-mono); font-weight: 700; }
+
+/* ── Buttons ─────────────────────────────────────────────────────────────
+   Black pill, lime type, monospace. Only actions that differ in kind get
+   their own colour — a row of exports should not read as a rainbow. */
+body.report-shell .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--r-ink);
+  color: var(--r-lime);
+  font-family: var(--r-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .8px;
+  text-transform: uppercase;
+  padding: 9px 14px;
+  border: 1px solid var(--r-ink);
+  border-radius: 2px;
+  box-shadow: none;
+  text-decoration: none;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background .14s ease, color .14s ease, border-color .14s ease;
+}
+body.report-shell .btn:hover {
+  background: var(--r-lime);
+  color: var(--r-ink);
+  border-color: var(--r-lime-deep);
+  transform: none;
+  box-shadow: none;
+}
+body.report-shell .btn-sm { padding: 5px 9px; font-size: 9.5px; letter-spacing: .7px; }
+body.report-shell .btn-lg { padding: 11px 18px; font-size: 12px; }
+
+body.report-shell .btn-pre {
+  background: var(--r-violet); border-color: var(--r-violet); color: #fff;
+}
+body.report-shell .btn-pre:hover { background: #fff; color: var(--r-violet); }
+body.report-shell .btn-post {
+  background: var(--r-up); border-color: var(--r-up); color: #fff;
+}
+body.report-shell .btn-post:hover { background: #fff; color: var(--r-up); }
+body.report-shell .btn-excel, body.report-shell .btn-green {
+  background: var(--r-lime); border-color: var(--r-lime-deep); color: var(--r-ink);
+}
+body.report-shell .btn-excel:hover, body.report-shell .btn-green:hover {
+  background: var(--r-ink); color: var(--r-lime); border-color: var(--r-ink);
+}
+body.report-shell .btn-ppt, body.report-shell .btn-gold {
+  background: transparent; border-color: var(--r-line-strong); color: var(--r-ink);
+}
+body.report-shell .btn-ppt:hover, body.report-shell .btn-gold:hover {
+  background: var(--r-ink); color: var(--r-lime); border-color: var(--r-ink);
+}
+body.report-shell .btn-ori {
+  background: #2a1f5c; border-color: #2a1f5c; color: #ded7ff;
+}
+body.report-shell .btn-ori:hover { background: #fff; color: #2a1f5c; }
+body.report-shell .btn-copy, body.report-shell .btn-soft {
+  background: transparent; border-color: var(--r-line-strong); color: var(--r-ink);
+}
+body.report-shell .btn-copy:hover, body.report-shell .btn-soft:hover {
+  background: var(--r-ink); color: var(--r-lime); border-color: var(--r-ink);
+}
+body.report-shell .btn-copy.done {
+  background: var(--r-lime); color: var(--r-ink); border-color: var(--r-lime-deep);
+}
+body.report-shell .btn-mail, body.report-shell .btn-primary {
+  background: var(--r-ink); border-color: var(--r-ink); color: var(--r-lime);
+}
+
+/* ── Odds and ends ───────────────────────────────────────────────────────── */
+body.report-shell .head-row {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 16px; flex-wrap: wrap; margin-bottom: 18px;
+}
+body.report-shell .head-row > div:first-child { flex: 1 1 320px; min-width: 0; }
+body.report-shell .head-row .sub { margin-bottom: 0; }
+
+body.report-shell .empty,
+body.report-shell .feed-empty {
+  text-align: center;
+  padding: 38px;
+  font-family: var(--r-mono);
+  font-size: 11.5px;
+  letter-spacing: .5px;
+  text-transform: uppercase;
+  color: var(--r-faint);
+}
+
+body.report-shell .foot {
+  font-family: var(--r-mono);
+  font-size: 10.5px;
+  letter-spacing: .5px;
+  line-height: 1.9;
+  color: #55555f;
+  text-align: center;
+  margin-top: 30px;
+}
+
+body.report-shell .scores {
+  white-space: nowrap;
+  font-family: var(--r-mono);
+  font-variant-numeric: tabular-nums;
+}
+body.report-shell .pre-score  { color: var(--r-violet); font-weight: 700; }
+body.report-shell .post-score { color: var(--r-up); font-weight: 700; }
+body.report-shell .scores .arrow { color: var(--r-faint); margin: 0 5px; }
+
+body.report-shell .swatch {
+  display: inline-block; width: 9px; height: 9px; border-radius: 1px;
+  margin-right: 8px; vertical-align: middle;
+}
+body.report-shell a { color: var(--r-violet); }
+
+body.report-shell .link-row > b {
+  font-family: var(--r-mono);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: .8px;
+  text-transform: uppercase;
+  color: var(--r-muted);
+}
 
 /* ── Movement ────────────────────────────────────────────────────────────
    Cards arrive rather than appear. report_motion.js adds `reveal` before
    anything is painted and `reveal-in` once the element is on screen; the
    delay staggers a row so it reads left to right. */
-body.report-shell .reveal {
-  opacity: 0;
-  transform: translateY(14px);
-}
+body.report-shell .reveal { opacity: 0; transform: translateY(14px); }
 body.report-shell .reveal-in {
   opacity: 1;
   transform: none;
   transition: opacity .5s cubic-bezier(.22, 1, .36, 1) var(--reveal-delay, 0ms),
               transform .55s cubic-bezier(.22, 1, .36, 1) var(--reveal-delay, 0ms);
 }
-
-/* Rows come in with the table rather than one at a time — a 400-row table
-   animating per row would be a mess, so the card carries them. */
 body.report-shell tbody tr { will-change: auto; }
 
 /* A share drawn as a bar, grown once its card is seen. */
 .share {
-  height: 6px;
-  border-radius: 999px;
-  background: #f0eade;
+  height: 5px;
+  border-radius: 1px;
+  background: var(--r-line);
   overflow: hidden;
   min-width: 68px;
 }
 .share > i {
-  display: block;
-  height: 100%;
-  width: 0;
-  border-radius: 999px;
-  background: linear-gradient(90deg, #8a6320, var(--r-gold));
+  display: block; height: 100%; width: 0; border-radius: 1px;
+  background: var(--r-violet);
   transition: width 1s cubic-bezier(.22, 1, .36, 1);
 }
-.share.is-high > i { background: linear-gradient(90deg, #15803d, #4ade80) }
-.share.is-low  > i { background: linear-gradient(90deg, #a16207, #eab308) }
-.share-cell { display: flex; flex-direction: column; gap: 5px; min-width: 92px }
-.share-pct { font-size: 11.5px; font-weight: 700; color: var(--r-ink) }
+.share.is-high > i { background: var(--r-up); }
+.share.is-low  > i { background: #d99a1f; }
+.share-cell { display: flex; flex-direction: column; gap: 5px; min-width: 92px; }
+.share-pct {
+  font-family: var(--r-mono); font-size: 10.5px; font-weight: 700; color: var(--r-ink);
+}
 
 /* The tools above a table: a filter on the left, a count on the right. */
 .table-tools {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-  flex-wrap: wrap;
-  margin-bottom: 14px;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 14px; flex-wrap: wrap; margin-bottom: 14px;
 }
-.tool-search { position: relative; flex: 1; min-width: 200px; max-width: 320px }
+.tool-search { position: relative; flex: 1; min-width: 200px; max-width: 320px; }
 .tool-search svg {
-  position: absolute;
-  left: 11px; top: 50%;
-  transform: translateY(-50%);
-  width: 15px; height: 15px;
-  color: var(--r-faint);
-  pointer-events: none;
+  position: absolute; left: 11px; top: 50%; transform: translateY(-50%);
+  width: 15px; height: 15px; color: var(--r-faint); pointer-events: none;
 }
 .tool-search input {
   width: 100%;
   padding: 9px 12px 9px 33px;
-  font: inherit;
-  font-size: 13px;
-  color: var(--r-ink-soft);
+  font-family: var(--r-mono);
+  font-size: 12px;
+  color: var(--r-ink);
   background: var(--r-surface-sunk);
   border: 1px solid var(--r-line);
-  border-radius: 10px;
+  border-radius: 2px;
   outline: none;
   transition: border-color .14s ease, box-shadow .14s ease, background .14s ease;
 }
-.tool-search input::placeholder { color: var(--r-faint) }
+.tool-search input::placeholder { color: var(--r-faint); }
 .tool-search input:focus {
   background: var(--r-surface);
-  border-color: rgba(185, 134, 44, .5);
-  box-shadow: 0 0 0 3px rgba(217, 164, 65, .16);
+  border-color: var(--r-violet);
+  box-shadow: 0 0 0 3px rgba(76, 63, 214, .14);
 }
-.result-note { font-size: 12px; color: var(--r-muted); white-space: nowrap }
+.result-note {
+  font-family: var(--r-mono); font-size: 10.5px; letter-spacing: .5px;
+  text-transform: uppercase; color: var(--r-muted); white-space: nowrap;
+}
 
 /* Sortable column headers. */
-body.report-shell th.sortable {
-  cursor: pointer;
-  user-select: none;
-  transition: color .12s ease, background .12s ease;
-}
-body.report-shell th.sortable:hover { color: var(--r-ink); background: #f2ede2 }
+body.report-shell th.sortable { cursor: pointer; user-select: none; transition: color .12s ease; }
+body.report-shell th.sortable:hover { color: var(--r-ink); background: var(--r-surface-sunk); }
 body.report-shell th.sortable .caret {
-  display: inline-block;
-  margin-left: 4px;
-  opacity: .35;
-  font-size: 9px;
+  display: inline-block; margin-left: 4px; opacity: .35; font-size: 9px;
 }
-body.report-shell th.sortable.sorted .caret { opacity: 1; color: var(--r-accent) }
+body.report-shell th.sortable.sorted .caret { opacity: 1; color: var(--r-violet); }
+
+@media (max-width: 640px) {
+  body.report-shell .header { padding: 28px 14px 4px; }
+  body.report-shell .container, body.report-shell .wrap { padding: 0 14px 32px; }
+  body.report-shell .card, body.report-shell .panel { padding: 18px 15px; }
+}
 
 /* Reduced motion: keep the surfaces, drop the movement. */
 @media (prefers-reduced-motion: reduce) {
   body.report-shell * { transition: none !important; }
   body.report-shell .btn:hover,
   body.report-shell .summary div:hover,
+  body.report-shell .stat:hover,
   body.report-shell .stat-card:hover { transform: none; }
   body.report-shell .reveal { opacity: 1; transform: none; }
   body.report-shell .share > i { transition: none; }
+}
+
+/* Printing a report should not print the wash behind it. */
+@media print {
+  body.report-shell { background: #fff; }
+  body.report-shell .card, body.report-shell .panel { box-shadow: none; break-inside: avoid; }
+  body.report-shell .btn { display: none; }
 }

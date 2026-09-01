@@ -1,126 +1,38 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  {% include "_report_head.html" %}
   <title>School-wise Analysis – JAIN University</title>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="{{ asset('/static/vendor/chart.umd.js') }}"></script>
   <style>
-    :root {
-      --navy: #1B2A4A; --navy-light: #2A3E68; --border: #E2E8F0; --bg: #F8FAFC;
-      --teal: #0f766e; --green: #15803d; --gray: #64748b;
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
-      background: var(--bg); color: var(--navy); min-height: 100vh; padding: 40px 20px;
-    }
-    .container { max-width: 1360px; margin: 0 auto; }
-    .header { text-align: center; margin-bottom: 32px; }
-    .header .tag {
-      display: inline-block; padding: 4px 14px; border-radius: 20px; font-size: 12px;
-      font-weight: 700; text-transform: uppercase; letter-spacing: .5px;
-      background: var(--navy); color: #fff; margin-bottom: 10px;
-    }
-    .header h1 { font-size: 28px; font-weight: 800; margin-bottom: 8px; letter-spacing: -.5px; }
-    .header p { font-size: 15px; color: var(--gray); }
-    .card {
-      background: #fff; border: 1px solid var(--border); border-radius: 16px;
-      box-shadow: 0 4px 6px -1px rgba(0,0,0,.05), 0 2px 4px -1px rgba(0,0,0,.03);
-      padding: 24px; margin-bottom: 24px;
-    }
-    .card h2 { font-size: 17px; font-weight: 700; margin-bottom: 4px; }
-    .card .sub { font-size: 13px; color: var(--gray); margin-bottom: 18px; }
-    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; }
-    .stat {
-      background: #fff; border: 1px solid var(--border); border-left: 4px solid var(--navy);
-      border-radius: 12px; padding: 16px;
-    }
-    .stat b { display: block; font-size: 26px; font-weight: 800; line-height: 1.1; }
-    .stat s { display: block; font-size: 11.5px; color: var(--gray); margin-top: 5px; text-decoration: none; }
-    .stat.teal   { border-left-color: var(--teal); }  .stat.teal b   { color: var(--teal); }
-    .stat.green  { border-left-color: var(--green); } .stat.green b  { color: var(--green); }
-    .stat.blue   { border-left-color: #2a78d6; }      .stat.blue b   { color: #2a78d6; }
-    .stat.amber  { border-left-color: #b45309; }      .stat.amber b  { color: #b45309; }
-    .highlights { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; }
-    .hl { border-radius: 12px; padding: 14px; border: 1px solid; }
-    .hl .lbl { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .4px; }
-    .hl .name { font-size: 14.5px; font-weight: 800; margin-top: 4px; line-height: 1.3; }
-    .hl .foot { font-size: 12.5px; font-weight: 600; margin-top: 3px; }
-    .hl-good { background: #ECFDF5; border-color: #A7F3D0; color: #065F46; }
-    .hl-bad  { background: #FFF1F2; border-color: #FECDD3; color: #9F1239; }
-    .hl-warn { background: #FFFBEB; border-color: #FDE68A; color: #92400E; }
-    .hl-live { background: #F0FDFA; border-color: #99F6E4; color: #115E59; }
-    .charts { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
-    @media (max-width: 900px) { .charts { grid-template-columns: 1fr; } }
-    .chart-box { position: relative; height: 340px; }
-    .scroll { overflow-x: auto; }
-    table { width: 100%; border-collapse: collapse; text-align: left; min-width: 1080px; }
-    th {
-      padding: 14px; font-weight: 700; font-size: 12.5px; color: var(--gray);
-      text-transform: uppercase; letter-spacing: .5px; border-bottom: 2px solid var(--border);
-      white-space: nowrap;
-    }
-    td { padding: 14px; border-bottom: 1px solid var(--border); font-size: 14px; vertical-align: middle; }
-    tr:last-child td { border-bottom: none; }
-    .school-name { font-weight: 700; min-width: 250px; }
-    .school-name small { display: block; font-weight: 500; font-size: 12px; color: var(--gray); margin-top: 2px; }
-    .num { text-align: right; font-variant-numeric: tabular-nums; }
-    .badge {
-      display: inline-block; padding: 4px 9px; border-radius: 6px;
-      font-size: 12px; font-weight: 700;
-    }
-    .badge-gray  { background: #F1F5F9; color: #475569; }
-    .badge-blue  { background: #E0F2FE; color: #0369a1; }
-    .badge-green { background: #DCFCE7; color: #15803d; }
-    .badge-amber { background: #FEF3C7; color: #92400e; }
-    .btn {
-      display: inline-flex; align-items: center; gap: 5px; padding: 6px 11px;
-      border-radius: 7px; font-size: 12px; font-weight: 700; text-decoration: none;
-      border: none; cursor: pointer; font-family: inherit;
-    }
-    .btn-pre   { background: var(--teal); color: #fff; }
-    .btn-post  { background: var(--green); color: #fff; }
-    .btn-excel { background: #047857; color: #fff; }
-    .btn-lg    { padding: 9px 15px; font-size: 13px; border-radius: 9px; }
-    /* The heading takes the room it needs; the button stays on the right
-       until the screen is too narrow for both. */
-    .head-row { display: flex; align-items: flex-start; justify-content: space-between;
-                gap: 16px; flex-wrap: wrap; margin-bottom: 18px; }
-    .head-row > div:first-child { flex: 1 1 320px; min-width: 0; }
-    .head-row .sub { margin-bottom: 0; }
-    .scores { white-space: nowrap; font-variant-numeric: tabular-nums; }
-    .pre-score  { color: #2a78d6; font-weight: 700; }
-    .post-score { color: #1baf7a; font-weight: 700; }
-    .scores .arrow { color: #cbd5e1; margin: 0 5px; }
-    .swatch {
-      display: inline-block; width: 10px; height: 10px; border-radius: 2px;
-      margin-right: 7px; vertical-align: middle;
-    }
-    .foot { text-align: center; font-size: 12.5px; color: var(--gray); margin-top: 28px; line-height: 1.7; }
+    /* Only what is particular to this page; everything else is the house
+       stylesheet. */
+    table { min-width: 1080px; }
+    .chart-box { height: 340px; }
   </style>
 </head>
-<body>
+<body class="report-shell">
 
 <div class="container">
   <div class="header">
     <div class="tag">All Schools</div>
-    <h1><span style="color:var(--teal)">OoA</span> · HACRI-E School Report</h1>
-    <p>Every school in the university, its departments folded into one row</p>
+    <h1>HACRI-E<br>School Report</h1>
+    <p>Every school in the university, its departments folded into one row.
+       Office of Academics · JAIN (Deemed-to-be University)</p>
   </div>
 
   <!-- The whole university in six numbers. -->
   <div class="card">
     <div class="head-row">
       <div>
+        <div class="section-tag"><b>01</b> The whole university</div>
         <h2>The university at a glance</h2>
       {{ overall.schools_listed }} schools listed · {{ overall.school_count }} with
       students registered. Departments belonging to no school are grouped under
       <b>Other</b>, so every registered student is counted exactly once.
         </p>
       </div>
-      <a class="btn btn-excel btn-lg" href="{{ overall.directory_excel_url }}">⬇ Export Excel</a>
+      <a class="btn btn-excel btn-lg" href="{{ overall.directory_excel_url }}">Export Excel ↓</a>
     </div>
     <div class="stats">
       <div class="stat"><b>{{ overall.registered }}</b><s>Registered students</s></div>
@@ -134,6 +46,7 @@
 
   {% if highlights.most_submissions %}
   <div class="card">
+    <div class="section-tag"><b>02</b> Ahead and behind</div>
     <h2>Who is ahead, who has stalled</h2>
     <p class="sub">Read together: a school can be highest on submissions and still
       have the lowest share of its own students finished.</p>
@@ -175,13 +88,15 @@
 
   <div class="charts">
     <div class="card">
-      <h2>🥧 Share of all submissions</h2>
+      <div class="section-tag"><b>03</b> Share</div>
+      <h2>Share of all submissions</h2>
       <p class="sub">Part of the whole, at a glance. The tail is folded into one
         slice — six is as many as a ring can be read at.</p>
       <div class="chart-box"><canvas id="donut"></canvas></div>
     </div>
     <div class="card">
-      <h2>📊 Submissions by school</h2>
+      <div class="section-tag"><b>04</b> Ranked</div>
+      <h2>Submissions by school</h2>
       <p class="sub">Which is highest and which is lowest, ranked. A ring cannot
         be read that way, so the same numbers are also bars.</p>
       <div class="chart-box" id="bar-box"><canvas id="bars"></canvas></div>
@@ -189,6 +104,7 @@
   </div>
 
   <div class="card">
+    <div class="section-tag"><b>05</b> The table</div>
     <h2>School by school</h2>
     <p class="sub">Ordered by how many students registered. One link per school opens
       its own report — baseline and post together, with the change between them — and
@@ -278,7 +194,7 @@ if (window.Chart && slices.length) {
       data: slices.map(s => s.value),
       backgroundColor: slices.map((s, i) => s.rest ? REST : HUES[i]),
       // A 2px surface gap, so adjacent fills never touch.
-      borderColor: '#ffffff', borderWidth: 2,
+      borderColor: '#f1f0e8', borderWidth: 2,
     }] },
     options: {
       responsive: true, maintainAspectRatio: false, cutout: '58%',
@@ -300,13 +216,13 @@ if (window.Chart && slices.length) {
     type: 'bar',
     data: { labels: ranked.map(s => s.name), datasets: [{
       label: 'Submissions', data: ranked.map(s => s.value),
-      backgroundColor: '#2a78d6', borderRadius: 4, barThickness: 14,
+      backgroundColor: '#4c3fd6', borderRadius: 3, barThickness: 13,
     }] },
     options: {
       indexAxis: 'y', responsive: true, maintainAspectRatio: false,
       plugins: { legend: { display: false } },
       scales: {
-        x: { beginAtZero: true, grid: { color: '#f1f5f9' } },
+        x: { beginAtZero: true, grid: { color: '#e3e2d8' } },
         y: { grid: { display: false }, ticks: { font: { size: 10 } } },
       },
     },

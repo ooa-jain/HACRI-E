@@ -4,7 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Deeksharambh 2026 Orientation Report — {{ scope_label }} — JAIN University</title>
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{{ asset('/static/css/orientation_vibe.css') }}">
 <!-- The same charting library the impact report uses, so a distribution is
      plotted the same way on both pages. -->
@@ -22,8 +24,12 @@
     --grape: #6d28d9; --sun: #f5b731; --lime: #58cc4a;
   }
   body {
-    font-family: 'Outfit', system-ui, sans-serif;
-    background: var(--cream); color: var(--ink);
+    font-family: 'Instrument Sans', system-ui, sans-serif;
+    background: linear-gradient(135deg,
+                #bdb2ec 0%, #d3cbe9 22%, #efece0 52%, #e7ecc2 78%, #d5e58f 100%)
+                fixed;
+    color: var(--ink);
+    min-height: 100vh;
     -webkit-font-smoothing: antialiased;
     overflow-x: hidden;
   }
@@ -32,35 +38,34 @@
   /* ── Cover band ────────────────────────────────────────────────────── */
   .cover {
     position: relative; overflow: hidden;
-    margin: 0 -18px 0; padding: 26px 24px 74px;
-    color: #fff;
-    background:
-      radial-gradient(120% 90% at 84% 6%, rgba(245,183,49,.20) 0%, transparent 55%),
-      radial-gradient(90% 80% at 10% 96%, rgba(88,204,74,.16) 0%, transparent 58%),
-      linear-gradient(168deg, #1b1330 0%, #2f1b57 52%, #3f2168 100%);
+    margin: 0 -18px 0; padding: 26px 24px 40px;
+    color: #131317;
+    background: none;
   }
-  .cover::after {
-    content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 54px;
-    background: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 60' preserveAspectRatio='none'%3E%3Cpath d='M0 34c190 26 350-18 540-10s310 32 500 22 260-32 400-18v32H0z' fill='%23fbf4e6'/%3E%3C/svg%3E") bottom/100% 100% no-repeat;
-    pointer-events: none;
-  }
+  .cover::after { content: none; }
   .cover > * { position: relative; z-index: 1 }
   .cover-inner { max-width: 1204px; margin: 0 auto }
   .nav { display: flex; align-items: center; gap: 14px; flex-wrap: wrap }
-  .nav .logo { background: #fff; border-radius: 12px; padding: 7px; line-height: 0 }
+  .nav .logo { background: #fff; border: 1px solid #e3e2d8; border-radius: 2px; padding: 7px; line-height: 0 }
   .nav .logo img { height: 32px; width: auto }
-  .nav .brand { font-size: 13px; font-weight: 800; letter-spacing: -.1px }
-  .nav .brand s { display: block; text-decoration: none; font-size: 11px; font-weight: 500; color: rgba(255,255,255,.6); margin-top: 2px }
+  .nav .brand { font-family: 'Archivo Black', 'Arial Black', sans-serif; font-size: 12px;
+              font-weight: 400; letter-spacing: -.1px; text-transform: uppercase }
+  .nav .brand s { display: block; text-decoration: none; font-family: 'JetBrains Mono', monospace;
+                font-size: 9.5px; font-weight: 500; letter-spacing: .6px; text-transform: uppercase;
+                color: #6f6f78; margin-top: 3px }
   .nav .grow { flex: 1 }
   .pill {
     display: inline-flex; align-items: center; gap: 6px;
-    background: rgba(255,255,255,.16); border: 1px solid rgba(255,255,255,.3);
-    border-radius: 999px; padding: 6px 15px;
-    font-size: 10.5px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase;
+    background: #d7f24f; border: none; color: #131317;
+    border-radius: 2px; padding: 5px 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px; font-weight: 700; letter-spacing: 1.1px; text-transform: uppercase;
   }
   .pagehead { margin-top: 30px }
-  .pagehead h1 { font-size: clamp(30px, 5.4vw, 52px); font-weight: 900; letter-spacing: -1.8px; line-height: 1.04 }
-  .pagehead p { font-size: 14px; color: rgba(255,255,255,.72); margin-top: 8px; max-width: 60ch }
+  .pagehead h1 { font-family: 'Archivo Black', 'Arial Black', sans-serif;
+                font-size: clamp(29px, 4.6vw, 50px); font-weight: 400;
+                letter-spacing: -1px; line-height: .98; text-transform: uppercase }
+  .pagehead p { font-size: 13.5px; color: #4a4a55; margin-top: 10px; max-width: 62ch; line-height: 1.65 }
 
   /* ── Controls ──────────────────────────────────────────────────────── */
   .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 22px 0 20px }
@@ -82,13 +87,16 @@
   }
   .scope { display: inline-flex; align-items: center; gap: 7px; background: var(--cream) }
   .btn {
-    font-size: 13px; font-weight: 800; padding: 10px 18px; border-radius: 999px;
-    border: 2px solid var(--ink); cursor: pointer; text-decoration: none;
-    display: inline-block; font-family: inherit; background: var(--paper); color: var(--ink);
-    transition: transform .14s ease, box-shadow .14s ease;
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 11px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase;
+    padding: 9px 14px; border-radius: 2px;
+    border: 1px solid #cfcec2; cursor: pointer; text-decoration: none;
+    display: inline-block; background: transparent; color: var(--ink);
+    transition: background .14s ease, color .14s ease, border-color .14s ease;
   }
-  .btn:hover { transform: translate(-1px, -1px); box-shadow: 4px 4px 0 rgba(23,17,10,.14) }
-  .btn-primary { background: var(--sun) }
+  .btn:hover { background: var(--ink); color: #d7f24f; border-color: var(--ink) }
+  .btn-primary { background: #d7f24f; border-color: #b6cf2c; color: var(--ink) }
+  .btn-primary:hover { background: var(--ink); color: #d7f24f }
   .spacer { flex: 1 }
 
   .loading { text-align: center; padding: 64px 20px; color: var(--muted); font-size: 14px; font-weight: 700 }

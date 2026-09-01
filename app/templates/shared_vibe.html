@@ -4,7 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>The Impact Report — {{ report.campus }} · JAIN University</title>
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <script src="{{ asset('/static/vendor/chart.umd.js') }}"></script>
 <style>
 /*
@@ -27,13 +29,16 @@
   --radius: 26px;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body {
-  font-family: 'Outfit', system-ui, sans-serif;
-  background: var(--cream);
-  color: var(--ink);
-  -webkit-font-smoothing: antialiased;
-  overflow-x: hidden;
-}
+  body {
+    font-family: 'Instrument Sans', system-ui, sans-serif;
+    background: linear-gradient(135deg,
+                #bdb2ec 0%, #d3cbe9 22%, #efece0 52%, #e7ecc2 78%, #d5e58f 100%)
+                fixed;
+    color: var(--ink);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
 .wrap { max-width: 1120px; margin: 0 auto; padding: 0 18px 60px; }
 .stack > * + * { margin-top: 18px; }
 

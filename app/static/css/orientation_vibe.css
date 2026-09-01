@@ -9,19 +9,25 @@
  */
 
 .ov {
-  --ink: #17110a;
-  --ink-soft: #4a3f31;
-  --muted: #7d7060;
-  --paper: #fffdf8;
-  --line: #ece0cc;
-  --cream: #fbf4e6;
-  --grape: #6d28d9;
-  --sun: #f5b731;
-  --lime: #58cc4a;
-  --sky: #2ba7d9;
-  --rose: #f0567a;
-  --rust: #c2410c;
-  --radius: 26px;
+  /* The same palette the rest of the shared reports wear: a lavender-to-lime
+     wash outside, near-black cards, lime as the only accent. */
+  --ink: #131317;
+  --ink-soft: #3d3d48;
+  --muted: #6f6f78;
+  --paper: #fbfaf5;
+  --line: #e3e2d8;
+  --cream: #f1f0e8;
+  --grape: #4c3fd6;
+  --sun: #d99a1f;
+  --lime: #b6cf2c;
+  --sky: #4c3fd6;
+  --rose: #c02c46;
+  --rust: #8a5f10;
+  --accent: #d7f24f;
+  --radius: 3px;
+  --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --display: 'Archivo Black', 'Arial Black', 'Helvetica Neue', sans-serif;
+  font-family: 'Instrument Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 .ov *, .ov *::before, .ov *::after { box-sizing: border-box; }
 
@@ -42,20 +48,24 @@
 /* ── Cards ────────────────────────────────────────────────────────────── */
 .ov-card {
   background: var(--paper);
-  border: 2px solid var(--ink);
+  border: 1px solid var(--line); border-left: 3px solid var(--grape); border-right: 3px solid var(--grape);
   border-radius: var(--radius);
   padding: 24px;
-  box-shadow: 6px 6px 0 rgba(23, 17, 10, .1);
+  box-shadow: 0 1px 2px rgba(19, 19, 23, .06);
 }
 .ov-card + .ov-card, .ov > * + * { margin-top: 18px; }
 .ov-kicker {
   display: inline-block;
-  font-size: 11px; font-weight: 800; letter-spacing: 1.6px; text-transform: uppercase;
-  color: var(--grape); margin-bottom: 6px;
+  background: var(--accent); color: var(--ink);
+  font-family: var(--mono);
+  font-size: 10.5px; font-weight: 700; letter-spacing: 1.1px; text-transform: uppercase;
+  padding: 4px 9px; border-radius: 2px; margin-bottom: 12px;
 }
-.ov-title { font-size: 21px; font-weight: 800; letter-spacing: -.5px; }
+.ov-title { font-family: var(--display); font-weight: 400; font-size: 18px;
+            letter-spacing: -.3px; text-transform: uppercase; line-height: 1.2; }
 .ov-sub { font-size: 13.5px; color: var(--muted); margin-top: 4px; line-height: 1.5; }
-.ov-h3 { font-size: 15px; font-weight: 800; letter-spacing: -.2px; }
+.ov-h3 { font-family: var(--display); font-weight: 400; font-size: 14px;
+         letter-spacing: -.1px; text-transform: uppercase; }
 .ov-empty { font-size: 13px; color: var(--muted); padding: 10px 0; }
 .ov-empty-card {
   background: var(--paper); border: 2px dashed var(--line); border-radius: var(--radius);
@@ -65,20 +75,21 @@
 /* ── Stat tiles ───────────────────────────────────────────────────────── */
 .ov-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(158px, 1fr)); gap: 14px; }
 .ov-tile {
-  --tone: var(--grape);
-  background: var(--paper);
-  border: 2px solid var(--ink);
-  border-radius: 20px;
-  padding: 18px;
-  box-shadow: 5px 5px 0 rgba(23, 17, 10, .09);
-  transition: transform .16s ease, box-shadow .16s ease;
+  --tone: #d7f24f;
+  background: var(--ink);
+  border: 1px solid #2b2b35; border-left: 3px solid var(--grape);
+  border-radius: var(--radius);
+  padding: 16px;
+  box-shadow: none;
+  transition: transform .16s ease;
 }
-.ov-tile:hover { transform: translate(-2px, -2px); box-shadow: 8px 8px 0 rgba(23, 17, 10, .14); }
-.ov-tile b { display: block; font-size: 34px; font-weight: 900; letter-spacing: -1.5px; line-height: 1; color: var(--tone); }
+.ov-tile:hover { transform: translateY(-2px); box-shadow: 0 1px 2px rgba(19, 19, 23, .06); }
+.ov-tile b { display: block; font-family: var(--display); font-size: 30px; font-weight: 400;
+             letter-spacing: -.5px; line-height: 1; color: var(--tone); }
 .ov-tile b small { font-size: 15px; font-weight: 700; opacity: .55; letter-spacing: 0; }
 .ov-tile span {
-  display: block; font-size: 12px; font-weight: 700; color: var(--muted);
-  text-transform: uppercase; letter-spacing: .6px; margin-top: 7px;
+  display: block; font-family: var(--mono); font-size: 9.5px; font-weight: 500;
+  color: #9a9aa4; text-transform: uppercase; letter-spacing: .9px; margin-top: 8px;
 }
 /* The counter sits inside the value, so it keeps the value's size, not the
    label's — the label rule above would otherwise shrink it to 12px. */
@@ -88,7 +99,7 @@
   /* The mood pill beside it is also a span — its chrome must not follow. */
   background: none; padding: 0; border-radius: 0;
 }
-.ov-meter { height: 8px; border-radius: 999px; background: var(--cream); border: 1px solid var(--line); margin-top: 10px; overflow: hidden; }
+.ov-meter { height: 5px; border-radius: 1px; background: #2b2b35; border: 1px solid var(--line); margin-top: 10px; overflow: hidden; }
 .ov-meter i { display: block; height: 100%; width: 0; background: var(--tone); transition: width .9s cubic-bezier(.2,.8,.3,1); }
 
 /* ── Bars and ranks ───────────────────────────────────────────────────── */
@@ -105,7 +116,7 @@
   width: 30px; height: 30px; flex-shrink: 0; border-radius: 10px;
   display: flex; align-items: center; justify-content: center;
   font-size: 14px; font-weight: 900; color: #fff; background: var(--tone, var(--grape));
-  border: 2px solid var(--ink);
+  border: 1px solid var(--line); border-left: 3px solid var(--grape); border-right: 3px solid var(--grape);
 }
 .ov-rank-body { flex: 1; min-width: 0; }
 .ov-rank-count { flex-shrink: 0; text-align: right; font-size: 15px; font-weight: 900; letter-spacing: -.5px; }
@@ -114,8 +125,8 @@
 /* ── Panels of answers ────────────────────────────────────────────────── */
 .ov-panels { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 16px; }
 .ov-panel {
-  background: var(--paper); border: 2px solid var(--ink); border-radius: 22px;
-  padding: 20px; box-shadow: 5px 5px 0 rgba(23, 17, 10, .09);
+  background: var(--paper); border: 1px solid var(--line); border-left: 3px solid var(--grape); border-right: 3px solid var(--grape); border-radius: 22px;
+  padding: 20px; box-shadow: 0 1px 2px rgba(19, 19, 23, .06);
   border-top: 8px solid var(--tone, var(--grape));
 }
 .ov-panel-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
@@ -133,7 +144,7 @@
 .ov-cell {
   --tone: var(--grape);
   border-radius: 18px; padding: 16px; text-align: left;
-  background: var(--cream); border: 2px solid var(--ink);
+  background: var(--cream); border: 1px solid var(--line); border-left: 3px solid var(--grape); border-right: 3px solid var(--grape);
 }
 .ov-cell b { display: block; font-size: 28px; font-weight: 900; letter-spacing: -1px; line-height: 1; color: var(--tone); }
 .ov-cell span { display: block; font-size: 12.5px; font-weight: 700; margin-top: 6px; }
@@ -143,7 +154,7 @@
 .ov-section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
 .ov-qgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(310px, 1fr)); gap: 16px; margin-top: 18px; }
 .ov-q {
-  background: var(--cream); border: 2px solid var(--ink); border-radius: 20px; padding: 18px;
+  background: var(--cream); border: 1px solid var(--line); border-left: 3px solid var(--grape); border-right: 3px solid var(--grape); border-radius: 20px; padding: 18px;
 }
 .ov-q-title { font-size: 14px; font-weight: 800; letter-spacing: -.2px; }
 .ov-q-sub { font-size: 11.5px; font-weight: 700; color: var(--muted); margin: 3px 0 14px; }
@@ -155,12 +166,12 @@
 .ov-depts { display: grid; gap: 12px; }
 .ov-dept {
   display: flex; align-items: center; gap: 14px; width: 100%; text-align: left;
-  background: var(--paper); border: 2px solid var(--ink); border-radius: 20px;
-  padding: 16px 18px; box-shadow: 4px 4px 0 rgba(23, 17, 10, .08);
+  background: var(--paper); border: 1px solid var(--line); border-left: 3px solid var(--grape); border-right: 3px solid var(--grape); border-radius: 20px;
+  padding: 16px 18px; box-shadow: 0 1px 2px rgba(19, 19, 23, .06);
   font: inherit; color: inherit;
 }
 button.ov-dept { cursor: pointer; transition: transform .14s ease, box-shadow .14s ease; }
-button.ov-dept:hover { transform: translate(-2px, -2px); box-shadow: 7px 7px 0 rgba(23, 17, 10, .13); }
+button.ov-dept:hover { transform: translateY(-2px); box-shadow: 0 1px 2px rgba(19, 19, 23, .06); }
 button.ov-dept:focus-visible { outline: 3px solid var(--grape); outline-offset: 3px; }
 .ov-dept-rank { width: 34px; flex-shrink: 0; font-size: 17px; font-weight: 900; color: var(--muted); text-align: center; }
 .ov-dept-body { flex: 1; min-width: 0; }
@@ -225,12 +236,10 @@ button.ov-dept:focus-visible { outline: 3px solid var(--grape); outline-offset: 
   padding: 30px;
   border-radius: var(--radius);
   color: #fff;
-  border: 2px solid var(--ink);
-  box-shadow: 6px 6px 0 rgba(23, 17, 10, .18);
-  background:
-    radial-gradient(120% 90% at 88% 6%, rgba(245, 183, 49, .22) 0%, transparent 56%),
-    radial-gradient(90% 80% at 8% 96%, rgba(88, 204, 74, .18) 0%, transparent 58%),
-    linear-gradient(168deg, #1b1330 0%, #2f1b57 52%, #3f2168 100%);
+  border: 1px solid var(--line); border-left: 3px solid var(--grape); border-right: 3px solid var(--grape);
+  box-shadow: 0 1px 2px rgba(19, 19, 23, .06);
+  /* Flat ink, the way every headline figure on the shared pages is carried. */
+  background: var(--ink);
 }
 .ov-hero-kicker {
   font-size: 11px; font-weight: 800; letter-spacing: 1.6px;
@@ -272,7 +281,7 @@ button.ov-dept:focus-visible { outline: 3px solid var(--grape); outline-offset: 
 .ov-nav-chip {
   --tone: var(--grape);
   padding: 8px 15px; border-radius: 999px; text-decoration: none;
-  border: 2px solid var(--ink); background: var(--paper); color: var(--ink);
+  border: 1px solid var(--line); border-left: 3px solid var(--grape); border-right: 3px solid var(--grape); background: var(--paper); color: var(--ink);
   font-size: 12.5px; font-weight: 700;
   transition: transform .14s ease, background .14s ease, color .14s ease;
 }
@@ -296,7 +305,7 @@ button.ov-dept:focus-visible { outline: 3px solid var(--grape); outline-offset: 
 }
 .ov-score-facts { display: flex; flex-wrap: wrap; gap: 12px; }
 .ov-score-facts > div {
-  background: var(--cream); border: 2px solid var(--ink); border-radius: 16px;
+  background: var(--cream); border: 1px solid var(--line); border-left: 3px solid var(--grape); border-right: 3px solid var(--grape); border-radius: 16px;
   padding: 12px 16px; min-width: 96px;
 }
 .ov-score-facts b { display: block; font-size: 24px; font-weight: 900; letter-spacing: -1px; line-height: 1; }
