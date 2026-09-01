@@ -60,6 +60,20 @@ options; only the time frame changes ("during your school years" →
 baseline counterpart. C carries no scored items — literacy and readiness come
 from B, D, E, F and G alone, which is what keeps the pre/post delta valid.
 
+### The submit button, and why it used to do nothing
+
+Both AI surveys are wizards: one step on screen, the rest `display:none`. Every
+step holds `required` controls, and a required control the browser cannot focus
+— one on a hidden step — makes it refuse the submission **and draw nothing**.
+No alert, no jump, no message a student would ever see. The button was not
+broken; it was being ignored. A student who resumed a saved draft landed on the
+last step with earlier steps still blank and hit exactly this.
+
+So the form carries `novalidate` and checks itself: on submit it sweeps *every*
+step, and the first one that is incomplete is opened with its unanswered
+questions marked. Native validation is never allowed to fail silently, because
+a silent failure on this form is indistinguishable from a dead button.
+
 ### Details are asked once
 
 Name, department and level are collected at registration and never asked again.

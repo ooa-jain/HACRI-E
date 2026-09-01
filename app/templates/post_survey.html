@@ -102,7 +102,7 @@
     </button>
   </div>
 
-  <form method="post" action="/survey/post" class="survey" id="survey-form">
+  <form method="post" action="/survey/post" class="survey" id="survey-form" novalidate>
     <input type="hidden" name="csrf" value="{{ csrf_token }}" />
 
     {% if has_ori_step %}
@@ -1287,9 +1287,14 @@
     showStep(1);
   };
 
-  function validateCurrentSection() {
+  // Check one step. With `report` off it answers whether the step passes
+  // without focusing anything, which is what the submit sweep needs while a
+  // step is still hidden: a control inside a hidden section cannot take
+  // focus, and asking it to report its own validity shows the student
+  // nothing.
+  function validateSection(stepIndex, report = true) {
     if (window._TEST_MODE) return true;
-    const section = document.querySelector(`.wizard-section[data-step-section="${currentStep}"]`);
+    const section = document.querySelector(`.wizard-section[data-step-section="${stepIndex}"]`);
     if (!section) return true;
 
     // Clear previous validation indicators
@@ -1332,14 +1337,11 @@
       }
     }
 
-    if (!isValid && firstInvalidElement) {
+    if (!isValid && report && firstInvalidElement) {
       firstInvalidElement.focus({ preventScroll: true });
       const questionCard = firstInvalidElement.closest('.question');
-      if (questionCard) {
-        questionCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      } else {
-        firstInvalidElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
+      (questionCard || firstInvalidElement).scrollIntoView({
+        behavior: 'smooth', block: 'center' });
 
       // Native bubble validation trigger
       if (firstInvalidElement.type !== 'radio') {
@@ -1352,6 +1354,10 @@
     }
 
     return isValid;
+  }
+
+  function validateCurrentSection() {
+    return validateSection(currentStep);
   }
 
   nextBtn.addEventListener('click', () => {
@@ -1387,13 +1393,22 @@
     });
   });
 
-  // Final submit validation
+  // Final submit validation — every step, not only the one on screen.
+  // The browser cannot be left to do this: a required control in a hidden
+  // step fails its own check, and because it cannot be focused the submit is
+  // refused with nothing shown at all, so the button reads as dead. The form
+  // is `novalidate` for that reason and the sweep below stands in for it,
+  // opening the first step that is still incomplete so the student can see
+  // what is missing.
   form.addEventListener('submit', (e) => {
-    if (!validateCurrentSection()) {
+    for (let step = 0; step < totalSteps; step++) {
+      if (validateSection(step, false)) continue;
       e.preventDefault();
-    } else {
-      localStorage.removeItem(storageKey);
+      if (step !== currentStep) showStep(step);
+      validateSection(step);
+      return;
     }
+    localStorage.removeItem(storageKey);
   });
 
   // Restore draft if exists, else start at step 0

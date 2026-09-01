@@ -83,3 +83,71 @@ async def test_the_orientation_answers_are_saved_under_the_normalised_address(cl
     assert user.get("orientation_submitted") is True, (
         "the answer saved but the student was never marked as having answered"
     )
+
+
+# ── The AI survey wizard ─────────────────────────────────────────────────────
+#
+# The same complaint, a different form and a different cause. The AI surveys
+# are wizards: one step visible, the rest `display:none`. Every step holds
+# `required` controls, so on submit the browser found a required control it
+# could not focus — one in a hidden step — and refused the submission without
+# drawing anything. No alert, no jump, no console message a student would see:
+# the button simply did nothing.
+#
+# The form therefore carries `novalidate` and validates every step itself,
+# opening the first incomplete one. These guard both halves, because losing
+# either brings back a dead button.
+
+import re
+from pathlib import Path
+
+import pytest
+
+TEMPLATES = Path(__file__).resolve().parent.parent / "app" / "templates"
+WIZARDS = ("pre_survey.html", "post_survey.html")
+
+
+@pytest.mark.parametrize("name", WIZARDS)
+def test_the_survey_form_turns_off_native_validation(name):
+    """Without this the browser blocks the submit and shows the student
+    nothing, because the control it objects to is on a hidden step."""
+    source = (TEMPLATES / name).read_text()
+    form = re.search(r"<form[^>]*id=\"survey-form\"[^>]*>", source)
+    assert form, f"{name} has no survey form"
+    assert "novalidate" in form.group(0), (
+        f"{name}: the form must be novalidate — a required control on a "
+        f"hidden step otherwise kills the submit silently")
+
+
+@pytest.mark.parametrize("name", WIZARDS)
+def test_the_survey_checks_every_step_on_submit(name):
+    """Checking only the visible step would let the browser refuse the
+    submission over a step the student cannot see."""
+    source = (TEMPLATES / name).read_text()
+
+    assert "function validateSection(stepIndex, report = true)" in source, (
+        f"{name}: validation must be able to run against any step, not just "
+        f"the visible one")
+
+    submit = source.split("form.addEventListener('submit'", 1)
+    assert len(submit) == 2, f"{name} has no submit handler"
+    handler = submit[1][:700]
+    assert "for (let step = 0; step < totalSteps; step++)" in handler, (
+        f"{name}: the submit handler must sweep every step")
+    assert "validateSection(step, false)" in handler, (
+        f"{name}: the sweep must check hidden steps without trying to focus "
+        f"them")
+    assert "showStep(step)" in handler, (
+        f"{name}: an incomplete step must be opened so the student can see "
+        f"what is missing")
+
+
+@pytest.mark.parametrize("name", WIZARDS)
+def test_the_survey_never_blocks_the_submit_without_saying_why(name):
+    """Every path that stops the submit has to leave a mark on screen."""
+    source = (TEMPLATES / name).read_text()
+    # preventDefault is reached only from inside the sweep, which always goes
+    # on to open the offending step and report against it.
+    assert source.count("e.preventDefault()") == 1, (
+        f"{name}: more than one way to block the submit — each needs its own "
+        f"visible explanation")
