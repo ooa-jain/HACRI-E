@@ -969,9 +969,13 @@ async def get_school_analysis_data() -> dict[str, Any]:
     # that finished in June and one filling today look identical in a total.
     since = _now() - timedelta(days=RECENT_DAYS)
     dept_of_email: dict[str, str] = {}
-    async for user in get_db()[USERS].find({}, {"email": 1, "program": 1}):
+    post_done_emails: set[str] = set()
+    async for user in get_db()[USERS].find({}, {"email": 1, "program": 1,
+                                               "status": 1}):
         if user.get("email"):
             dept_of_email[user["email"]] = (user.get("program") or "").strip()
+            if user.get("status") == STATUS_POST_DONE:
+                post_done_emails.add(user["email"].strip().lower())
 
     recent: dict[str, dict[str, Any]] = {}
     for collection, key in ((PRE, "recent_pre"), (POST, "recent_post"),
@@ -1004,12 +1008,25 @@ async def get_school_analysis_data() -> dict[str, Any]:
         dept = lower_to_dept.get(email, "")
         ori_by_dept[dept] = ori_by_dept.get(dept, 0) + 1
 
+    # Students who are actually finished, per department: the Pre AI Survey,
+    # the Post AI Survey and Deeksharambh, all three, by the same person. The
+    # three counts above answer "how many replies came in", and adding them up
+    # counts one finished student three times; this counts them once, and is
+    # the number a dean means by "how many are done".
+    #
+    # Post-done implies pre-done — a student reaches that status by way of the
+    # pre survey — so the two AI surveys are one test against `status`.
+    all_three_by_dept: dict[str, int] = {}
+    for email in post_done_emails & seen_ori:
+        dept = lower_to_dept.get(email, "")
+        all_three_by_dept[dept] = all_three_by_dept.get(dept, 0) + 1
+
     # Fold the department rows into their school.
     buckets: dict[str, dict[str, Any]] = {}
     for name in [*SCHOOL_NAMES, OTHER_SCHOOL]:
         buckets[name] = {
             "school": name, "departments": [], "registered": 0,
-            "pre_done": 0, "post_done": 0, "ori_done": 0,
+            "pre_done": 0, "post_done": 0, "ori_done": 0, "all_three_done": 0,
             "pre_lit": [], "pre_read": [], "post_lit": [], "post_read": [],
             "pre_count": 0, "post_count": 0,
         }
@@ -1017,7 +1034,7 @@ async def get_school_analysis_data() -> dict[str, Any]:
     for dept in dept_data["departments"]:
         bucket = buckets.setdefault(school_of(dept["dept"]), {
             "school": school_of(dept["dept"]), "departments": [], "registered": 0,
-            "pre_done": 0, "post_done": 0, "ori_done": 0,
+            "pre_done": 0, "post_done": 0, "ori_done": 0, "all_three_done": 0,
             "pre_lit": [], "pre_read": [], "post_lit": [], "post_read": [],
             "pre_count": 0, "post_count": 0,
         })
@@ -1025,9 +1042,12 @@ async def get_school_analysis_data() -> dict[str, Any]:
         # page can break the third survey down the way it breaks the other two.
         dept["ori_done"] = ori_by_dept.get(dept["dept"], 0)
         dept["ori_pending"] = max(0, dept["registered"] - dept["ori_done"])
+        dept["all_three_done"] = all_three_by_dept.get(dept["dept"], 0)
+        dept["all_three_pending"] = max(
+            0, dept["registered"] - dept["all_three_done"])
         bucket["departments"].append(dept)
         for field in ("registered", "pre_done", "post_done", "ori_done",
-                      "pre_count", "post_count"):
+                      "all_three_done", "pre_count", "post_count"):
             bucket[field] += dept.get(field, 0) or 0
         # Averaged over students, not over departments: a department of three
         # must not weigh the same as one of three hundred.
@@ -1058,9 +1078,12 @@ async def get_school_analysis_data() -> dict[str, Any]:
             "pre_done": bucket["pre_done"],
             "post_done": bucket["post_done"],
             "ori_done": bucket["ori_done"],
+            "all_three_done": bucket["all_three_done"],
             "pre_pending": max(0, bucket["registered"] - bucket["pre_done"]),
             "post_pending": max(0, bucket["pre_done"] - bucket["post_done"]),
             "ori_pending": max(0, bucket["registered"] - bucket["ori_done"]),
+            "all_three_pending": max(
+                0, bucket["registered"] - bucket["all_three_done"]),
             "pre_count": bucket["pre_count"],
             "post_count": bucket["post_count"],
             "avg_lit_pre": weighted(bucket["pre_lit"]),
@@ -1084,13 +1107,21 @@ async def get_school_analysis_data() -> dict[str, Any]:
 
     overall = dept_data["overall"]
     ori_total = sum(r["ori_done"] for r in rows)
+    all_three_total = sum(r["all_three_done"] for r in rows)
     submissions = overall["pre_done"] + overall["post_done"] + ori_total
     active = [r for r in rows if r["registered"]]
-    def filled(row: dict) -> int:
-        """All three surveys together — the page counts submissions, not students."""
-        return row["pre_done"] + row["post_done"] + row["ori_done"]
 
-    by_submissions = sorted(active, key=lambda r: -filled(r))
+    def progress(row: dict) -> tuple[int, int]:
+        """Students finished with all three, then replies of any kind.
+
+        Finishing all three is the measure, but early on nobody has and every
+        school sits at nought; the second figure breaks that tie so "ahead"
+        and "stalled" still name the school a reader would name.
+        """
+        return (row["all_three_done"],
+                row["pre_done"] + row["post_done"] + row["ori_done"])
+
+    by_submissions = sorted(active, key=progress, reverse=True)
 
     def rate(row: dict) -> float:
         return (row["pre_done"] / row["registered"]) if row["registered"] else 0.0
@@ -1105,6 +1136,8 @@ async def get_school_analysis_data() -> dict[str, Any]:
             "schools_listed": len(rows),
             "ori_done": ori_total,
             "ori_pending": max(0, overall["registered"] - ori_total),
+            "all_three_done": all_three_total,
+            "all_three_pending": max(0, overall["registered"] - all_three_total),
             "submissions": submissions,
             "recent_days": RECENT_DAYS,
             "recent_total": sum(r["recent_total"] for r in rows),

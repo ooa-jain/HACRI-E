@@ -252,8 +252,9 @@ async def test_the_all_schools_page_needs_its_token(client: AsyncClient):
                           params={"token": get_schools_directory_token()})
     assert ok.status_code == 200
     assert LAW in ok.text
-    assert "Share of all submissions" in ok.text       # the pie
-    assert "Submissions by school" in ok.text          # and the ranked bars
+    assert "Share of all replies" in ok.text          # the pie
+    assert "Replies by school" in ok.text              # and the ranked bars
+    assert "Finished all 3" in ok.text                 # the column that counts students
 
 
 @pytest.mark.asyncio
@@ -556,4 +557,83 @@ async def test_the_workbook_carries_all_three_surveys(app_with_mock):
     law = next(r for r in wb["All Schools"].iter_rows(min_row=5, values_only=True)
                if r[0] == LAW)
     assert law[3] == 1 and law[4] == 1 and law[5] == 1     # pre, post, Deeksharambh
-    assert law[9] == 3                                     # total submissions
+    # One student did all three, so the column that counts students reads 1 —
+    # not the 3 you get by adding the three surveys together.
+    assert headers[9] == "Finished all three"
+    assert law[9] == 1
+    assert law[10] == 0                                    # none left unfinished
+
+
+# ── Finished all three ───────────────────────────────────────────────────────
+#
+# Adding the three survey counts together counts one finished student three
+# times, which is why "submissions" was never the number a dean meant. These
+# cover the figure that counts students instead.
+
+@pytest.mark.asyncio
+async def test_finished_all_three_counts_students_not_replies(app_with_mock):
+    # Did everything: pre, post and Deeksharambh.
+    await _student("done@x.com", program="Department of Law",
+                   status=db.STATUS_POST_DONE)
+    await _orientation("done@x.com")
+    # Both AI surveys but never Deeksharambh.
+    await _student("nodeeksha@x.com", program="Department of Law",
+                   status=db.STATUS_POST_DONE)
+    # Deeksharambh and the pre survey, but no post survey.
+    await _student("nopost@x.com", program="Department of Law",
+                   status=db.STATUS_PRE_DONE)
+    await _orientation("nopost@x.com")
+
+    row = next(r for r in (await db.get_school_analysis_data())["schools"]
+               if r["school"] == LAW)
+
+    # Three students, seven replies between them, one person actually done.
+    assert row["registered"] == 3
+    assert row["pre_done"] + row["post_done"] + row["ori_done"] == 7
+    assert row["all_three_done"] == 1
+    assert row["all_three_pending"] == 2
+
+
+@pytest.mark.asyncio
+async def test_finished_all_three_counts_a_resubmitter_once(app_with_mock):
+    await _student("keen@x.com", program="Department of Law",
+                   status=db.STATUS_POST_DONE)
+    for _ in range(3):
+        await _orientation("keen@x.com")
+
+    data = await db.get_school_analysis_data()
+    row = next(r for r in data["schools"] if r["school"] == LAW)
+
+    assert row["all_three_done"] == 1
+    assert data["overall"]["all_three_done"] == 1
+
+
+@pytest.mark.asyncio
+async def test_finished_all_three_matches_a_differently_cased_address(app_with_mock):
+    """Registration keeps the address as typed; Deeksharambh lowercases it."""
+    await _student("Mixed.Case@x.com", program="Department of Law",
+                   status=db.STATUS_POST_DONE)
+    await _orientation("mixed.case@x.com")
+
+    row = next(r for r in (await db.get_school_analysis_data())["schools"]
+               if r["school"] == LAW)
+    assert row["all_three_done"] == 1
+
+
+@pytest.mark.asyncio
+async def test_finished_all_three_folds_department_into_school(app_with_mock):
+    for i, dept in enumerate(("Department of Law", "Department of Law")):
+        await _student(f"law{i}@x.com", program=dept, status=db.STATUS_POST_DONE)
+        await _orientation(f"law{i}@x.com")
+    await _student("sci@x.com", program="Department of Forensic Science",
+                   status=db.STATUS_POST_DONE)
+    await _orientation("sci@x.com")
+
+    data = await db.get_school_analysis_data()
+    rows = {r["school"]: r for r in data["schools"]}
+
+    assert rows[LAW]["all_three_done"] == 2
+    assert rows[SCIENCES]["all_three_done"] == 1
+    assert data["overall"]["all_three_done"] == 3
+    # A school total is its departments added up, never a separate count.
+    assert sum(d["all_three_done"] for d in rows[LAW]["departments"]) == 2

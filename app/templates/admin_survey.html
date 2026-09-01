@@ -2808,17 +2808,18 @@ function renderSchools() {
         <div class="stat border-l-teal-600"><b class="text-teal-600">${num(ov.pre_done)}</b><s>Pre AI Survey done</s></div>
         <div class="stat border-l-emerald-600"><b class="text-emerald-600">${num(ov.post_done)}</b><s>Post AI Survey done</s></div>
         <div class="stat border-l-indigo-600"><b class="text-indigo-700">${num(ov.ori_done)}</b><s>Deeksharambh done</s></div>
+        <div class="stat border-l-slate-800"><b>${num(ov.all_three_done)}</b><s>Finished all three</s></div>
         <div class="stat border-l-amber-500"><b class="text-amber-600">${num(ov.recent_total)}</b><s>Filled in ${ov.recent_days} days</s></div>
         <div class="stat border-l-slate-400"><b>${ov.school_count}</b><s>Schools taking part</s></div>
       </div>
 
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        ${card('emerald', '🏆 Most submissions', hi.most_submissions,
-               r => `${r.pre_done + r.post_done} submissions · ${share(r.pre_done + r.post_done)}% of all`)}
-        ${card('rose', '⚠️ Fewest submissions', hi.fewest_submissions,
-               r => `${r.pre_done + r.post_done} submissions from ${r.registered} registered`)}
+        ${card('emerald', '🏆 Most finished', hi.most_submissions,
+               r => `${r.all_three_done} finished all three of ${r.registered} registered`)}
+        ${card('rose', '⚠️ Fewest finished', hi.fewest_submissions,
+               r => `${r.all_three_done} finished all three of ${r.registered} registered`)}
         ${card('amber', '🐢 Lowest completion', hi.lowest_completion,
-               r => `${r.registered ? Math.round(100 * r.pre_done / r.registered) : 0}% of ${r.registered} finished the baseline`)}
+               r => `${r.registered ? Math.round(100 * r.pre_done / r.registered) : 0}% of ${r.registered} finished the Pre AI Survey`)}
         ${card('teal', '🔥 Filling now', hi.most_recent,
                r => `${r.recent_total} in the last ${ov.recent_days} days · last ${e(r.last_submission || '—')}`)}
       </div>
@@ -2826,15 +2827,16 @@ function renderSchools() {
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
       <div class="card">
-        <div class="h-card">🥧 Share of all submissions</div>
+        <div class="h-card">🥧 Share of all replies</div>
         <div class="sub mb-3">Part of the whole, at a glance. The tail is folded into one
           slice — six is as many as a ring can be read at.</div>
         <div style="height:300px"><canvas id="school-donut"></canvas></div>
       </div>
       <div class="card">
-        <div class="h-card">📊 Submissions by school</div>
+        <div class="h-card">📊 Replies by school</div>
         <div class="sub mb-3">Which is highest and which is lowest, ranked — a ring
-          cannot be read that way, so the same numbers are also bars.</div>
+          cannot be read that way, so the same numbers are also bars. A reply to any
+          of the three counts here, so one finished student counts three times.</div>
         <div style="height:300px; overflow-y:auto"><canvas id="school-bars"></canvas></div>
       </div>
     </div>
@@ -2852,10 +2854,9 @@ function renderSchools() {
 
   table('school-table',
     ['#', 'School', 'Depts', 'Registered', 'Pre AI', 'Post AI', 'Deeksharambh',
-     'Submissions', `Last ${ov.recent_days} days`,
+     'Finished all 3', `Last ${ov.recent_days} days`,
      'Avg lit / read (pre → post)', 'Report link'],
     rows, (r, i) => {
-      const subs = r.pre_done + r.post_done + r.ori_done;
       const pct = r.registered ? Math.round(100 * r.pre_done / r.registered) : 0;
       return [
         i + 1,
@@ -2869,7 +2870,8 @@ function renderSchools() {
          <span class="text-slate-400">/ ${r.post_pending} left</span>`,
         `<span class="font-bold text-indigo-700">${r.ori_done}</span>
          <span class="text-slate-400">/ ${r.ori_pending} left</span>`,
-        `<b>${subs}</b>`,
+        `<b>${r.all_three_done}</b>
+         <span class="text-slate-400">/ ${r.all_three_pending} left</span>`,
         r.recent_total
           ? `<span class="badge b-amber">${r.recent_total} new</span>`
           : '<span class="text-slate-400">—</span>',
@@ -2909,7 +2911,7 @@ function drawSchoolCharts(rows, slices) {
         responsive: true, maintainAspectRatio: false, cutout: '58%',
         plugins: {
           legend: { position: 'right', labels: { boxWidth: 12, font: { size: 11 } } },
-          tooltip: { callbacks: { label: c => `${c.label}: ${c.parsed} submissions` } },
+          tooltip: { callbacks: { label: c => `${c.label}: ${c.parsed} replies` } },
         },
       },
     });
@@ -2969,7 +2971,7 @@ function showSchoolDetail(school) {
 
   table('school-dept-table',
     ['#', 'Department', 'Registered', 'Pre AI', 'Post AI', 'Deeksharambh',
-     'Avg pre (lit / read)', 'Avg post (lit / read)', 'Reports'],
+     'Finished all 3', 'Avg pre (lit / read)', 'Avg post (lit / read)', 'Reports'],
     row.departments, (d, i) => [
       i + 1,
       `<button class="font-semibold text-slate-900 hover:text-blue-700 text-left"
@@ -2981,6 +2983,8 @@ function showSchoolDetail(school) {
        <span class="text-slate-400">/ ${d.post_pending} left</span>`,
       `<span class="font-bold text-indigo-700">${d.ori_done}</span>
        <span class="text-slate-400">/ ${d.ori_pending} left</span>`,
+      `<b>${d.all_three_done}</b>
+       <span class="text-slate-400">/ ${d.all_three_pending} left</span>`,
       `${score(d.avg_lit_pre)} / ${score(d.avg_read_pre)}`,
       `${score(d.avg_lit_post)} / ${score(d.avg_read_post)}`,
       ['pre', 'post'].map(type => `

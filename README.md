@@ -47,7 +47,7 @@ it is submitted, so the sequence is always orientation → post survey.
 
 ### Survey sections
 
-| | Survey 1 (Baseline) | Survey 2 (Impact) |
+| | Survey 1 (Pre AI Survey) | Survey 2 (Impact) |
 |---|---|---|
 | **A** | Your Background | Your Background (family details) |
 | **B, D, E, F, G** | Scored Likert items | The same items, same wording |
@@ -159,16 +159,27 @@ Averages are weighted **by students, not by department**: a department of three
 does not weigh the same as one of three hundred.
 
 Each row shows registered / Pre AI Survey / Post AI Survey / Deeksharambh /
-total submissions, how many came in **in the last 7 days** ("filling now"), and
-average literacy and readiness.
+**finished all three**, how many came in **in the last 7 days** ("filling now"),
+and average literacy and readiness.
 Click a school to open its departments underneath. Four cards name the school
-with the most submissions, the fewest, the worst completion rate, and the one
-filling fastest right now.
+with the most students finished, the fewest, the worst completion rate, and the
+one filling fastest right now.
+
+**"Finished all three" counts students, not replies.** Adding the three survey
+counts together counts one finished student three times, so that total answered
+a question nobody was asking — the same cohort fills all three, and what a dean
+wants to know is how many of them are actually done. This column is the count of
+students with the Pre AI Survey, the Post AI Survey *and* Deeksharambh against
+their name: one per person however many times they resubmitted, matched across
+the differently-cased addresses registration and Deeksharambh each store, and
+folded from department to school like everything else on the page.
 
 Two charts, because they answer different questions: a **donut** for share of
-all submissions (top five schools plus a folded "Other schools" slice — six is
+all **replies** (top five schools plus a folded "Other schools" slice — six is
 as many as a ring can be read at), and **ranked horizontal bars** for which
-school is highest and which is lowest, which a ring cannot show.
+school is highest and which is lowest, which a ring cannot show. Both plot
+replies rather than finished students, so they stay readable before anyone has
+finished all three; the table column is the figure for students who are done.
 
 **One link per school, all three surveys.** Two links meant reading the change
 between the Pre and Post AI Surveys by opening two tabs and subtracting by eye —

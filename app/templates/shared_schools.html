@@ -39,6 +39,7 @@
       <div class="stat pre"><b>{{ overall.pre_done }}</b><s>Pre AI Survey done</s></div>
       <div class="stat post"><b>{{ overall.post_done }}</b><s>Post AI Survey done</s></div>
       <div class="stat blue"><b>{{ overall.ori_done }}</b><s>Deeksharambh done</s></div>
+      <div class="stat"><b>{{ overall.all_three_done }}</b><s>Finished all three</s></div>
       <div class="stat amber"><b>{{ overall.recent_total }}</b><s>Filled in the last {{ overall.recent_days }} days</s></div>
       <div class="stat"><b>{{ overall.school_count }}</b><s>Schools taking part</s></div>
     </div>
@@ -48,20 +49,20 @@
   <div class="card">
     <div class="section-tag"><b>02</b> Ahead and behind</div>
     <h2>Who is ahead, who has stalled</h2>
-    <p class="sub">Read together: a school can be highest on submissions and still
-      have the lowest share of its own students finished.</p>
+    <p class="sub">Read together: a school can be highest on the count of students
+      who have finished and still have the lowest share of its own students done.</p>
     <div class="highlights">
       <div class="hl hl-good">
-        <div class="lbl">🏆 Most submissions</div>
+        <div class="lbl">🏆 Most finished</div>
         <div class="name">{{ highlights.most_submissions.school }}</div>
-        <div class="foot">{{ highlights.most_submissions.pre_done + highlights.most_submissions.post_done }} submissions
-          from {{ highlights.most_submissions.registered }} registered</div>
+        <div class="foot">{{ highlights.most_submissions.all_three_done }} finished all three
+          of {{ highlights.most_submissions.registered }} registered</div>
       </div>
       <div class="hl hl-bad">
-        <div class="lbl">⚠️ Fewest submissions</div>
+        <div class="lbl">⚠️ Fewest finished</div>
         <div class="name">{{ highlights.fewest_submissions.school }}</div>
-        <div class="foot">{{ highlights.fewest_submissions.pre_done + highlights.fewest_submissions.post_done }} submissions
-          from {{ highlights.fewest_submissions.registered }} registered</div>
+        <div class="foot">{{ highlights.fewest_submissions.all_three_done }} finished all three
+          of {{ highlights.fewest_submissions.registered }} registered</div>
       </div>
       {% if highlights.lowest_completion %}
       <div class="hl hl-warn">
@@ -89,16 +90,18 @@
   <div class="charts">
     <div class="card">
       <div class="section-tag"><b>03</b> Share</div>
-      <h2>Share of all submissions</h2>
+      <h2>Share of all replies</h2>
       <p class="sub">Part of the whole, at a glance. The tail is folded into one
         slice — six is as many as a ring can be read at.</p>
       <div class="chart-box"><canvas id="donut"></canvas></div>
     </div>
     <div class="card">
       <div class="section-tag"><b>04</b> Ranked</div>
-      <h2>Submissions by school</h2>
+      <h2>Replies by school</h2>
       <p class="sub">Which is highest and which is lowest, ranked. A ring cannot
-        be read that way, so the same numbers are also bars.</p>
+        be read that way, so the same numbers are also bars. A reply to any of
+        the three counts here, so one finished student counts three times —
+        for students who are done, read the last column of the table.</p>
       <div class="chart-box" id="bar-box"><canvas id="bars"></canvas></div>
     </div>
   </div>
@@ -107,7 +110,8 @@
     <div class="section-tag"><b>05</b> The table</div>
     <h2>School by school</h2>
     <p class="sub">Ordered by how many students registered. One link per school opens
-      its own report — baseline and post together, with the change between them — and
+      its own report — the Pre AI Survey and the Post AI Survey together, with the
+      change between them — and
       can be forwarded to that school on its own.</p>
     <div class="scroll">
       <table>
@@ -115,7 +119,7 @@
           <tr>
             <th>#</th><th>School</th><th class="num">Depts</th><th class="num">Registered</th>
             <th class="num">Pre AI</th><th class="num">Post AI</th>
-            <th class="num">Deeksharambh</th><th class="num">Submissions</th>
+            <th class="num">Deeksharambh</th><th class="num">Finished all 3</th>
             <th>Last {{ overall.recent_days }} days</th>
             <th>Avg lit / read (pre &rarr; post)</th><th>Report</th>
           </tr>
@@ -137,7 +141,9 @@
             </td>
             <td class="num"><span class="badge badge-green">{{ s.post_done }}</span></td>
             <td class="num"><span class="badge badge-blue">{{ s.ori_done }}</span></td>
-            <td class="num"><b>{{ s.pre_done + s.post_done + s.ori_done }}</b></td>
+            <td class="num"><b>{{ s.all_three_done }}</b>
+              {% if s.registered %}<small style="color:var(--gray)">
+                {{ 100 * s.all_three_done // s.registered }}%</small>{% endif %}</td>
             <td>{% if s.recent_total %}<span class="badge badge-amber">{{ s.recent_total }} new</span>
                 {% else %}<span class="badge badge-gray">—</span>{% endif %}</td>
             <td class="scores">
@@ -202,7 +208,7 @@ if (window.Chart && slices.length) {
       responsive: true, maintainAspectRatio: false, cutout: '58%',
       plugins: {
         legend: { position: 'right', labels: { boxWidth: 12, font: { size: 11 } } },
-        tooltip: { callbacks: { label: c => c.label + ': ' + c.parsed + ' submissions' } },
+        tooltip: { callbacks: { label: c => c.label + ': ' + c.parsed + ' replies' } },
       },
     },
   });
@@ -217,7 +223,7 @@ if (window.Chart && slices.length) {
   new Chart(document.getElementById('bars').getContext('2d'), {
     type: 'bar',
     data: { labels: ranked.map(s => s.name), datasets: [{
-      label: 'Submissions', data: ranked.map(s => s.value),
+      label: 'Replies', data: ranked.map(s => s.value),
       backgroundColor: '#4c3fd6', borderRadius: 3, barThickness: 13,
     }] },
     options: {

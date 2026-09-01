@@ -40,12 +40,14 @@
       <div class="stat pre"><b>{{ school.pre_done }}</b><s>Pre AI Survey done</s></div>
       <div class="stat post"><b>{{ school.post_done }}</b><s>Post AI Survey done</s></div>
       <div class="stat blue"><b>{{ school.ori_done }}</b><s>Deeksharambh done</s></div>
+      <div class="stat"><b>{{ school.all_three_done }}</b><s>Finished all three</s></div>
       <div class="stat amber"><b>{{ school.recent_total }}</b><s>Filled in the last {{ overall.recent_days }} days</s></div>
     </div>
     <div class="stats" style="margin-top:12px">
       <div class="stat"><b>{{ school.pre_pending }}</b><s>Pre AI Survey pending</s></div>
       <div class="stat"><b>{{ school.post_pending }}</b><s>Post AI Survey pending</s></div>
       <div class="stat"><b>{{ school.ori_pending }}</b><s>Deeksharambh pending</s></div>
+      <div class="stat"><b>{{ school.all_three_pending }}</b><s>Not yet finished all three</s></div>
     </div>
   </div>
 
@@ -116,6 +118,7 @@
             <th colspan="2" class="grp grp-post sep">Post AI Survey</th>
             <th colspan="2" class="grp sep">Change</th>
             <th rowspan="2" class="mid sep">Deeksharambh</th>
+            <th rowspan="2" class="mid sep">Finished all 3</th>
             <th rowspan="2">Report</th>
           </tr>
           <tr>
@@ -154,6 +157,10 @@
             <td class="mid sep">
               <span class="badge badge-blue">{{ d.ori_done }}</span>
               <small style="color:var(--r-muted)">/ {{ d.ori_pending }} left</small>
+            </td>
+            <td class="mid sep">
+              <b>{{ d.all_three_done }}</b>
+              <small style="color:var(--r-muted)">/ {{ d.all_three_pending }} left</small>
             </td>
             <td>
               <a class="btn btn-pre btn-sm" target="_blank" href="{{ d.share_url_pre }}">Pre</a>
