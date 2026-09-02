@@ -705,3 +705,48 @@ def test_one_schools_page_survives_an_unrestarted_deploy():
         generated_at="now")
 
     assert "Finished all 3" in html
+
+
+# ── The department drawer ────────────────────────────────────────────────────
+
+@pytest.mark.asyncio
+async def test_the_all_schools_table_opens_its_departments(client: AsyncClient):
+    from app.routes.shared_analysis import get_schools_directory_token
+
+    await _student("a@x.com", program="Department of Law",
+                   status=db.STATUS_POST_DONE)
+    await _orientation("a@x.com")
+    await _student("b@x.com", program="Department of Forensic Science",
+                   status=db.STATUS_PRE_DONE)
+
+    html = (await client.get("/shared/schools",
+                             params={"token": get_schools_directory_token()})).text
+
+    # The departments are rendered into the page, not fetched on click: the
+    # link gets forwarded, opened from a file and printed, and none of those
+    # can call back to the server.
+    assert "Department of Law" in html
+    assert "Department of Forensic Science" in html
+
+    # Closed to begin with, and openable.
+    assert 'class="drawer"' in html and "hidden" in html
+    assert 'aria-expanded="false"' in html
+    assert "drawer-1" in html
+
+
+@pytest.mark.asyncio
+async def test_a_school_with_no_departments_has_nothing_to_open(client: AsyncClient):
+    """Every school is listed, including the ones nobody registered under —
+    those rows must not offer a control that opens an empty drawer."""
+    from app.routes.shared_analysis import get_schools_directory_token
+
+    await _student("a@x.com", program="Department of Law",
+                   status=db.STATUS_PRE_DONE)
+
+    html = (await client.get("/shared/schools",
+                             params={"token": get_schools_directory_token()})).text
+
+    # One school has a department; the rest of the listed schools have none, so
+    # there are far fewer drawers than there are rows.
+    assert html.count('class="drawer"') == 1
+    assert html.count("click to open") == 1
