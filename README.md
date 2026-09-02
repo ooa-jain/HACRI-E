@@ -479,22 +479,44 @@ gunicorn app.main:app -c gunicorn.conf.py   # prod
 
 ## Deploy on VPS
 
+The app lives at **`/var/www/HACRI-E`** and the unit is **`hacri-e`**.
+
 ```bash
 # Copy to server
-scp -r . root@31.97.186.191:/var/www/hacri_e2_integrated/
+scp -r . root@31.97.186.191:/var/www/HACRI-E/
 
 # On server
-cd /var/www/hacri_e2_integrated
+cd /var/www/HACRI-E
 python3 -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
 cp hacri_e2_integrated.service /etc/systemd/system/
-systemctl daemon-reload && systemctl enable --now hacri_e2_integrated
+systemctl daemon-reload && systemctl enable --now hacri-e
 # Nginx
 cp nginx.conf.example /etc/nginx/sites-available/ai-survey.juooa.cloud
 ln -s /etc/nginx/sites-available/ai-survey.juooa.cloud /etc/nginx/sites-enabled/
 certbot --nginx -d ai-survey.juooa.cloud
 nginx -t && systemctl reload nginx
 ```
+
+### Updating a running server
+
+```bash
+cd /var/www/HACRI-E
+git pull
+systemctl restart hacri-e      # not optional — see below
+```
+
+**The restart is the whole thing.** Templates are read from disk, but the
+Python that fills them is held in memory, so a pull without a restart leaves
+new HTML rendering against the old aggregation. Every field added since is
+missing, and while Jinja prints a missing value as empty, *arithmetic* on one
+raises — so the page 500s rather than looking slightly wrong. That is what took
+`/shared/schools` down after the "finished all three" change: the column was on
+disk, the number that fills it was not.
+
+The shared pages now default these to nought so a half-finished deploy degrades
+instead of white-screening, but that is a safety net, not a substitute. Restart
+the service.
 
 ## Admin Credentials
 Set `ADMIN_USERNAME` and `ADMIN_PASSWORD` in `.env`.  

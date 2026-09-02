@@ -637,3 +637,71 @@ async def test_finished_all_three_folds_department_into_school(app_with_mock):
     assert data["overall"]["all_three_done"] == 3
     # A school total is its departments added up, never a separate count.
     assert sum(d["all_three_done"] for d in rows[LAW]["departments"]) == 2
+
+
+# ── Surviving a half-finished deploy ─────────────────────────────────────────
+#
+# A pull that lands the new templates without restarting the service leaves new
+# HTML rendering against the old aggregation, so every field added since is
+# missing. Jinja renders a missing value as empty, but arithmetic on one raises
+# and the whole page becomes a 500 — which is how a link already handed to
+# deans went white. The shared pages therefore have to tolerate a row that
+# predates the fields they read.
+
+def _old_school_row() -> dict:
+    """A school row exactly as an older build produced it."""
+    return {
+        "school": LAW, "slug": "law", "dept_count": 1, "registered": 10,
+        "pre_done": 5, "post_done": 3, "ori_done": 2, "recent_total": 1,
+        "pre_pending": 5, "post_pending": 2, "ori_pending": 8,
+        "avg_lit_pre": None, "avg_read_pre": None,
+        "avg_lit_post": None, "avg_read_post": None,
+        "last_submission": "", "share_url": "#", "excel_url": "#",
+        "departments": [],
+    }
+
+
+def _jinja():
+    from pathlib import Path
+
+    from jinja2 import Environment, FileSystemLoader
+
+    root = Path(__file__).resolve().parent.parent / "app" / "templates"
+    env = Environment(loader=FileSystemLoader(str(root)))
+    env.globals["asset"] = lambda p: p
+    return env
+
+
+def test_the_all_schools_page_survives_an_unrestarted_deploy():
+    row = _old_school_row()
+    overall = {"schools_listed": 1, "school_count": 1, "registered": 10,
+               "pre_done": 5, "post_done": 3, "ori_done": 2, "recent_total": 1,
+               "recent_days": 7, "submissions": 10, "directory_excel_url": "#"}
+
+    html = _jinja().get_template("shared_schools.html").render(
+        schools=[row], chart_rows=[row], overall=overall,
+        highlights={"most_submissions": None}, generated_at="now")
+
+    # It renders, and the column it cannot fill reads nought rather than blowing up.
+    assert "Finished all 3" in html
+    assert LAW in html
+
+
+def test_one_schools_page_survives_an_unrestarted_deploy():
+    school = _old_school_row()
+    school["departments"] = [{
+        "dept": "Department of Law", "registered": 10, "pre_done": 5,
+        "post_done": 3, "ori_done": 2, "pre_pending": 5, "post_pending": 2,
+        "ori_pending": 8, "avg_lit_pre": None, "avg_read_pre": None,
+        "avg_lit_post": None, "avg_read_post": None,
+        "share_url_pre": "#", "share_url_post": "#",
+    }]
+
+    html = _jinja().get_template("shared_school.html").render(
+        school=school, overall={"registered": 10, "recent_days": 7},
+        chart_rows=[{"dept": "Department of Law", "pre_done": 5,
+                     "post_done": 3, "ori_done": 2}],
+        dept_changes={}, lit_change=None, read_change=None,
+        generated_at="now")
+
+    assert "Finished all 3" in html

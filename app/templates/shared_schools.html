@@ -39,7 +39,7 @@
       <div class="stat pre"><b>{{ overall.pre_done }}</b><s>Pre AI Survey done</s></div>
       <div class="stat post"><b>{{ overall.post_done }}</b><s>Post AI Survey done</s></div>
       <div class="stat blue"><b>{{ overall.ori_done }}</b><s>Deeksharambh done</s></div>
-      <div class="stat"><b>{{ overall.all_three_done }}</b><s>Finished all three</s></div>
+      <div class="stat"><b>{{ overall.all_three_done | default(0, true) }}</b><s>Finished all three</s></div>
       <div class="stat amber"><b>{{ overall.recent_total }}</b><s>Filled in the last {{ overall.recent_days }} days</s></div>
       <div class="stat"><b>{{ overall.school_count }}</b><s>Schools taking part</s></div>
     </div>
@@ -55,13 +55,13 @@
       <div class="hl hl-good">
         <div class="lbl">🏆 Most finished</div>
         <div class="name">{{ highlights.most_submissions.school }}</div>
-        <div class="foot">{{ highlights.most_submissions.all_three_done }} finished all three
+        <div class="foot">{{ highlights.most_submissions.all_three_done | default(0, true) }} finished all three
           of {{ highlights.most_submissions.registered }} registered</div>
       </div>
       <div class="hl hl-bad">
         <div class="lbl">⚠️ Fewest finished</div>
         <div class="name">{{ highlights.fewest_submissions.school }}</div>
-        <div class="foot">{{ highlights.fewest_submissions.all_three_done }} finished all three
+        <div class="foot">{{ highlights.fewest_submissions.all_three_done | default(0, true) }} finished all three
           of {{ highlights.fewest_submissions.registered }} registered</div>
       </div>
       {% if highlights.lowest_completion %}
@@ -141,9 +141,10 @@
             </td>
             <td class="num"><span class="badge badge-green">{{ s.post_done }}</span></td>
             <td class="num"><span class="badge badge-blue">{{ s.ori_done }}</span></td>
-            <td class="num"><b>{{ s.all_three_done }}</b>
+            {% set done3 = s.all_three_done | default(0, true) %}
+            <td class="num"><b>{{ done3 }}</b>
               {% if s.registered %}<small style="color:var(--gray)">
-                {{ 100 * s.all_three_done // s.registered }}%</small>{% endif %}</td>
+                {{ 100 * done3 // s.registered }}%</small>{% endif %}</td>
             <td>{% if s.recent_total %}<span class="badge badge-amber">{{ s.recent_total }} new</span>
                 {% else %}<span class="badge badge-gray">—</span>{% endif %}</td>
             <td class="scores">
