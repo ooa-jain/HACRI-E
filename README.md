@@ -47,7 +47,7 @@ it is submitted, so the sequence is always orientation → post survey.
 
 ### Survey sections
 
-| | Survey 1 (Baseline) | Survey 2 (Impact) |
+| | Survey 1 (Pre AI Survey) | Survey 2 (Impact) |
 |---|---|---|
 | **A** | Your Background | Your Background (family details) |
 | **B, D, E, F, G** | Scored Likert items | The same items, same wording |
@@ -59,6 +59,20 @@ options; only the time frame changes ("during your school years" →
 "now, as a university student"), so each answer reads directly against its
 baseline counterpart. C carries no scored items — literacy and readiness come
 from B, D, E, F and G alone, which is what keeps the pre/post delta valid.
+
+### The submit button, and why it used to do nothing
+
+Both AI surveys are wizards: one step on screen, the rest `display:none`. Every
+step holds `required` controls, and a required control the browser cannot focus
+— one on a hidden step — makes it refuse the submission **and draw nothing**.
+No alert, no jump, no message a student would ever see. The button was not
+broken; it was being ignored. A student who resumed a saved draft landed on the
+last step with earlier steps still blank and hit exactly this.
+
+So the form carries `novalidate` and checks itself: on submit it sweeps *every*
+step, and the first one that is incomplete is opened with its unanswered
+questions marked. Native validation is never allowed to fail silently, because
+a silent failure on this form is indistinguishable from a dead button.
 
 ### Details are asked once
 
@@ -145,16 +159,27 @@ Averages are weighted **by students, not by department**: a department of three
 does not weigh the same as one of three hundred.
 
 Each row shows registered / Pre AI Survey / Post AI Survey / Deeksharambh /
-total submissions, how many came in **in the last 7 days** ("filling now"), and
-average literacy and readiness.
+**finished all three**, how many came in **in the last 7 days** ("filling now"),
+and average literacy and readiness.
 Click a school to open its departments underneath. Four cards name the school
-with the most submissions, the fewest, the worst completion rate, and the one
-filling fastest right now.
+with the most students finished, the fewest, the worst completion rate, and the
+one filling fastest right now.
+
+**"Finished all three" counts students, not replies.** Adding the three survey
+counts together counts one finished student three times, so that total answered
+a question nobody was asking — the same cohort fills all three, and what a dean
+wants to know is how many of them are actually done. This column is the count of
+students with the Pre AI Survey, the Post AI Survey *and* Deeksharambh against
+their name: one per person however many times they resubmitted, matched across
+the differently-cased addresses registration and Deeksharambh each store, and
+folded from department to school like everything else on the page.
 
 Two charts, because they answer different questions: a **donut** for share of
-all submissions (top five schools plus a folded "Other schools" slice — six is
+all **replies** (top five schools plus a folded "Other schools" slice — six is
 as many as a ring can be read at), and **ranked horizontal bars** for which
-school is highest and which is lowest, which a ring cannot show.
+school is highest and which is lowest, which a ring cannot show. Both plot
+replies rather than finished students, so they stay readable before anyone has
+finished all three; the table column is the figure for students who are done.
 
 **One link per school, all three surveys.** Two links meant reading the change
 between the Pre and Post AI Surveys by opening two tabs and subtracting by eye —
@@ -454,22 +479,44 @@ gunicorn app.main:app -c gunicorn.conf.py   # prod
 
 ## Deploy on VPS
 
+The app lives at **`/var/www/HACRI-E`** and the unit is **`hacri-e`**.
+
 ```bash
 # Copy to server
-scp -r . root@31.97.186.191:/var/www/hacri_e2_integrated/
+scp -r . root@31.97.186.191:/var/www/HACRI-E/
 
 # On server
-cd /var/www/hacri_e2_integrated
+cd /var/www/HACRI-E
 python3 -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
 cp hacri_e2_integrated.service /etc/systemd/system/
-systemctl daemon-reload && systemctl enable --now hacri_e2_integrated
+systemctl daemon-reload && systemctl enable --now hacri-e
 # Nginx
 cp nginx.conf.example /etc/nginx/sites-available/ai-survey.juooa.cloud
 ln -s /etc/nginx/sites-available/ai-survey.juooa.cloud /etc/nginx/sites-enabled/
 certbot --nginx -d ai-survey.juooa.cloud
 nginx -t && systemctl reload nginx
 ```
+
+### Updating a running server
+
+```bash
+cd /var/www/HACRI-E
+git pull
+systemctl restart hacri-e      # not optional — see below
+```
+
+**The restart is the whole thing.** Templates are read from disk, but the
+Python that fills them is held in memory, so a pull without a restart leaves
+new HTML rendering against the old aggregation. Every field added since is
+missing, and while Jinja prints a missing value as empty, *arithmetic* on one
+raises — so the page 500s rather than looking slightly wrong. That is what took
+`/shared/schools` down after the "finished all three" change: the column was on
+disk, the number that fills it was not.
+
+The shared pages now default these to nought so a half-finished deploy degrades
+instead of white-screening, but that is a safety net, not a substitute. Restart
+the service.
 
 ## Admin Credentials
 Set `ADMIN_USERNAME` and `ADMIN_PASSWORD` in `.env`.  

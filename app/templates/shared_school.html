@@ -40,12 +40,14 @@
       <div class="stat pre"><b>{{ school.pre_done }}</b><s>Pre AI Survey done</s></div>
       <div class="stat post"><b>{{ school.post_done }}</b><s>Post AI Survey done</s></div>
       <div class="stat blue"><b>{{ school.ori_done }}</b><s>Deeksharambh done</s></div>
+      <div class="stat"><b>{{ school.all_three_done | default(0, true) }}</b><s>Finished all three</s></div>
       <div class="stat amber"><b>{{ school.recent_total }}</b><s>Filled in the last {{ overall.recent_days }} days</s></div>
     </div>
     <div class="stats" style="margin-top:12px">
       <div class="stat"><b>{{ school.pre_pending }}</b><s>Pre AI Survey pending</s></div>
       <div class="stat"><b>{{ school.post_pending }}</b><s>Post AI Survey pending</s></div>
       <div class="stat"><b>{{ school.ori_pending }}</b><s>Deeksharambh pending</s></div>
+      <div class="stat"><b>{{ school.all_three_pending | default(0, true) }}</b><s>Not yet finished all three</s></div>
     </div>
   </div>
 
@@ -116,6 +118,7 @@
             <th colspan="2" class="grp grp-post sep">Post AI Survey</th>
             <th colspan="2" class="grp sep">Change</th>
             <th rowspan="2" class="mid sep">Deeksharambh</th>
+            <th rowspan="2" class="mid sep">Finished all 3</th>
             <th rowspan="2">Report</th>
           </tr>
           <tr>
@@ -126,7 +129,11 @@
         </thead>
         <tbody>
           {% for d in school.departments %}
+          {# .get, not .lit — a department missing from dept_changes gives an
+             undefined, and comparing one raises rather than rendering a dash. #}
           {% set c = dept_changes.get(d.dept, {}) %}
+          {% set c_lit = c.get('lit') %}
+          {% set c_read = c.get('read') %}
           <tr>
             <td class="num">{{ loop.index }}</td>
             <td class="dept-name">{{ d.dept }}</td>
@@ -140,20 +147,24 @@
             <td class="mid">{{ d.avg_lit_post if d.avg_lit_post is not none else '—' }} /
                 {{ d.avg_read_post if d.avg_read_post is not none else '—' }}</td>
             <td class="mid sep">
-              {% if c.lit is none %}<span class="badge badge-gray">&mdash;</span>
-              {% elif c.lit > 0 %}<span class="up">▲ {{ '%.2f'|format(c.lit) }}</span>
-              {% elif c.lit < 0 %}<span class="down">▼ {{ '%.2f'|format(-c.lit) }}</span>
+              {% if c_lit is none %}<span class="badge badge-gray">&mdash;</span>
+              {% elif c_lit > 0 %}<span class="up">▲ {{ '%.2f'|format(c_lit) }}</span>
+              {% elif c_lit < 0 %}<span class="down">▼ {{ '%.2f'|format(-c_lit) }}</span>
               {% else %}<span style="color:var(--gray)">0.00</span>{% endif %}
             </td>
             <td class="mid">
-              {% if c.read is none %}<span class="badge badge-gray">—</span>
-              {% elif c.read > 0 %}<span class="up">▲ {{ '%.2f'|format(c.read) }}</span>
-              {% elif c.read < 0 %}<span class="down">▼ {{ '%.2f'|format(-c.read) }}</span>
+              {% if c_read is none %}<span class="badge badge-gray">—</span>
+              {% elif c_read > 0 %}<span class="up">▲ {{ '%.2f'|format(c_read) }}</span>
+              {% elif c_read < 0 %}<span class="down">▼ {{ '%.2f'|format(-c_read) }}</span>
               {% else %}<span style="color:var(--gray)">0.00</span>{% endif %}
             </td>
             <td class="mid sep">
               <span class="badge badge-blue">{{ d.ori_done }}</span>
               <small style="color:var(--r-muted)">/ {{ d.ori_pending }} left</small>
+            </td>
+            <td class="mid sep">
+              <b>{{ d.all_three_done | default(0, true) }}</b>
+              <small style="color:var(--r-muted)">/ {{ d.all_three_pending | default(0, true) }} left</small>
             </td>
             <td>
               <a class="btn btn-pre btn-sm" target="_blank" href="{{ d.share_url_pre }}">Pre</a>

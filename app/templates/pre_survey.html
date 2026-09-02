@@ -82,7 +82,7 @@
     </button>
   </div>
 
-  <form method="post" action="/survey/pre" class="survey" id="survey-form">
+  <form method="post" action="/survey/pre" class="survey" id="survey-form" novalidate>
     <input type="hidden" name="csrf" value="{{ csrf_token }}" />
 
     <!-- ── SECTION A — Background ───────────────────────────────────────── -->
@@ -896,9 +896,14 @@
       saveDraft();
     }
 
-    function validateCurrentSection() {
+    // Check one step. With `report` off it answers whether the step passes
+    // without focusing anything or raising an alert, which is what the submit
+    // sweep needs while a step is still hidden: a control inside a hidden
+    // section cannot take focus, and asking it to report its own validity
+    // shows the student nothing.
+    function validateSection(stepIndex, report = true) {
       if (window._TEST_MODE) return true;
-      const section = document.querySelector(`.wizard-section[data-step-section="${currentStep}"]`);
+      const section = document.querySelector(`.wizard-section[data-step-section="${stepIndex}"]`);
       if (!section) return true;
 
       // Clear previous validation indicators
@@ -908,6 +913,16 @@
       let isValid = true;
       const radioGroups = {};
       let firstInvalidElement = null;
+      let message = '';
+
+      const flag = (el) => {
+        isValid = false;
+        if (!firstInvalidElement) firstInvalidElement = el;
+        const questionCard = el.closest('.question');
+        if (questionCard) {
+          questionCard.classList.add('error-pulse');
+        }
+      };
 
       inputs.forEach(input => {
         if (input.type === 'radio') {
@@ -915,29 +930,16 @@
             radioGroups[input.name] = [];
           }
           radioGroups[input.name].push(input);
-        } else {
-          if (!input.checkValidity()) {
-            isValid = false;
-            if (!firstInvalidElement) firstInvalidElement = input;
-            const questionCard = input.closest('.question');
-            if (questionCard) {
-              questionCard.classList.add('error-pulse');
-            }
-          }
+        } else if (!input.checkValidity()) {
+          flag(input);
         }
       });
 
       // Radio groups validation
       for (const name in radioGroups) {
         const group = radioGroups[name];
-        const isAnyChecked = group.some(r => r.checked);
-        if (!isAnyChecked) {
-          isValid = false;
-          if (!firstInvalidElement) firstInvalidElement = group[0];
-          const questionCard = group[0].closest('.question');
-          if (questionCard) {
-            questionCard.classList.add('error-pulse');
-          }
+        if (!group.some(r => r.checked)) {
+          flag(group[0]);
         }
       }
 
@@ -953,43 +955,30 @@
       for (const name in cbGroups) {
         const group = cbGroups[name];
         const checkedCount = group.filter(cb => cb.checked).length;
-        if (checkedCount === 0) {
-          isValid = false;
-          if (!firstInvalidElement) firstInvalidElement = group[0];
-          const questionCard = group[0].closest('.question');
-          if (questionCard) {
-            questionCard.classList.add('error-pulse');
-          }
-          if (name === 'H2') {
-            alert("Please select at least 1 and up to 3 options in question H2.");
-          } else {
-            alert(`Please select at least 1 option in question ${name}.`);
-          }
-          return false;
-        } else if (name === 'H2' && checkedCount > 3) {
-          isValid = false;
-          if (!firstInvalidElement) firstInvalidElement = group[0];
-          const questionCard = group[0].closest('.question');
-          if (questionCard) {
-            questionCard.classList.add('error-pulse');
-          }
-          alert("Please select at most 3 options in question H2.");
-          return false;
+        const tooFew = checkedCount === 0;
+        const tooMany = name === 'H2' && checkedCount > 3;
+        if (!tooFew && !tooMany) continue;
+        flag(group[0]);
+        if (message) continue;
+        if (tooMany) {
+          message = 'Please select at most 3 options in question H2.';
+        } else if (name === 'H2') {
+          message = 'Please select at least 1 and up to 3 options in question H2.';
+        } else {
+          message = `Please select at least 1 option in question ${name}.`;
         }
       }
 
-      if (!isValid && firstInvalidElement) {
+      if (!isValid && report && firstInvalidElement) {
         // Native reporting or scroll focus
         firstInvalidElement.focus({ preventScroll: true });
         const questionCard = firstInvalidElement.closest('.question');
-        if (questionCard) {
-          questionCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        } else {
-          firstInvalidElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
+        (questionCard || firstInvalidElement).scrollIntoView({
+          behavior: 'smooth', block: 'center' });
 
-        // Use native bubble validation trigger if available
-        if (firstInvalidElement.type !== 'radio') {
+        if (message) {
+          alert(message);
+        } else if (firstInvalidElement.type !== 'radio') {
           firstInvalidElement.reportValidity();
         } else {
           // Custom brief validation warning for radios
@@ -1000,6 +989,10 @@
       }
 
       return isValid;
+    }
+
+    function validateCurrentSection() {
+      return validateSection(currentStep);
     }
 
     nextBtn.addEventListener('click', () => {
@@ -1035,13 +1028,22 @@
       });
     });
 
-    // Final submit validation
+    // Final submit validation — every step, not only the one on screen.
+    // The browser cannot be left to do this: a required control in a hidden
+    // step fails its own check, and because it cannot be focused the submit
+    // is refused with nothing shown at all, so the button reads as dead. The
+    // form is `novalidate` for that reason and the sweep below stands in for
+    // it, opening the first step that is still incomplete so the student can
+    // see what is missing.
     form.addEventListener('submit', (e) => {
-      if (!validateCurrentSection()) {
+      for (let step = 0; step < totalSteps; step++) {
+        if (validateSection(step, false)) continue;
         e.preventDefault();
-      } else {
-        localStorage.removeItem(storageKey);
+        if (step !== currentStep) showStep(step);
+        validateSection(step);
+        return;
       }
+      localStorage.removeItem(storageKey);
     });
 
     // Restore draft if exists, else start at step 0

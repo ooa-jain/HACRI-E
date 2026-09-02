@@ -9,6 +9,50 @@
        stylesheet. */
     table { min-width: 1080px; }
     .chart-box { height: 340px; }
+
+    /* The school name doubles as the control that opens its departments, so it
+       has to stay a school name first: same weight and colour as the rows that
+       have no drawer, with the caret carrying the affordance. */
+    .drill {
+      appearance: none; background: none; border: 0; padding: 0;
+      font: inherit; color: inherit; text-align: left; cursor: pointer;
+      display: inline-flex; align-items: baseline; gap: 6px;
+    }
+    .drill:hover { color: var(--r-violet); }
+    .drill:focus-visible { outline: 2px solid var(--r-violet); outline-offset: 3px; }
+    .drill .caret {
+      font-size: 10px; color: var(--r-faint);
+      transition: transform .15s ease, color .15s ease;
+      display: inline-block;
+    }
+    .drill:hover .caret { color: var(--r-violet); }
+    .drill[aria-expanded="true"] .caret {
+      transform: rotate(90deg); color: var(--r-violet);
+    }
+
+    .drawer > td { padding: 0; background: var(--r-surface-sunk); }
+    .drawer-inner { padding: 14px 18px 18px; border-left: 3px solid var(--r-violet); }
+    .drawer-head {
+      font-family: var(--r-mono); font-size: 10px; letter-spacing: .08em;
+      text-transform: uppercase; color: var(--r-ink); margin-bottom: 10px;
+    }
+    .drawer-head span {
+      text-transform: none; letter-spacing: 0; color: var(--r-muted);
+      font-family: var(--r-body); margin-left: 8px;
+    }
+    /* The nested table sets its own width: it lives inside one cell of a table
+       that is already 1080px wide, so inheriting that minimum would push it off
+       the side of its own drawer. */
+    .sub-table { min-width: 0; width: 100%; background: var(--r-surface); }
+    .sub-table th { background: transparent; }
+    .sub-table td, .sub-table th { padding: 8px 10px; font-size: 12px; }
+    .sub-table .dept-name { font-weight: 600; color: var(--r-ink); }
+    /* "/ 4 left" is one phrase; letting it break puts "left" on its own line. */
+    .sub-table td.num small { white-space: nowrap; }
+
+    @media (prefers-reduced-motion: reduce) {
+      .drill .caret { transition: none; }
+    }
   </style>
 </head>
 <body class="report-shell">
@@ -39,6 +83,7 @@
       <div class="stat pre"><b>{{ overall.pre_done }}</b><s>Pre AI Survey done</s></div>
       <div class="stat post"><b>{{ overall.post_done }}</b><s>Post AI Survey done</s></div>
       <div class="stat blue"><b>{{ overall.ori_done }}</b><s>Deeksharambh done</s></div>
+      <div class="stat"><b>{{ overall.all_three_done | default(0, true) }}</b><s>Finished all three</s></div>
       <div class="stat amber"><b>{{ overall.recent_total }}</b><s>Filled in the last {{ overall.recent_days }} days</s></div>
       <div class="stat"><b>{{ overall.school_count }}</b><s>Schools taking part</s></div>
     </div>
@@ -48,20 +93,20 @@
   <div class="card">
     <div class="section-tag"><b>02</b> Ahead and behind</div>
     <h2>Who is ahead, who has stalled</h2>
-    <p class="sub">Read together: a school can be highest on submissions and still
-      have the lowest share of its own students finished.</p>
+    <p class="sub">Read together: a school can be highest on the count of students
+      who have finished and still have the lowest share of its own students done.</p>
     <div class="highlights">
       <div class="hl hl-good">
-        <div class="lbl">🏆 Most submissions</div>
+        <div class="lbl">🏆 Most finished</div>
         <div class="name">{{ highlights.most_submissions.school }}</div>
-        <div class="foot">{{ highlights.most_submissions.pre_done + highlights.most_submissions.post_done }} submissions
-          from {{ highlights.most_submissions.registered }} registered</div>
+        <div class="foot">{{ highlights.most_submissions.all_three_done | default(0, true) }} finished all three
+          of {{ highlights.most_submissions.registered }} registered</div>
       </div>
       <div class="hl hl-bad">
-        <div class="lbl">⚠️ Fewest submissions</div>
+        <div class="lbl">⚠️ Fewest finished</div>
         <div class="name">{{ highlights.fewest_submissions.school }}</div>
-        <div class="foot">{{ highlights.fewest_submissions.pre_done + highlights.fewest_submissions.post_done }} submissions
-          from {{ highlights.fewest_submissions.registered }} registered</div>
+        <div class="foot">{{ highlights.fewest_submissions.all_three_done | default(0, true) }} finished all three
+          of {{ highlights.fewest_submissions.registered }} registered</div>
       </div>
       {% if highlights.lowest_completion %}
       <div class="hl hl-warn">
@@ -89,16 +134,18 @@
   <div class="charts">
     <div class="card">
       <div class="section-tag"><b>03</b> Share</div>
-      <h2>Share of all submissions</h2>
+      <h2>Share of all replies</h2>
       <p class="sub">Part of the whole, at a glance. The tail is folded into one
         slice — six is as many as a ring can be read at.</p>
       <div class="chart-box"><canvas id="donut"></canvas></div>
     </div>
     <div class="card">
       <div class="section-tag"><b>04</b> Ranked</div>
-      <h2>Submissions by school</h2>
+      <h2>Replies by school</h2>
       <p class="sub">Which is highest and which is lowest, ranked. A ring cannot
-        be read that way, so the same numbers are also bars.</p>
+        be read that way, so the same numbers are also bars. A reply to any of
+        the three counts here, so one finished student counts three times —
+        for students who are done, read the last column of the table.</p>
       <div class="chart-box" id="bar-box"><canvas id="bars"></canvas></div>
     </div>
   </div>
@@ -107,7 +154,8 @@
     <div class="section-tag"><b>05</b> The table</div>
     <h2>School by school</h2>
     <p class="sub">Ordered by how many students registered. One link per school opens
-      its own report — baseline and post together, with the change between them — and
+      its own report — the Pre AI Survey and the Post AI Survey together, with the
+      change between them — and
       can be forwarded to that school on its own.</p>
     <div class="scroll">
       <table>
@@ -115,7 +163,7 @@
           <tr>
             <th>#</th><th>School</th><th class="num">Depts</th><th class="num">Registered</th>
             <th class="num">Pre AI</th><th class="num">Post AI</th>
-            <th class="num">Deeksharambh</th><th class="num">Submissions</th>
+            <th class="num">Deeksharambh</th><th class="num">Finished all 3</th>
             <th>Last {{ overall.recent_days }} days</th>
             <th>Avg lit / read (pre &rarr; post)</th><th>Report</th>
           </tr>
@@ -125,8 +173,16 @@
           <tr>
             <td class="num">{{ loop.index }}</td>
             <td class="school-name">
-              <span class="swatch" data-school="{{ s.school }}"></span>{{ s.school }}
-              <small>{{ s.dept_count }} department{{ '' if s.dept_count == 1 else 's' }}</small>
+              <span class="swatch" data-school="{{ s.school }}"></span>
+              {%- if s.departments %}
+              <button type="button" class="drill" aria-expanded="false"
+                      data-drawer="drawer-{{ loop.index }}">
+                <span class="caret" aria-hidden="true">▸</span>{{ s.school }}
+              </button>
+              {%- else -%}
+              {{ s.school }}
+              {%- endif %}
+              <small>{{ s.dept_count }} department{{ '' if s.dept_count == 1 else 's' }}{% if s.departments %} · click to open{% endif %}</small>
             </td>
             <td class="num">{{ s.dept_count }}</td>
             <td class="num">{{ s.registered }}</td>
@@ -137,7 +193,10 @@
             </td>
             <td class="num"><span class="badge badge-green">{{ s.post_done }}</span></td>
             <td class="num"><span class="badge badge-blue">{{ s.ori_done }}</span></td>
-            <td class="num"><b>{{ s.pre_done + s.post_done + s.ori_done }}</b></td>
+            {% set done3 = s.all_three_done | default(0, true) %}
+            <td class="num"><b>{{ done3 }}</b>
+              {% if s.registered %}<small style="color:var(--gray)">
+                {{ 100 * done3 // s.registered }}%</small>{% endif %}</td>
             <td>{% if s.recent_total %}<span class="badge badge-amber">{{ s.recent_total }} new</span>
                 {% else %}<span class="badge badge-gray">—</span>{% endif %}</td>
             <td class="scores">
@@ -152,6 +211,57 @@
               <a class="btn btn-excel" href="{{ s.excel_url }}">Excel</a>
             </td>
           </tr>
+          {% if s.departments %}
+          <tr class="drawer" id="drawer-{{ loop.index }}" hidden>
+            <td colspan="11">
+              <div class="drawer-inner">
+                <div class="drawer-head">
+                  Departments in {{ s.school }}
+                  <span>ordered by how many students registered</span>
+                </div>
+                <table class="sub-table">
+                  <thead>
+                    <tr>
+                      <th>Department</th><th class="num">Registered</th>
+                      <th class="num">Pre AI</th><th class="num">Post AI</th>
+                      <th class="num">Deeksharambh</th><th class="num">Finished all 3</th>
+                      <th>Avg lit / read (pre &rarr; post)</th><th>Report</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for d in s.departments %}
+                    <tr>
+                      <td class="dept-name">{{ d.dept }}</td>
+                      <td class="num">{{ d.registered }}</td>
+                      <td class="num"><span class="badge badge-pre">{{ d.pre_done }}</span>
+                        <small style="color:var(--r-muted)">/ {{ d.pre_pending }} left</small></td>
+                      <td class="num"><span class="badge badge-post">{{ d.post_done }}</span>
+                        <small style="color:var(--r-muted)">/ {{ d.post_pending }} left</small></td>
+                      <td class="num"><span class="badge badge-blue">{{ d.ori_done | default(0, true) }}</span>
+                        <small style="color:var(--r-muted)">/ {{ d.ori_pending | default(0, true) }} left</small></td>
+                      <td class="num"><b>{{ d.all_three_done | default(0, true) }}</b>
+                        <small style="color:var(--r-muted)">/ {{ d.all_three_pending | default(0, true) }} left</small></td>
+                      <td class="scores">
+                        <span class="pre-score">{{ d.avg_lit_pre if d.avg_lit_pre is not none else '—' }} /
+                          {{ d.avg_read_pre if d.avg_read_pre is not none else '—' }}</span>
+                        <span class="arrow">&rarr;</span>
+                        <span class="post-score">{{ d.avg_lit_post if d.avg_lit_post is not none else '—' }} /
+                          {{ d.avg_read_post if d.avg_read_post is not none else '—' }}</span>
+                      </td>
+                      <td>
+                        {% if d.share_url_pre %}<a class="btn btn-pre btn-sm" target="_blank"
+                           href="{{ d.share_url_pre }}">Pre</a>{% endif %}
+                        {% if d.share_url_post %}<a class="btn btn-post btn-sm" target="_blank"
+                           href="{{ d.share_url_post }}">Post</a>{% endif %}
+                      </td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </td>
+          </tr>
+          {% endif %}
           {% endfor %}
         </tbody>
       </table>
@@ -202,7 +312,7 @@ if (window.Chart && slices.length) {
       responsive: true, maintainAspectRatio: false, cutout: '58%',
       plugins: {
         legend: { position: 'right', labels: { boxWidth: 12, font: { size: 11 } } },
-        tooltip: { callbacks: { label: c => c.label + ': ' + c.parsed + ' submissions' } },
+        tooltip: { callbacks: { label: c => c.label + ': ' + c.parsed + ' replies' } },
       },
     },
   });
@@ -217,7 +327,7 @@ if (window.Chart && slices.length) {
   new Chart(document.getElementById('bars').getContext('2d'), {
     type: 'bar',
     data: { labels: ranked.map(s => s.name), datasets: [{
-      label: 'Submissions', data: ranked.map(s => s.value),
+      label: 'Replies', data: ranked.map(s => s.value),
       backgroundColor: '#4c3fd6', borderRadius: 3, barThickness: 13,
     }] },
     options: {
@@ -230,6 +340,19 @@ if (window.Chart && slices.length) {
     },
   });
 }
+
+// Open a school's departments underneath it. The rows are already in the page
+// — the drawer only unhides one — so this works with the page loaded from a
+// file, printed, or opened by someone the link was forwarded to.
+document.querySelectorAll('.drill[data-drawer]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const drawer = document.getElementById(btn.dataset.drawer);
+    if (!drawer) return;
+    const open = btn.getAttribute('aria-expanded') === 'true';
+    btn.setAttribute('aria-expanded', open ? 'false' : 'true');
+    drawer.hidden = open;
+  });
+});
 
 // Paint each table row's swatch to match its slice, so the ring and the table
 // name the same school the same way. A school in the folded tail gets the same
