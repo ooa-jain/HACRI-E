@@ -685,18 +685,45 @@ body.admin-shell header.admin-bar select.field {
 
 /* The rail itself. The markup carries Tailwind's bg-slate-900 and
    text-slate-200 from when this was a dark rail; these win on specificity and
-   turn it pale without touching the templates. */
+   turn it pale without touching the templates. A violet rule down the edge
+   facing the content, echoing the one every card carries, so the rail reads
+   as a panel of the same kind rather than a plain sidebar. */
 body.admin-shell #sidebar {
   background: var(--a-surface);
   color: var(--a-ink);
-  border-right: 1px solid var(--a-line);
-  box-shadow: none;
+  border-right: 3px solid var(--a-violet);
+  box-shadow: var(--a-shadow-lift);
 }
 body.admin-shell #sidebar .text-white { color: var(--a-ink) }
 body.admin-shell #sidebar .text-amber-400 { color: var(--a-gold-deep) }
 body.admin-shell #sidebar .text-slate-400 { color: var(--a-faint) }
 body.admin-shell #sidebar .border-white\/5 { border-color: var(--a-line) }
 body.admin-shell #sidebar .bg-white { background: var(--t-lavender) }
+
+/* ── Closing the rail ────────────────────────────────────────────────────
+   The markup hard-codes both `-translate-x-full` (the base, mobile-first
+   utility) and `md:translate-x-0` (its desktop override) on #sidebar at all
+   times; only the JS toggles the first one. Below the md breakpoint that
+   is the whole story and the close button worked. At or above it,
+   `md:translate-x-0` — a breakpoint-scoped utility, not a state the JS ever
+   touches — always wins, so the button changed a class with no visible
+   effect: closing looked like it did nothing.
+
+   An id selector outranks a class regardless of source order or the media
+   query it sits in, so targeting #sidebar directly here overrides the
+   Tailwind utility at every width without touching the template. #shell's
+   margin is closed the same way, so the content actually reclaims the
+   space instead of leaving a blank 240px gutter where the rail used to be. */
+#shell { transition: margin-left .2s ease }
+body.admin-shell.sidebar-closed #sidebar { transform: translateX(-100%) }
+body.admin-shell.sidebar-closed #shell { margin-left: 0 }
+
+/* The header's "show menu" button only makes sense once the rail is
+   actually gone — shown at every width and every state before this, it sat
+   permanently next to the mobile hamburger doing nothing on a wide screen
+   with the rail already open. */
+#sidebar-open { display: none }
+body.admin-shell.sidebar-closed #sidebar-open { display: inline-flex }
 
 /* ── What the rail carries below the menu ────────────────────────────────
    The menu is short and the rail is tall, which used to leave a third of the
@@ -837,6 +864,24 @@ body.admin-shell .btn-rose:hover { background: #fbe1ea }
   color: var(--a-ink);
 }
 body.admin-shell header .brand-word { color: #fff }
+
+/* The lime tag every report opens on ("ALL SCHOOLS", "SCHOOL REPORT"),
+   carried onto the one word of chrome an admin has open the whole session —
+   so the badge that means "this is HACRI-E" reads the same way whether an
+   admin is looking at it or a dean opens the link one of them sent. */
+.rail-tag {
+  display: inline-block;
+  background: var(--a-lime);
+  color: var(--a-ink);
+  font-family: var(--a-mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 2px;
+  line-height: 1.4;
+}
 
 /* Who is signed in, at the foot of the rail. */
 .who {
