@@ -27,58 +27,66 @@
  */
 
 :root {
-  /* The six tints. Each is a pale ground, a border a shade firmer, and the
-     saturated version of the same hue for the label that sits on it — so a
-     card, its edge and its title are one colour at three strengths. */
-  --t-mint:      #e9f7f1;  --t-mint-line:      #c7ebdc;  --t-mint-ink:      #0b7a58;
-  --t-lavender:  #efecfc;  --t-lavender-line:  #dbd4f7;  --t-lavender-ink:  #5a45c9;
+  /* The six tints, kept as real pale grounds — they carry the hero banner,
+     the active nav row, the active tab, KPI defaults, avatar rings and
+     toasts, none of which are legible as ink-on-cream-on-cream. Only the
+     card face itself moved to the shared reports' near-black-or-cream
+     scheme; these small highlights keep their colour. The grounds are drawn
+     from the same light badge colours report_shell.css already uses, so nothing
+     here introduces a hue the reports don't already have. */
+  --t-mint:      #e8f5ec;  --t-mint-line:      #c4e5cf;  --t-mint-ink:      #1d7a41;
+  --t-lavender:  #e7e4fb;  --t-lavender-line:  #cdc6f5;  --t-lavender-ink:  #4c3fd6;
   --t-peach:     #fdf0e7;  --t-peach-line:     #f7dcc8;  --t-peach-ink:     #b25a1f;
   --t-sky:       #e8f2fd;  --t-sky-line:       #cfe2fa;  --t-sky-ink:       #2264b8;
-  --t-rose:      #fcecf2;  --t-rose-line:      #f6d6e2;  --t-rose-ink:      #b23a68;
-  --t-butter:    #fdf5dd;  --t-butter-line:    #f6e6bd;  --t-butter-ink:    #916c16;
+  --t-rose:      #fdeaee;  --t-rose-line:      #f5ccd5;  --t-rose-ink:      #c02c46;
+  --t-butter:    #fdf3dc;  --t-butter-line:    #f0dfb0;  --t-butter-ink:    #8a5f10;
 
-  /* Brand. JAIN's gold stays the signature; the violet is the one thing that
-     is clickable, so it never appears on anything that is not. */
-  --a-navy: #232043;
-  --a-navy-soft: #33305a;
-  --a-navy-deep: #1a1834;
-  --a-gold: #f0b429;
-  --a-gold-deep: #916c16;
-  --a-gold-soft: var(--t-butter);
-  --a-violet: #6d5bf6;
-  --a-violet-deep: #5344d6;
-  --a-violet-soft: var(--t-lavender);
+  /* Brand. One accent — the lime — and one violet for the rule down a card
+     and for the things you can press. Gold is kept as a name so the older
+     rules that ask for it still resolve, but it now *is* the lime: two
+     signature colours on one page was the thing that made the admin and the
+     shared reports look like different products. */
+  --a-navy: #131317;
+  --a-navy-soft: #1e1e26;
+  --a-navy-deep: #0c0c10;
+  --a-lime: #d7f24f;
+  --a-lime-deep: #b6cf2c;
+  --a-gold: #d7f24f;
+  --a-gold-deep: #8a7c14;
+  --a-gold-soft: #f7fbe0;
+  --a-violet: #4c3fd6;
+  --a-violet-deep: #3d32ab;
+  --a-violet-soft: #efecfc;
 
-  /* Ink and ground. Warm-neutral greys with a touch of violet, so they sit
-     with the tints instead of greying them out. Body copy is deliberately not
-     black — on pale colour it reads heavy. */
-  --a-ink: #232135;
-  --a-ink-soft: #46435f;
-  --a-muted: #6e6b85;
-  --a-faint: #9c99b0;
-  --a-bg: #fbfbfe;
-  --a-surface: #ffffff;
-  --a-surface-sunk: #f4f4f9;
-  --a-line: #ecebf3;
-  --a-line-strong: #dcdae8;
+  /* Ink and ground, matched to report_shell.css so a figure looks the same
+     whether an admin is reading it behind the login or a dean is reading it
+     on the link they were sent. */
+  --a-ink: #131317;
+  --a-ink-soft: #2b2b35;
+  --a-muted: #6f6f78;
+  --a-faint: #9a9aa4;
+  --a-bg: #efece0;
+  --a-surface: #fbfaf5;
+  --a-surface-sunk: #f1f0e8;
+  --a-line: #e3e2d8;
+  --a-line-strong: #cfcec2;
 
-  /* Semantics, drawn from the same tint family so a status pill never looks
-     like it came from another design. */
-  --a-up: var(--t-mint-ink);      --a-up-bg: var(--t-mint);
-  --a-down: #c33a52;              --a-down-bg: var(--t-rose);
-  --a-wait: var(--t-peach-ink);   --a-wait-bg: var(--t-peach);
-  --a-info: var(--t-sky-ink);     --a-info-bg: var(--t-sky);
+  /* Semantics. The same green and red the reports use for a rise and a fall,
+     so an arrow means one thing across the whole product. */
+  --a-up: #1d7a41;                --a-up-bg: #e8f5ec;
+  --a-down: #c02c46;              --a-down-bg: #fdeaee;
+  --a-wait: #8a5f10;              --a-wait-bg: #fdf3dc;
+  --a-info: #4c3fd6;              --a-info-bg: #e7e4fb;
 
-  --a-radius: 18px;
-  --a-radius-sm: 11px;
-  --a-shadow: 0 1px 2px rgba(40, 35, 80, .04);
-  --a-shadow-lift:
-    0 2px 8px -3px rgba(40, 35, 80, .08),
-    0 16px 30px -22px rgba(40, 35, 80, .22);
+  /* Square-ish. The reports use a 3px radius throughout; rounded cards were
+     the other half of why the two halves of the product looked unrelated. */
+  --a-radius: 3px;
+  --a-radius-sm: 3px;
+  --a-shadow: 0 1px 2px rgba(19, 19, 23, .06);
+  --a-shadow-lift: 0 6px 16px -6px rgba(19, 19, 23, .18);
   --a-shadow-rail: none;
 
-  --a-display: "Bricolage Grotesque", "Instrument Sans", system-ui, -apple-system,
-               "Segoe UI", sans-serif;
+  --a-display: "Archivo Black", "Arial Black", "Helvetica Neue", sans-serif;
   --a-body: "Instrument Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --a-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 
@@ -98,12 +106,22 @@
 
 /* ── Ground ──────────────────────────────────────────────────────────────── */
 body.admin-shell {
+  /* The same wash the shared reports sit on. Fixed, so it stays put while a
+     long table scrolls over it rather than sliding a gradient past the eye. */
   background-color: var(--a-bg);
+  background-image:
+    linear-gradient(135deg, #c9bff0 0%, #ddd8ee 28%, #e9ecd9 62%, #dfe9a8 100%);
+  background-attachment: fixed;
+  background-size: cover;
   color: var(--a-ink);
   font-family: var(--a-body);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
+
+/* html carries the Tailwind class bg-slate-50, which would otherwise paint
+   over the wash on any viewport taller than the content. */
+html.h-full { background: var(--a-bg); }
 
 /* Digits line up in columns everywhere, so a table of figures reads as a
    shape rather than as ragged text. */
@@ -115,7 +133,9 @@ body.admin-shell h1,
 body.admin-shell h2,
 body.admin-shell h3 {
   font-family: var(--a-display);
-  letter-spacing: -.02em;
+  font-weight: 400;          /* the face has one weight; 700 would synthesise */
+  letter-spacing: -.01em;
+  text-transform: uppercase;
 }
 
 /* ── Panels ──────────────────────────────────────────────────────────────── */
@@ -124,6 +144,9 @@ body.admin-shell .ori-card,
 body.admin-shell .coh-card {
   background: var(--a-surface);
   border: 1px solid var(--a-line);
+  /* The rule is what a card is recognised by on these pages. A tinted card
+     sets --tint-line and gets its own colour; everything else gets violet. */
+  border-left: 3px solid var(--tint-line, var(--a-violet));
   border-radius: var(--a-radius);
   box-shadow: none;
 }
@@ -132,9 +155,10 @@ body.admin-shell .coh-card {
    inside a card, not a card itself. */
 body.admin-shell .h-card {
   font-family: var(--a-display);
-  font-size: 15px;
-  font-weight: 600;
-  letter-spacing: -.015em;
+  font-size: 14px;
+  font-weight: 400;
+  letter-spacing: -.005em;
+  text-transform: uppercase;
   color: var(--a-ink);
 }
 
@@ -860,14 +884,16 @@ body.admin-shell .btn {
   align-items: center;
   justify-content: center;
   gap: 7px;
-  padding: 8px 15px;
-  border-radius: 999px;
+  padding: 8px 14px;
+  border-radius: var(--a-radius);
   border: 1px solid var(--a-line-strong);
   background: var(--a-surface);
   color: var(--a-ink);
-  font-family: var(--a-body);
-  font-size: 12.5px;
-  font-weight: 600;
+  font-family: var(--a-mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: .06em;
+  text-transform: uppercase;
   line-height: 1.2;
   cursor: pointer;
   transition: background .14s ease, border-color .14s ease,
@@ -884,26 +910,26 @@ body.admin-shell .btn:focus-visible {
 }
 
 body.admin-shell .btn-primary {
-  background: var(--a-violet);
-  border-color: var(--a-violet);
-  color: #fff;
-  box-shadow: 0 6px 16px -8px rgba(109, 91, 246, .9);
+  background: var(--a-ink);
+  border-color: var(--a-ink);
+  color: var(--a-lime);
+  box-shadow: none;
 }
 body.admin-shell .btn-primary:hover {
-  background: var(--a-violet-deep);
-  border-color: var(--a-violet-deep);
+  background: var(--a-navy-deep);
+  border-color: var(--a-navy-deep);
 }
 body.admin-shell .btn-dark {
   background: var(--a-ink);
   border-color: var(--a-ink);
-  color: #fff;
+  color: var(--a-lime);
 }
 body.admin-shell .btn-green {
-  background: var(--a-up);
-  border-color: var(--a-up);
-  color: #fff;
+  background: var(--a-lime);
+  border-color: var(--a-lime-deep);
+  color: var(--a-ink);
 }
-body.admin-shell .btn-green:hover { filter: brightness(.94) }
+body.admin-shell .btn-green:hover { background: var(--a-lime-deep) }
 body.admin-shell .btn-soft {
   background: var(--a-surface-sunk);
   border-color: transparent;
@@ -1037,6 +1063,18 @@ body.admin-shell .badge {
   color: var(--a-muted);
 }
 
+/* The five colour classes tables build badges from (b-blue etc.) are defined
+   inline in admin_survey.html, dating from before this stylesheet existed —
+   Tailwind-stock blue/emerald/amber/rose. Overridden here at higher
+   specificity so a badge reads the same hue as the matching one on the
+   shared reports: violet where the report calls a thing "pre" or "blue",
+   green for "post" or done, amber for waiting, rose for a warning. */
+body.admin-shell .b-blue  { background: var(--t-lavender); color: var(--t-lavender-ink) }
+body.admin-shell .b-green { background: var(--t-mint);     color: var(--t-mint-ink) }
+body.admin-shell .b-gray  { background: var(--a-surface-sunk); color: var(--a-muted) }
+body.admin-shell .b-amber { background: var(--t-butter);   color: var(--t-butter-ink) }
+body.admin-shell .b-rose  { background: var(--t-rose);     color: var(--t-rose-ink) }
+
 .avatar {
   width: 30px;
   height: 30px;
@@ -1097,29 +1135,42 @@ body.admin-shell tbody tr:hover { background: var(--a-surface-sunk) }
 
 .row-actions { display: flex; align-items: center; gap: 6px; justify-content: flex-end }
 
-/* The small stat blocks that carry a coloured left edge for their meaning. */
+/* The stat blocks. Near-black, with the figure in the display face and the
+   label above it in mono — the same tile the shared reports use, so the two
+   sides of the login state a number the same way.
+
+   The label is written after the figure in the markup (<b> then <s>) and put
+   above it here with column-reverse, because the label is what you read first
+   and the markup order is what a screen reader follows. */
 body.admin-shell .stat {
-  background: var(--a-surface);
-  border: 1px solid var(--a-line);
-  border-left-width: 3px;
-  border-radius: var(--a-radius-sm);
-  padding: 13px 15px;
+  display: flex;
+  flex-direction: column-reverse;
+  justify-content: flex-end;
+  background: var(--a-navy);
+  border: 1px solid var(--a-ink-soft);
+  border-left: 3px solid var(--a-violet);
+  border-radius: var(--a-radius);
+  padding: 15px 16px 16px;
 }
 body.admin-shell .stat b {
   display: block;
   font-family: var(--a-display);
-  font-size: 22px;
-  font-weight: 700;
-  letter-spacing: -.03em;
-  line-height: 1.1;
-  color: var(--a-ink);
+  font-size: 28px;
+  font-weight: 400;
+  letter-spacing: -.5px;
+  line-height: 1;
+  color: var(--a-lime);
 }
 body.admin-shell .stat s {
   display: block;
   text-decoration: none;
-  font-size: 11.5px;
-  color: var(--a-muted);
-  margin-top: 3px;
+  font-family: var(--a-mono);
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: .9px;
+  text-transform: uppercase;
+  color: #b9b9c4;
+  margin: 0 0 7px;
 }
 body.admin-shell .stat.border-l-slate-800  { border-left-color: var(--a-navy) }
 body.admin-shell .stat.border-l-slate-300  { border-left-color: var(--a-line-strong) }
@@ -1130,12 +1181,22 @@ body.admin-shell .stat.border-l-blue-600,
 body.admin-shell .stat.border-l-sky-600    { border-left-color: var(--a-info) }
 body.admin-shell .stat.border-l-indigo-600 { border-left-color: var(--a-violet) }
 
-body.admin-shell .stat .text-emerald-600 { color: var(--a-up) }
-body.admin-shell .stat .text-rose-600    { color: var(--a-down) }
-body.admin-shell .stat .text-amber-600   { color: var(--a-wait) }
+/* A figure keeps the colour its class names, but lightened to carry on the
+   dark tile — emerald-600 and indigo-700 were picked against white and go
+   nearly black here. The hue is preserved so the meaning survives; only the
+   lightness moves. */
+body.admin-shell .stat .text-emerald-600,
+body.admin-shell .stat .text-emerald-700 { color: #6ee7a8 }
+body.admin-shell .stat .text-teal-600    { color: #5fe3d0 }
+body.admin-shell .stat .text-rose-600    { color: #ff92a8 }
+body.admin-shell .stat .text-amber-600   { color: #f5c451 }
 body.admin-shell .stat .text-blue-600,
-body.admin-shell .stat .text-sky-600     { color: var(--a-info) }
-body.admin-shell .stat .text-indigo-600  { color: var(--a-violet) }
+body.admin-shell .stat .text-blue-700,
+body.admin-shell .stat .text-sky-600     { color: #8fb8ff }
+body.admin-shell .stat .text-indigo-600,
+body.admin-shell .stat .text-indigo-700  { color: #b4a9ff }
+body.admin-shell .stat .text-slate-900,
+body.admin-shell .stat .text-slate-800   { color: var(--a-lime) }
 
 body.admin-shell .coh-node,
 body.admin-shell .coh-owed-item {
@@ -1315,6 +1376,12 @@ body.admin-shell .note {
   font-size: 12.5px;
   padding: 11px 14px;
 }
+/* The three tone classes (note-info/-ok/-err), like the badge colours above,
+   are stock Tailwind blue/emerald/rose from the inline block predating this
+   sheet. Retuned to the report's own info/up/down family. */
+body.admin-shell .note-info { background: var(--t-sky);   border-color: var(--t-sky-line);   color: var(--t-sky-ink) }
+body.admin-shell .note-ok   { background: var(--t-mint);  border-color: var(--t-mint-line);  color: var(--t-mint-ink) }
+body.admin-shell .note-err  { background: var(--t-rose);  border-color: var(--t-rose-line);  color: var(--t-rose-ink) }
 body.admin-shell #toast {
   background: var(--a-ink);
   color: #fff;
