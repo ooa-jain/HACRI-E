@@ -139,7 +139,7 @@ async def test_another_address_is_unaffected(client):
         headers={"X-Forwarded-For": "198.51.100.7"}, follow_redirects=False)
     # Not turned away: the password is accepted and the code step opens.
     assert other.status_code == 200
-    assert "One-Time Password" in other.text
+    assert "Enter one-time password" in other.text
 
 
 # ── The page that reads it ───────────────────────────────────────────────────
