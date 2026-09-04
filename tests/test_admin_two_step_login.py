@@ -69,7 +69,7 @@ async def test_the_right_password_asks_for_the_code_instead_of_signing_in(client
     resp = await _password_step(client)
 
     assert resp.status_code == 200
-    assert "One-Time Password" in resp.text
+    assert "Enter one-time password" in resp.text
     # Nothing that opens the portal has been handed out yet.
     assert "survey_admin_session" not in resp.cookies
     assert "admin_login_pending" in resp.cookies
@@ -128,7 +128,7 @@ async def test_the_wrong_code_gets_nowhere(client):
     assert "survey_admin_session" not in resp.cookies
     assert "not right" in resp.text
     # Still on the code step, so the admin can try the real one.
-    assert "One-Time Password" in resp.text
+    assert "Enter one-time password" in resp.text
     assert (await db.list_login_events())[0]["note"] == "wrong code"
 
 
@@ -137,7 +137,7 @@ async def test_the_wrong_password_never_reaches_the_code_step(client):
     resp = await _password_step(client, password="not-the-password")
 
     assert resp.status_code == 401
-    assert "One-Time Password" not in resp.text
+    assert "Enter one-time password" not in resp.text
     assert await db.get_db()["admin_otps"].find_one({"username": SURVEY}) is None
 
 
@@ -157,7 +157,7 @@ async def test_a_code_cannot_be_requested_with_a_username_alone(client):
                               data={"username": SURVEY}, headers=FROM,
                               follow_redirects=False)
     assert again.status_code == 200
-    assert "One-Time Password" in again.text
+    assert "Enter one-time password" in again.text
 
 
 @pytest.mark.asyncio

@@ -257,7 +257,7 @@ async def test_unified_admin_login_flow(client: AsyncClient):
     # 2. Unauthenticated GET of the login page returns 200
     resp_login = await client.get(admin + "/login")
     assert resp_login.status_code == 200
-    assert "Admin Username" in resp_login.text
+    assert "Admin username" in resp_login.text
 
     # 3. GET legacy routes redirect to the login page
     for path in ["/survey/login", "/orientation/login"]:
@@ -271,7 +271,7 @@ async def test_unified_admin_login_flow(client: AsyncClient):
             admin + "/login", data={"username": username, "password": password},
             follow_redirects=False)
         assert first.status_code == 200, first.text
-        assert "One-Time Password" in first.text
+        assert "Enter one-time password" in first.text
         otp_doc = await get_db()["admin_otps"].find_one({"username": username})
         assert otp_doc is not None
         return await client.post(

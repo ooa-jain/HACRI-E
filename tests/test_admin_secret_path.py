@@ -88,7 +88,7 @@ async def test_the_old_otp_request_is_gone_too(client: AsyncClient):
 async def test_the_portal_opens_behind_the_configured_path(client: AsyncClient):
     resp = await client.get(ADMIN + "/login")
     assert resp.status_code == 200
-    assert "Admin Username" in resp.text
+    assert "Admin username" in resp.text
 
     # Its own forms post back to the same door, never to /admin.
     assert f'action="{ADMIN}/login"' in resp.text
