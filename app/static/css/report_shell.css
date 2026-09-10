@@ -258,8 +258,8 @@ body.report-shell .stat.pre,   body.report-shell .stat-card.pre   { border-left-
 body.report-shell .stat.pre b, body.report-shell .stat-card.pre .stat-val { color: #b9b0ff; }
 body.report-shell .stat.post,  body.report-shell .stat-card.post  { border-left-color: var(--r-lime-deep); }
 body.report-shell .stat.green, body.report-shell .stat.teal { border-left-color: var(--r-lime-deep); }
-body.report-shell .stat.blue  { border-left-color: #5c8dff; }
-body.report-shell .stat.blue b { color: #9ec2ff; }
+body.report-shell .stat.blue,  body.report-shell .stat-card.blue  { border-left-color: #5c8dff; }
+body.report-shell .stat.blue b, body.report-shell .stat-card.blue .stat-val { color: #9ec2ff; }
 body.report-shell .stat.amber { border-left-color: #e8a33c; }
 body.report-shell .stat.amber b { color: #ffce7a; }
 body.report-shell .stat-card.registered { border-left-color: var(--r-faint); }

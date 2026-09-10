@@ -257,11 +257,25 @@ async def shared_analysis_get(
 
     # Fetch users for this department
     users_list = await list_survey_users(dept=dept)
-    
+
     total = len(users_list)
     pre_done = sum(1 for u in users_list if u.get("status") in ("pre_done", "post_done"))
     post_done = sum(1 for u in users_list if u.get("status") == "post_done")
     pending = pre_done - post_done
+
+    # Deeksharambh, counted the same way the school pages count it: one
+    # student once, however many times they resubmitted, folded to this
+    # department (or summed across all of them for the "overall" report).
+    from app.db import department_registration_summary
+    ori_summary = await department_registration_summary()
+    if _is_overall(dept):
+        ori_done = ori_summary["totals"]["orientation_done"]
+        ori_pending = ori_summary["totals"]["orientation_pending"]
+    else:
+        ori_row = next((r for r in ori_summary["departments"]
+                        if r["dept"].strip().lower() == dept.strip().lower()), None)
+        ori_done = ori_row["orientation_done"] if ori_row else 0
+        ori_pending = ori_row["orientation_pending"] if ori_row else total
 
     # Find department or overall scores
     dept_info = None
@@ -290,6 +304,8 @@ async def shared_analysis_get(
             "pre_done": pre_done,
             "post_done": post_done,
             "pending": pending,
+            "ori_done": ori_done,
+            "ori_pending": ori_pending,
             "dept_info": dept_info,
             "overall_info": analysis_data["overall"],
             "dept_list": analysis_data["departments"],
