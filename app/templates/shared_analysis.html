@@ -394,6 +394,10 @@ body {
         <div class="stat-val">{{ pre_done }}</div>
         <div class="stat-lbl">Pre Done (baseline)</div>
       </div>
+      <div class="stat-card blue">
+        <div class="stat-val">{{ ori_done }}</div>
+        <div class="stat-lbl">Deeksharambh Done</div>
+      </div>
       {% else %}
       <div class="stat-card pre">
         <div class="stat-val">{{ pre_done }}</div>
@@ -403,9 +407,9 @@ body {
         <div class="stat-val">{{ total - pre_done }}</div>
         <div class="stat-lbl">Pending Pre</div>
       </div>
-      <div class="stat-card">
-        <div class="stat-val" style="color:#94a3b8;">—</div>
-        <div class="stat-lbl" style="color:#94a3b8;">Post N/A</div>
+      <div class="stat-card blue">
+        <div class="stat-val">{{ ori_done }}</div>
+        <div class="stat-lbl">Deeksharambh Done</div>
       </div>
       {% endif %}
     </div>

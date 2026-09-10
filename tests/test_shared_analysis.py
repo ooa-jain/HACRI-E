@@ -186,3 +186,53 @@ async def test_calendar_date_analysis(client: AsyncClient):
     assert data["departments"][0]["max_day"]["total"] == 1
 
 
+
+
+# ── Deeksharambh on the department page ──────────────────────────────────────
+#
+# The department report showed registered / pre / post / pending but never
+# Deeksharambh, even though the school-level reports already carried it. A
+# department page is the one three surveys are actually read from side by
+# side, so leaving the third one off it was the odd page out.
+
+@pytest.mark.asyncio
+async def test_the_department_page_carries_deeksharambh(client: AsyncClient):
+    dept = "Department of Chemistry"
+    U = get_db()["users"]; O = get_db()["orientation_responses"]
+
+    await U.insert_one({"email": "a@x.com", "name": "A", "program": dept,
+                        "status": STATUS_POST_DONE})
+    await U.insert_one({"email": "b@x.com", "name": "B", "program": dept,
+                        "status": STATUS_POST_DONE})
+    await O.insert_one({"email": "a@x.com", "name": "A", "data": {}})
+    # A resubmit must not be counted twice.
+    await O.insert_one({"email": "a@x.com", "name": "A", "data": {}})
+
+    token = get_dept_token(dept, "post")
+    resp = await client.get(f"/shared/analysis?dept={dept}&token={token}&type=post")
+    assert resp.status_code == 200
+    assert "Deeksharambh Done" in resp.text
+    assert ">1<" in resp.text  # one distinct student, not two replies
+
+    token_pre = get_dept_token(dept, "pre")
+    resp_pre = await client.get(f"/shared/analysis?dept={dept}&token={token_pre}&type=pre")
+    assert resp_pre.status_code == 200
+    assert "Deeksharambh Done" in resp_pre.text
+    # The pre view used to fill this slot with a dead "Post N/A" placeholder.
+    assert "Post N/A" not in resp_pre.text
+
+
+@pytest.mark.asyncio
+async def test_the_overall_report_sums_deeksharambh_across_departments(client: AsyncClient):
+    U = get_db()["users"]; O = get_db()["orientation_responses"]
+
+    for i, dept in enumerate(("Department of Law", "Department of Commerce")):
+        await U.insert_one({"email": f"s{i}@x.com", "name": f"S{i}",
+                            "program": dept, "status": STATUS_POST_DONE})
+        await O.insert_one({"email": f"s{i}@x.com", "name": f"S{i}", "data": {}})
+
+    token = get_dept_token("Overall", "post")
+    resp = await client.get(f"/shared/analysis?dept=Overall&token={token}&type=post")
+    assert resp.status_code == 200
+    assert "Deeksharambh Done" in resp.text
+    assert ">2<" in resp.text
