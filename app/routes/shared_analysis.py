@@ -172,6 +172,38 @@ def vibe_share_url(base_url: str, campus: str = "") -> str:
     return f"{base_url.rstrip('/')}/shared/impact?{query}"
 
 
+# ── The department meeting pack ──────────────────────────────────────────────
+# Its own token scope rather than the orientation report's: the meeting pack
+# names every department's conversion in one table, which is a different thing
+# to hand out than one campus's orientation analysis, and an orientation link
+# already given away should not quietly start opening it.
+MEETING_KEY = "__meeting__"
+
+
+def get_meeting_token(campus: str = "") -> str:
+    """Token for the shareable department meeting pack of one campus (or all)."""
+    return get_dept_token(f"{MEETING_KEY}:{campus or 'all'}", "meeting")
+
+
+def verify_meeting_token(campus: str, token: str) -> bool:
+    return hmac.compare_digest(get_meeting_token(campus), token or "")
+
+
+def require_meeting_token(campus: str, token: str) -> None:
+    if not verify_meeting_token(campus, token):
+        raise HTTPException(
+            status_code=403, detail="Access denied: Invalid or expired sharing link.")
+
+
+def meeting_share_url(base_url: str, campus: str = "",
+                      path: str = "/shared/deeksharambh-meeting") -> str:
+    """The link the meeting is run from. `path` picks the page or its PDF."""
+    from urllib.parse import urlencode
+
+    query = urlencode({"campus": campus, "token": get_meeting_token(campus)})
+    return f"{base_url.rstrip('/')}{path}?{query}"
+
+
 def directory_url(base_url: str) -> str:
     return f"{base_url.rstrip('/')}/shared/departments?token={get_directory_token()}"
 
@@ -670,6 +702,45 @@ async def shared_orientation_excel(
     from app.orientation_data import excel_response
 
     return await excel_response(campus=campus, dept=dept)
+
+
+@router.get("/shared/deeksharambh-meeting", response_class=HTMLResponse)
+async def shared_deeksharambh_meeting(
+    request: Request,
+    token: str = Query(...),
+    campus: str = Query(default=""),
+):
+    """The department meeting pack, readable without an admin login.
+
+    One page: how many students each department registered against how many
+    took Deeksharambh, the strongest five and weakest five on that conversion,
+    and then every department's own question-by-question reading. Nothing is
+    folded away — the meeting reads it top to bottom.
+    """
+    require_meeting_token(campus, token)
+
+    from app.deeksharambh_meeting import meeting_page
+
+    base = str(request.base_url).rstrip("/")
+    return await meeting_page(
+        request,
+        campus=campus,
+        pdf_url=meeting_share_url(base, campus, "/shared/deeksharambh-meeting.pdf"),
+        share_url=meeting_share_url(base, campus),
+    )
+
+
+@router.get("/shared/deeksharambh-meeting.pdf")
+async def shared_deeksharambh_meeting_pdf(
+    token: str = Query(...),
+    campus: str = Query(default=""),
+):
+    """The same meeting pack as a PDF, for whoever holds the link."""
+    require_meeting_token(campus, token)
+
+    from app.deeksharambh_meeting import meeting_pdf_response
+
+    return await meeting_pdf_response(campus=campus)
 
 
 @router.get("/shared/cohort", response_class=HTMLResponse)

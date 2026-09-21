@@ -1626,6 +1626,40 @@ async def admin_deeksharambh_brief_xlsx(request: Request, campus: str = Query(de
     )
 
 
+@router.get("/admin/survey/deeksharambh-meeting", response_class=HTMLResponse)
+async def admin_deeksharambh_meeting(request: Request, campus: str = Query(default="")):
+    """The department meeting pack: the count, the top five and least five, and
+    every department's own question-by-question reading — all on one page."""
+    if not _is_survey_admin(request):
+        raise HTTPException(status_code=403)
+
+    from urllib.parse import urlencode
+
+    from app.deeksharambh_meeting import meeting_page
+    from app.routes.shared_analysis import meeting_share_url
+
+    query = f"?{urlencode({'campus': campus})}" if campus else ""
+    return await meeting_page(
+        request,
+        campus=campus,
+        pdf_url=f"/admin/survey/deeksharambh-meeting.pdf{query}",
+        # Offered on the admin copy so the pack can be handed to the meeting
+        # without giving anybody an admin login.
+        share_url=meeting_share_url(str(request.base_url).rstrip("/"), campus),
+    )
+
+
+@router.get("/admin/survey/deeksharambh-meeting.pdf")
+async def admin_deeksharambh_meeting_pdf(request: Request, campus: str = Query(default="")):
+    """The meeting pack as a PDF."""
+    if not _is_survey_admin(request):
+        raise HTTPException(status_code=403)
+
+    from app.deeksharambh_meeting import meeting_pdf_response
+
+    return await meeting_pdf_response(campus=campus)
+
+
 async def run_orientation_mail_task(
     task_id: str,
     recipients: list[dict],
