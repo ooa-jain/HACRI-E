@@ -54,7 +54,27 @@
      one progress value written to CSS custom properties, so a reduced-motion
      visitor simply gets the finished state. */
   .se-wrap { position: relative; height: 138vh }
-  .se-sticky { position: sticky; top: 0; height: 100vh; display: grid; place-items: center; overflow: hidden }
+  .se-sticky {
+    position: sticky; top: 0; height: 100vh; display: grid; place-items: center;
+    overflow: hidden; isolation: isolate;
+  }
+  /* The same campus, filling the plate the frame sits on. Blurred and pushed
+     back so the sharp frame reads as the thing in front of it, and fading as
+     the frame opens to take the whole stage. */
+  .se-sticky::before {
+    content: ''; position: absolute; inset: -30px; z-index: -2;
+    background-image: url('{{ asset("/static/img/campus-hero.jpg") }}');
+    background-size: cover; background-position: center 40%;
+    filter: blur(14px) saturate(1.02) brightness(.92);
+    transform: scale(1.06);
+    opacity: calc(1 - .55 * var(--p, 0));
+  }
+  .se-sticky::after {
+    content: ''; position: absolute; inset: 0; z-index: -1;
+    background: linear-gradient(150deg, rgba(253,242,248,.5) 0%, rgba(247,229,241,.38) 45%,
+                                        rgba(240,226,248,.52) 100%);
+    opacity: calc(1 - .35 * var(--p, 0));
+  }
   .se-frame {
     position: relative; overflow: hidden;
     /* The floor is what the headline, the four figures and the button row
@@ -104,24 +124,21 @@
     color: #ffd7e7;
   }
   .se-inner h1 {
-    font-size: clamp(30px, 5.4vw, 60px); font-weight: 800; letter-spacing: -1.4px;
+    font-size: clamp(38px, 7vw, 76px); font-weight: 800; letter-spacing: -2.2px;
     line-height: 1.04; margin: 12px 0 10px;
     text-shadow: 0 2px 22px rgba(6,2,14,.55);
   }
   .se-inner p { color: #ded4ef; font-size: 14.5px; max-width: 62ch; margin: 0 auto;
                 text-shadow: 0 1px 12px rgba(6,2,14,.6) }
-  .se-stage {
-    display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;
-    margin-top: 26px;
-    opacity: calc(.88 + .12 * var(--p, 0));
-    transform: translateY(calc(10px * (1 - var(--p, 0))));
+  .se-sub {
+    display: inline-block; margin-top: 18px;
+    font-size: clamp(13px, 1.5vw, 17px); font-weight: 700;
+    letter-spacing: 3.4px; text-transform: uppercase; color: #fff;
+    padding: 9px 22px; border-radius: 999px;
+    background: rgba(14,7,26,.4); border: 1px solid rgba(255,255,255,.28);
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    text-shadow: 0 1px 12px rgba(6,2,14,.6);
   }
-  .se-stage div { background: rgba(14,7,26,.42); border: 1px solid rgba(255,255,255,.2);
-                  border-radius: 12px; padding: 12px 10px;
-                  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px) }
-  .se-stage b { display: block; font-size: clamp(19px, 2.6vw, 30px); font-weight: 800; color: #fff }
-  .se-stage s { display: block; text-decoration: none; font-size: 9.5px; font-weight: 700;
-                letter-spacing: 1.1px; text-transform: uppercase; color: #d6c9ee; margin-top: 4px }
   .se-hint {
     margin-top: 18px; font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase;
     font-weight: 700; color: #e8dcff; opacity: calc(1 - var(--p, 0) * 2.2);
@@ -317,7 +334,6 @@
   }
   @media (max-width: 640px) {
     .wrap { padding: 0 14px 70px }
-    .se-stage { grid-template-columns: repeat(2, 1fr) }
     .dc-track { width: 252px; height: 350px }
     /* On a phone the scroll-expand is imperceptible and costs most of a
        screen of scrolling to play — the very thing this page was rebuilt to
@@ -325,7 +341,12 @@
        grows to whatever its content needs, which also ends the whole family
        of "the buttons are cut off" bugs on short screens. */
     .se-wrap { height: auto }
-    .se-sticky { position: static; height: auto; padding: 30px 0 }
+    /* `relative`, not `static`: the backdrop layer is absolutely positioned
+       and only an ancestor that establishes a containing block can clip it.
+       Made static, it escaped `overflow: hidden` and its -30px inset pushed
+       the page sideways on a phone. */
+    .se-sticky { position: relative; height: auto; padding: 30px 0 }
+    .se-wrap { --p: 1 }
     .se-frame { width: 100%; height: auto; min-height: 0; border-radius: 0;
                 box-shadow: none; padding: 40px 0 }
     .se-media { transform: none }
@@ -335,7 +356,8 @@
   @media (prefers-reduced-motion: reduce) {
     html { scroll-behavior: auto }
     .se-wrap { height: auto } .se-sticky { position: static; height: auto; padding: 46px 0 }
-    .se-frame { width: 100%; height: auto; --p: 1 }
+    .se-wrap { --p: 1 }
+    .se-frame { width: 100%; height: auto }
     .se-media { transform: none }
     .dc-card { transition: none } .dept.on { animation: none }
   }
@@ -346,12 +368,14 @@
     .wrap { max-width: none; padding: 0 }
     .toolbar, .se-hint, .dc-shell, .rail, .no-print, .chart-box, .chart-tall { display: none !important }
     .se-wrap { height: auto } .se-sticky { position: static; height: auto; display: block }
+    .se-wrap { --p: 1 }
     .se-frame { width: 100% !important; height: auto !important; border-radius: 0 !important;
-                box-shadow: none; --p: 1; padding: 26px 0 }
+                box-shadow: none; padding: 26px 0 }
+    .se-sticky::before, .se-sticky::after { display: none }
     .se-media { display: none }
-    .se-inner, .se-kicker, .se-inner h1, .se-inner p, .se-stage b { color: #000 !important }
-    .se-stage { opacity: 1 !important; transform: none !important }
-    .se-stage div { border: 1px solid #ccc }
+    .se-inner, .se-kicker, .se-inner h1, .se-inner p { color: #000 !important }
+    .se-sub { color: #000 !important; background: none; border: 1px solid #ccc;
+              text-shadow: none }
     .explorer, .grid2 { display: block }
     /* The whole point: on paper nothing is behind a click. */
     .dept { display: block !important; break-before: page; page-break-before: always;
@@ -378,16 +402,11 @@
     <div class="se-frame" id="seFrame">
       <div class="se-media"></div>
       <div class="se-inner">
-        <div class="se-kicker">Deeksharambh 2026 · {{ pack.campus }}</div>
-        <h1>Department meeting pack</h1>
+        <div class="se-kicker">JAIN University · 2026 · {{ pack.campus }}</div>
+        <h1>Deeksharambh</h1>
         <p>Who registered on the portal, who actually took Deeksharambh, and what
            every department's own students said about the week.</p>
-        <div class="se-stage">
-          <div><b class="num">{{ t.registered }}</b><s>Registered</s></div>
-          <div><b class="num">{{ t.took }}</b><s>Took it</s></div>
-          <div><b class="num">{{ t.missing }}</b><s>Yet to</s></div>
-          <div><b class="num">{{ t.pct }}%</b><s>Conversion</s></div>
-        </div>
+        <div class="se-sub">Department-wise survey</div>
         <div class="toolbar">
           <a class="btn btn-pdf" href="{{ pdf_url }}">⬇ Download PDF</a>
           <button class="btn btn-ghost" onclick="window.print()">🖨 Print</button>
@@ -696,7 +715,7 @@ var REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var STATIC = window.matchMedia('(max-width: 640px)');
   function isStatic() { return REDUCED || STATIC.matches; }
   if (!wrap || !frame) return;
-  if (isStatic()) { frame.style.setProperty('--p', 1); }
+  if (isStatic()) { wrap.style.setProperty('--p', 1); }
 
   var HOLD = 0.35, SMOOTH = 0.1;
   var current = 0, target = 0, ticking = false;
@@ -712,12 +731,12 @@ var REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   function frameLoop() {
     current += (target - current) * SMOOTH;
     if (Math.abs(target - current) < 0.001) current = target;
-    frame.style.setProperty('--p', current.toFixed(4));
+    wrap.style.setProperty('--p', current.toFixed(4));
     if (Math.abs(target - current) > 0.0005) { requestAnimationFrame(frameLoop); }
     else { ticking = false; }
   }
   function onScroll() {
-    if (isStatic()) { frame.style.setProperty('--p', 1); return; }
+    if (isStatic()) { wrap.style.setProperty('--p', 1); return; }
     measure();
     if (!ticking) { ticking = true; requestAnimationFrame(frameLoop); }
   }
@@ -725,7 +744,7 @@ var REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   window.addEventListener('resize', onScroll);
   // Crossing the breakpoint has to hand the frame back to the stylesheet.
   STATIC.addEventListener('change', function () {
-    if (isStatic()) { frame.style.setProperty('--p', 1); }
+    if (isStatic()) { wrap.style.setProperty('--p', 1); }
     else { current = 0; onScroll(); }
   });
   onScroll();

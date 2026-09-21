@@ -617,5 +617,47 @@ async def test_the_hero_cannot_clip_its_own_buttons(admin_client):
     assert "--h0: clamp(500px, 62vh, 660px)" in page
     assert "min-height: var(--h0)" in page
     # The small-screen stand-down, in both the stylesheet and the script.
-    assert ".se-sticky { position: static; height: auto; padding: 30px 0 }" in page
+    assert ".se-sticky { position: relative; height: auto; padding: 30px 0 }" in page
     assert "var STATIC = window.matchMedia('(max-width: 640px)')" in page
+
+
+@pytest.mark.asyncio
+async def test_the_hero_backdrop_is_clipped_on_every_screen(admin_client):
+    """The campus also fills the plate the frame sits on, and must stay in it.
+
+    The backdrop is an absolutely positioned layer inset past its box, so it
+    is only contained by an ancestor that establishes a containing block.
+    When the phone rule made that ancestor `static`, the layer escaped
+    `overflow: hidden` and pushed the page sideways — so both the clip and
+    the positioning that makes it work are pinned here.
+    """
+    await _seed()
+    page = (await admin_client.get("/admin/survey/deeksharambh-meeting")).text
+
+    sticky = page.split(".se-sticky {")[1].split("}")[0]
+    assert "position: sticky" in sticky and "overflow: hidden" in sticky
+    assert ".se-sticky { position: relative; height: auto; padding: 30px 0 }" in page
+    # Same photo as the frame's own media, served locally.
+    assert page.count("/static/img/campus-hero.jpg?v=") == 2
+
+
+@pytest.mark.asyncio
+async def test_the_hero_names_the_survey_and_leaves_the_figures_to_the_tiles(admin_client):
+    """The four figures moved out of the hero into the KPI row below it.
+
+    They are not gone — repeating them twice in one screen was what crowded
+    the hero into clipping its own buttons — so this checks both halves: the
+    hero says what the page is, and the numbers are still on the page.
+    """
+    await _seed()
+    page = (await admin_client.get("/admin/survey/deeksharambh-meeting")).text
+
+    assert "<h1>Deeksharambh</h1>" in page
+    assert 'class="se-sub">Department-wise survey<' in page
+    assert "se-stage" not in page          # the old tile grid is gone entirely
+
+    # …and every figure it used to show still appears, in the tiles below.
+    for label in ("Registered in portal", "Took Deeksharambh",
+                  "Yet to take it", "Conversion"):
+        assert label in page
+    assert ">11<" in page and ">6<" in page and ">54.5%<" in page
