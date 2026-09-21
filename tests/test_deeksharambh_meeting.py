@@ -610,18 +610,41 @@ async def test_the_hero_photo_is_served_locally_and_dropped_when_printing(admin_
 async def test_the_hero_cannot_clip_its_own_buttons(admin_client):
     """A fixed-height frame cut the Download PDF row off on a short laptop.
 
-    The frame now opens from a floor tall enough for its content, and on a
-    phone it does not animate at all — it is a plain block that grows to fit,
-    which is also one less screen of scrolling on the smallest screens.
+    The fix is that the frame's height is a floor, not a size: the scroll
+    interpolates `min-height` while `height` stays `auto`, so at any progress
+    value on any screen the frame grows to whatever the headline, the pill and
+    the button row need. That is also what let the expand come back on mobile,
+    where it had been switched off to dodge this very bug.
     """
     await _seed()
     page = (await admin_client.get("/admin/survey/deeksharambh-meeting")).text
 
-    assert "--h0: clamp(500px, 62vh, 660px)" in page
-    assert "min-height: var(--h0)" in page
-    # The small-screen stand-down, in both the stylesheet and the script.
-    assert ".se-sticky { position: relative; height: auto; padding: 30px 0 }" in page
-    assert "var STATIC = window.matchMedia('(max-width: 640px)')" in page
+    frame = page.split(".se-frame {")[1].split("}")[0]
+    assert "height: auto;" in frame
+    assert "min-height: calc(var(--h0) + (100vh - var(--h0)) * var(--p, 0));" in frame
+    # svh too, so a phone's URL bar hiding does not resize the frame
+    # mid-animation — the vh line above it is the fallback.
+    assert "min-height: calc(var(--h0) + (100svh - var(--h0)) * var(--p, 0));" in frame
+    # No fixed height anywhere in the frame's own rule (min-height is not
+    # a fixed height, so the check has to exclude it).
+    import re
+    assert re.search(r"(?<!min-)height: calc\(", frame) is None
+
+
+@pytest.mark.asyncio
+async def test_the_hero_expands_on_a_phone_too(admin_client):
+    """It was switched off below 640px to dodge the clipping bug above. Now
+    that the frame cannot clip, the only reader handed the opened state
+    outright is one who asked for less motion."""
+    await _seed()
+    page = (await admin_client.get("/admin/survey/deeksharambh-meeting")).text
+
+    # No width breakpoint stands the animation down any more.
+    assert "window.matchMedia('(max-width: 640px)')" not in page
+    assert "function isStatic() { return REDUCED; }" in page
+    # The phone rule opens from a sensible inset instead of a letterbox.
+    assert "width: calc(86% + (100% - 86%) * var(--pw, 0))" in page
+    assert "@media (prefers-reduced-motion: reduce)" in page
 
 
 @pytest.mark.asyncio
@@ -630,16 +653,22 @@ async def test_the_hero_backdrop_is_clipped_on_every_screen(admin_client):
 
     The backdrop is an absolutely positioned layer inset past its box, so it
     is only contained by an ancestor that establishes a containing block.
-    When the phone rule made that ancestor `static`, the layer escaped
-    `overflow: hidden` and pushed the page sideways — so both the clip and
-    the positioning that makes it work are pinned here.
+    A phone rule once made that ancestor `static`, the layer escaped
+    `overflow: hidden`, and its negative inset pushed the page 44px sideways.
+    The plate is sticky at every width now, so it is always a containing
+    block — this pins the clip and the positioning that makes it work.
     """
     await _seed()
     page = (await admin_client.get("/admin/survey/deeksharambh-meeting")).text
 
     sticky = page.split(".se-sticky {")[1].split("}")[0]
     assert "position: sticky" in sticky and "overflow: hidden" in sticky
-    assert ".se-sticky { position: relative; height: auto; padding: 30px 0 }" in page
+    # Every on-screen rule for the plate keeps it a containing block. Print
+    # is exempt: there the backdrop is display:none, so it has nothing to
+    # escape from.
+    screen_css = page.split("@media print")[0]
+    for block in screen_css.split(".se-sticky {")[1:]:
+        assert "position: static" not in block.split("}")[0]
     # Same photo as the frame's own media, served locally.
     assert page.count("/static/img/campus-hero.jpg?v=") == 2
 

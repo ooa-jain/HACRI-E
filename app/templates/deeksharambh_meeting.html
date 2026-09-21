@@ -57,7 +57,8 @@
      visitor simply gets the finished state. */
   .se-wrap { position: relative; height: 138vh }
   .se-sticky {
-    position: sticky; top: 0; height: 100vh; display: grid; place-items: center;
+    position: sticky; top: 0; height: 100vh; height: 100svh;
+    display: grid; place-items: center;
     overflow: hidden; isolation: isolate;
   }
   /* The same campus, filling the plate the frame sits on. Blurred and pushed
@@ -85,13 +86,17 @@
     /* The floor is what the headline, the four figures and the button row
        actually need; without it a short laptop screen cut the buttons off
        at the frame's edge. */
-    --h0: clamp(500px, 62vh, 660px);
+    --h0: clamp(440px, 62vh, 660px);
     /* Width finishes at 82% of the progress so the gutters close well
        before the handover; height keeps the full run. */
     --pw: min(1, calc(var(--p, 0) / 0.82));
     width: calc(42% + (100% - 42%) * var(--pw, 0));
-    height: calc(var(--h0) + (100vh - var(--h0)) * var(--p, 0));
-    min-height: var(--h0);
+    height: auto;
+    /* svh, not vh: on a phone the URL bar hides as you scroll, which changes
+       vh mid-animation and makes the frame jump. The vh line above it is the
+       fallback for browsers that do not know svh. */
+    min-height: calc(var(--h0) + (100vh - var(--h0)) * var(--p, 0));
+    min-height: calc(var(--h0) + (100svh - var(--h0)) * var(--p, 0));
     border-radius: calc(24px * (1 - var(--pw, 0)));
     box-shadow: 0 30px 80px -20px rgba(43, 12, 70, calc(.45 * (1 - var(--pw, 0))));
     background: var(--g-ink);
@@ -396,27 +401,23 @@
   @media (max-width: 640px) {
     .wrap { padding: 0 14px 70px }
     .dc-track { width: 252px; height: 350px }
-    /* On a phone the scroll-expand is imperceptible and costs most of a
-       screen of scrolling to play — the very thing this page was rebuilt to
-       stop. So it does not run here at all: the hero is a plain block that
-       grows to whatever its content needs, which also ends the whole family
-       of "the buttons are cut off" bugs on short screens. */
-    .se-wrap { height: auto }
-    /* `relative`, not `static`: the backdrop layer is absolutely positioned
-       and only an ancestor that establishes a containing block can clip it.
-       Made static, it escaped `overflow: hidden` and its -30px inset pushed
-       the page sideways on a phone. */
-    .se-sticky { position: relative; height: auto; padding: 30px 0 }
-    .se-wrap { --p: 1 }
-    .se-frame { width: 100%; height: auto; min-height: 0; border-radius: 0;
-                box-shadow: none; padding: 40px 0 }
-    .se-media { transform: none }
-    .se-inner { padding: 0 18px }
+    /* The expand runs here too. A 42% frame is a letterbox on a phone, so it
+       opens from 86%, and the run is shorter because scroll is dearer on a
+       small screen. Nothing can clip: the frame's height is a floor, not a
+       fixed size, so it grows to whatever the content needs. */
+    .se-wrap { height: 118vh; height: 118svh }
+    .se-frame { --h0: clamp(400px, 54svh, 560px);
+                width: calc(86% + (100% - 86%) * var(--pw, 0)) }
+    .se-inner { padding: 0 18px 24px }
     .toolbar { margin-top: 18px }
   }
   @media (prefers-reduced-motion: reduce) {
     html { scroll-behavior: auto }
-    .se-wrap { height: auto } .se-sticky { position: static; height: auto; padding: 46px 0 }
+    /* `relative`, never `static`: the backdrop layer is absolutely positioned
+       and inset past its box, so only an ancestor that establishes a
+       containing block clips it. Static let it escape `overflow: hidden` and
+       push the page sideways — the same bug the phone rule once had. */
+    .se-wrap { height: auto } .se-sticky { position: relative; height: auto; padding: 46px 0 }
     .se-wrap { --p: 1 }
     .se-frame { width: 100%; height: auto }
     .se-media { transform: none }
@@ -848,11 +849,10 @@ var REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 (function () {
   var wrap = document.getElementById('hero');
   var frame = document.getElementById('seFrame');
-  // Matches the stylesheet's small-screen rule above: no scroll-expand on a
-  // phone, and none for a reader who asked for less motion. Both get the
-  // opened state.
-  var STATIC = window.matchMedia('(max-width: 640px)');
-  function isStatic() { return REDUCED || STATIC.matches; }
+  // The expand runs on every width now that the frame cannot clip its own
+  // content. Only a reader who asked for less motion is handed the opened
+  // state outright.
+  function isStatic() { return REDUCED; }
   if (!wrap || !frame) return;
   if (isStatic()) { wrap.style.setProperty('--p', 1); }
 
@@ -886,11 +886,6 @@ var REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   }
   window.addEventListener('scroll', onScroll, { passive: true });
   window.addEventListener('resize', onScroll);
-  // Crossing the breakpoint has to hand the frame back to the stylesheet.
-  STATIC.addEventListener('change', function () {
-    if (isStatic()) { wrap.style.setProperty('--p', 1); }
-    else { current = 0; onScroll(); }
-  });
   onScroll();
 })();
 
