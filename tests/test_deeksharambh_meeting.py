@@ -580,3 +580,42 @@ async def test_the_carousel_reads_the_same_rows_the_tables_print(admin_client):
     assert "Top 4 by conversion" in page
     assert "Least 4 by conversion" in page
     assert ".dc-shell, .rail, .no-print" in page   # dropped when printing
+
+
+@pytest.mark.asyncio
+async def test_the_hero_photo_is_served_locally_and_dropped_when_printing(admin_client):
+    """The campus behind the hero is an asset of this app, not a hotlink, and
+    it is chrome: paper gets the words, not a full-bleed photograph."""
+    await _seed()
+    page = (await admin_client.get("/admin/survey/deeksharambh-meeting")).text
+
+    # Served from our own /static, cache-stamped like every other asset.
+    assert "/static/img/campus-hero.jpg?v=" in page
+    assert "http://" not in page.split("<style>")[1].split("</style>")[0]
+
+    # And it really is on disk, or the page would render a broken frame.
+    from pathlib import Path
+    from app.main import BASE_DIR
+    photo = Path(BASE_DIR) / "static" / "img" / "campus-hero.jpg"
+    assert photo.is_file() and photo.stat().st_size > 20_000
+
+    # Print drops it.
+    assert ".se-media { display: none }" in page
+
+
+@pytest.mark.asyncio
+async def test_the_hero_cannot_clip_its_own_buttons(admin_client):
+    """A fixed-height frame cut the Download PDF row off on a short laptop.
+
+    The frame now opens from a floor tall enough for its content, and on a
+    phone it does not animate at all — it is a plain block that grows to fit,
+    which is also one less screen of scrolling on the smallest screens.
+    """
+    await _seed()
+    page = (await admin_client.get("/admin/survey/deeksharambh-meeting")).text
+
+    assert "--h0: clamp(500px, 62vh, 660px)" in page
+    assert "min-height: var(--h0)" in page
+    # The small-screen stand-down, in both the stylesheet and the script.
+    assert ".se-sticky { position: static; height: auto; padding: 30px 0 }" in page
+    assert "var STATIC = window.matchMedia('(max-width: 640px)')" in page

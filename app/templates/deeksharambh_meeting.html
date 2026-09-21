@@ -57,8 +57,13 @@
   .se-sticky { position: sticky; top: 0; height: 100vh; display: grid; place-items: center; overflow: hidden }
   .se-frame {
     position: relative; overflow: hidden;
+    /* The floor is what the headline, the four figures and the button row
+       actually need; without it a short laptop screen cut the buttons off
+       at the frame's edge. */
+    --h0: clamp(500px, 62vh, 660px);
     width: calc(42% + (100% - 42%) * var(--p, 0));
-    height: calc(58vh + (100vh - 58vh) * var(--p, 0));
+    height: calc(var(--h0) + (100vh - var(--h0)) * var(--p, 0));
+    min-height: var(--h0);
     border-radius: calc(24px * (1 - var(--p, 0)));
     box-shadow: 0 30px 80px -20px rgba(43, 12, 70, calc(.45 * (1 - var(--p, 0))));
     background: var(--g-ink);
@@ -67,15 +72,28 @@
   .se-media {
     position: absolute; inset: 0;
     transform: scale(calc(1.35 - .35 * var(--p, 0)));
+    background-image: url('{{ asset("/static/img/campus-hero.jpg") }}');
+    background-size: cover; background-position: center 42%;
+    background-color: #1b1030;
+  }
+  /* Two layers over the photo. The first is the brand wash that ties the
+     hero to the rest of the page; the second is a flat scrim that lifts as
+     the frame opens, so the campus comes through as you scroll while the
+     headline never loses its footing. A daylight aerial is bright enough
+     that white text needs both. */
+  .se-media::before {
+    content: ''; position: absolute; inset: 0;
     background:
-      radial-gradient(900px 520px at 18% 12%, rgba(245,49,127,.42), transparent 62%),
-      radial-gradient(760px 480px at 84% 78%, rgba(31,162,255,.38), transparent 60%),
-      radial-gradient(620px 420px at 62% 22%, rgba(123,63,228,.42), transparent 58%),
-      var(--g-ink);
+      radial-gradient(900px 520px at 18% 12%, rgba(245,49,127,.34), transparent 64%),
+      radial-gradient(760px 480px at 84% 78%, rgba(31,162,255,.3), transparent 62%),
+      radial-gradient(620px 420px at 62% 22%, rgba(123,63,228,.32), transparent 60%),
+      /* Darkest where the headline sits, opening out over the campus below. */
+      linear-gradient(175deg, rgba(18,10,32,.86) 0%, rgba(18,10,32,.5) 42%,
+                              rgba(24,12,42,.34) 68%, rgba(52,24,80,.6) 100%);
   }
   .se-media::after {
     content: ''; position: absolute; inset: 0;
-    background: rgba(9, 4, 20, calc(.45 * (1 - var(--p, 0))));
+    background: rgba(9, 4, 20, calc(.3 - .12 * var(--p, 0)));
   }
   .se-inner {
     position: relative; z-index: 2; color: #fff; text-align: center;
@@ -88,16 +106,19 @@
   .se-inner h1 {
     font-size: clamp(30px, 5.4vw, 60px); font-weight: 800; letter-spacing: -1.4px;
     line-height: 1.04; margin: 12px 0 10px;
+    text-shadow: 0 2px 22px rgba(6,2,14,.55);
   }
-  .se-inner p { color: #cbc0e4; font-size: 14.5px; max-width: 62ch; margin: 0 auto }
+  .se-inner p { color: #ded4ef; font-size: 14.5px; max-width: 62ch; margin: 0 auto;
+                text-shadow: 0 1px 12px rgba(6,2,14,.6) }
   .se-stage {
     display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;
     margin-top: 26px;
-    opacity: calc(.55 + .45 * var(--p, 0));
+    opacity: calc(.88 + .12 * var(--p, 0));
     transform: translateY(calc(10px * (1 - var(--p, 0))));
   }
-  .se-stage div { background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.17);
-                  border-radius: 12px; padding: 12px 10px; backdrop-filter: blur(6px) }
+  .se-stage div { background: rgba(14,7,26,.42); border: 1px solid rgba(255,255,255,.2);
+                  border-radius: 12px; padding: 12px 10px;
+                  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px) }
   .se-stage b { display: block; font-size: clamp(19px, 2.6vw, 30px); font-weight: 800; color: #fff }
   .se-stage s { display: block; text-decoration: none; font-size: 9.5px; font-weight: 700;
                 letter-spacing: 1.1px; text-transform: uppercase; color: #d6c9ee; margin-top: 4px }
@@ -298,11 +319,24 @@
     .wrap { padding: 0 14px 70px }
     .se-stage { grid-template-columns: repeat(2, 1fr) }
     .dc-track { width: 252px; height: 350px }
+    /* On a phone the scroll-expand is imperceptible and costs most of a
+       screen of scrolling to play — the very thing this page was rebuilt to
+       stop. So it does not run here at all: the hero is a plain block that
+       grows to whatever its content needs, which also ends the whole family
+       of "the buttons are cut off" bugs on short screens. */
+    .se-wrap { height: auto }
+    .se-sticky { position: static; height: auto; padding: 30px 0 }
+    .se-frame { width: 100%; height: auto; min-height: 0; border-radius: 0;
+                box-shadow: none; padding: 40px 0 }
+    .se-media { transform: none }
+    .se-inner { padding: 0 18px }
+    .toolbar { margin-top: 18px }
   }
   @media (prefers-reduced-motion: reduce) {
     html { scroll-behavior: auto }
     .se-wrap { height: auto } .se-sticky { position: static; height: auto; padding: 46px 0 }
-    .se-frame { width: 100%; height: auto; min-height: 58vh; --p: 1 }
+    .se-frame { width: 100%; height: auto; --p: 1 }
+    .se-media { transform: none }
     .dc-card { transition: none } .dept.on { animation: none }
   }
 
@@ -656,7 +690,13 @@ var REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 (function () {
   var wrap = document.getElementById('hero');
   var frame = document.getElementById('seFrame');
-  if (!wrap || !frame || REDUCED) { if (frame) frame.style.setProperty('--p', 1); return; }
+  // Matches the stylesheet's small-screen rule above: no scroll-expand on a
+  // phone, and none for a reader who asked for less motion. Both get the
+  // opened state.
+  var STATIC = window.matchMedia('(max-width: 640px)');
+  function isStatic() { return REDUCED || STATIC.matches; }
+  if (!wrap || !frame) return;
+  if (isStatic()) { frame.style.setProperty('--p', 1); }
 
   var HOLD = 0.35, SMOOTH = 0.1;
   var current = 0, target = 0, ticking = false;
@@ -677,11 +717,17 @@ var REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     else { ticking = false; }
   }
   function onScroll() {
+    if (isStatic()) { frame.style.setProperty('--p', 1); return; }
     measure();
     if (!ticking) { ticking = true; requestAnimationFrame(frameLoop); }
   }
   window.addEventListener('scroll', onScroll, { passive: true });
   window.addEventListener('resize', onScroll);
+  // Crossing the breakpoint has to hand the frame back to the stylesheet.
+  STATIC.addEventListener('change', function () {
+    if (isStatic()) { frame.style.setProperty('--p', 1); }
+    else { current = 0; onScroll(); }
+  });
   onScroll();
 })();
 
