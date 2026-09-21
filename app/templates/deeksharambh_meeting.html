@@ -347,35 +347,24 @@
   .mrow > b { font-size: 12.5px; color: var(--ink) }
   .mrow .picks { margin-left: 0 }
 
-  /* ── Band strip, chase list, campus split ──────────────────────────── */
-  .bands { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 16px }
-  .band { border: 1px solid var(--line); border-radius: 14px; padding: 15px 16px; background: var(--paper) }
-  .band .sw { width: 30px; height: 6px; border-radius: 4px; display: block }
-  .band b { display: block; font-size: 27px; font-weight: 800; color: var(--ink);
-            letter-spacing: -.8px; margin-top: 11px }
-  .band s { display: block; text-decoration: none; font-size: 11px; font-weight: 700;
-            letter-spacing: .5px; text-transform: uppercase; color: var(--muted); margin-top: 3px }
-  .band em { font-style: normal; display: block; font-size: 11.5px; color: var(--muted); margin-top: 8px }
+  /* ── Opportunity list, campus split ────────────────────────────────── */
   .meter { display: flex; height: 13px; border-radius: 7px; overflow: hidden; margin-top: 16px;
            background: var(--d-grid) }
   .meter i { display: block; height: 100% }
-  .meter i + i { box-shadow: -2px 0 0 #fff }
-  .meter-key { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 11px; font-size: 12px }
-  .meter-key i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; margin-right: 6px }
 
-  .chase li { list-style: none; display: flex; align-items: center; gap: 12px;
+  .reach li { list-style: none; display: flex; align-items: center; gap: 12px;
               padding: 11px 0; border-bottom: 1px solid var(--line) }
-  .chase li:last-child { border-bottom: none }
-  .chase .r { font-variant-numeric: tabular-nums; font-weight: 800; color: var(--muted);
+  .reach li:last-child { border-bottom: none }
+  .reach .r { font-variant-numeric: tabular-nums; font-weight: 800; color: var(--muted);
               min-width: 20px; font-size: 12px }
-  .chase .nm { flex: 1; font-weight: 700; color: var(--ink); font-size: 13px; min-width: 0;
+  .reach .nm { flex: 1; font-weight: 700; color: var(--ink); font-size: 13px; min-width: 0;
                overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
-  .chase .tk { width: 120px; height: 7px; border-radius: 4px; background: var(--d-grid);
+  .reach .tk { width: 120px; height: 7px; border-radius: 4px; background: var(--d-grid);
                overflow: hidden; flex: none }
-  .chase .tk i { display: block; height: 100%; background: var(--d-primary) }
-  .chase .mi { font-variant-numeric: tabular-nums; font-weight: 800; color: var(--ink);
+  .reach .tk i { display: block; height: 100%; background: var(--d-primary) }
+  .reach .mi { font-variant-numeric: tabular-nums; font-weight: 800; color: var(--ink);
                min-width: 92px; text-align: right; font-size: 13px }
-  .chase .mi s { display: block; text-decoration: none; font-size: 10.5px; font-weight: 600;
+  .reach .mi s { display: block; text-decoration: none; font-size: 10.5px; font-weight: 600;
                  color: var(--muted) }
 
   .campus-grid { display: grid; gap: 12px; margin-top: 16px;
@@ -384,7 +373,6 @@
   .campus h5 { font-size: 14px; font-weight: 800; color: var(--ink) }
   .campus .big { font-size: 30px; font-weight: 800; letter-spacing: -1px; color: var(--ink); margin-top: 8px }
   .campus .sub { font-size: 11.5px; color: var(--muted); margin-top: 2px }
-  @media (max-width: 860px) { .bands { grid-template-columns: repeat(2, 1fr) } }
   .share-row { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap }
   .share-row input { flex: 1; min-width: 220px; padding: 11px 14px; font-size: 12.5px;
                      border: 1px solid var(--line); border-radius: 10px;
@@ -499,8 +487,8 @@
         <em>Across {{ t.departments }} {{ 'department' if t.departments == 1 else 'departments' }}</em></div>
       <div class="kpi p2"><b class="num">{{ t.took }}</b><s>Took Deeksharambh</s>
         <em>Replies on file</em></div>
-      <div class="kpi p3"><b class="num">{{ t.missing }}</b><s>Yet to take it</s>
-        <em>Still to chase</em></div>
+      <div class="kpi p3"><b class="num">{{ t.missing }}</b><s>Still to reach</s>
+        <em>Where the next push goes</em></div>
       <div class="kpi p4"><b class="num">{{ t.pct }}%</b><s>Conversion</s>
         <em>{{ t.took }} of {{ t.registered }}</em></div>
     </div>
@@ -518,7 +506,7 @@
         <div class="chart-box"><canvas id="donut"></canvas></div>
         <div class="legend">
           <span><i style="background:var(--d-primary)"></i>Took it — {{ t.took }}</span>
-          <span><i style="background:var(--d-rest)"></i>Yet to — {{ t.missing }}</span>
+          <span><i style="background:var(--d-rest)"></i>Still to reach — {{ t.missing }}</span>
         </div>
       </div>
       <div class="card">
@@ -527,44 +515,20 @@
       </div>
     </div>
 
-    <div class="card" style="margin-top:16px">
-      <div class="cap">Where the departments sit<span>Each department placed in a conversion band —
-        with {{ pack.conversion | length }} of them, this is the shape a ranked table cannot show.</span></div>
-      {% set ramp = ['#86b6ef', '#5598e7', '#2a78d6', '#184f95'] %}
-      <div class="meter" role="img" aria-label="Departments by conversion band">
-        {% for b in pack.bands %}{% if b.pct %}<i style="width:{{ b.pct }}%;background:{{ ramp[loop.index0] }}"></i>{% endif %}{% endfor %}
-      </div>
-      <div class="meter-key">
-        {% for b in pack.bands %}
-        <span><i style="background:{{ ramp[loop.index0] }}"></i>{{ b.label }} — <b>{{ b.count }}</b></span>
-        {% endfor %}
-      </div>
-      <div class="bands">
-        {% for b in pack.bands %}
-        <div class="band">
-          <span class="sw" style="background:{{ ramp[loop.index0] }}"></span>
-          <b class="num">{{ b.count }}</b>
-          <s>{{ b.label }}</s>
-          <em>{{ b.registered }} registered · {{ b.missing }} yet to take it</em>
-        </div>
-        {% endfor %}
-      </div>
-    </div>
-
     <div class="grid2 even">
       <div class="card">
-        <div class="cap">The chase list<span>Most students still to take it — by headcount, not
-          percentage, because that is the order somebody actually works through.</span></div>
-        <ul class="chase">
+        <div class="cap">Where a push goes furthest<span>Most students still to reach — by headcount, not
+          percentage, because that is where the same effort brings in the most people.</span></div>
+        <ul class="reach">
           {% for row in pack.gaps %}
           <li>
             <span class="r num">{{ loop.index }}</span>
             <span class="nm">{{ row.dept }}</span>
             <span class="tk" title="{{ row.pct }}% taken"><i style="width:{{ row.pct }}%"></i></span>
-            <span class="mi num">{{ row.missing }}<s>of {{ row.registered }} · {{ row.pct }}% in</s></span>
+            <span class="mi num">{{ row.missing }}<s>still to reach · {{ row.pct }}% in</s></span>
           </li>
           {% else %}
-          <li><span class="nm">Nobody left to chase — every registered student has taken it.</span></li>
+          <li><span class="nm">Everyone is in — every registered student has taken Deeksharambh.</span></li>
           {% endfor %}
         </ul>
       </div>
@@ -578,7 +542,7 @@
             <div class="big num">{{ c.pct }}%</div>
             <div class="sub">{{ c.took }} of {{ c.registered }} registered</div>
             <div class="sub">{{ c.departments }} {{ 'department' if c.departments == 1 else 'departments' }}
-              · {{ c.missing }} yet to take it</div>
+              · {{ c.missing }} still to reach</div>
             <div class="meter" style="height:7px;margin-top:11px">
               <i style="width:{{ c.pct }}%;background:var(--d-primary)"></i>
             </div>
@@ -595,7 +559,7 @@
       <div class="t-scroll" style="margin-top:16px"><table>
         <thead><tr>
           <th class="n">#</th><th>Department</th><th>Campus</th>
-          <th class="n">Registered</th><th class="n">Took</th><th class="n">Yet to</th><th class="n">Conversion</th>
+          <th class="n">Registered</th><th class="n">Took</th><th class="n">To reach</th><th class="n">Conversion</th>
         </tr></thead>
         <tbody>
         {% for row in pack.conversion %}
@@ -621,9 +585,10 @@
     {% set shown = [c.top | length, c.least | length] | max %}
     <div class="head">
       <div>
-        <h2><span class="n">02</span>The strongest {{ shown }} and the weakest {{ shown }}</h2>
+        <h2><span class="n">02</span>Most active departments, and where a push goes furthest</h2>
         <p class="lede">Ranked on the same conversion. Departments level on percentage are split by how
-          many students that percentage stands for, so 100% of forty ranks above 100% of four.</p>
+          many students that percentage stands for, so 100% of forty ranks above 100% of four.
+          The second list is not a ranking of failure — it is where the next push reaches the most students.</p>
       </div>
     </div>
 
@@ -636,10 +601,10 @@
     <div class="dc-shell">
       <div class="dc-top">
         <div class="dc-title">Department spotlight
-          <span id="dcCaption">Top {{ c.top | length }} by conversion — departments whose students turned up.</span></div>
+          <span id="dcCaption">Most active {{ c.top | length }} — departments whose students turned up in force.</span></div>
         <div class="seg" role="group" aria-label="Which list to show">
-          <button type="button" id="segTop" aria-pressed="true" onclick="dcSet('top')">▲ Top {{ c.top | length }}</button>
-          <button type="button" id="segLeast" aria-pressed="false" onclick="dcSet('least')">▼ Least {{ c.least | length }}</button>
+          <button type="button" id="segTop" aria-pressed="true" onclick="dcSet('top')">★ Most active {{ c.top | length }}</button>
+          <button type="button" id="segLeast" aria-pressed="false" onclick="dcSet('least')">↗ Room to grow {{ c.least | length }}</button>
         </div>
       </div>
       <div class="dc-stage"><div class="dc-track" id="dcTrack"></div></div>
@@ -654,7 +619,7 @@
          not the only copy. Print keeps these and drops the carousel. -->
     <div class="grid2 even">
       <div class="card">
-        <div class="cap">Top {{ c.top | length }} by conversion<span>Departments whose students turned up.</span></div>
+        <div class="cap">Most active {{ c.top | length }}<span>Departments whose students turned up in force.</span></div>
         <div class="t-scroll" style="margin-top:16px"><table>
           <thead><tr><th class="n">#</th><th>Department</th><th class="n">Took / Reg.</th><th class="n">%</th></tr></thead>
           <tbody>
@@ -668,7 +633,7 @@
         </table></div>
       </div>
       <div class="card">
-        <div class="cap">Least {{ c.least | length }} by conversion<span>Worst first — the departments to chase.</span></div>
+        <div class="cap">Room to grow — {{ c.least | length }} departments<span>Biggest opportunity first — where a push reaches the most students.</span></div>
         <div class="t-scroll" style="margin-top:16px"><table>
           <thead><tr><th class="n">#</th><th>Department</th><th class="n">Took / Reg.</th><th class="n">%</th></tr></thead>
           <tbody>
@@ -920,7 +885,7 @@ function dcRender() {
 
   track.innerHTML = rows.map(function (r, i) {
     return '<article class="dc-card' + (dcList === 'least' ? ' down' : '') + '" data-i="' + i + '">' +
-      '<div class="dc-rank">' + (dcList === 'top' ? 'Rank ' : 'To chase ') + (i + 1) +
+      '<div class="dc-rank">' + (dcList === 'top' ? 'Most active ' : 'Room to grow ') + (i + 1) +
         ' of ' + rows.length + '</div>' +
       '<div class="dc-name">' + esc(r.dept) + '</div>' +
       '<div class="dc-big num">' + r.pct + '%</div>' +
@@ -971,8 +936,8 @@ function dcSet(which) {
   var cap = document.getElementById('dcCaption');
   if (cap) {
     cap.textContent = which === 'top'
-      ? 'Top ' + DC.top.length + ' by conversion — departments whose students turned up.'
-      : 'Least ' + DC.least.length + ' by conversion — worst first, the departments to chase.';
+      ? 'Most active ' + DC.top.length + ' — departments whose students turned up in force.'
+      : 'Room to grow — ' + DC.least.length + ' departments where a push reaches the most students.';
   }
   dcRender();
 }
@@ -1073,7 +1038,7 @@ function legacyCopy(url, done, btn) {
     new Chart(donut, {
       type: 'doughnut',
       data: {
-        labels: ['Took Deeksharambh', 'Yet to take it'],
+        labels: ['Took Deeksharambh', 'Still to reach'],
         datasets: [{
           data: [{{ t.took }}, {{ t.missing }}],
           backgroundColor: [PRIMARY, REST],

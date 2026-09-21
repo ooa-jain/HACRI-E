@@ -269,7 +269,7 @@ async def test_the_two_answers_come_from_the_good_end(app_with_mock):
     # A question that only ever asked what went wrong is shown as asks, not
     # dressed up as good news.
     assert q["q12"]["frame"] == "asked"
-    assert q["q12"]["frame_label"].startswith("Top 2 asks")
+    assert q["q12"]["frame_label"] == "What would lift it"
     assert [p["label"] for p in q["q12"]["picks"]][0] == "🚶 Campus Tour"
     assert q["q28"]["frame"] == "asked"
 
@@ -390,9 +390,12 @@ async def test_the_admin_link_prints_every_department_in_full(admin_client):
     assert "Registered in portal" in page
     assert ">11<" in page and ">6<" in page and ">54.5%<" in page
 
-    # Both call-out lists.
-    assert "Top 4 by conversion" in page
-    assert "Least 4 by conversion" in page
+    # Both call-out lists, named for what a department can do about them
+    # rather than as a verdict on it.
+    assert "Most active 4" in page
+    assert "Room to grow — 4 departments" in page
+    for word in ("worst", "Worst", "weakest", "chase list"):
+        assert word not in page
 
     # Every question, for every department — 41 questions across 4 departments,
     # minus Science which answered nothing and says so instead.
@@ -467,14 +470,16 @@ async def test_the_pdf_carries_the_whole_pack(admin_client):
         assert dept in text
     # The count, and both call-out lists.
     assert "REGISTERED IN PORTAL" in text and "54.5%" in text
-    assert "Top 4 by conversion" in text
-    assert "Least 4 by conversion" in text
+    assert "Most active 4" in text
+    assert "Room to grow - 4 departments" in text
+    for word in ("worst", "weakest", "chase"):
+        assert word not in text
     # Questions carried across, with their labels intact once the emoji that no
     # PDF core font can set are dropped.
     assert "Felt welcomed during Deeksharambh" in text
     assert "Absolutely yes!" in text
     assert "Sessions that need the most improvement" in text
-    assert "Top 2 asks" in text
+    assert "What would lift it" in text
     # Page furniture.
     assert "Page 1" in text
 
@@ -577,8 +582,8 @@ async def test_the_carousel_reads_the_same_rows_the_tables_print(admin_client):
     assert '"dept": "Department of Commerce"' in page or \
            '"dept":"Department of Commerce"' in page
     # Both plain tables are present for the reader and the printer.
-    assert "Top 4 by conversion" in page
-    assert "Least 4 by conversion" in page
+    assert "Most active 4" in page
+    assert "Room to grow — 4 departments" in page
     assert ".dc-shell, .rail, .no-print" in page   # dropped when printing
 
 
@@ -690,7 +695,7 @@ async def test_the_hero_names_the_survey_and_leaves_the_figures_to_the_tiles(adm
 
     # …and every figure it used to show still appears, in the tiles below.
     for label in ("Registered in portal", "Took Deeksharambh",
-                  "Yet to take it", "Conversion"):
+                  "Still to reach", "Conversion"):
         assert label in page
     assert ">11<" in page and ">6<" in page and ">54.5%<" in page
 
@@ -756,41 +761,13 @@ async def test_copying_still_works_where_the_clipboard_api_is_missing(admin_clie
 # ── The added components ─────────────────────────────────────────────────────
 
 @pytest.mark.asyncio
-async def test_the_bands_account_for_every_department_exactly_once(app_with_mock):
-    """The band strip is a partition, not a sample: each department lands in
-    one band, the four add up to the whole field, and the boundaries do not
-    overlap — 75.0% is "75% and up", not the band below it."""
-    await _seed()
-    from app.deeksharambh_meeting import meeting_pack
-
-    pack = await meeting_pack()
-    bands = pack["bands"]
-    assert [b["label"] for b in bands] == ["Under 25%", "25 – 49%", "50 – 74%", "75% and up"]
-
-    named = [r for r in pack["conversion"] if r["dept"] != "No department"]
-    assert sum(b["count"] for b in bands) == len(named)
-
-    # Every department appears in exactly one band's membership list.
-    listed = [d for b in bands for d in b["departments"]]
-    assert sorted(listed) == sorted(r["dept"] for r in named)
-    assert len(listed) == len(set(listed))
-
-    # Our four: 0%, 33.3%, 75%, 100%.
-    counts = {b["label"]: b["count"] for b in bands}
-    assert counts == {"Under 25%": 1, "25 – 49%": 1, "50 – 74%": 0, "75% and up": 2}
-    # And the registered totals travel with them.
-    under = next(b for b in bands if b["label"] == "Under 25%")
-    assert under["registered"] == 2 and under["missing"] == 2   # Science
-
-
-@pytest.mark.asyncio
-async def test_the_chase_list_ranks_by_headcount_not_percentage(app_with_mock):
+async def test_the_opportunity_list_ranks_by_headcount_not_percentage(app_with_mock):
     """The two rankings disagree on purpose.
 
-    Science is last on conversion (0%) but only two students short. Design
-    at 33.3% is short of two as well, and Law at 75% is short of one. Sorting
-    by what is actually missing is what makes the list workable — a 0%
-    department of four is not where a week of chasing goes.
+    Science sits at 0% but is only two students short. Design at 33.3% is
+    short of two as well, and Law at 75% is short of one. Sorting by how many
+    students a push would actually reach is what makes the list workable — a
+    0% department of four is not where a week of effort pays off.
     """
     await _seed()
     from app.deeksharambh_meeting import meeting_pack
