@@ -5,8 +5,8 @@ Two things sit in here, and nothing else:
 
   The count. How many students each department registered on the portal, and
   how many of them actually took Deeksharambh. That single conversion is what
-  the meeting opens with, ranked, with the five strongest and the five weakest
-  departments called out by name.
+  the meeting opens with, ranked, naming the five most active departments and
+  the five where a push would reach the most students.
 
   The department reading. Every department gets its own full analysis — every
   question the orientation form asked, with the two answers its own students
@@ -116,9 +116,9 @@ SCALE_POSITIVE = {10: (8, 9, 10), 5: (4, 5)}
 NPS_POSITIVE = (9, 10)
 
 FRAME_LABEL = {
-    "positive": "Top 2 answers — the good news",
-    "asked":    "Top 2 asks — what students want changed",
-    "top":      "Top 2 answers",
+    "positive": "Good news",
+    "asked":    "What would lift it",
+    "top":      "Most chosen",
 }
 
 
@@ -274,10 +274,10 @@ def conversion_rows(rows: list[dict]) -> list[dict]:
 
 
 def callouts(rows: list[dict], size: int = CALLOUT) -> dict:
-    """The strongest and the weakest departments on that conversion.
+    """The most active departments, and the ones with the most room to grow.
 
-    `rows` arrives already ranked. The weakest list is handed back worst-first,
-    because that is the order they get talked about in. When there are fewer
+    `rows` arrives already ranked. The second list is handed back with the
+    largest opportunity first, because that is the order it gets worked in. When there are fewer
     than twice `size` departments the two lists share members, and `overlap`
     says so — a meeting told "top five and bottom five" about eight
     departments is being told the same department twice.
@@ -295,48 +295,14 @@ def callouts(rows: list[dict], size: int = CALLOUT) -> dict:
     }
 
 
-# The four bands a department's conversion falls into. Ordered worst to best,
-# because the meeting reads them in the order it has to act on them.
-BANDS: tuple[tuple[str, float, float], ...] = (
-    ("Under 25%",  0.0,  25.0),
-    ("25 – 49%",  25.0,  50.0),
-    ("50 – 74%",  50.0,  75.0),
-    ("75% and up", 75.0, 100.01),
-)
-
-
-def band_rows(rows: list[dict]) -> list[dict]:
-    """How the departments spread across those bands.
-
-    With thirty-odd departments a ranked table is a wall. This says in four
-    numbers where the cohort actually sits, and names who is in each band so
-    the meeting can go straight to them.
-    """
-    out = []
-    for label, low, high in BANDS:
-        members = [r for r in rows
-                   if r["dept"] != NO_DEPARTMENT and low <= r["pct"] < high]
-        out.append({
-            "label": label,
-            "count": len(members),
-            "departments": [r["dept"] for r in members],
-            "registered": sum(r["registered"] for r in members),
-            "missing": sum(r["missing"] for r in members),
-        })
-    counted = sum(b["count"] for b in out)
-    for band in out:
-        band["pct"] = round(100.0 * band["count"] / counted, 1) if counted else 0.0
-    return out
-
-
 def gap_rows(rows: list[dict], limit: int = 8) -> list[dict]:
-    """Departments with the most students still to take Deeksharambh.
+    """Where a push reaches the most students.
 
-    The percentage ranking is the fair way to judge a department and the wrong
-    way to plan a week of chasing: 0% of four students is last on that table
-    and worth almost nothing to fix, while a large department at 60% may be
-    hundreds of students short. This ranks by how many students are actually
-    missing, which is the list somebody works through.
+    The percentage is the fair way to read a department and the wrong way to
+    plan a week: 0% of four students sits at the bottom of that table and
+    moves almost nothing, while a large department at 60% can still be
+    hundreds of students short. This ranks by how many students a push would
+    actually reach, which is the list somebody works through.
     """
     ranked = [r for r in rows if r["dept"] != NO_DEPARTMENT and r["missing"] > 0]
     ranked.sort(key=lambda r: (-r["missing"], r["pct"], r["dept"].lower()))
@@ -434,7 +400,6 @@ async def meeting_pack(*, campus: str = "") -> dict:
         },
         "conversion": conversion,
         "callouts": callouts(conversion),
-        "bands": band_rows(conversion),
         "gaps": gap_rows(conversion),
         "campuses": campus_rows(students),
         "departments": departments,
