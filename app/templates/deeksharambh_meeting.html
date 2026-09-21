@@ -323,6 +323,10 @@
   .mrow > b { font-size: 12.5px; color: var(--ink) }
   .mrow .picks { margin-left: 0 }
 
+  .share-row { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap }
+  .share-row input { flex: 1; min-width: 220px; padding: 11px 14px; font-size: 12.5px;
+                     border: 1px solid var(--line); border-radius: 10px;
+                     background: var(--soft); color: var(--body) }
   .foot { margin-top: 44px; padding-top: 18px; border-top: 1px solid var(--line);
           font-size: 11.5px; color: var(--muted) }
 
@@ -410,7 +414,8 @@
         <div class="toolbar">
           <a class="btn btn-pdf" href="{{ pdf_url }}">⬇ Download PDF</a>
           <button class="btn btn-ghost" onclick="window.print()">🖨 Print</button>
-          {% if share_url %}<button class="btn btn-ghost" onclick="copyLink(this)">🔗 Copy link</button>{% endif %}
+          {% if share_url %}<button class="btn btn-ghost" data-share="{{ share_url }}"
+                  onclick="copyLink(this)">🔗 Copy share link</button>{% endif %}
           <a class="btn btn-ghost" href="#departments">🏛 Jump to departments</a>
         </div>
         <div class="se-hint">Scroll<i></i></div>
@@ -690,6 +695,20 @@
     </div>
   </section>
 
+  {% if share_url %}
+  <section id="share" class="no-print">
+    <div class="card">
+      <div class="cap">Share this pack<span>Opens the same page, with no admin login — the
+        count, the spotlight and every department's reading.</span></div>
+      <div class="share-row">
+        <input id="shareUrl" class="mono" readonly value="{{ share_url }}"
+               aria-label="Shareable link" onclick="this.select()">
+        <button class="btn btn-pdf" data-share="{{ share_url }}" onclick="copyLink(this)">Copy</button>
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
   <p class="foot">
     Deeksharambh 2026 · {{ pack.campus }} · generated {{ generated_at }} ·
     {{ t.registered }} registered, {{ t.took }} took Deeksharambh across
@@ -877,11 +896,42 @@ function filterDepts(term) {
 }
 
 function copyLink(btn) {
-  navigator.clipboard.writeText(location.href).then(function () {
+  // The link to hand out is the token one the server minted, never the URL
+  // this reader happens to be on: from the admin page that would be an
+  // admin-only URL, and everyone it was sent to would get a 403.
+  var url = btn.getAttribute('data-share') || location.href;
+
+  function done() {
     var was = btn.textContent;
     btn.textContent = '✓ Copied';
     setTimeout(function () { btn.textContent = was; }, 1600);
-  });
+  }
+
+  // navigator.clipboard only exists in a secure context, and this app is
+  // served over plain HTTP on some deployments — so there is a fallback, and
+  // under that a prompt the reader can copy out of by hand. A share button
+  // that does nothing on the one server it matters on is not a share button.
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(url).then(done, function () { legacyCopy(url, done, btn); });
+    return;
+  }
+  legacyCopy(url, done, btn);
+}
+
+function legacyCopy(url, done, btn) {
+  var box = document.createElement('textarea');
+  box.value = url;
+  box.setAttribute('readonly', '');
+  box.style.position = 'fixed';
+  box.style.top = '-1000px';
+  document.body.appendChild(box);
+  box.select();
+  var ok = false;
+  try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+  document.body.removeChild(box);
+  if (ok) { done(); return; }
+  window.prompt('Copy this link — it opens without an admin login:', url);
+  if (btn) { btn.blur(); }
 }
 
 /* ── Charts ────────────────────────────────────────────────────────────

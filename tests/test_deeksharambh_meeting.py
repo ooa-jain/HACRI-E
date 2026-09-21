@@ -661,3 +661,61 @@ async def test_the_hero_names_the_survey_and_leaves_the_figures_to_the_tiles(adm
                   "Yet to take it", "Conversion"):
         assert label in page
     assert ">11<" in page and ">6<" in page and ">54.5%<" in page
+
+
+@pytest.mark.asyncio
+async def test_the_copy_button_hands_out_a_link_that_works_without_a_login(admin_client, client):
+    """The share button used to copy whatever URL the reader was on.
+
+    From the admin page that is an admin-only URL, so every person it was sent
+    to got a 403 — a share button that silently shared nothing. It now carries
+    the token link the server minted, and this walks that exact link through a
+    client with no admin cookie.
+    """
+    await _seed()
+    page = (await admin_client.get("/admin/survey/deeksharambh-meeting")).text
+
+    # Pull the link straight out of the rendered page, the way a reader would.
+    import html
+    import re
+    match = re.search(r'id="shareUrl"[^>]*value="([^"]+)"', page)
+    assert match, "the page offers no shareable link"
+    url = html.unescape(match.group(1))
+    assert "token=" in url and "/shared/deeksharambh-meeting" in url
+
+    # The button copies that same link, not location.href.
+    assert 'data-share="' in page
+    assert "location.href" in page   # only as the fallback, after data-share
+    assert "btn.getAttribute('data-share') || location.href" in page
+
+    # A reader with no admin cookie can open it and read the whole pack.
+    from urllib.parse import urlparse
+    path = urlparse(url)
+    shared = await client.get(f"{path.path}?{path.query}")
+    assert shared.status_code == 200
+    assert "Department of Law" in shared.text
+    assert "<h1>Deeksharambh</h1>" in shared.text
+    # …and every department is in it, same as the admin copy.
+    for dept in ("Department of Commerce", "Department of Design", "Department of Science"):
+        assert dept in shared.text
+
+    # The PDF on that same token works too.
+    pdf = await client.get(f"{path.path}.pdf?{path.query}")
+    assert pdf.status_code == 200
+    assert pdf.content.startswith(b"%PDF-")
+
+
+@pytest.mark.asyncio
+async def test_copying_still_works_where_the_clipboard_api_is_missing(admin_client):
+    """This app is served over plain HTTP on some deployments, and
+    navigator.clipboard does not exist outside a secure context. Without a
+    fallback the share button would do nothing on the one server it matters
+    on."""
+    await _seed()
+    page = (await admin_client.get("/admin/survey/deeksharambh-meeting")).text
+
+    assert "window.isSecureContext" in page
+    assert "document.execCommand('copy')" in page
+    assert "window.prompt(" in page
+    # And the link is on the page as selectable text regardless.
+    assert 'id="shareUrl"' in page
