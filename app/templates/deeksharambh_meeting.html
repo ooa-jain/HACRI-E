@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Deeksharambh 2026 — Department Meeting Pack — {{ pack.campus }} — JAIN University</title>
+<style>
+  /* One long document, not an app. Everything on this page is printed the
+     moment it loads: no tabs, no accordions, no "show more". A department
+     sitting in the meeting has to be able to scroll to its own name and read
+     every question, and the same page has to come out of a printer that way. */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0 }
+  :root {
+    --ink: #0b1220; --body: #24304a; --muted: #64748b;
+    --line: #e2e8f0; --soft: #f8fafc; --paper: #ffffff;
+    --teal: #0d9488; --teal-soft: #ccfbf1;
+    --amber: #b45309; --amber-soft: #fef3c7;
+    --rose: #be123c; --rose-soft: #ffe4e6;
+  }
+  body {
+    font-family: 'Instrument Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI',
+                 Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background: #eef2f7; color: var(--body);
+    font-size: 14px; line-height: 1.5; -webkit-font-smoothing: antialiased;
+  }
+  .sheet {
+    max-width: 1080px; margin: 0 auto; background: var(--paper);
+    padding: 0 0 72px; box-shadow: 0 0 0 1px var(--line);
+  }
+  .pad { padding: 0 40px }
+
+  /* ── Cover ─────────────────────────────────────────────────────────── */
+  .cover { background: var(--ink); color: #fff; padding: 36px 40px 32px }
+  .kicker { font-size: 11px; font-weight: 700; letter-spacing: 2px;
+            text-transform: uppercase; color: #5eead4 }
+  .cover h1 { font-size: 34px; line-height: 1.12; font-weight: 800;
+              letter-spacing: -.5px; margin: 12px 0 8px }
+  .cover p { color: #94a3b8; font-size: 13px; max-width: 70ch }
+  .cover .rule { width: 72px; height: 3px; background: #2dd4bf; margin: 18px 0 0 }
+  .toolbar { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px }
+  .btn { display: inline-flex; align-items: center; gap: 7px; cursor: pointer;
+         border: none; border-radius: 8px; padding: 9px 15px; font: inherit;
+         font-size: 13px; font-weight: 700; text-decoration: none }
+  .btn-pdf { background: #2dd4bf; color: #06251f }
+  .btn-ghost { background: rgba(255,255,255,.1); color: #e2e8f0;
+               box-shadow: inset 0 0 0 1px rgba(255,255,255,.22) }
+
+  /* ── Structure ─────────────────────────────────────────────────────── */
+  section { padding-top: 34px }
+  h2 { font-size: 20px; font-weight: 800; color: var(--ink); letter-spacing: -.2px }
+  h2 .n { color: var(--teal); font-variant-numeric: tabular-nums; margin-right: 8px }
+  .lede { color: var(--muted); font-size: 13px; margin-top: 5px; max-width: 80ch }
+  .divider { height: 1px; background: var(--line); margin: 30px 0 0 }
+
+  .cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 18px }
+  .card { border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; background: var(--soft) }
+  .card b { display: block; font-size: 26px; font-weight: 800; color: var(--ink);
+            font-variant-numeric: tabular-nums; letter-spacing: -.5px }
+  .card s { display: block; text-decoration: none; font-size: 11px; font-weight: 700;
+            letter-spacing: .7px; text-transform: uppercase; color: var(--muted); margin-top: 5px }
+
+  table { width: 100%; border-collapse: collapse; margin-top: 16px; font-size: 13px }
+  th { text-align: left; font-size: 11px; letter-spacing: .6px; text-transform: uppercase;
+       color: var(--muted); padding: 8px 10px; border-bottom: 2px solid var(--line); white-space: nowrap }
+  td { padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top }
+  td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap }
+  tbody tr:nth-child(even) { background: #fcfdfe }
+  .rank { color: var(--muted); font-variant-numeric: tabular-nums }
+  .dept-name { font-weight: 700; color: var(--ink) }
+
+  .bar { position: relative; height: 7px; border-radius: 4px; background: var(--line);
+         min-width: 90px; margin-top: 5px; overflow: hidden }
+  .bar i { position: absolute; inset: 0 auto 0 0; background: var(--teal); border-radius: 4px }
+  .bar.low i { background: #f43f5e }
+  .bar.mid i { background: #f59e0b }
+
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 26px; margin-top: 8px }
+  .callout { border: 1px solid var(--line); border-radius: 12px; padding: 4px 18px 14px }
+  .callout.good { border-color: #99f6e4; background: #f0fdfa }
+  .callout.work { border-color: #fecdd3; background: #fff5f6 }
+  .callout h3 { font-size: 14px; font-weight: 800; color: var(--ink); margin: 14px 0 0 }
+  .callout .lede { font-size: 12px }
+  .note { margin-top: 14px; border-left: 3px solid var(--amber); background: var(--amber-soft);
+          color: #78350f; padding: 10px 14px; border-radius: 0 8px 8px 0; font-size: 12.5px }
+
+  /* ── Department sections ───────────────────────────────────────────── */
+  .dept { margin-top: 30px; border: 1px solid var(--line); border-radius: 14px; overflow: hidden }
+  .dept-head { background: var(--ink); color: #fff; padding: 16px 20px }
+  .dept-head .kicker { color: #5eead4; font-size: 10px }
+  .dept-head h3 { font-size: 19px; font-weight: 800; letter-spacing: -.2px; margin-top: 4px }
+  .dept-stats { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px }
+  .chip { background: rgba(255,255,255,.1); color: #e2e8f0; border-radius: 999px;
+          padding: 4px 11px; font-size: 11.5px; font-weight: 600 }
+  .chip b { color: #fff; font-variant-numeric: tabular-nums }
+  .dept-body { padding: 4px 20px 20px }
+  .small-cell { margin: 16px 0 0; border-left: 3px solid var(--muted); background: var(--soft);
+                padding: 10px 14px; border-radius: 0 8px 8px 0; font-size: 12.5px; color: var(--body) }
+
+  .qsec { margin-top: 22px }
+  .qsec > h4 { font-size: 12px; font-weight: 800; letter-spacing: 1.1px; text-transform: uppercase;
+               color: var(--teal); border-bottom: 1px solid var(--line); padding-bottom: 6px }
+  .q { padding: 12px 0; border-bottom: 1px dashed var(--line) }
+  .q:last-child { border-bottom: none }
+  .q-top { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap }
+  .q-key { font-family: ui-monospace, Menlo, monospace; font-size: 11px; font-weight: 700;
+           color: var(--muted); min-width: 30px }
+  .q-label { font-weight: 700; color: var(--ink); font-size: 13.5px; flex: 1; min-width: 220px }
+  .q-meta { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums }
+  .tag { font-size: 10px; font-weight: 800; letter-spacing: .5px; text-transform: uppercase;
+         border-radius: 999px; padding: 2px 9px; white-space: nowrap }
+  .tag-good { background: var(--teal-soft); color: #115e59 }
+  .tag-ask  { background: var(--amber-soft); color: var(--amber) }
+  .tag-top  { background: #e0e7ff; color: #3730a3 }
+  .picks { list-style: none; margin: 9px 0 0 40px }
+  .picks li { display: flex; gap: 10px; align-items: baseline; padding: 3px 0; font-size: 13px }
+  .picks .i { font-variant-numeric: tabular-nums; font-weight: 800; color: var(--teal); min-width: 16px }
+  .picks .pct { margin-left: auto; font-variant-numeric: tabular-nums; font-weight: 700; color: var(--ink);
+                white-space: nowrap }
+  .picks .cnt { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap }
+  .none { margin: 8px 0 0 40px; font-size: 12.5px; color: var(--muted); font-style: italic }
+  .mrow { margin: 10px 0 0 40px; padding-left: 12px; border-left: 2px solid var(--line) }
+  .mrow > b { font-size: 12.5px; color: var(--ink) }
+  .mrow .picks { margin-left: 0 }
+
+  .foot { margin-top: 34px; padding-top: 16px; border-top: 1px solid var(--line);
+          font-size: 11.5px; color: var(--muted) }
+
+  @media (max-width: 860px) {
+    .pad, .cover { padding-left: 18px; padding-right: 18px }
+    .cards { grid-template-columns: repeat(2, 1fr) }
+    .two { grid-template-columns: 1fr }
+  }
+
+  /* ── Print / Save-as-PDF ───────────────────────────────────────────── */
+  @media print {
+    body { background: #fff; font-size: 10.5pt }
+    .sheet { max-width: none; box-shadow: none; padding-bottom: 0 }
+    .toolbar, .no-print { display: none !important }
+    .cover { background: #0b1220 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact }
+    .dept { break-inside: auto; page-break-inside: auto }
+    .dept-head { break-after: avoid; page-break-after: avoid;
+                 -webkit-print-color-adjust: exact; print-color-adjust: exact }
+    section, .qsec { break-inside: auto }
+    .q { break-inside: avoid; page-break-inside: avoid }
+    .qsec > h4 { break-after: avoid; page-break-after: avoid }
+    table { break-inside: auto }
+    tr { break-inside: avoid; page-break-inside: avoid }
+    thead { display: table-header-group }
+  }
+  @page { margin: 14mm 12mm }
+</style>
+</head>
+<body>
+{% set t = pack.totals %}
+{% macro barclass(pct) %}{% if pct >= 75 %}{% elif pct >= 50 %}mid{% else %}low{% endif %}{% endmacro %}
+
+<div class="sheet">
+
+  <div class="cover">
+    <div class="kicker">Deeksharambh 2026 · {{ pack.campus }}</div>
+    <h1>Department meeting pack</h1>
+    <p>Registered on the portal against who actually took Deeksharambh, ranked, with the
+       five strongest and five weakest departments — then every department's own
+       reading, question by question, with the {{ pack.picks }} answers its students gave most.</p>
+    <div class="rule"></div>
+    <div class="toolbar">
+      <a class="btn btn-pdf" href="{{ pdf_url }}">⬇ Download PDF</a>
+      <button class="btn btn-ghost" onclick="window.print()">🖨 Print / Save as PDF</button>
+      {% if share_url %}<button class="btn btn-ghost" onclick="copyLink(this)">🔗 Copy this link</button>{% endif %}
+    </div>
+  </div>
+
+  <div class="pad">
+
+    <!-- ── 1. The count ──────────────────────────────────────────────── -->
+    <section id="count">
+      <h2><span class="n">01</span>Registered on the portal → took Deeksharambh</h2>
+      <p class="lede">Every student the portal registered is in the denominator, whether or not they
+        ever opened the baseline survey. The numerator is the students with a Deeksharambh reply on file.</p>
+
+      <div class="cards">
+        <div class="card"><b>{{ t.registered }}</b><s>Registered in portal</s></div>
+        <div class="card"><b>{{ t.took }}</b><s>Took Deeksharambh</s></div>
+        <div class="card"><b>{{ t.missing }}</b><s>Yet to take it</s></div>
+        <div class="card"><b>{{ t.pct }}%</b><s>Conversion</s></div>
+      </div>
+
+      {% if t.unmatched %}
+      <p class="note"><b>{{ t.unmatched }}</b> Deeksharambh {{ 'reply' if t.unmatched == 1 else 'replies' }}
+        came from an email address with no portal registration. Those replies are read in the
+        department analysis below but cannot appear in this conversion, which is why the two
+        totals differ by exactly {{ t.unmatched }}.</p>
+      {% endif %}
+
+      <table>
+        <thead><tr>
+          <th class="n">#</th><th>Department</th><th>Campus</th>
+          <th class="n">Registered</th><th class="n">Took Deeksharambh</th>
+          <th class="n">Yet to take</th><th class="n">Conversion</th>
+        </tr></thead>
+        <tbody>
+        {% for row in pack.conversion %}
+          <tr>
+            <td class="n rank">{{ loop.index }}</td>
+            <td class="dept-name">{{ row.dept }}</td>
+            <td>{{ row.campuses | join(', ') or '—' }}</td>
+            <td class="n">{{ row.registered }}</td>
+            <td class="n">{{ row.took }}</td>
+            <td class="n">{{ row.missing }}</td>
+            <td class="n">{{ row.pct }}%
+              <div class="bar {{ barclass(row.pct) }}"><i style="width:{{ row.pct }}%"></i></div>
+            </td>
+          </tr>
+        {% else %}
+          <tr><td colspan="7">No students registered in this scope yet.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- ── 2. Top 5 / least 5 ────────────────────────────────────────── -->
+    <section id="callouts">
+      {% set c = pack.callouts %}
+      {% set shown = [c.top | length, c.least | length] | max %}
+      <h2><span class="n">02</span>The strongest {{ shown }} and the weakest {{ shown }}</h2>
+      <p class="lede">Ranked on the same conversion. Departments level on percentage are split by how
+        many students that percentage stands for, so 100% of forty ranks above 100% of four.</p>
+
+      {% if c.overlap %}
+      <p class="note">Only {{ c.ranked }} {{ 'department has' if c.ranked == 1 else 'departments have' }}
+        students registered in this scope — fewer than the {{ c.size * 2 }} the two lists need, so
+        {{ c.overlap | join(', ') }} {{ 'appears' if c.overlap | length == 1 else 'appear' }} in both.</p>
+      {% endif %}
+
+      <div class="two">
+        <div class="callout good">
+          <h3>▲ Top {{ c.top | length }} by conversion</h3>
+          <p class="lede">Departments whose students turned up.</p>
+          <table>
+            <thead><tr><th class="n">#</th><th>Department</th><th class="n">Took / Reg.</th><th class="n">%</th></tr></thead>
+            <tbody>
+            {% for row in c.top %}
+              <tr><td class="n rank">{{ loop.index }}</td><td class="dept-name">{{ row.dept }}</td>
+                  <td class="n">{{ row.took }} / {{ row.registered }}</td><td class="n">{{ row.pct }}%</td></tr>
+            {% else %}
+              <tr><td colspan="4">Nothing to rank yet.</td></tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="callout work">
+          <h3>▼ Least {{ c.least | length }} by conversion</h3>
+          <p class="lede">Worst first — the departments to chase.</p>
+          <table>
+            <thead><tr><th class="n">#</th><th>Department</th><th class="n">Took / Reg.</th><th class="n">%</th></tr></thead>
+            <tbody>
+            {% for row in c.least %}
+              <tr><td class="n rank">{{ loop.index }}</td><td class="dept-name">{{ row.dept }}</td>
+                  <td class="n">{{ row.took }} / {{ row.registered }}</td><td class="n">{{ row.pct }}%</td></tr>
+            {% else %}
+              <tr><td colspan="4">Nothing to rank yet.</td></tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- ── 3. Department by department ───────────────────────────────── -->
+    <section id="departments">
+      <h2><span class="n">03</span>Department by department, question by question</h2>
+      <p class="lede">Every question the Deeksharambh form asked, for every department, with the
+        {{ pack.picks }} answers its own students chose most. Where a question has a good end, both
+        answers come from it. Where a question only ever asked what went wrong, the {{ pack.picks }}
+        biggest asks are shown as asks. Percentages are of the students in that department who
+        answered that question, not of the department.</p>
+
+      {% for d in pack.departments %}
+      <article class="dept" id="dept-{{ loop.index }}">
+        <header class="dept-head">
+          <div class="kicker">Department {{ loop.index }} of {{ pack.departments | length }}
+            {%- if d.campuses %} · {{ d.campuses | join(', ') }}{% endif %}</div>
+          <h3>{{ d.dept }}</h3>
+          <div class="dept-stats">
+            <span class="chip">Registered <b>{{ d.registered }}</b></span>
+            <span class="chip">Took Deeksharambh <b>{{ d.took }}</b></span>
+            <span class="chip">Conversion <b>{{ d.pct }}%</b></span>
+            <span class="chip">Replies analysed <b>{{ d.responses }}</b></span>
+            {% if d.headline.vibe is not none %}<span class="chip">Vibe <b>{{ d.headline.vibe }}/10</b></span>{% endif %}
+            {% if d.headline.nps is not none %}<span class="chip">NPS <b>{{ d.headline.nps }}</b></span>{% endif %}
+            {% if d.headline.belonging is not none %}<span class="chip">Belonging <b>{{ d.headline.belonging }}/10</b></span>{% endif %}
+          </div>
+        </header>
+        <div class="dept-body">
+
+          {% if not d.responses %}
+            <p class="small-cell">No Deeksharambh replies from this department yet — the
+              {{ d.registered }} registered {{ 'student has' if d.registered == 1 else 'students have' }}
+              nothing on file to read. Every question below would be empty, so the questions are not
+              printed for this department.</p>
+          {% else %}
+            {% if not d.reportable %}
+            <p class="small-cell">{{ d.responses }} {{ 'reply' if d.responses == 1 else 'replies' }} —
+              below the {{ pack.min_reportable }} this report treats as safe to quote outside the
+              department. The answers are printed here because this is the department's own reading;
+              read them as {{ d.responses }} named {{ 'student' if d.responses == 1 else 'students' }},
+              not as a percentage of anything.</p>
+            {% endif %}
+
+            {% for sec in d.sections %}
+            <div class="qsec">
+              <h4>{{ sec.title }}</h4>
+              {% for q in sec.questions %}
+              <div class="q">
+                <div class="q-top">
+                  <span class="q-key">{{ q.key | upper }}</span>
+                  <span class="q-label">{{ q.label }}</span>
+                  {% if q.answered %}
+                    <span class="tag {{ 'tag-good' if q.frame == 'positive' else ('tag-ask' if q.frame == 'asked' else 'tag-top') }}">{{ q.frame_label }}</span>
+                    <span class="q-meta">{{ q.answered }} answered{% if q.avg is defined and q.avg is not none %} · avg {{ q.avg }}{% if q.max %}/{{ q.max }}{% endif %}{% endif %}{% if q.nps is defined and q.nps is not none %} · NPS {{ q.nps }}{% endif %}</span>
+                  {% else %}
+                    <span class="q-meta">Not answered by anyone in this department</span>
+                  {% endif %}
+                </div>
+
+                {% if q.kind == 'matrix' %}
+                  {% for row in q.rows %}
+                  <div class="mrow">
+                    <b>{{ row.label }}</b>
+                    <span class="q-meta">— {{ row.answered }} answered</span>
+                    {% if row.picks %}
+                    <ul class="picks">
+                      {% for p in row.picks %}
+                      <li><span class="i">{{ loop.index }}.</span><span>{{ p.label }}</span>
+                          <span class="pct">{{ p.pct }}%</span><span class="cnt">({{ p.count }})</span></li>
+                      {% endfor %}
+                    </ul>
+                    {% else %}
+                    <div class="none">No answer at the positive end of this statement.</div>
+                    {% endif %}
+                  </div>
+                  {% else %}
+                  <div class="none">Nobody in this department filled this grid in.</div>
+                  {% endfor %}
+                {% elif q.picks %}
+                  <ul class="picks">
+                    {% for p in q.picks %}
+                    <li><span class="i">{{ loop.index }}.</span><span>{{ p.label }}</span>
+                        <span class="pct">{{ p.pct }}%</span><span class="cnt">({{ p.count }})</span></li>
+                    {% endfor %}
+                  </ul>
+                  {% if q.share is not none %}<div class="none">Between them, {{ q.share }}% of the {{ q.answered }} who answered this question.</div>{% endif %}
+                {% elif q.answered %}
+                  <div class="none">
+                    {% if q.frame == 'positive' %}{{ q.answered }} answered, but none of them picked
+                      an answer from the positive end of this question.
+                    {% else %}{{ q.answered }} answered, with nothing to rank.{% endif %}
+                  </div>
+                {% else %}
+                  <div class="none">No answers on file.</div>
+                {% endif %}
+              </div>
+              {% endfor %}
+            </div>
+            {% endfor %}
+          {% endif %}
+
+        </div>
+      </article>
+      {% else %}
+        <p class="lede">No departments in this scope yet.</p>
+      {% endfor %}
+    </section>
+
+    <p class="foot">
+      Deeksharambh 2026 · {{ pack.campus }} · generated {{ generated_at }} ·
+      {{ t.registered }} registered, {{ t.took }} took Deeksharambh across
+      {{ t.departments }} {{ 'department' if t.departments == 1 else 'departments' }}.
+      Counts read from the registration portal and the orientation responses directly;
+      no figure on this page is estimated.
+    </p>
+  </div>
+</div>
+
+<script>
+function copyLink(btn) {
+  navigator.clipboard.writeText(location.href).then(function () {
+    var was = btn.textContent;
+    btn.textContent = '✓ Copied';
+    setTimeout(function () { btn.textContent = was; }, 1600);
+  });
+}
+</script>
+</body>
+</html>
