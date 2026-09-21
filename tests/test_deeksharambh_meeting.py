@@ -519,3 +519,64 @@ def test_an_exclusive_question_with_two_picks_does_carry_a_combined_share():
     assert [p["pct"] for p in q["q2"]["picks"]] == [50.0, 25.0]
     assert q["q2"]["share"] == 75.0      # three of the four, and no more
     assert q["q2"]["avg"] == 8.0
+
+
+# ── The page's shape ─────────────────────────────────────────────────────────
+
+@pytest.mark.asyncio
+async def test_every_department_is_in_the_page_even_though_one_shows_at_a_time(admin_client):
+    """The explorer answers "stop making me scroll" without hiding anything.
+
+    Only one department is on screen, but all of them are in the document —
+    so Ctrl+F, the rail, screen readers, printing and the PDF all still reach
+    every one. A department behind a click is fine; a department missing from
+    the page is not.
+    """
+    await _seed()
+    page = (await admin_client.get("/admin/survey/deeksharambh-meeting")).text
+
+    # Four departments rendered, exactly one of them marked visible.
+    assert page.count('class="dept ') + page.count('class="dept"') == 4
+    assert page.count('class="dept on"') == 1
+
+    # And every one is reachable from the rail, with its conversion on it.
+    for dept in ("Department of Commerce", "Department of Law",
+                 "Department of Design", "Department of Science"):
+        assert f'data-name="{dept.lower()}"' in page
+
+    # Nothing is inside a collapsed element.
+    assert "<details" not in page
+
+    # Print puts them all back — this rule is the whole guarantee.
+    assert ".dept { display: block !important" in page
+
+
+@pytest.mark.asyncio
+async def test_the_page_charts_from_the_vendored_bundle_not_a_cdn(admin_client):
+    """The campus network blocks CDNs; the charts have to survive that."""
+    await _seed()
+    page = (await admin_client.get("/admin/survey/deeksharambh-meeting")).text
+
+    assert "/static/vendor/chart.umd.js" in page
+    for host in ("cdn.jsdelivr.net", "cdnjs.cloudflare.com", "unpkg.com"):
+        assert host not in page
+
+
+@pytest.mark.asyncio
+async def test_the_carousel_reads_the_same_rows_the_tables_print(admin_client):
+    """The spotlight is a view of the call-out lists, never a second copy.
+
+    Both are rendered from `callouts`, so a department cannot lead the
+    carousel while the table under it says something else — and the tables
+    survive into print, where the carousel is dropped.
+    """
+    await _seed()
+    page = (await admin_client.get("/admin/survey/deeksharambh-meeting")).text
+
+    # The carousel's data is handed over as JSON from the same structure.
+    assert '"dept": "Department of Commerce"' in page or \
+           '"dept":"Department of Commerce"' in page
+    # Both plain tables are present for the reader and the printer.
+    assert "Top 4 by conversion" in page
+    assert "Least 4 by conversion" in page
+    assert ".dc-shell, .rail, .no-print" in page   # dropped when printing
