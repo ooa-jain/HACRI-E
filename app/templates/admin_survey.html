@@ -624,6 +624,23 @@
             <div class="card">
               <div class="panel-head">
                 <div>
+                  <div class="h-card">🧾 Department meeting pack</div>
+                  <div class="sub">One link for the meeting: how many students each department
+                    registered on the portal against how many actually took Deeksharambh, ranked,
+                    with the top five and least five called out — then every department's own
+                    analysis, every question, with the two answers its students gave most.
+                    Nothing folded away.</div>
+                </div>
+                <div class="panel-actions">
+                  <a id="ori-meeting" href="/admin/survey/deeksharambh-meeting" target="_blank" class="btn btn-dark">🔗 Open</a>
+                  <a id="ori-meeting-pdf" href="/admin/survey/deeksharambh-meeting.pdf" class="btn btn-soft">⬇️ PDF</a>
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="panel-head">
+                <div>
                   <div class="h-card">📘 Student Experience & Orientation Impact brief</div>
                   <div class="sub">The journey from baseline to post survey, every department
                     registered vs. submitted, the 2026 theme and its nine sections, what students
@@ -3291,6 +3308,9 @@ function setOriView(view) {
     $('ori-view-' + v).classList.toggle('hidden', v !== view));
   $('ori-ppt').href = '/admin/survey/orientation-ppt?' + oriParams();
   $('ori-count-ppt').href = '/admin/survey/orientation-count-ppt?campus=' + encodeURIComponent(oriCampus);
+  const meetingScope = 'campus=' + encodeURIComponent(oriCampus);
+  if ($('ori-meeting')) $('ori-meeting').href = '/admin/survey/deeksharambh-meeting?' + meetingScope;
+  if ($('ori-meeting-pdf')) $('ori-meeting-pdf').href = '/admin/survey/deeksharambh-meeting.pdf?' + meetingScope;
   if (view === 'analysis')    loadOriCampusReport();
   if (view === 'departments') loadOriDepartments();
   if (view === 'filled')      loadOriStudents();
