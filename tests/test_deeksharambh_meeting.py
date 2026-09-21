@@ -599,8 +599,11 @@ async def test_the_hero_photo_is_served_locally_and_dropped_when_printing(admin_
     photo = Path(BASE_DIR) / "static" / "img" / "campus-hero.jpg"
     assert photo.is_file() and photo.stat().st_size > 20_000
 
-    # Print drops it.
-    assert ".se-media { display: none }" in page
+    # Print drops it — the rule also hides the seam gradient now, so this
+    # checks the print block rather than one exact declaration.
+    print_block = page.split("@media print {")[1]
+    assert ".se-media" in print_block.split("@page")[0]
+    assert "display: none" in print_block.split(".se-media")[1][:80]
 
 
 @pytest.mark.asyncio
@@ -719,3 +722,110 @@ async def test_copying_still_works_where_the_clipboard_api_is_missing(admin_clie
     assert "window.prompt(" in page
     # And the link is on the page as selectable text regardless.
     assert 'id="shareUrl"' in page
+
+
+# ── The added components ─────────────────────────────────────────────────────
+
+@pytest.mark.asyncio
+async def test_the_bands_account_for_every_department_exactly_once(app_with_mock):
+    """The band strip is a partition, not a sample: each department lands in
+    one band, the four add up to the whole field, and the boundaries do not
+    overlap — 75.0% is "75% and up", not the band below it."""
+    await _seed()
+    from app.deeksharambh_meeting import meeting_pack
+
+    pack = await meeting_pack()
+    bands = pack["bands"]
+    assert [b["label"] for b in bands] == ["Under 25%", "25 – 49%", "50 – 74%", "75% and up"]
+
+    named = [r for r in pack["conversion"] if r["dept"] != "No department"]
+    assert sum(b["count"] for b in bands) == len(named)
+
+    # Every department appears in exactly one band's membership list.
+    listed = [d for b in bands for d in b["departments"]]
+    assert sorted(listed) == sorted(r["dept"] for r in named)
+    assert len(listed) == len(set(listed))
+
+    # Our four: 0%, 33.3%, 75%, 100%.
+    counts = {b["label"]: b["count"] for b in bands}
+    assert counts == {"Under 25%": 1, "25 – 49%": 1, "50 – 74%": 0, "75% and up": 2}
+    # And the registered totals travel with them.
+    under = next(b for b in bands if b["label"] == "Under 25%")
+    assert under["registered"] == 2 and under["missing"] == 2   # Science
+
+
+@pytest.mark.asyncio
+async def test_the_chase_list_ranks_by_headcount_not_percentage(app_with_mock):
+    """The two rankings disagree on purpose.
+
+    Science is last on conversion (0%) but only two students short. Design
+    at 33.3% is short of two as well, and Law at 75% is short of one. Sorting
+    by what is actually missing is what makes the list workable — a 0%
+    department of four is not where a week of chasing goes.
+    """
+    await _seed()
+    from app.deeksharambh_meeting import meeting_pack
+
+    gaps = (await meeting_pack())["gaps"]
+    assert [(r["dept"], r["missing"]) for r in gaps] == [
+        ("Department of Science", 2),   # 2 missing, 0% — worse pct breaks the tie
+        ("Department of Design", 2),    # 2 missing, 33.3%
+        ("Department of Law", 1),
+    ]
+    # Departments with nobody left to chase are simply not on the list.
+    assert all(r["missing"] > 0 for r in gaps)
+    assert "Department of Commerce" not in [r["dept"] for r in gaps]
+
+
+@pytest.mark.asyncio
+async def test_the_campus_split_reconciles_with_the_cohort_total(app_with_mock):
+    await _seed()
+    await db.get_db()["users"].insert_one({
+        "email": "lata@x.com", "name": "Lata", "program": "Department of Arts",
+        "ug_or_pg": "ug", "location": "Kochi", "status": db.STATUS_PRE_DONE,
+        "created_at": datetime.now(timezone.utc),
+    })
+    from app.deeksharambh_meeting import meeting_pack
+
+    pack = await meeting_pack()
+    campuses = {c["campus"]: c for c in pack["campuses"]}
+    assert campuses["Bangalore"]["registered"] == 11
+    assert campuses["Kochi"]["registered"] == 1
+    # The parts are the whole — no student counted twice or dropped.
+    assert sum(c["registered"] for c in pack["campuses"]) == pack["totals"]["registered"]
+    assert sum(c["took"] for c in pack["campuses"]) == pack["totals"]["took"]
+
+
+@pytest.mark.asyncio
+async def test_the_hero_is_open_before_it_hands_over_to_the_page(admin_client):
+    """The hard line between the photo and the page was a frame still opening.
+
+    At the handover the frame was ~94% open: visible side gutters, a residual
+    corner radius, and the pale page starting underneath it. Three things fix
+    it, and all three are pinned here — the width saturates early, full bleed
+    is reached halfway through the hero and held, and once the hero is behind
+    you the frame is snapped open regardless of where the easing got to.
+    """
+    await _seed()
+    page = (await admin_client.get("/admin/survey/deeksharambh-meeting")).text
+
+    assert "--pw: min(1, calc(var(--p, 0) / 0.82))" in page
+    assert "width: calc(42% + (100% - 42%) * var(--pw, 0))" in page
+    assert "border-radius: calc(24px * (1 - var(--pw, 0)))" in page
+    assert "var HOLD = 0.5, SMOOTH = 0.16;" in page
+    assert "current = 1; wrap.style.setProperty('--p', 1); ticking = false; return;" in page
+    # And the frame's floor fades into the page's own colour.
+    assert ".se-frame::after" in page
+    assert "var(--plane) 100%" in page
+
+
+@pytest.mark.asyncio
+async def test_no_inline_grid_columns_defeat_the_responsive_rules(admin_client):
+    """An inline grid-template-columns beat the media query and kept two
+    columns on a phone, pushing the campus cards off the side of the page.
+    Layout belongs in classes so the breakpoints can win."""
+    await _seed()
+    page = (await admin_client.get("/admin/survey/deeksharambh-meeting")).text
+
+    assert 'style="grid-template-columns' not in page
+    assert ".grid2, .grid2.even, .explorer { grid-template-columns: 1fr }" in page

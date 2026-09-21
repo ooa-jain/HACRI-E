@@ -44,7 +44,9 @@
     background: var(--plane); color: var(--body);
     font-size: 14px; line-height: 1.5; -webkit-font-smoothing: antialiased;
   }
-  .wrap { max-width: 1240px; margin: 0 auto; padding: 0 22px 90px }
+  .wrap { max-width: 1240px; margin: 0 auto; padding: 0 22px 90px;
+          background: linear-gradient(to bottom, var(--plane) 0%, var(--plane) 120px,
+                                      transparent 420px) }
   .mono { font-family: 'JetBrains Mono', ui-monospace, Menlo, monospace }
   .num { font-variant-numeric: tabular-nums }
 
@@ -77,15 +79,21 @@
   }
   .se-frame {
     position: relative; overflow: hidden;
+    /* Fades the frame's bottom edge out as it reaches full bleed, so the
+       campus dissolves into the page instead of ending on a hard line. */
+    --seam: calc(var(--p, 0) * 1);
     /* The floor is what the headline, the four figures and the button row
        actually need; without it a short laptop screen cut the buttons off
        at the frame's edge. */
     --h0: clamp(500px, 62vh, 660px);
-    width: calc(42% + (100% - 42%) * var(--p, 0));
+    /* Width finishes at 82% of the progress so the gutters close well
+       before the handover; height keeps the full run. */
+    --pw: min(1, calc(var(--p, 0) / 0.82));
+    width: calc(42% + (100% - 42%) * var(--pw, 0));
     height: calc(var(--h0) + (100vh - var(--h0)) * var(--p, 0));
     min-height: var(--h0);
-    border-radius: calc(24px * (1 - var(--p, 0)));
-    box-shadow: 0 30px 80px -20px rgba(43, 12, 70, calc(.45 * (1 - var(--p, 0))));
+    border-radius: calc(24px * (1 - var(--pw, 0)));
+    box-shadow: 0 30px 80px -20px rgba(43, 12, 70, calc(.45 * (1 - var(--pw, 0))));
     background: var(--g-ink);
     display: grid; place-items: center;
   }
@@ -115,9 +123,19 @@
     content: ''; position: absolute; inset: 0;
     background: rgba(9, 4, 20, calc(.3 - .12 * var(--p, 0)));
   }
+  /* The handover: a band of the page's own colour, rising out of the frame's
+     floor only once the frame is open enough to touch the content below it. */
+  .se-frame::after {
+    content: ''; position: absolute; left: 0; right: 0; bottom: 0; z-index: 3;
+    height: 190px; pointer-events: none;
+    opacity: var(--seam, 0);
+    background: linear-gradient(to bottom,
+      rgba(253,242,248,0) 0%, rgba(253,242,248,.55) 46%,
+      rgba(253,242,248,.88) 74%, var(--plane) 100%);
+  }
   .se-inner {
-    position: relative; z-index: 2; color: #fff; text-align: center;
-    padding: 0 26px; max-width: 900px;
+    position: relative; z-index: 4; color: #fff; text-align: center;
+    padding: 0 26px 30px; max-width: 900px;
   }
   .se-kicker {
     font-size: 11px; font-weight: 800; letter-spacing: 2.6px; text-transform: uppercase;
@@ -226,6 +244,7 @@
 
   /* ── Charts & tables ───────────────────────────────────────────────── */
   .grid2 { display: grid; grid-template-columns: 340px 1fr; gap: 16px; margin-top: 20px; align-items: start }
+  .grid2.even { grid-template-columns: 1fr 1fr }
   /* A grid item defaults to min-width:auto, so a card would stretch to its
      widest table and take the page sideways with it rather than letting the
      table scroll inside itself. */
@@ -323,6 +342,44 @@
   .mrow > b { font-size: 12.5px; color: var(--ink) }
   .mrow .picks { margin-left: 0 }
 
+  /* ── Band strip, chase list, campus split ──────────────────────────── */
+  .bands { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 16px }
+  .band { border: 1px solid var(--line); border-radius: 14px; padding: 15px 16px; background: var(--paper) }
+  .band .sw { width: 30px; height: 6px; border-radius: 4px; display: block }
+  .band b { display: block; font-size: 27px; font-weight: 800; color: var(--ink);
+            letter-spacing: -.8px; margin-top: 11px }
+  .band s { display: block; text-decoration: none; font-size: 11px; font-weight: 700;
+            letter-spacing: .5px; text-transform: uppercase; color: var(--muted); margin-top: 3px }
+  .band em { font-style: normal; display: block; font-size: 11.5px; color: var(--muted); margin-top: 8px }
+  .meter { display: flex; height: 13px; border-radius: 7px; overflow: hidden; margin-top: 16px;
+           background: var(--d-grid) }
+  .meter i { display: block; height: 100% }
+  .meter i + i { box-shadow: -2px 0 0 #fff }
+  .meter-key { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 11px; font-size: 12px }
+  .meter-key i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; margin-right: 6px }
+
+  .chase li { list-style: none; display: flex; align-items: center; gap: 12px;
+              padding: 11px 0; border-bottom: 1px solid var(--line) }
+  .chase li:last-child { border-bottom: none }
+  .chase .r { font-variant-numeric: tabular-nums; font-weight: 800; color: var(--muted);
+              min-width: 20px; font-size: 12px }
+  .chase .nm { flex: 1; font-weight: 700; color: var(--ink); font-size: 13px; min-width: 0;
+               overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+  .chase .tk { width: 120px; height: 7px; border-radius: 4px; background: var(--d-grid);
+               overflow: hidden; flex: none }
+  .chase .tk i { display: block; height: 100%; background: var(--d-primary) }
+  .chase .mi { font-variant-numeric: tabular-nums; font-weight: 800; color: var(--ink);
+               min-width: 92px; text-align: right; font-size: 13px }
+  .chase .mi s { display: block; text-decoration: none; font-size: 10.5px; font-weight: 600;
+                 color: var(--muted) }
+
+  .campus-grid { display: grid; gap: 12px; margin-top: 16px;
+                 grid-template-columns: repeat(auto-fit, minmax(min(210px, 100%), 1fr)) }
+  .campus { border: 1px solid var(--line); border-radius: 14px; padding: 16px; background: var(--paper) }
+  .campus h5 { font-size: 14px; font-weight: 800; color: var(--ink) }
+  .campus .big { font-size: 30px; font-weight: 800; letter-spacing: -1px; color: var(--ink); margin-top: 8px }
+  .campus .sub { font-size: 11.5px; color: var(--muted); margin-top: 2px }
+  @media (max-width: 860px) { .bands { grid-template-columns: repeat(2, 1fr) } }
   .share-row { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap }
   .share-row input { flex: 1; min-width: 220px; padding: 11px 14px; font-size: 12.5px;
                      border: 1px solid var(--line); border-radius: 10px;
@@ -332,7 +389,7 @@
 
   @media (max-width: 1040px) {
     .kpis { grid-template-columns: repeat(2, 1fr) }
-    .grid2, .explorer { grid-template-columns: 1fr }
+    .grid2, .grid2.even, .explorer { grid-template-columns: 1fr }
     .rail { position: static; max-height: none }
     .rail-list { max-height: 260px }
   }
@@ -376,7 +433,7 @@
     .se-frame { width: 100% !important; height: auto !important; border-radius: 0 !important;
                 box-shadow: none; padding: 26px 0 }
     .se-sticky::before, .se-sticky::after { display: none }
-    .se-media { display: none }
+    .se-media, .se-frame::after { display: none }
     .se-inner, .se-kicker, .se-inner h1, .se-inner p { color: #000 !important }
     .se-sub { color: #000 !important; background: none; border: 1px solid #ccc;
               text-shadow: none }
@@ -470,6 +527,69 @@
     </div>
 
     <div class="card" style="margin-top:16px">
+      <div class="cap">Where the departments sit<span>Each department placed in a conversion band —
+        with {{ pack.conversion | length }} of them, this is the shape a ranked table cannot show.</span></div>
+      {% set ramp = ['#86b6ef', '#5598e7', '#2a78d6', '#184f95'] %}
+      <div class="meter" role="img" aria-label="Departments by conversion band">
+        {% for b in pack.bands %}{% if b.pct %}<i style="width:{{ b.pct }}%;background:{{ ramp[loop.index0] }}"></i>{% endif %}{% endfor %}
+      </div>
+      <div class="meter-key">
+        {% for b in pack.bands %}
+        <span><i style="background:{{ ramp[loop.index0] }}"></i>{{ b.label }} — <b>{{ b.count }}</b></span>
+        {% endfor %}
+      </div>
+      <div class="bands">
+        {% for b in pack.bands %}
+        <div class="band">
+          <span class="sw" style="background:{{ ramp[loop.index0] }}"></span>
+          <b class="num">{{ b.count }}</b>
+          <s>{{ b.label }}</s>
+          <em>{{ b.registered }} registered · {{ b.missing }} yet to take it</em>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="grid2 even">
+      <div class="card">
+        <div class="cap">The chase list<span>Most students still to take it — by headcount, not
+          percentage, because that is the order somebody actually works through.</span></div>
+        <ul class="chase">
+          {% for row in pack.gaps %}
+          <li>
+            <span class="r num">{{ loop.index }}</span>
+            <span class="nm">{{ row.dept }}</span>
+            <span class="tk" title="{{ row.pct }}% taken"><i style="width:{{ row.pct }}%"></i></span>
+            <span class="mi num">{{ row.missing }}<s>of {{ row.registered }} · {{ row.pct }}% in</s></span>
+          </li>
+          {% else %}
+          <li><span class="nm">Nobody left to chase — every registered student has taken it.</span></li>
+          {% endfor %}
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="cap">By campus<span>The same conversion, split by where students are.</span></div>
+        <div class="campus-grid">
+          {% for c in pack.campuses %}
+          <div class="campus">
+            <h5>{{ c.campus }}</h5>
+            <div class="big num">{{ c.pct }}%</div>
+            <div class="sub">{{ c.took }} of {{ c.registered }} registered</div>
+            <div class="sub">{{ c.departments }} {{ 'department' if c.departments == 1 else 'departments' }}
+              · {{ c.missing }} yet to take it</div>
+            <div class="meter" style="height:7px;margin-top:11px">
+              <i style="width:{{ c.pct }}%;background:var(--d-primary)"></i>
+            </div>
+          </div>
+          {% else %}
+          <div class="campus"><h5>No campuses in this scope yet</h5></div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
       <div class="cap">Every department<span>The full count, ranked.</span></div>
       <div class="t-scroll" style="margin-top:16px"><table>
         <thead><tr>
@@ -531,7 +651,7 @@
 
     <!-- The same two lists as plain tables: the carousel is a view of these,
          not the only copy. Print keeps these and drops the carousel. -->
-    <div class="grid2" style="grid-template-columns:1fr 1fr">
+    <div class="grid2 even">
       <div class="card">
         <div class="cap">Top {{ c.top | length }} by conversion<span>Departments whose students turned up.</span></div>
         <div class="t-scroll" style="margin-top:16px"><table>
@@ -736,7 +856,7 @@ var REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   if (!wrap || !frame) return;
   if (isStatic()) { wrap.style.setProperty('--p', 1); }
 
-  var HOLD = 0.35, SMOOTH = 0.1;
+  var HOLD = 0.5, SMOOTH = 0.16;
   var current = 0, target = 0, ticking = false;
 
   function measure() {
@@ -749,7 +869,7 @@ var REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   }
   function frameLoop() {
     current += (target - current) * SMOOTH;
-    if (Math.abs(target - current) < 0.001) current = target;
+    if (Math.abs(target - current) < 0.004) current = target;
     wrap.style.setProperty('--p', current.toFixed(4));
     if (Math.abs(target - current) > 0.0005) { requestAnimationFrame(frameLoop); }
     else { ticking = false; }
@@ -757,6 +877,11 @@ var REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   function onScroll() {
     if (isStatic()) { wrap.style.setProperty('--p', 1); return; }
     measure();
+    if (target >= 1) {
+      // Past the hero there is nothing left to open, and a frame caught
+      // part-open here is precisely the hard edge this is meant to remove.
+      current = 1; wrap.style.setProperty('--p', 1); ticking = false; return;
+    }
     if (!ticking) { ticking = true; requestAnimationFrame(frameLoop); }
   }
   window.addEventListener('scroll', onScroll, { passive: true });

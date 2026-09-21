@@ -295,6 +295,76 @@ def callouts(rows: list[dict], size: int = CALLOUT) -> dict:
     }
 
 
+# The four bands a department's conversion falls into. Ordered worst to best,
+# because the meeting reads them in the order it has to act on them.
+BANDS: tuple[tuple[str, float, float], ...] = (
+    ("Under 25%",  0.0,  25.0),
+    ("25 – 49%",  25.0,  50.0),
+    ("50 – 74%",  50.0,  75.0),
+    ("75% and up", 75.0, 100.01),
+)
+
+
+def band_rows(rows: list[dict]) -> list[dict]:
+    """How the departments spread across those bands.
+
+    With thirty-odd departments a ranked table is a wall. This says in four
+    numbers where the cohort actually sits, and names who is in each band so
+    the meeting can go straight to them.
+    """
+    out = []
+    for label, low, high in BANDS:
+        members = [r for r in rows
+                   if r["dept"] != NO_DEPARTMENT and low <= r["pct"] < high]
+        out.append({
+            "label": label,
+            "count": len(members),
+            "departments": [r["dept"] for r in members],
+            "registered": sum(r["registered"] for r in members),
+            "missing": sum(r["missing"] for r in members),
+        })
+    counted = sum(b["count"] for b in out)
+    for band in out:
+        band["pct"] = round(100.0 * band["count"] / counted, 1) if counted else 0.0
+    return out
+
+
+def gap_rows(rows: list[dict], limit: int = 8) -> list[dict]:
+    """Departments with the most students still to take Deeksharambh.
+
+    The percentage ranking is the fair way to judge a department and the wrong
+    way to plan a week of chasing: 0% of four students is last on that table
+    and worth almost nothing to fix, while a large department at 60% may be
+    hundreds of students short. This ranks by how many students are actually
+    missing, which is the list somebody works through.
+    """
+    ranked = [r for r in rows if r["dept"] != NO_DEPARTMENT and r["missing"] > 0]
+    ranked.sort(key=lambda r: (-r["missing"], r["pct"], r["dept"].lower()))
+    return ranked[:limit]
+
+
+def campus_rows(students: list[dict]) -> list[dict]:
+    """The same conversion, per campus."""
+    groups: dict[str, list[dict]] = {}
+    for row in students:
+        groups.setdefault(row["campus"] or "Unspecified", []).append(row)
+
+    out = []
+    for campus, members in groups.items():
+        took = sum(1 for m in members if m["orientation"])
+        registered = len(members)
+        out.append({
+            "campus": campus,
+            "registered": registered,
+            "took": took,
+            "missing": registered - took,
+            "pct": round(100.0 * took / registered, 1) if registered else 0.0,
+            "departments": len({m["program"] or NO_DEPARTMENT for m in members}),
+        })
+    out.sort(key=lambda r: (-r["registered"], r["campus"]))
+    return out
+
+
 # ── The pack ─────────────────────────────────────────────────────────────────
 
 async def meeting_pack(*, campus: str = "") -> dict:
@@ -364,6 +434,9 @@ async def meeting_pack(*, campus: str = "") -> dict:
         },
         "conversion": conversion,
         "callouts": callouts(conversion),
+        "bands": band_rows(conversion),
+        "gaps": gap_rows(conversion),
+        "campuses": campus_rows(students),
         "departments": departments,
         "picks": PICKS,
         "min_reportable": MIN_REPORTABLE,
