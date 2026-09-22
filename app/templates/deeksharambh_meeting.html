@@ -376,7 +376,7 @@
   .rail-list { margin-top: 10px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px }
   .chip { display: flex; align-items: center; gap: 9px; width: 100%; text-align: left; cursor: pointer;
           border: none; background: transparent; font: inherit; font-size: 12.5px; color: var(--body);
-          border-radius: 10px; padding: 9px 11px; transition: background .12s; text-decoration: none }
+          border-radius: 10px; padding: 9px 11px; transition: background .12s }
   .chip:hover { background: var(--soft) }
   .chip[aria-current="true"] { background: var(--ink); color: #fff; font-weight: 700 }
   .chip .nm { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
@@ -802,13 +802,13 @@
                aria-label="Search departments" oninput="filterDepts(this.value)">
         <div class="rail-list" id="deptList" role="tablist" aria-label="Departments">
           {% for d in pack.departments %}
-          <a href="#dept-{{ loop.index }}" target="_blank" rel="noopener" class="chip" role="tab"
-             data-target="dept-{{ loop.index }}"
-             data-name="{{ d.dept | lower }}" aria-current="{{ 'true' if loop.first else 'false' }}">
+          <button type="button" class="chip" role="tab" data-target="dept-{{ loop.index }}"
+                  data-name="{{ d.dept | lower }}" aria-current="{{ 'true' if loop.first else 'false' }}"
+                  onclick="showDept('dept-{{ loop.index }}', this)">
             <span class="dot" style="background:{% if d.pct >= 75 %}var(--d-primary){% elif d.pct >= 40 %}#ff8008{% else %}var(--d-alert){% endif %}"></span>
             <span class="nm">{{ d.dept }}</span>
             <span class="pc">{{ d.pct }}%</span>
-          </a>
+          </button>
           {% endfor %}
         </div>
         <div class="rail-foot">
@@ -1387,18 +1387,6 @@ function showDept(id, chip) {
   var btn = document.getElementById('allBtn');
   if (btn) btn.textContent = 'Show all departments';
 }
-
-// A department chip opens in its own tab (target="_blank" on the link
-// itself); that new tab is this same page loading fresh with a
-// #dept-N hash, so on every load — not just a click — the hash is what
-// picks and scrolls to a department, a plain button click cannot do that.
-(function () {
-  var id = (location.hash || '').replace('#', '');
-  if (!/^dept-\d+$/.test(id)) return;
-  var chip = document.querySelector('#deptList .chip[data-target="' + id + '"]');
-  showDept(id, chip);
-  document.getElementById(id).scrollIntoView({ block: 'start' });
-})();
 
 function showAllDepts() {
   var showingAll = document.querySelectorAll('#deptStage .dept.on').length > 1;

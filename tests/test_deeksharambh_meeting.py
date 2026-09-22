@@ -1238,21 +1238,20 @@ async def test_each_department_opens_with_its_own_strengths_and_gaps(admin_clien
 
 
 @pytest.mark.asyncio
-async def test_a_department_chip_opens_in_its_own_tab(admin_client):
-    """Clicking a department used to switch which article was visible on the
-    same page. Each chip is now a real link with target="_blank", so it opens
-    a fresh tab on this same page, and an init script reads the #dept-N hash
-    on load to pick and scroll to that department — a plain onclick handler
-    cannot do that for a tab that starts from nothing."""
+async def test_a_department_chip_stays_on_the_same_page(admin_client):
+    """A chip briefly opened its department in a new tab (target="_blank" on
+    a link). That is gone: a chip is a plain button again, switching which
+    article is on screen in this same tab, the way the rest of the explorer
+    (search, "show all departments") already assumes it does."""
     await _seed()
     page = (await admin_client.get("/admin/survey/deeksharambh-meeting")).text
 
-    assert '<a href="#dept-1" target="_blank" rel="noopener" class="chip"' in page
-    assert 'href="#dept-2" target="_blank"' in page
-    # The hash-driven init script that makes a fresh tab land correctly.
-    assert "var id = (location.hash || '').replace('#', '');" in page
-    assert "showDept(id, chip);" in page
-    assert "scrollIntoView({ block: 'start' });" in page
+    assert 'target="_blank"' not in page
+    assert '<button type="button" class="chip" role="tab" data-target="dept-1"' in page
+    assert "onclick=\"showDept('dept-1', this)\"" in page
+    assert "onclick=\"showDept('dept-2', this)\"" in page
+    # The hash-driven init script the new-tab version needed is gone too.
+    assert "location.hash" not in page
 
 
 @pytest.mark.asyncio

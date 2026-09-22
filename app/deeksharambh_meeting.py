@@ -630,10 +630,7 @@ def department_synopsis(responses: int, headline: dict,
     bits = [f"{responses} {'student' if responses == 1 else 'students'} in this "
             "department replied."]
     if headline.get("vibe") is not None:
-        sentence = f"The week averaged a vibe of {headline['vibe']}/10"
-        if headline.get("nps") is not None:
-            sentence += f" and an NPS of {headline['nps']}"
-        bits.append(sentence + ".")
+        bits.append(f"The week averaged a vibe of {headline['vibe']}/10.")
     if strengths:
         top = strengths[0]
         bits.append(f"The strongest read was on {top['label']}, where "
