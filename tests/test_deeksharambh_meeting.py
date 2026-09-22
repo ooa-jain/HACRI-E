@@ -569,8 +569,8 @@ async def test_every_department_is_in_the_page_even_though_one_shows_at_a_time(a
     await _seed()
     page = (await admin_client.get("/admin/survey/deeksharambh-meeting")).text
 
-    # Four departments rendered, exactly one of them marked visible.
-    assert page.count('class="dept ') + page.count('class="dept"') == 4
+    # Four departments plus the pinned overall reading, exactly one visible.
+    assert page.count('class="dept ') + page.count('class="dept"') == 5
     assert page.count('class="dept on"') == 1
 
     # And every one is reachable from the rail, with its conversion on it.
@@ -1376,7 +1376,8 @@ async def test_the_department_list_runs_most_replies_first_with_full_names_on_ho
     for d in pack["departments"]:
         assert f'title="{d["dept"]} — {d["responses"]}' in rail
     import re
-    shown = [int(n) for n in re.findall(r'<span class="pc">(\d+)</span>', rail)]
+    # The pinned overall chip comes first; the departments follow it.
+    shown = [int(n) for n in re.findall(r'<span class="pc">(\d+)</span>', rail)][1:]
     assert shown == [d["responses"] for d in pack["departments"]]
     assert shown == sorted(shown, reverse=True)
 
@@ -1399,3 +1400,36 @@ async def test_nps_is_explained_in_words_not_shown_as_an_acronym(admin_client):
     assert "NPS <b>" not in page
     assert "Likelihood to recommend JAIN (NPS)" not in page
     assert "would-recommend score" in page
+
+
+@pytest.mark.asyncio
+async def test_the_department_list_opens_on_an_overall_reading(admin_client):
+    """The rail now starts with "Overall — all departments": every reply read
+    the same way a single department is — summary, strengths and gaps, then
+    the same eight sections — and it is what the drill-down opens on."""
+    await _seed()
+    from app.deeksharambh_meeting import meeting_pack
+    pack = await meeting_pack()
+    o = pack["overall_dept"]
+    assert o["responses"] == 6 and o["registered"] == 11 and o["pct"] == 54.5
+    assert o["synopsis"].startswith("6 students across all departments replied.")
+    assert [s["title"] for s in o["sections"]] == [s["title"] for s in pack["overall_sections"]]
+
+    page = (await admin_client.get("/admin/survey/deeksharambh-meeting")).text
+    rail = page.split('id="deptList"')[1].split('id="allBtn"')[0]
+    assert rail.index('data-target="dept-overall"') < rail.index('data-target="dept-1"')
+    assert 'data-target="dept-overall"\n                  data-name="overall all departments" aria-current="true"' in rail
+    assert '<article class="dept on" id="dept-overall">' in page
+    assert "All 4 departments" in page
+    assert rail.count('aria-current="true"') == 1
+
+
+@pytest.mark.asyncio
+async def test_the_department_header_is_blue_and_both_highlight_headings_green(admin_client):
+    await _seed()
+    page = (await admin_client.get("/admin/survey/deeksharambh-meeting")).text
+
+    assert "--dept-blue: #1e4f9a;" in page
+    assert ".dept-head { background: var(--dept-blue);" in page
+    assert '.chip[aria-current="true"] { background: var(--dept-blue);' in page
+    assert ".hl-good h4, .hl-gap h4 { color: #0ca30c }" in page

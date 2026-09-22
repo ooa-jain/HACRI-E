@@ -619,7 +619,8 @@ def merge_ratings_section(sections: list[dict]) -> list[dict]:
 
 
 def department_synopsis(responses: int, headline: dict,
-                         strengths: list[dict], gaps: list[dict]) -> str:
+                         strengths: list[dict], gaps: list[dict],
+                         scope: str = "in this department") -> str:
     """One or two plain sentences opening a department's own page, built
     from the same headline numbers already on its stat chips and the same
     strengths/gaps computed below it — nothing here can say something the
@@ -627,8 +628,7 @@ def department_synopsis(responses: int, headline: dict,
     """
     if not responses:
         return ""
-    bits = [f"{responses} {'student' if responses == 1 else 'students'} in this "
-            "department replied."]
+    bits = [f"{responses} {'student' if responses == 1 else 'students'} {scope} replied."]
     if headline.get("vibe") is not None:
         bits.append(f"The week averaged a vibe of {headline['vibe']}/10.")
     if strengths:
@@ -802,6 +802,30 @@ async def meeting_pack(*, campus: str = "") -> dict:
     took = sum(1 for r in students if r["orientation"])
     unmatched = sum(1 for r in filled if r["program"] == UNMATCHED_PROGRAM)
 
+    # The whole scope read the same way as one department: pinned at the top
+    # of the department list, and what the drill-down opens on.
+    everyone = summarize_orientation([r["data"] for r in filled])
+    all_sections = question_picks(everyone)
+    all_strengths, all_gaps = department_highlights(all_sections)
+    overall_sections = merge_ratings_section(all_sections)
+    overall_dept = {
+        "dept": "Overall — all departments",
+        "registered": registered,
+        "took": took,
+        "missing": registered - took,
+        "pct": round(100.0 * took / registered, 1) if registered else 0.0,
+        "campuses": sorted({c for r in conversion for c in r["campuses"]}),
+        "responses": len(filled),
+        "headline": everyone["headline"],
+        "reportable": len(filled) >= MIN_REPORTABLE,
+        "sections": overall_sections,
+        "strengths": all_strengths,
+        "gaps": all_gaps,
+        "synopsis": department_synopsis(len(filled), everyone["headline"],
+                                        all_strengths, all_gaps,
+                                        scope="across all departments"),
+    }
+
     return {
         "campus": campus or ALL_CAMPUSES,
         "totals": {
@@ -819,8 +843,8 @@ async def meeting_pack(*, campus: str = "") -> dict:
         "callouts": callouts(conversion),
         # The eight sections as the whole scope answered them: what the
         # explorer opens on before anybody picks a department.
-        "overall_sections": merge_ratings_section(question_picks(summarize_orientation(
-            [r["data"] for r in filled]))),
+        "overall_sections": overall_sections,
+        "overall_dept": overall_dept,
         # Just the pie's slices, per department per section, so the explorer
         # can redraw without the page carrying every option of every question
         # a second time. The question detail it shows is cloned out of the
