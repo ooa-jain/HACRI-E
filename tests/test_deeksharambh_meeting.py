@@ -216,14 +216,24 @@ async def test_every_question_is_printed_for_every_department(app_with_mock):
         r["dept"] for r in pack["conversion"]
     ]
 
+    # The drill-down folds the first and last of the form's nine sections —
+    # Orientation Sentiment and Outcomes Summary — into one, renamed and
+    # moved to the end; the seven in between keep their original order.
+    middle_titles = [SECTION_DISPLAY[t][0] for t, _ in SECTIONS[1:-1]]
     for dept in pack["departments"]:
         # Every section, and inside them every question the form asks — not
         # only the ones this department happened to answer. Titles are the
         # leadership-facing clean ones, not the form's own emoji-led names.
         assert [s["title"] for s in dept["sections"]] == [
-            SECTION_DISPLAY[t][0] for t, _ in SECTIONS]
+            *middle_titles, "Student Experience Ratings"]
         keys = [q["key"] for s in dept["sections"] for q in s["questions"]]
-        assert keys == list(QUESTIONS)
+        assert sorted(keys) == sorted(QUESTIONS)
+        # The merged section is exactly the first and last unmerged
+        # sections' own questions, first then last, nothing reordered
+        # within either half.
+        first_keys = [k for k, *_ in SECTIONS[0][1]]
+        last_keys = [k for k, *_ in SECTIONS[-1][1]]
+        assert [q["key"] for q in dept["sections"][-1]["questions"]] == first_keys + last_keys
         for q in (q for s in dept["sections"] for q in s["questions"]):
             assert len(q["picks"]) <= pack["picks"]
 
@@ -1120,8 +1130,12 @@ async def test_pie_slices_are_coloured_by_answer_not_by_popularity(app_with_mock
     assert _slice_color("q99", "Anything") == "#9099a8"
 
     pack = await meeting_pack()
-    law = next(d for d in pack["departments"] if d["dept"] == "Department of Law")
-    q3_lead = next(s["lead"] for s in law["sections"] if s["lead"] and s["lead"]["key"] == "q3")
+    # q3's own section (Orientation Sentiment) is folded into the drill
+    # -down's merged "Student Experience Ratings" section, which carries no
+    # lead of its own — the pie data survives the fold in `dept_leads`,
+    # indexed the same way as `pack["overall_sections"]`'s own nine.
+    law_i = next(i for i, d in enumerate(pack["departments"]) if d["dept"] == "Department of Law")
+    q3_lead = next(lead for lead in pack["dept_leads"][law_i] if lead and lead["key"] == "q3")
     colours = {o["label"]: o["color"] for o in q3_lead["options"]}
     assert colours["Strongly Agree"] == "#0a7d0a"
 
@@ -1170,7 +1184,7 @@ async def test_every_answer_is_shown_not_just_the_top_two(admin_client):
     from app.deeksharambh_meeting import meeting_pack
     pack = await meeting_pack()
     law = next(d for d in pack["departments"] if d["dept"] == "Department of Law")
-    q1 = next(q for q in law["sections"][0]["questions"] if q["key"] == "q1")
+    q1 = next(q for s in law["sections"] for q in s["questions"] if q["key"] == "q1")
     assert len(q1["all"]) > 2
     assert len(q1["picks"]) <= 2          # the PDF's own summary is untouched
 
@@ -1239,3 +1253,101 @@ async def test_a_department_chip_opens_in_its_own_tab(admin_client):
     assert "var id = (location.hash || '').replace('#', '');" in page
     assert "showDept(id, chip);" in page
     assert "scrollIntoView({ block: 'start' });" in page
+
+
+@pytest.mark.asyncio
+async def test_a_department_opens_with_a_plain_language_synopsis(admin_client):
+    """Before the strengths/gaps grid, a department now opens on one or two
+    sentences built from the same headline numbers and the same strengths
+    and gaps computed below it — so the synopsis can never say something
+    the detail underneath it does not."""
+    await _seed()
+    from app.deeksharambh_meeting import meeting_pack
+    pack = await meeting_pack()
+    law = next(d for d in pack["departments"] if d["dept"] == "Department of Law")
+    assert law["synopsis"]
+    assert str(law["responses"]) in law["synopsis"]
+    assert law["strengths"][0]["label"] in law["synopsis"]
+
+    page = (await admin_client.get("/admin/survey/deeksharambh-meeting")).text
+    dept1 = page.split('id="dept-1"')[1].split('id="dept-2"')[0]
+    assert '<p class="dept-synopsis">' in dept1
+    assert law["strengths"][0]["label"] in dept1
+
+    # Science took nothing, so there is nothing to open on.
+    science = next(d for d in pack["departments"] if d["dept"] == "Department of Science")
+    assert science["synopsis"] == ""
+
+
+@pytest.mark.asyncio
+async def test_orientation_sentiment_and_outcomes_summary_merge_into_one_last_section(admin_client):
+    """The two "how did the week feel" sections used to open and close the
+    department's own reading, eight sections apart. They are now one
+    section, "Student Experience Ratings", renamed and moved to the end."""
+    await _seed()
+    from app.deeksharambh_meeting import meeting_pack
+    pack = await meeting_pack()
+    law = next(d for d in pack["departments"] if d["dept"] == "Department of Law")
+    assert len(law["sections"]) == 8
+    assert law["sections"][-1]["title"] == "Student Experience Ratings"
+    assert "Orientation Sentiment" not in [s["title"] for s in law["sections"]]
+    assert "Outcomes Summary" not in [s["title"] for s in law["sections"]]
+
+    # The section explorer's own nine cards are untouched by the merge.
+    assert len(pack["overall_sections"]) == 9
+    assert [s["title"] for s in pack["overall_sections"]][0] == "Orientation Sentiment"
+    assert [s["title"] for s in pack["overall_sections"]][-1] == "Outcomes Summary"
+
+    page = (await admin_client.get("/admin/survey/deeksharambh-meeting")).text
+    dept1 = page.split('id="dept-1"')[1].split('id="dept-2"')[0]
+    assert "Student Experience Ratings" in dept1
+    assert dept1.count('class="qsec"') == 8
+
+
+@pytest.mark.asyncio
+async def test_a_section_lists_its_questions_only_once_clicked(admin_client):
+    """A department used to open on all eight sections fully expanded — every
+    answer to every question at once. Each section now starts collapsed,
+    behind its own header button, and opens only when that header is
+    activated; printing forces every one back open regardless."""
+    await _seed()
+    page = (await admin_client.get("/admin/survey/deeksharambh-meeting")).text
+
+    assert '<button type="button" class="qsec-h" aria-expanded="false"' in page
+    assert "function toggleQsec(btn)" in page
+    assert "sec.classList.toggle('open')" in page
+    assert ".qsec-body { display: none }" in page
+    assert ".qsec.open .qsec-body { display: block }" in page
+    # Print puts every section's questions back, collapsed or not.
+    assert ".qsec-body { display: block !important }" in page
+
+
+@pytest.mark.asyncio
+async def test_the_section_explorers_department_detail_still_finds_the_merged_section(admin_client):
+    """The section explorer clones a department's own reading of a section
+    straight out of the drill-down below it, by position. That position
+    broke when the drill-down folded its first and last section into one —
+    fixed by tagging every drill-down section with the explorer index (or,
+    for the merged one, both indexes) it corresponds to."""
+    await _seed()
+    page = (await admin_client.get("/admin/survey/deeksharambh-meeting")).text
+
+    import re
+    assert 'data-sec="0 8"' in page       # the merged section carries both
+    assert re.search(r'data-sec="[1-7]"', page)
+    assert "qsec[data-sec~=\"' + secIndex + '\"]" in page
+    assert "clone.classList.add('open');" in page
+
+
+@pytest.mark.asyncio
+async def test_the_department_explorer_accents_are_blue_not_violet(admin_client):
+    """The department rail, its section headers and its answer-list numbers
+    used to match the page's own violet house accent. They now use the
+    page's existing blue data colour instead, so this part of the page reads
+    apart from the violet-accented furniture around it."""
+    await _seed()
+    page = (await admin_client.get("/admin/survey/deeksharambh-meeting")).text
+
+    assert ".qsec-h { width: 100%; text-align: left; cursor: pointer; border: none; background: none;\n            font: inherit; font-size: 11.5px; font-weight: 800; letter-spacing: 1.2px;\n            text-transform: uppercase; color: var(--d-primary);" in page
+    assert ".rail input:focus { border-color: var(--d-primary); background: #fff }" in page
+    assert ".picks .i { font-variant-numeric: tabular-nums; font-weight: 800; color: var(--d-primary); min-width: 17px }" in page

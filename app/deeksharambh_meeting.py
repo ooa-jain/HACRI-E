@@ -585,6 +585,66 @@ def department_highlights(sections: list[dict]) -> tuple[list[dict], list[dict]]
     return strengths[:HIGHLIGHTS], gaps[:HIGHLIGHTS]
 
 
+def merge_ratings_section(sections: list[dict]) -> list[dict]:
+    """Fold the two "how did the week feel overall" sections — Orientation
+    Sentiment (first) and Outcomes Summary (last) — into one, renamed
+    "Student Experience Ratings" and moved to the end, so a department's own
+    detail works through the specific sections first and closes on the two
+    headline reads together.
+
+    Only the department view calls this. The section explorer (nine cards,
+    one pie each) reads `question_picks()` straight, unmerged — merging
+    there would drop a section the pie/carousel/department-pick machinery
+    all key off by title, which is a much larger change than was asked for.
+    Each section still carries `explorer_index`, the position (or, for the
+    merged one, both positions) it held in that unmerged nine — the section
+    explorer clones a department's own reading of a section straight out of
+    this drill-down's markup by that index, so the mapping has to survive
+    the fold.
+    """
+    indexed = list(enumerate(sections))
+    (i0, first), *middle, (i8, last) = indexed
+    questions = first["questions"] + last["questions"]
+    merged = {
+        "title": "Student Experience Ratings",
+        "icon": "chart",
+        "questions": questions,
+        "lead": None,
+        "answered": max((q["answered"] for q in questions), default=0),
+        "explorer_index": f"{i0} {i8}",
+    }
+    out = [{**sec, "explorer_index": str(i)} for i, sec in middle]
+    out.append(merged)
+    return out
+
+
+def department_synopsis(responses: int, headline: dict,
+                         strengths: list[dict], gaps: list[dict]) -> str:
+    """One or two plain sentences opening a department's own page, built
+    from the same headline numbers already on its stat chips and the same
+    strengths/gaps computed below it — nothing here can say something the
+    detail underneath it does not already say.
+    """
+    if not responses:
+        return ""
+    bits = [f"{responses} {'student' if responses == 1 else 'students'} in this "
+            "department replied."]
+    if headline.get("vibe") is not None:
+        sentence = f"The week averaged a vibe of {headline['vibe']}/10"
+        if headline.get("nps") is not None:
+            sentence += f" and an NPS of {headline['nps']}"
+        bits.append(sentence + ".")
+    if strengths:
+        top = strengths[0]
+        bits.append(f"The strongest read was on {top['label']}, where "
+                     f"{top['pct']}% said {top['top']}.")
+    if gaps:
+        top = gaps[0]
+        bits.append(f"The loudest ask was on {top['label']}, where "
+                     f"{top['pct']}% said {top['top']}.")
+    return " ".join(bits)
+
+
 # ── The count ────────────────────────────────────────────────────────────────
 
 def conversion_rows(rows: list[dict]) -> list[dict]:
@@ -706,6 +766,12 @@ async def meeting_pack(*, campus: str = "") -> dict:
 
     counted = {r["dept"]: r for r in conversion}
     departments = []
+    # One lead per section per department, in `question_picks()`'s own nine
+    # -section order — kept apart from `sections` below, because the section
+    # explorer's per-department pie indexes into this by the same position
+    # as its own nine cards, and the drill-down's sections are about to be
+    # folded down to eight.
+    dept_leads: list[list[dict | None]] = []
     for name in names:
         answers = by_dept.get(name, [])
         report = summarize_orientation([r["data"] for r in answers])
@@ -713,6 +779,8 @@ async def meeting_pack(*, campus: str = "") -> dict:
                                    "missing": 0, "pct": 0.0, "campuses": []})
         sections = question_picks(report)
         strengths, gaps = department_highlights(sections)
+        synopsis = department_synopsis(len(answers), report["headline"], strengths, gaps)
+        dept_leads.append([sec["lead"] for sec in sections])
         departments.append({
             "dept": name,
             "registered": count["registered"],
@@ -727,9 +795,12 @@ async def meeting_pack(*, campus: str = "") -> dict:
             "responses": len(answers),
             "headline": report["headline"],
             "reportable": len(answers) >= MIN_REPORTABLE,
-            "sections": sections,
+            # The drill-down's own eight sections: Orientation Sentiment and
+            # Outcomes Summary folded into one, moved to the end.
+            "sections": merge_ratings_section(sections),
             "strengths": strengths,
             "gaps": gaps,
+            "synopsis": synopsis,
         })
 
     registered = len(students)
@@ -758,8 +829,10 @@ async def meeting_pack(*, campus: str = "") -> dict:
         # Just the pie's slices, per department per section, so the explorer
         # can redraw without the page carrying every option of every question
         # a second time. The question detail it shows is cloned out of the
-        # department reading that is already on the page.
-        "dept_leads": [[sec["lead"] for sec in d["sections"]] for d in departments],
+        # department reading that is already on the page. Built from the
+        # nine unmerged sections, matching `overall_sections`' own order —
+        # `departments[i]["sections"]` has since been folded to eight.
+        "dept_leads": dept_leads,
         "gaps": gap_rows(conversion),
         "campuses": campus_rows(students),
         "departments": departments,
