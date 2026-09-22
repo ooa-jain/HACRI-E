@@ -810,15 +810,16 @@ async def test_no_decorative_gradients_remain(admin_client):
 
 
 @pytest.mark.asyncio
-async def test_the_body_wears_the_same_wash_as_the_rest_of_the_product(admin_client):
+async def test_the_body_wears_jains_own_navy_to_gold_wash(admin_client):
     """The public shared pages (shared_orientation.html) use a fixed lavender
-    -to-lime wash behind flat cream cards. This page now uses the identical
-    background, so the meeting pack reads as the same product rather than a
-    separate, more saturated dashboard skin."""
+    -to-lime wash behind flat cream cards. This page carried the identical
+    background until the hero was rebranded to JAIN's own navy and gold —
+    now the body wash follows the hero rather than the rest of the product,
+    at the same pastel weight the shared pages use."""
     await _seed()
     page = (await admin_client.get("/admin/survey/deeksharambh-meeting")).text
 
-    assert "#bdb2ec 0%, #d3cbe9 22%, #efece0 52%, #e7ecc2 78%, #d5e58f 100%" in page
+    assert "#b7c6e8 0%, #cfd9ec 22%, #efece0 52%, #f2e7c4 78%, #e6cf82 100%" in page
 
 
 @pytest.mark.asyncio
