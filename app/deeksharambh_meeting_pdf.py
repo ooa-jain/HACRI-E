@@ -3,7 +3,7 @@ deeksharambh_meeting_pdf.py — the meeting pack as a PDF somebody can email.
 
 The same document the meeting link shows, laid out for paper: a cover, the
 registered-to-Deeksharambh count for every department, the strongest five and
-weakest five, and then one full section per department with every question and
+the ones with the most room to grow, then one full section per department with
 the two answers its students gave most.
 
 It flows rather than paginating by hand — a department with forty questions
@@ -179,15 +179,15 @@ def build_meeting_pdf(pack: dict, *, generated_at: str) -> bytes:
         Paragraph("Department meeting pack", S["h1"]),
         Paragraph(
             "Registered on the portal against who actually took Deeksharambh, ranked, "
-            f"with the five strongest and five weakest departments - then every "
-            f"department's own reading, question by question, with the "
-            f"{pack.get('picks', 2)} answers its students gave most.", S["body"]),
+            "naming the most active departments and the ones where a push reaches the "
+            "most students - then every department's own reading, question by question, "
+            f"with the {pack.get('picks', 2)} answers its students gave most.", S["body"]),
         Spacer(1, 6 * mm),
     ]
 
     story.append(table(
         [[Paragraph(_text(label), S["th"]) for label in
-          ("REGISTERED IN PORTAL", "TOOK DEEKSHARAMBH", "YET TO TAKE IT", "CONVERSION")],
+          ("REGISTERED IN PORTAL", "TOOK DEEKSHARAMBH", "STILL TO REACH", "CONVERSION")],
          [Paragraph(f'<font size="17"><b>{value}</b></font>', S["cellb"]) for value in
           (totals.get("registered", 0), totals.get("took", 0),
            totals.get("missing", 0), _pct(totals.get("pct")))]],
@@ -218,7 +218,7 @@ def build_meeting_pdf(pack: dict, *, generated_at: str) -> bytes:
     ]
 
     head = [Paragraph(h, S["th"]) for h in
-            ("#", "DEPARTMENT", "CAMPUS", "REG.", "TOOK", "YET TO", "CONV.")]
+            ("#", "DEPARTMENT", "CAMPUS", "REG.", "TOOK", "TO REACH", "CONV.")]
     rows = [head]
     for i, row in enumerate(pack.get("conversion", []), start=1):
         rows.append([
@@ -240,12 +240,13 @@ def build_meeting_pdf(pack: dict, *, generated_at: str) -> bytes:
     # ── 2. Top 5 / least 5 ───────────────────────────────────────────────
     callouts = pack.get("callouts", {})
     size = callouts.get("size", 5)
-    shown = max(len(callouts.get("top") or []), len(callouts.get("least") or []))
     story += [
-        Paragraph(f"02 &middot; The strongest {shown} and the weakest {shown}", S["h2"]),
+        Paragraph("02 &middot; Most active departments, and where a push goes furthest",
+                  S["h2"]),
         Paragraph("Ranked on the same conversion. Departments level on percentage are split by "
                   "how many students that percentage stands for, so 100% of forty ranks above "
-                  "100% of four.", S["lede"]),
+                  "100% of four. The second list is not a ranking of failure - it is where the "
+                  "next push reaches the most students.", S["lede"]),
     ]
 
     if callouts.get("overlap"):
@@ -260,9 +261,9 @@ def build_meeting_pdf(pack: dict, *, generated_at: str) -> bytes:
             content_w, AMBER_SOFT, AMBER, Table, TableStyle, colors))
 
     for title, key, tint in (
-        (f"Top {len(callouts.get('top', []))} by conversion - departments whose students turned up",
+        (f"Most active {len(callouts.get('top', []))} - departments whose students turned up in force",
          "top", PAPER_TEAL),
-        (f"Least {len(callouts.get('least', []))} by conversion - worst first, the departments to chase",
+        (f"Room to grow - {len(callouts.get('least', []))} departments where a push reaches the most students",
          "least", ROSE_SOFT),
     ):
         story += [Spacer(1, 4 * mm), Paragraph(_text(title), S["h3"])]

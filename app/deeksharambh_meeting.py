@@ -5,8 +5,8 @@ Two things sit in here, and nothing else:
 
   The count. How many students each department registered on the portal, and
   how many of them actually took Deeksharambh. That single conversion is what
-  the meeting opens with, ranked, with the five strongest and the five weakest
-  departments called out by name.
+  the meeting opens with, ranked, naming the five most active departments and
+  the five where a push would reach the most students.
 
   The department reading. Every department gets its own full analysis — every
   question the orientation form asked, with the two answers its own students
@@ -26,6 +26,7 @@ and not "registered and already past the baseline". The answers come from
 """
 from __future__ import annotations
 
+import re
 import unicodedata
 
 from app.orientation_analysis import (
@@ -116,9 +117,9 @@ SCALE_POSITIVE = {10: (8, 9, 10), 5: (4, 5)}
 NPS_POSITIVE = (9, 10)
 
 FRAME_LABEL = {
-    "positive": "Top 2 answers — the good news",
-    "asked":    "Top 2 asks — what students want changed",
-    "top":      "Top 2 answers",
+    "positive": "Good news",
+    "asked":    "What would lift it",
+    "top":      "Most chosen",
 }
 
 
@@ -170,6 +171,299 @@ def _share(picks: list[dict], kind: str) -> float | None:
     return round(sum(o["pct"] for o in picks), 1)
 
 
+# ── The section explorer ─────────────────────────────────────────────────────
+# One question per section carries that section's headline as a pie: the
+# single-choice question whose answers say most about what the section asked.
+# A multi-select cannot be a pie — one student ticks several options, so the
+# slices would add past the whole — so every lead here is single-choice.
+SECTION_LEAD: dict[str, str] = {
+    "🔥 The Vibe Check":                "q3",   # felt welcomed
+    "🧭 Settling In":                   "q5",   # ease of transition
+    "👣 Footsteps (pre-arrival)":       "q10",  # would watch a season 2
+    "🎯 Orientation Experience":        "q15",  # how engaging
+    "🌉 Bridge Course":                 "q18",  # feels prepared
+    "📜 NEP 2020 & Digital Readiness":  "q21",  # understands ABC ID / credits
+    "💬 The Gen Z Lens":                "q25",  # the first week felt like
+    "❤️ Belonging & Expectations":      "q31",  # knows whom to contact
+    "📊 Score & Mic Drop":              "q35",  # overall learning experience
+}
+
+# The validated ordinal ramp is five steps deep, so a question with more
+# answers than that folds its smallest into one final slice. Five named
+# slices and an "Other" beats six slices nobody can tell apart.
+MAX_SLICES = 5
+OTHER = "Other answers"
+
+
+# ── Presentation for a leadership audience ───────────────────────────────────
+# Everything above this line matches and ranks answers by their original,
+# unaltered text — a curated label here can never change what counts as a
+# good answer, because that classification has already happened by the time
+# a label reaches this section. All that changes below is the words a label
+# is printed in: no emoji, and — for the rating-scale questions — the
+# vocabulary an academic reader already reads comfortably (a five-point
+# agreement scale becomes "Strongly Agree .. Strongly Disagree", not
+# "Absolutely yes! .. Not at all"). The ordinal meaning and the ranking are
+# untouched; only the register is.
+_EMOJI_RE = re.compile(
+    "["
+    "🌀-🫿"   # pictographs, emoticons, symbols, supplemental
+    "☀-➿"   # misc symbols & dingbats
+    "🇦-🇿"   # regional indicators
+    "️"              # variation selector-16
+    "‍"              # zero-width joiner (emoji sequences)
+    "]+"
+)
+
+
+def _strip_emoji(text: str) -> str:
+    return _EMOJI_RE.sub("", text).strip()
+
+
+# The rating and sentiment scales only — copied by exact raw string from the
+# orientation form, the same way POSITIVE_OPTIONS is. A string not listed
+# here (every topic, session and expectation list — nominal categories, not
+# a scale) falls back to the mechanical cleanup in `clean_label` below, which
+# is already enough: "🎪 Student Club Fair" reads perfectly once the emoji is
+# gone, without inventing a new vocabulary for it.
+_SCALE_LABELS: dict[str, str] = {
+    # q3 — felt welcomed during Deeksharambh
+    "🤗 Absolutely yes!": "Strongly Agree",
+    "🙂 Yes, mostly": "Agree",
+    "😐 Neutral": "Neutral",
+    "🤔 Not really": "Disagree",
+    "😞 Not at all": "Strongly Disagree",
+    # q18 — feels prepared for regular classes
+    "💪 Totally ready!": "Very Well Prepared",
+    "🙂 Mostly ready": "Well Prepared",
+    "😐 Somewhat ready": "Moderately Prepared",
+    "😬 Not quite": "Somewhat Unprepared",
+    "😰 Not ready at all": "Not Prepared",
+    # q21 — understands ABC ID / APAAR / credits, after
+    "🧠 Crystal clear now!": "Fully Understood",
+    "🙂 Mostly understand": "Mostly Understood",
+    "😐 Kind of": "Partially Understood",
+    "🤔 Still confused": "Limited Understanding",
+    "😕 No idea still": "Not Understood",
+    # q5 — ease of transition (the emoji-picker widget stores no emoji, so
+    # these keys already match the raw stored value exactly)
+    "Very hard": "Very Difficult",
+    "Tough": "Difficult",
+    "Okay": "Moderate",
+    "Smooth": "Manageable",
+    "Super easy": "Very Easy",
+    # q10 — would watch a Footsteps season 2
+    "Absolutely!": "Definitely",
+    "Maybe": "Possibly",
+    "Not sure": "Uncertain",
+    "Probably not": "Unlikely",
+    # q14 — how hands-on / interactive the sessions were
+    "All sitting, no doing": "Entirely Passive",
+    "Mostly passive": "Largely Passive",
+    "Some activities": "Moderately Interactive",
+    "Quite hands-on": "Highly Interactive",
+    "Fully interactive!": "Fully Interactive",
+    # q15 — how engaging the sessions were
+    "Sleep Mode": "Disengaged",
+    "Interesting": "Engaged",
+    "Super Engaging": "Highly Engaged",
+    "Couldn't Stop": "Exceptionally Engaged",
+    # q20 — knew what NEP 2020 means, before
+    "No idea": "Not Aware",
+    "Heard of it": "Minimally Aware",
+    "Basic idea": "Somewhat Aware",
+    "I knew well": "Well Informed",
+    # q25 — the first week felt like
+    "A rollercoaster": "An Eventful Experience",
+    "A blur": "An Overwhelming Experience",
+    "A celebration": "A Positive Experience",
+    "Study mode": "An Academically Focused Experience",
+    "Fresh start": "A New Beginning",
+    "Survive mode": "A Challenging Experience",
+    # q35 — overall learning experience
+    "Not great": "Unsatisfactory",
+    "Could be better": "Below Expectations",
+    "It was okay": "Satisfactory",
+    "Pretty good!": "Good",
+    "Absolutely loved it": "Excellent",
+    # q41 — their JAIN avatar (mkAv stores no emoji either)
+    "Future CEO": "Aspiring Executive Leader",
+    "Startup Founder": "Aspiring Entrepreneur",
+    "Academic Achiever": "Academically Driven",
+    "Change Maker": "Aspiring Social Change Agent",
+    "AI Innovator": "Technology and Innovation Focused",
+    "Creative Maverick": "Creatively Driven",
+    "Corporate Leader": "Aspiring Corporate Leader",
+    "The Rule Changer": "Reform-Minded",
+    "Sports Star": "Athletically Driven",
+    "Still Figuring It Out": "Exploring Options",
+    # q7 — the one answer to the challenges question that is not a challenge
+    "✅ Nothing — it was smooth!": "No Challenges Reported",
+    # q36 — reasons behind the NPS rating (the positive set)
+    "🌟 Great overall experience": "Excellent Overall Experience",
+    "👩‍🏫 Faculty impressed me": "Strong Faculty Impression",
+    "🏫 Campus is outstanding": "Outstanding Campus Facilities",
+    "🤗 Felt very welcomed & included": "Strong Sense of Welcome and Inclusion",
+    "🏆 Strong academic reputation": "Strong Academic Reputation",
+    "💼 Good career support visible": "Visible Career Support",
+    # q40 — Deeksharambh left them feeling (the positive set)
+    "🚀 Excited & ready to begin": "Excited and Ready to Begin",
+    "💪 Motivated to excel here": "Motivated to Excel",
+    "😎 Confident & positive": "Confident and Positive",
+    "❤️ Happy & glad to be here": "Happy to Be Here",
+}
+
+
+def clean_label(label) -> str:
+    """One label, in the words a leadership report reads in.
+
+    Looks the raw text up in the curated scale vocabulary first; anything
+    else is emoji-stripped and lightly tidied (an ampersand spelled out, a
+    trailing exclamation point dropped) rather than reworded, since a topic
+    or session name is already descriptive and a report should not invent a
+    new one for it.
+    """
+    text = str(label or "")
+    if text in _SCALE_LABELS:
+        return _SCALE_LABELS[text]
+    cleaned = _strip_emoji(text)
+    cleaned = cleaned.replace(" & ", " and ")
+    if cleaned.endswith("!") and len(cleaned) > 1:
+        cleaned = cleaned[:-1].strip()
+    return cleaned or text
+
+
+def _clean_options(options: list[dict]) -> list[dict]:
+    """A copy of an options/picks list with every label cleaned for display.
+
+    A copy, not a mutation: `options` here is what `_pick()` and the matrix
+    branch already selected using the original text, and nothing downstream
+    should ever compare against the cleaned version.
+    """
+    return [{**o, "label": clean_label(o["label"])} for o in options]
+
+
+# The nine section titles, exactly as `orientation_analysis.SECTIONS` writes
+# them (emoji included), mapped to the title and the icon a leadership report
+# shows instead. Changing this touches only this page — the shared SECTIONS
+# constant everywhere else (the admin dashboard, the shared report, every
+# export) keeps its own emoji-led titles unchanged.
+SECTION_DISPLAY: dict[str, tuple[str, str]] = {
+    "🔥 The Vibe Check":               ("Orientation Sentiment", "pulse"),
+    "🧭 Settling In":                  ("Transition and Settling In", "compass"),
+    "👣 Footsteps (pre-arrival)":      ("Pre-Arrival Preparation (Footsteps)", "route"),
+    "🎯 Orientation Experience":       ("Orientation Programme Experience", "target"),
+    "🌉 Bridge Course":                ("Bridge Course", "bridge"),
+    "📜 NEP 2020 & Digital Readiness": ("NEP 2020 and Digital Readiness", "document"),
+    "💬 The Gen Z Lens":               ("Student Perspective", "chat"),
+    "❤️ Belonging & Expectations":     ("Belonging and Expectations", "heart"),
+    "📊 Score & Mic Drop":             ("Outcomes Summary", "chart"),
+}
+
+
+def _display_section(title: str) -> tuple[str, str]:
+    """A section's title and icon key, for a leadership-facing report."""
+    return SECTION_DISPLAY.get(title, (clean_label(title), "document"))
+
+
+# ── Colour for the one chart on this page that has a real best/worst axis ────
+# A pie is only ever drawn for a SECTION_LEAD question, and every one of them
+# is a rating: an agreement scale, a readiness scale, an engagement scale.
+# That is the case the house dataviz rules call out by name — "when a series
+# means good/bad, it wears status tokens" — so colour here is not decoration,
+# it is the same worst-to-best axis the numbers already show. The four
+# reserved status steps (good, warning, serious, critical) are the same ones
+# used everywhere else a state is shown; the fifth, for a five-point scale's
+# very best answer, is one shade deeper than "good" in the same hue rather
+# than a new colour family.
+_SENTIMENT_RAMP: tuple[str, ...] = (
+    "#d03b3b",  # critical — the worst answer on the scale
+    "#ec835a",  # serious
+    "#fab219",  # warning — the midpoint
+    "#0ca30c",  # good
+    "#0a7d0a",  # the best answer, one shade deeper than "good"
+)
+# A slice this page has no ranking for — the folded "Other answers" bucket,
+# or a label that reaches here from outside the curated scales below.
+_NEUTRAL_SLICE = "#9099a8"
+
+# Each SECTION_LEAD question's options, worst to best, by the CLEAN label
+# `clean_label` already produces for it — not the raw form text. A question
+# not listed here draws every slice in the neutral grey rather than guessing
+# at an order it was never given.
+_SCALE_ORDER: dict[str, tuple[str, ...]] = {
+    "q3":  ("Strongly Disagree", "Disagree", "Neutral", "Agree", "Strongly Agree"),
+    "q5":  ("Very Difficult", "Difficult", "Moderate", "Manageable", "Very Easy"),
+    "q10": ("Unlikely", "Uncertain", "Possibly", "Definitely"),
+    "q15": ("Disengaged", "Moderate", "Engaged", "Highly Engaged", "Exceptionally Engaged"),
+    "q18": ("Not Prepared", "Somewhat Unprepared", "Moderately Prepared",
+            "Well Prepared", "Very Well Prepared"),
+    "q21": ("Not Understood", "Limited Understanding", "Partially Understood",
+            "Mostly Understood", "Fully Understood"),
+    "q25": ("A Challenging Experience", "An Overwhelming Experience",
+            "An Eventful Experience", "An Academically Focused Experience",
+            "A New Beginning", "A Positive Experience"),
+    "q31": ("Not really — need more clarity", "Somewhat — have a rough idea",
+            "Yes — I know exactly who to reach"),
+    "q35": ("Unsatisfactory", "Below Expectations", "Satisfactory", "Good", "Excellent"),
+}
+
+
+def _slice_color(question_key: str, label: str) -> str:
+    """Where one answer sits on its question's own worst-to-best axis.
+
+    A scale of any length spreads evenly across the same five-stop ramp, so
+    a three-point scale still reads as clearly red/amber/green as a
+    five-point one — position on its own scale, not the raw option count,
+    is what a colour like this can honestly represent.
+    """
+    order = _SCALE_ORDER.get(question_key)
+    if not order or label not in order:
+        return _NEUTRAL_SLICE
+    span = len(order) - 1
+    step = round(order.index(label) * (len(_SENTIMENT_RAMP) - 1) / span) if span else 2
+    return _SENTIMENT_RAMP[step]
+
+
+def lead_slices(stats: dict | None) -> dict | None:
+    """One question's answers, ready to draw as a pie.
+
+    Ordered by how many chose each, so the ramp reads most-chosen to least,
+    and capped: everything past the fifth is summed into one honest "Other"
+    slice rather than being dropped. Every slice carries its own worst-to-best
+    colour and is named in the legend, so neither the ranking nor the colour
+    has to be read off a swatch alone.
+    """
+    if not stats or not stats.get("answered"):
+        return None
+
+    options = list(stats.get("options") or [])
+    if not options:
+        return None
+
+    head = options[:MAX_SLICES]
+    tail = options[MAX_SLICES:]
+    if tail:
+        head = head[:MAX_SLICES - 1] + [{
+            "label": OTHER,
+            "count": sum(o["count"] for o in options[MAX_SLICES - 1:]),
+            "pct": round(sum(o["pct"] for o in options[MAX_SLICES - 1:]), 1),
+        }]
+
+    key = stats["key"]
+    coloured = []
+    for o in head:
+        label = clean_label(o["label"])
+        coloured.append({**o, "label": label, "color": _slice_color(key, label)})
+
+    return {
+        "key": key,
+        "label": clean_label(stats["label"]),
+        "answered": stats["answered"],
+        "options": coloured,
+        "folded": len(tail) + 1 if tail else 0,
+    }
+
 def question_picks(report: dict) -> list[dict]:
     """Every question the form asks, in form order, with its two answers.
 
@@ -206,9 +500,9 @@ def question_picks(report: dict) -> list[dict]:
                             if wanted else options)
                     picks = good[:PICKS]
                     rows.append({
-                        "label": row["label"],
+                        "label": clean_label(row["label"]),
                         "answered": row.get("answered", 0),
-                        "picks": picks,
+                        "picks": _clean_options(picks),
                         "share": _share(picks, "single"),
                     })
                 questions.append({
@@ -228,13 +522,23 @@ def question_picks(report: dict) -> list[dict]:
                 "avg": stats.get("avg"),
                 "max": stats.get("max"),
                 "nps": stats.get("nps"),
-                "picks": picks,
+                "picks": _clean_options(picks),
                 "rows": [],
                 "frame": frame,
                 "frame_label": FRAME_LABEL[frame],
                 "share": _share(picks, kind),
             })
-        out.append({"title": title, "questions": questions})
+        clean_title, icon = _display_section(title)
+        out.append({
+            "title": clean_title,
+            "icon": icon,
+            "questions": questions,
+            # What the section's card draws before a department is picked.
+            "lead": lead_slices(answered.get(SECTION_LEAD.get(title, ""))),
+            # How many of this scope's students answered anything in the
+            # section at all — the card's own headline number.
+            "answered": max((q["answered"] for q in questions), default=0),
+        })
     return out
 
 
@@ -274,10 +578,10 @@ def conversion_rows(rows: list[dict]) -> list[dict]:
 
 
 def callouts(rows: list[dict], size: int = CALLOUT) -> dict:
-    """The strongest and the weakest departments on that conversion.
+    """The most active departments, and the ones with the most room to grow.
 
-    `rows` arrives already ranked. The weakest list is handed back worst-first,
-    because that is the order they get talked about in. When there are fewer
+    `rows` arrives already ranked. The second list is handed back with the
+    largest opportunity first, because that is the order it gets worked in. When there are fewer
     than twice `size` departments the two lists share members, and `overlap`
     says so — a meeting told "top five and bottom five" about eight
     departments is being told the same department twice.
@@ -293,6 +597,42 @@ def callouts(rows: list[dict], size: int = CALLOUT) -> dict:
         "ranked": len(ranked),
         "overlap": sorted(r["dept"] for r in least if r["dept"] in top_names),
     }
+
+
+def gap_rows(rows: list[dict], limit: int = 8) -> list[dict]:
+    """Where a push reaches the most students.
+
+    The percentage is the fair way to read a department and the wrong way to
+    plan a week: 0% of four students sits at the bottom of that table and
+    moves almost nothing, while a large department at 60% can still be
+    hundreds of students short. This ranks by how many students a push would
+    actually reach, which is the list somebody works through.
+    """
+    ranked = [r for r in rows if r["dept"] != NO_DEPARTMENT and r["missing"] > 0]
+    ranked.sort(key=lambda r: (-r["missing"], r["pct"], r["dept"].lower()))
+    return ranked[:limit]
+
+
+def campus_rows(students: list[dict]) -> list[dict]:
+    """The same conversion, per campus."""
+    groups: dict[str, list[dict]] = {}
+    for row in students:
+        groups.setdefault(row["campus"] or "Unspecified", []).append(row)
+
+    out = []
+    for campus, members in groups.items():
+        took = sum(1 for m in members if m["orientation"])
+        registered = len(members)
+        out.append({
+            "campus": campus,
+            "registered": registered,
+            "took": took,
+            "missing": registered - took,
+            "pct": round(100.0 * took / registered, 1) if registered else 0.0,
+            "departments": len({m["program"] or NO_DEPARTMENT for m in members}),
+        })
+    out.sort(key=lambda r: (-r["registered"], r["campus"]))
+    return out
 
 
 # ── The pack ─────────────────────────────────────────────────────────────────
@@ -364,6 +704,17 @@ async def meeting_pack(*, campus: str = "") -> dict:
         },
         "conversion": conversion,
         "callouts": callouts(conversion),
+        # The nine sections as the whole scope answered them: what the
+        # explorer opens on before anybody picks a department.
+        "overall_sections": question_picks(summarize_orientation(
+            [r["data"] for r in filled])),
+        # Just the pie's slices, per department per section, so the explorer
+        # can redraw without the page carrying every option of every question
+        # a second time. The question detail it shows is cloned out of the
+        # department reading that is already on the page.
+        "dept_leads": [[sec["lead"] for sec in d["sections"]] for d in departments],
+        "gaps": gap_rows(conversion),
+        "campuses": campus_rows(students),
         "departments": departments,
         "picks": PICKS,
         "min_reportable": MIN_REPORTABLE,

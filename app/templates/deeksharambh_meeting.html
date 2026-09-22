@@ -4,397 +4,1457 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Deeksharambh 2026 — Department Meeting Pack — {{ pack.campus }} — JAIN University</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<script src="{{ asset('/static/vendor/chart.umd.js') }}"></script>
 <style>
-  /* One long document, not an app. Everything on this page is printed the
-     moment it loads: no tabs, no accordions, no "show more". A department
-     sitting in the meeting has to be able to scroll to its own name and read
-     every question, and the same page has to come out of a printer that way. */
+  /* Deeksharambh meeting pack.
+     Two jobs pull against each other here: nothing may be hidden from the
+     record, and nobody should have to scroll past forty departments to reach
+     their own. So every department stays in the DOM and in the print — the
+     stage below simply shows one at a time on screen, and print puts them all
+     back. Ctrl+F still finds everything.
+     Decorative chrome (the hero, the cards, the carousel) wears gradients.
+     The marks that carry a number wear validated data colours and are always
+     labelled, never colour alone. */
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0 }
   :root {
-    --ink: #0b1220; --body: #24304a; --muted: #64748b;
-    --line: #e2e8f0; --soft: #f8fafc; --paper: #ffffff;
-    --teal: #0d9488; --teal-soft: #ccfbf1;
-    --amber: #b45309; --amber-soft: #fef3c7;
-    --rose: #be123c; --rose-soft: #ffe4e6;
+    /* The house palette — the same tokens the public shared pages use
+       (shared_orientation.html, shared_vibe.html): warm ink on cream, one
+       violet accent, one lime accent. No gradients: colour is used to mark
+       state (selected, primary action), not as decoration. */
+    --ink: #17110a; --body: #4a3f31; --muted: #7d7060;
+    --line: #ece0cc; --soft: #fbf4e6; --paper: #fffdf8;
+    --plane: #f3efe0;
+    --grape: #6d28d9; --sun: #f5b731; --lime: #58cc4a;
+    --accent: #d7f24f;
+
+    /* Data colours — validated against a white surface (ΔE 32.3 normal,
+       21.6 protan). Used for marks only; text keeps ink tokens. */
+    --d-primary: #2a78d6;
+    --d-alert:   #e34948;
+    --d-rest:    #dcd8e8;
+    --d-grid:    #efecf6;
   }
+  html { scroll-behavior: smooth }
   body {
-    font-family: 'Instrument Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI',
-                 Roboto, 'Helvetica Neue', Arial, sans-serif;
-    background: #eef2f7; color: var(--body);
+    font-family: 'Instrument Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    /* The same lavender-to-lime wash the rest of the product's public pages
+       use — a soft fixed backdrop, not a saturated gradient card. */
+    background: linear-gradient(135deg,
+                #bdb2ec 0%, #d3cbe9 22%, #efece0 52%, #e7ecc2 78%, #d5e58f 100%)
+                fixed;
+    color: var(--body);
     font-size: 14px; line-height: 1.5; -webkit-font-smoothing: antialiased;
   }
-  .sheet {
-    max-width: 1080px; margin: 0 auto; background: var(--paper);
-    padding: 0 0 72px; box-shadow: 0 0 0 1px var(--line);
+  .wrap { max-width: 1240px; margin: 0 auto; padding: 0 22px 90px;
+          background: linear-gradient(to bottom, var(--plane) 0%, var(--plane) 120px,
+                                      transparent 420px) }
+  .mono { font-family: 'JetBrains Mono', ui-monospace, Menlo, monospace }
+  .num { font-variant-numeric: tabular-nums }
+
+  /* ── 1. Scroll-expanding hero ──────────────────────────────────────────
+     A frame that starts inset and opens to full bleed as you scroll past it.
+     The wrapper is tall; the frame inside is sticky. All motion is driven by
+     one progress value written to CSS custom properties, so a reduced-motion
+     visitor simply gets the finished state. */
+  .se-wrap { position: relative; height: 138vh }
+  .se-sticky {
+    position: sticky; top: 0; height: 100vh; height: 100svh;
+    display: grid; place-items: center;
+    overflow: hidden; isolation: isolate;
   }
-  .pad { padding: 0 40px }
+  /* The same campus, filling the plate the frame sits on. Blurred and pushed
+     back so the sharp frame reads as the thing in front of it, and fading as
+     the frame opens to take the whole stage. */
+  .se-sticky::before {
+    content: ''; position: absolute; inset: -30px; z-index: -2;
+    background-image: url('{{ asset("/static/img/campus-hero.jpg") }}');
+    background-size: cover; background-position: center 40%;
+    filter: blur(14px) saturate(1.02) brightness(.92);
+    transform: scale(1.06);
+    opacity: calc(1 - .55 * var(--p, 0));
+  }
+  .se-sticky::after {
+    content: ''; position: absolute; inset: 0; z-index: -1;
+    background: linear-gradient(150deg, rgba(230,224,204,.55) 0%, rgba(239,236,224,.4) 45%,
+                                        rgba(213,229,143,.5) 100%);
+    opacity: calc(1 - .35 * var(--p, 0));
+  }
+  .se-frame {
+    position: relative; overflow: hidden;
+    /* Fades the frame's bottom edge out as it reaches full bleed, so the
+       campus dissolves into the page instead of ending on a hard line. */
+    --seam: calc(var(--p, 0) * 1);
+    /* The floor is what the headline, the four figures and the button row
+       actually need; without it a short laptop screen cut the buttons off
+       at the frame's edge. */
+    --h0: clamp(440px, 62vh, 660px);
+    /* Width finishes at 82% of the progress so the gutters close well
+       before the handover; height keeps the full run. */
+    --pw: min(1, calc(var(--p, 0) / 0.82));
+    width: calc(42% + (100% - 42%) * var(--pw, 0));
+    height: auto;
+    /* svh, not vh: on a phone the URL bar hides as you scroll, which changes
+       vh mid-animation and makes the frame jump. The vh line above it is the
+       fallback for browsers that do not know svh. */
+    min-height: calc(var(--h0) + (100vh - var(--h0)) * var(--p, 0));
+    min-height: calc(var(--h0) + (100svh - var(--h0)) * var(--p, 0));
+    border-radius: calc(24px * (1 - var(--pw, 0)));
+    box-shadow: 0 30px 80px -20px rgba(23, 17, 10, calc(.45 * (1 - var(--pw, 0))));
+    background: var(--ink);
+    display: grid; place-items: center;
+  }
+  .se-media {
+    position: absolute; inset: 0;
+    transform: scale(calc(1.35 - .35 * var(--p, 0)));
+    background-image: url('{{ asset("/static/img/campus-hero.jpg") }}');
+    background-size: cover; background-position: center 42%;
+    background-color: #1b1030;
+  }
+  /* Two layers over the photo. The first is the brand wash that ties the
+     hero to the rest of the page; the second is a flat scrim that lifts as
+     the frame opens, so the campus comes through as you scroll while the
+     headline never loses its footing. A daylight aerial is bright enough
+     that white text needs both. */
+  .se-media::before {
+    content: ''; position: absolute; inset: 0;
+    /* One tone, not a bloom of colours: darkest where the headline sits,
+       opening out over the campus below. */
+    background: linear-gradient(175deg, rgba(23,17,10,.82) 0%, rgba(23,17,10,.48) 42%,
+                                        rgba(23,17,10,.3) 68%, rgba(23,17,10,.56) 100%);
+  }
+  .se-media::after {
+    content: ''; position: absolute; inset: 0;
+    background: rgba(23, 17, 10, calc(.3 - .12 * var(--p, 0)));
+  }
+  /* The handover: a band of the page's own colour, rising out of the frame's
+     floor only once the frame is open enough to touch the content below it. */
+  .se-frame::after {
+    content: ''; position: absolute; left: 0; right: 0; bottom: 0; z-index: 3;
+    height: 190px; pointer-events: none;
+    opacity: var(--seam, 0);
+    background: linear-gradient(to bottom,
+      rgba(253,242,248,0) 0%, rgba(253,242,248,.55) 46%,
+      rgba(253,242,248,.88) 74%, var(--plane) 100%);
+  }
+  .se-inner {
+    position: relative; z-index: 4; color: #fff; text-align: center;
+    padding: 0 26px 30px; max-width: 900px;
+  }
+  .se-kicker {
+    font-size: 11px; font-weight: 800; letter-spacing: 2.6px; text-transform: uppercase;
+    color: var(--accent);
+  }
+  .se-inner h1 {
+    font-size: clamp(38px, 7vw, 76px); font-weight: 800; letter-spacing: -2.2px;
+    line-height: 1.04; margin: 12px 0 10px;
+    text-shadow: 0 2px 22px rgba(6,2,14,.55);
+  }
+  .se-inner p { color: #ded4ef; font-size: 14.5px; max-width: 62ch; margin: 0 auto;
+                text-shadow: 0 1px 12px rgba(6,2,14,.6) }
+  .se-sub {
+    display: inline-block; margin-top: 18px;
+    font-size: clamp(13px, 1.5vw, 17px); font-weight: 700;
+    letter-spacing: 3.4px; text-transform: uppercase; color: #fff;
+    padding: 9px 22px; border-radius: 999px;
+    background: rgba(14,7,26,.4); border: 1px solid rgba(255,255,255,.28);
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    text-shadow: 0 1px 12px rgba(6,2,14,.6);
+  }
+  .se-hint {
+    margin-top: 18px; font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase;
+    font-weight: 700; color: #e8dcff; opacity: calc(1 - var(--p, 0) * 2.2);
+    pointer-events: none;
+  }
+  .se-hint i { display: block; width: 1px; height: 16px; margin: 6px auto 0;
+               background: linear-gradient(#e8dcff, transparent) }
 
-  /* ── Cover ─────────────────────────────────────────────────────────── */
-  .cover { background: var(--ink); color: #fff; padding: 36px 40px 32px }
-  .kicker { font-size: 11px; font-weight: 700; letter-spacing: 2px;
-            text-transform: uppercase; color: #5eead4 }
-  .cover h1 { font-size: 34px; line-height: 1.12; font-weight: 800;
-              letter-spacing: -.5px; margin: 12px 0 8px }
-  .cover p { color: #94a3b8; font-size: 13px; max-width: 70ch }
-  .cover .rule { width: 72px; height: 3px; background: #2dd4bf; margin: 18px 0 0 }
-  .toolbar { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px }
-  .btn { display: inline-flex; align-items: center; gap: 7px; cursor: pointer;
-         border: none; border-radius: 8px; padding: 9px 15px; font: inherit;
-         font-size: 13px; font-weight: 700; text-decoration: none }
-  .btn-pdf { background: #2dd4bf; color: #06251f }
-  .btn-ghost { background: rgba(255,255,255,.1); color: #e2e8f0;
-               box-shadow: inset 0 0 0 1px rgba(255,255,255,.22) }
+  .toolbar { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 22px }
+  .btn { display: inline-flex; align-items: center; gap: 7px; cursor: pointer; border: none;
+         border-radius: 10px; padding: 10px 17px; font: inherit; font-size: 13px;
+         font-weight: 700; text-decoration: none; transition: transform .15s, box-shadow .15s }
+  .btn:hover { transform: translateY(-1px) }
+  .btn svg { width: 15px; height: 15px; flex: none }
+  .btn-pdf { background: var(--accent); color: var(--ink); box-shadow: none }
+  .btn-pdf:hover { background: #c7e23e }
+  .btn-ghost { background: rgba(255,255,255,.12); color: #fdf9ec; box-shadow: inset 0 0 0 1px rgba(255,255,255,.26) }
 
-  /* ── Structure ─────────────────────────────────────────────────────── */
-  section { padding-top: 34px }
-  h2 { font-size: 20px; font-weight: 800; color: var(--ink); letter-spacing: -.2px }
-  h2 .n { color: var(--teal); font-variant-numeric: tabular-nums; margin-right: 8px }
-  .lede { color: var(--muted); font-size: 13px; margin-top: 5px; max-width: 80ch }
-  .divider { height: 1px; background: var(--line); margin: 30px 0 0 }
+  /* ── Shared furniture ──────────────────────────────────────────────── */
+  section { padding-top: 46px }
+  .head { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; flex-wrap: wrap }
+  h2 { font-size: 21px; font-weight: 800; color: var(--ink); letter-spacing: -.3px }
+  h2 .n { color: var(--grape); margin-right: 9px }
+  .lede { color: var(--muted); font-size: 13px; margin-top: 5px; max-width: 82ch }
+  .card { background: var(--paper); border: 1px solid var(--line); border-radius: 14px;
+          padding: 16px; box-shadow: 0 1px 2px rgba(23,17,10,.06) }
+  .note { margin-top: 16px; border-left: 3px solid #ff8008; background: #fff7ed;
+          color: #7c3a06; padding: 11px 15px; border-radius: 0 10px 10px 0; font-size: 12.5px }
 
-  .cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 18px }
-  .card { border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; background: var(--soft) }
-  .card b { display: block; font-size: 26px; font-weight: 800; color: var(--ink);
-            font-variant-numeric: tabular-nums; letter-spacing: -.5px }
-  .card s { display: block; text-decoration: none; font-size: 11px; font-weight: 700;
-            letter-spacing: .7px; text-transform: uppercase; color: var(--muted); margin-top: 5px }
+  /* KPI cards — flat and small: a paper card, an ink number, one colour used
+     only as a top accent stripe so four tiles read as a set without four
+     different gradients competing for attention. */
+  .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 20px }
+  .kpi { background: var(--paper); border: 1px solid var(--line); border-top: 3px solid var(--grape);
+         border-radius: 12px; padding: 12px 14px; color: var(--ink);
+         box-shadow: 0 1px 2px rgba(23,17,10,.06) }
+  .kpi.p1 { border-top-color: var(--grape) } .kpi.p2 { border-top-color: var(--d-primary) }
+  .kpi.p3 { border-top-color: var(--sun) } .kpi.p4 { border-top-color: var(--lime) }
+  .kpi b { display: block; font-size: 23px; font-weight: 800; letter-spacing: -.6px; color: var(--ink) }
+  .kpi s { display: block; text-decoration: none; font-size: 10px; font-weight: 700;
+           letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-top: 4px }
+  .kpi em { font-style: normal; font-size: 11px; color: var(--muted); display: block; margin-top: 7px }
 
-  table { width: 100%; border-collapse: collapse; margin-top: 16px; font-size: 13px }
-  th { text-align: left; font-size: 11px; letter-spacing: .6px; text-transform: uppercase;
-       color: var(--muted); padding: 8px 10px; border-bottom: 2px solid var(--line); white-space: nowrap }
-  td { padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top }
+  /* ── Section spotlight ─────────────────────────────────────────────
+     The depth carousel, carrying the survey's nine sections. The card in
+     front is the selected section; the pie and the department list below
+     follow it. */
+  .dc-shell { margin-top: 20px; background: var(--ink); border-radius: 18px; padding: 18px;
+              position: relative; overflow: hidden }
+  .dc-top { position: relative; z-index: 2; display: flex; align-items: center;
+            justify-content: space-between; gap: 14px; flex-wrap: wrap; margin-bottom: 8px }
+  .dc-title { color: #fff; font-size: 15px; font-weight: 800 }
+  .dc-title span { display: block; font-size: 11.5px; font-weight: 500; color: #c7bda3; margin-top: 3px }
+  .dc-stage { position: relative; z-index: 2; height: 340px; perspective: 1400px;
+              display: grid; place-items: center }
+  .dc-track { position: relative; width: 260px; height: 320px; transform-style: preserve-3d }
+  .dc-card {
+    position: absolute; inset: 0; border-radius: 14px; padding: 18px 18px;
+    pointer-events: none; text-align: left;
+    background: #241f16;
+    border: 1px solid rgba(255,255,255,.14); color: #fff;
+    display: flex; flex-direction: column;
+    transition: transform .7s cubic-bezier(.16,1,.3,1), opacity .7s, filter .7s;
+    box-shadow: 0 20px 40px -20px rgba(0,0,0,.7);
+  }
+  .dc-card.lead { background: #2c2617;
+                  border-color: var(--accent) }
+  .dc-rank { font-size: 10.5px; font-weight: 800; letter-spacing: 1.6px; text-transform: uppercase;
+             color: var(--accent) }
+  .dc-sec-q { font-size: 12.5px; color: #c7bda3; margin-top: 12px; line-height: 1.35 }
+  .dc-name { font-size: 19px; font-weight: 800; line-height: 1.2; margin-top: 10px; letter-spacing: -.3px;
+             display: flex; align-items: center; gap: 8px }
+  .dc-icon { flex: none; display: inline-flex }
+  .dc-icon svg { width: 18px; height: 18px; color: var(--accent) }
+  .dc-big { font-size: 36px; font-weight: 800; letter-spacing: -1.4px; margin-top: auto }
+  .dc-sub { font-size: 12px; color: #c7bda3; margin-top: 2px }
+  .dc-meter { height: 6px; border-radius: 4px; background: rgba(255,255,255,.16); margin-top: 14px; overflow: hidden }
+  .dc-meter i { display: block; height: 100%; border-radius: 4px; background: var(--accent) }
+  .dc-stage { pointer-events: none }
+  .dc-ctrl { position: relative; z-index: 3; pointer-events: auto; display: flex; align-items: center;
+             justify-content: center; gap: 12px; margin-top: 6px }
+  .dc-ctrl button { width: 38px; height: 38px; border-radius: 50%; border: none; cursor: pointer;
+                    background: rgba(255,255,255,.14); color: #fff; font-size: 16px }
+  .dc-ctrl button:hover { background: rgba(255,255,255,.26) }
+  .dc-dots { display: flex; gap: 7px }
+  .dc-dots button { width: 10px; height: 10px; padding: 0; border-radius: 50%; border: none;
+                    cursor: pointer; background: rgba(255,255,255,.34) }
+  .dc-dots button:hover { background: rgba(255,255,255,.6) }
+  .dc-dots button:focus-visible, .dc-ctrl > button:focus-visible {
+    outline: 2px solid #fff; outline-offset: 3px }
+  .dc-dots button[aria-current="true"] { background: #fff; width: 22px; border-radius: 4px }
+
+  /* ── Section explorer ──────────────────────────────────────────────── */
+  .sec-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 18px }
+  .sec-card { position: relative; text-align: left; cursor: pointer; font: inherit;
+              border-radius: 12px; padding: 12px 14px;
+              background: var(--paper); border: 1px solid var(--line); color: var(--body);
+              display: flex; flex-direction: column; gap: 3px; transition: transform .15s, box-shadow .15s }
+  .sec-card:hover { transform: translateY(-2px); box-shadow: 0 6px 14px -8px rgba(23,17,10,.16) }
+  .sec-card.on { background: var(--ink); border-color: var(--ink); color: #fff;
+                 box-shadow: 0 6px 16px -8px rgba(23,17,10,.5) }
+  .sec-n { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700;
+           color: var(--grape); letter-spacing: 1px }
+  .sec-card.on .sec-n { color: var(--accent) }
+  .sec-t { font-size: 14px; font-weight: 800; color: var(--ink); line-height: 1.25;
+           display: flex; align-items: center; gap: 7px }
+  .sec-t svg { width: 15px; height: 15px; flex: none; color: var(--grape) }
+  .sec-card.on .sec-t { color: #fff }
+  .sec-card.on .sec-t svg { color: var(--accent) }
+  /* A tooltip, not a caption: off by default, so nine cards read as nine
+     clean headings — the count is still one hover or focus away, and the
+     `title` attribute on the button covers a reader who cannot hover. */
+  .sec-m {
+    position: absolute; left: 14px; bottom: calc(100% + 8px); z-index: 5;
+    background: var(--ink); color: #fdf9ec; font-size: 11px; font-weight: 600;
+    white-space: nowrap; padding: 6px 10px; border-radius: 8px;
+    box-shadow: 0 8px 20px -8px rgba(23,17,10,.4);
+    opacity: 0; transform: translateY(4px); pointer-events: none;
+    transition: opacity .12s, transform .12s;
+  }
+  .sec-m::after {
+    content: ''; position: absolute; top: 100%; left: 16px;
+    border: 5px solid transparent; border-top-color: var(--ink);
+  }
+  .sec-card:hover .sec-m, .sec-card:focus-visible .sec-m { opacity: 1; transform: none }
+
+  .sec-panel { margin-top: 16px }
+  .sec-grid { display: grid; grid-template-columns: 1fr 340px; gap: 24px; align-items: start }
+  .sec-grid > * { min-width: 0 }
+  .pie-box { position: relative; height: 290px; margin-top: 14px }
+  .pie-legend { display: flex; flex-direction: column; gap: 7px; margin-top: 14px }
+  .pie-legend div { display: flex; align-items: center; gap: 10px; font-size: 13px;
+                    border-radius: 8px; padding: 4px 6px; margin: 0 -6px;
+                    cursor: pointer; transition: background .1s }
+  .pie-legend div:hover, .pie-legend div:focus-visible {
+    background: var(--soft); outline: none }
+  .pie-legend i { width: 12px; height: 12px; border-radius: 3px; flex: none }
+  .pie-legend .lb { flex: 1; min-width: 0 }
+  .pie-legend .vl { font-variant-numeric: tabular-nums; font-weight: 800; color: var(--ink) }
+  .pie-legend .ct { font-variant-numeric: tabular-nums; font-size: 11.5px; color: var(--muted) }
+  .pie-note { font-size: 11.5px; color: var(--muted); margin-top: 10px; font-style: italic }
+
+  .sec-search { width: 100%; margin-top: 12px; padding: 9px 12px; border: 1px solid var(--line);
+                border-radius: 10px; font: inherit; font-size: 12.5px; background: var(--soft); outline: none }
+  .sec-search:focus { border-color: var(--grape); background: #fff }
+  .sec-list { margin-top: 10px; max-height: 330px; overflow-y: auto; display: flex;
+              flex-direction: column; gap: 4px }
+  .sec-dept { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+              cursor: pointer; border: none; background: transparent; font: inherit; font-size: 12.5px;
+              color: var(--body); border-radius: 10px; padding: 9px 11px }
+  .sec-dept:hover { background: var(--soft) }
+  .sec-dept[aria-selected="true"] { background: var(--ink); color: #fff; font-weight: 700 }
+  .sec-dept .nm { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+  .sec-dept .ct { font-variant-numeric: tabular-nums; font-size: 11.5px; opacity: .8 }
+  /* Pinned above the search, not one of the filtered rows: a visible border
+     and bold weight mark it as the way back to the whole cohort. */
+  .sec-dept-overall { border: 1px solid var(--line); font-weight: 700; margin-top: 12px }
+  .sec-dept-overall .nm { color: var(--grape) }
+  .sec-dept-overall[aria-selected="true"] { background: var(--ink); border-color: var(--ink) }
+  .sec-dept-overall[aria-selected="true"] .nm { color: var(--accent) }
+
+  .sec-detail { margin-top: 22px; border-top: 1px solid var(--line); padding-top: 18px }
+  .sec-detail-head { display: flex; align-items: flex-start; justify-content: space-between;
+                     gap: 14px; flex-wrap: wrap }
+  .btn-soft-sm { cursor: pointer; border: 1px solid var(--line); background: var(--soft);
+                 color: var(--body); font: inherit; font-size: 12px; font-weight: 700;
+                 border-radius: 9px; padding: 8px 13px }
+  .btn-soft-sm:hover { background: #fff }
+
+  @media (max-width: 1040px) { .sec-cards { grid-template-columns: repeat(2, 1fr) }
+                               .sec-grid { grid-template-columns: 1fr } }
+  @media (max-width: 640px) {
+    .sec-cards { grid-template-columns: 1fr }
+    /* Index, label, bar, percent and count will not sit on one phone line.
+       The bar is the redundant one — the percent beside it says the same
+       thing — so it goes and the rest wraps. */
+    .picks .track { display: none }
+    .picks li { flex-wrap: wrap }
+    .picks .lb { flex: 1 1 100% }
+  }
+
+  /* ── Charts & tables ───────────────────────────────────────────────── */
+  .grid2 { display: grid; grid-template-columns: 340px 1fr; gap: 16px; margin-top: 20px; align-items: start }
+  .grid2.even { grid-template-columns: 1fr 1fr }
+  /* A grid item defaults to min-width:auto, so a card would stretch to its
+     widest table and take the page sideways with it rather than letting the
+     table scroll inside itself. */
+  .grid2 > *, .explorer > *, .kpis > * { min-width: 0 }
+  .chart-box { position: relative; height: 260px }
+  .chart-tall { position: relative; height: 340px }
+  .cap { font-size: 12px; font-weight: 800; color: var(--ink) }
+  .cap span { display: block; font-size: 11.5px; font-weight: 500; color: var(--muted); margin-top: 2px }
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 12px; font-size: 12px }
+  .legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; margin-right: 6px }
+
+  .t-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch }
+  table { width: 100%; border-collapse: collapse; margin-top: 16px; font-size: 13px;
+          min-width: 520px }
+  .t-scroll table { margin-top: 0 }
+  th { text-align: left; font-size: 10.5px; letter-spacing: .7px; text-transform: uppercase;
+       color: var(--muted); padding: 9px 11px; border-bottom: 2px solid var(--line); white-space: nowrap }
+  td { padding: 9px 11px; border-bottom: 1px solid var(--line); vertical-align: middle }
   td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap }
-  tbody tr:nth-child(even) { background: #fcfdfe }
-  .rank { color: var(--muted); font-variant-numeric: tabular-nums }
+  tbody tr:hover { background: var(--soft) }
   .dept-name { font-weight: 700; color: var(--ink) }
 
-  .bar { position: relative; height: 7px; border-radius: 4px; background: var(--line);
-         min-width: 90px; margin-top: 5px; overflow: hidden }
-  .bar i { position: absolute; inset: 0 auto 0 0; background: var(--teal); border-radius: 4px }
-  .bar.low i { background: #f43f5e }
-  .bar.mid i { background: #f59e0b }
+  /* ── Department explorer — the fix for endless scrolling ──────────── */
+  .explorer { display: grid; grid-template-columns: 286px 1fr; gap: 16px; margin-top: 20px; align-items: start }
+  .rail { background: var(--paper); border: 1px solid var(--line); border-radius: 18px; padding: 14px;
+          position: sticky; top: 16px; max-height: calc(100vh - 32px); display: flex; flex-direction: column }
+  .rail input { width: 100%; padding: 9px 12px; border: 1px solid var(--line); border-radius: 10px;
+                font: inherit; font-size: 12.5px; background: var(--soft); outline: none }
+  .rail input:focus { border-color: var(--grape); background: #fff }
+  .rail-list { margin-top: 10px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px }
+  .chip { display: flex; align-items: center; gap: 9px; width: 100%; text-align: left; cursor: pointer;
+          border: none; background: transparent; font: inherit; font-size: 12.5px; color: var(--body);
+          border-radius: 10px; padding: 9px 11px; transition: background .12s }
+  .chip:hover { background: var(--soft) }
+  .chip[aria-current="true"] { background: var(--ink); color: #fff; font-weight: 700 }
+  .chip .nm { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+  .chip .pc { font-variant-numeric: tabular-nums; font-weight: 800; font-size: 11.5px; opacity: .85 }
+  .chip .dot { width: 7px; height: 7px; border-radius: 50%; flex: none }
+  .rail-foot { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line) }
+  .rail-foot button { width: 100%; cursor: pointer; border: 1px dashed var(--line); background: var(--soft);
+                      color: var(--body); font: inherit; font-size: 12px; font-weight: 700;
+                      border-radius: 10px; padding: 9px }
 
-  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 26px; margin-top: 8px }
-  .callout { border: 1px solid var(--line); border-radius: 12px; padding: 4px 18px 14px }
-  .callout.good { border-color: #99f6e4; background: #f0fdfa }
-  .callout.work { border-color: #fecdd3; background: #fff5f6 }
-  .callout h3 { font-size: 14px; font-weight: 800; color: var(--ink); margin: 14px 0 0 }
-  .callout .lede { font-size: 12px }
-  .note { margin-top: 14px; border-left: 3px solid var(--amber); background: var(--amber-soft);
-          color: #78350f; padding: 10px 14px; border-radius: 0 8px 8px 0; font-size: 12.5px }
+  .stage { min-height: 400px }
+  .dept { display: none; background: var(--paper); border: 1px solid var(--line);
+          border-radius: 18px; overflow: hidden }
+  .dept.on { display: block; animation: rise .32s cubic-bezier(.16,1,.3,1) both }
+  @keyframes rise { from { opacity: 0; transform: translateY(10px) } to { opacity: 1; transform: none } }
+  .dept-head { background: var(--ink); color: #fff; padding: 18px 22px; position: relative; overflow: hidden }
+  .dept-head > * { position: relative; z-index: 2 }
+  .dept-head .kick { font-size: 10px; font-weight: 800; letter-spacing: 1.7px;
+                     text-transform: uppercase; color: var(--accent) }
+  .dept-head h3 { font-size: 23px; font-weight: 800; letter-spacing: -.5px; margin-top: 5px }
+  .dept-stats { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px }
+  .st { background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.16);
+        border-radius: 999px; padding: 5px 13px; font-size: 11.5px; font-weight: 600; color: #d8cdb0 }
+  .st b { color: #fff; font-variant-numeric: tabular-nums }
+  .dept-body { padding: 6px 24px 24px }
+  .small-cell { margin: 18px 0 0; border-left: 3px solid var(--muted); background: var(--soft);
+                padding: 11px 15px; border-radius: 0 10px 10px 0; font-size: 12.5px }
 
-  /* ── Department sections ───────────────────────────────────────────── */
-  .dept { margin-top: 30px; border: 1px solid var(--line); border-radius: 14px; overflow: hidden }
-  .dept-head { background: var(--ink); color: #fff; padding: 16px 20px }
-  .dept-head .kicker { color: #5eead4; font-size: 10px }
-  .dept-head h3 { font-size: 19px; font-weight: 800; letter-spacing: -.2px; margin-top: 4px }
-  .dept-stats { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px }
-  .chip { background: rgba(255,255,255,.1); color: #e2e8f0; border-radius: 999px;
-          padding: 4px 11px; font-size: 11.5px; font-weight: 600 }
-  .chip b { color: #fff; font-variant-numeric: tabular-nums }
-  .dept-body { padding: 4px 20px 20px }
-  .small-cell { margin: 16px 0 0; border-left: 3px solid var(--muted); background: var(--soft);
-                padding: 10px 14px; border-radius: 0 8px 8px 0; font-size: 12.5px; color: var(--body) }
-
-  .qsec { margin-top: 22px }
-  .qsec > h4 { font-size: 12px; font-weight: 800; letter-spacing: 1.1px; text-transform: uppercase;
-               color: var(--teal); border-bottom: 1px solid var(--line); padding-bottom: 6px }
-  .q { padding: 12px 0; border-bottom: 1px dashed var(--line) }
+  .qsec { margin-top: 26px }
+  .qsec > h4 { font-size: 11.5px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase;
+               color: var(--grape); border-bottom: 1px solid var(--line); padding-bottom: 7px;
+               display: flex; align-items: center; gap: 7px }
+  .qsec > h4 svg { width: 13px; height: 13px; flex: none }
+  .q { padding: 13px 0; border-bottom: 1px dashed var(--line) }
   .q:last-child { border-bottom: none }
   .q-top { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap }
-  .q-key { font-family: ui-monospace, Menlo, monospace; font-size: 11px; font-weight: 700;
-           color: var(--muted); min-width: 30px }
+  .q-key { font-family: 'JetBrains Mono', monospace; font-size: 10.5px; font-weight: 700;
+           color: var(--muted); min-width: 34px }
   .q-label { font-weight: 700; color: var(--ink); font-size: 13.5px; flex: 1; min-width: 220px }
   .q-meta { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums }
-  .tag { font-size: 10px; font-weight: 800; letter-spacing: .5px; text-transform: uppercase;
-         border-radius: 999px; padding: 2px 9px; white-space: nowrap }
-  .tag-good { background: var(--teal-soft); color: #115e59 }
-  .tag-ask  { background: var(--amber-soft); color: var(--amber) }
-  .tag-top  { background: #e0e7ff; color: #3730a3 }
-  .picks { list-style: none; margin: 9px 0 0 40px }
-  .picks li { display: flex; gap: 10px; align-items: baseline; padding: 3px 0; font-size: 13px }
-  .picks .i { font-variant-numeric: tabular-nums; font-weight: 800; color: var(--teal); min-width: 16px }
-  .picks .pct { margin-left: auto; font-variant-numeric: tabular-nums; font-weight: 700; color: var(--ink);
-                white-space: nowrap }
-  .picks .cnt { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap }
-  .none { margin: 8px 0 0 40px; font-size: 12.5px; color: var(--muted); font-style: italic }
-  .mrow { margin: 10px 0 0 40px; padding-left: 12px; border-left: 2px solid var(--line) }
+  .tag { font-size: 9.5px; font-weight: 800; letter-spacing: .6px; text-transform: uppercase;
+         border-radius: 999px; padding: 3px 10px; white-space: nowrap }
+  .tag-good { background: #e7f3ff; color: #17508f }
+  .tag-ask { background: #fff3e0; color: #8a4b06 }
+  .tag-top { background: #f1ecfd; color: #4b2b9c }
+  .picks { list-style: none; margin: 11px 0 0 44px }
+  .picks li { display: flex; gap: 11px; align-items: center; padding: 5px 0; font-size: 13px }
+  .picks .i { font-variant-numeric: tabular-nums; font-weight: 800; color: var(--grape); min-width: 17px }
+  .picks .lb { flex: 1 }
+  .picks .track { width: 108px; height: 6px; border-radius: 4px; background: var(--d-grid); overflow: hidden; flex: none }
+  .picks .track i { display: block; height: 100%; border-radius: 4px; background: var(--d-primary) }
+  .picks .pct { font-variant-numeric: tabular-nums; font-weight: 800; color: var(--ink);
+                white-space: nowrap; min-width: 52px; text-align: right }
+  .picks .cnt { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums;
+                white-space: nowrap; min-width: 30px }
+  .none { margin: 9px 0 0 44px; font-size: 12.5px; color: var(--muted); font-style: italic }
+  .mrow { margin: 12px 0 0 44px; padding-left: 13px; border-left: 2px solid var(--line) }
   .mrow > b { font-size: 12.5px; color: var(--ink) }
   .mrow .picks { margin-left: 0 }
 
-  .foot { margin-top: 34px; padding-top: 16px; border-top: 1px solid var(--line);
+  /* ── Section explorer, opportunity list, campus split ──────────────── */
+  .meter { display: flex; height: 13px; border-radius: 7px; overflow: hidden; margin-top: 16px;
+           background: var(--d-grid) }
+  .meter i { display: block; height: 100% }
+
+  .reach li { list-style: none; display: flex; align-items: center; gap: 12px;
+              padding: 11px 0; border-bottom: 1px solid var(--line) }
+  .reach li:last-child { border-bottom: none }
+  .reach .r { font-variant-numeric: tabular-nums; font-weight: 800; color: var(--muted);
+              min-width: 20px; font-size: 12px }
+  .reach .nm { flex: 1; font-weight: 700; color: var(--ink); font-size: 13px; min-width: 0;
+               overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+  .reach .tk { width: 120px; height: 7px; border-radius: 4px; background: var(--d-grid);
+               overflow: hidden; flex: none }
+  .reach .tk i { display: block; height: 100%; background: var(--d-primary) }
+  .reach .mi { font-variant-numeric: tabular-nums; font-weight: 800; color: var(--ink);
+               min-width: 92px; text-align: right; font-size: 13px }
+  .reach .mi s { display: block; text-decoration: none; font-size: 10.5px; font-weight: 600;
+                 color: var(--muted) }
+
+  .campus-grid { display: grid; gap: 12px; margin-top: 16px;
+                 grid-template-columns: repeat(auto-fit, minmax(min(210px, 100%), 1fr)) }
+  .campus { border: 1px solid var(--line); border-radius: 12px; padding: 12px; background: var(--paper) }
+  .campus h5 { font-size: 14px; font-weight: 800; color: var(--ink) }
+  .campus .big { font-size: 30px; font-weight: 800; letter-spacing: -1px; color: var(--ink); margin-top: 8px }
+  .campus .sub { font-size: 11.5px; color: var(--muted); margin-top: 2px }
+  .share-row { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap }
+  .share-row input { flex: 1; min-width: 220px; padding: 11px 14px; font-size: 12.5px;
+                     border: 1px solid var(--line); border-radius: 10px;
+                     background: var(--soft); color: var(--body) }
+  .foot { margin-top: 44px; padding-top: 18px; border-top: 1px solid var(--line);
           font-size: 11.5px; color: var(--muted) }
 
-  @media (max-width: 860px) {
-    .pad, .cover { padding-left: 18px; padding-right: 18px }
-    .cards { grid-template-columns: repeat(2, 1fr) }
-    .two { grid-template-columns: 1fr }
+  @media (max-width: 1040px) {
+    .kpis { grid-template-columns: repeat(2, 1fr) }
+    .grid2, .grid2.even, .explorer { grid-template-columns: 1fr }
+    .rail { position: static; max-height: none }
+    .rail-list { max-height: 260px }
+  }
+  @media (max-width: 640px) {
+    .wrap { padding: 0 14px 70px }
+    /* The expand runs here too. A 42% frame is a letterbox on a phone, so it
+       opens from 86%, and the run is shorter because scroll is dearer on a
+       small screen. Nothing can clip: the frame's height is a floor, not a
+       fixed size, so it grows to whatever the content needs. */
+    .se-wrap { height: 118vh; height: 118svh }
+    .se-frame { --h0: clamp(400px, 54svh, 560px);
+                width: calc(86% + (100% - 86%) * var(--pw, 0)) }
+    .se-inner { padding: 0 18px 24px }
+    .toolbar { margin-top: 18px }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto }
+    /* `relative`, never `static`: the backdrop layer is absolutely positioned
+       and inset past its box, so only an ancestor that establishes a
+       containing block clips it. Static let it escape `overflow: hidden` and
+       push the page sideways — the same bug the phone rule once had. */
+    .se-wrap { height: auto } .se-sticky { position: relative; height: auto; padding: 46px 0 }
+    .se-wrap { --p: 1 }
+    .se-frame { width: 100%; height: auto }
+    .se-media { transform: none }
+    .dept.on { animation: none }
   }
 
-  /* ── Print / Save-as-PDF ───────────────────────────────────────────── */
+  /* ── Print / Save as PDF — everything comes back ───────────────────── */
   @media print {
     body { background: #fff; font-size: 10.5pt }
-    .sheet { max-width: none; box-shadow: none; padding-bottom: 0 }
-    .toolbar, .no-print { display: none !important }
-    .cover { background: #0b1220 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact }
-    .dept { break-inside: auto; page-break-inside: auto }
-    .dept-head { break-after: avoid; page-break-after: avoid;
-                 -webkit-print-color-adjust: exact; print-color-adjust: exact }
-    section, .qsec { break-inside: auto }
+    .wrap { max-width: none; padding: 0 }
+    .toolbar, .se-hint, .dc-shell, .sec-search, .rail, .no-print,
+    .chart-box, .chart-tall, .pie-box { display: none !important }
+    .se-wrap { height: auto } .se-sticky { position: static; height: auto; display: block }
+    .se-wrap { --p: 1 }
+    .se-frame { width: 100% !important; height: auto !important; border-radius: 0 !important;
+                box-shadow: none; padding: 26px 0 }
+    .se-sticky::before, .se-sticky::after { display: none }
+    .se-media, .se-frame::after { display: none }
+    .se-inner, .se-kicker, .se-inner h1, .se-inner p { color: #000 !important }
+    .se-sub { color: #000 !important; background: none; border: 1px solid #ccc;
+              text-shadow: none }
+    .explorer, .grid2 { display: block }
+    /* The whole point: on paper nothing is behind a click. */
+    .dept { display: block !important; break-before: page; page-break-before: always;
+            border: none; margin-top: 0 }
+    .dept:first-of-type { break-before: auto; page-break-before: auto }
+    .dept-head { -webkit-print-color-adjust: exact; print-color-adjust: exact;
+                 break-after: avoid; page-break-after: avoid }
     .q { break-inside: avoid; page-break-inside: avoid }
     .qsec > h4 { break-after: avoid; page-break-after: avoid }
-    table { break-inside: auto }
-    tr { break-inside: avoid; page-break-inside: avoid }
-    thead { display: table-header-group }
+    tr { break-inside: avoid } thead { display: table-header-group }
+    .t-scroll { overflow: visible } table { min-width: 0 }
   }
   @page { margin: 14mm 12mm }
 </style>
 </head>
 <body>
 {% set t = pack.totals %}
-{% macro barclass(pct) %}{% if pct >= 75 %}{% elif pct >= 50 %}mid{% else %}low{% endif %}{% endmacro %}
+{% set c = pack.callouts %}
+{# Every icon this page draws, in one place: the nine section glyphs and the
+   five pieces of button chrome that used to be an emoji. Line-stroke SVGs,
+   matching the icon style already used on the survey admin dashboard, so a
+   leadership audience reads a consistent, professional mark rather than a
+   platform-dependent emoji glyph — the same character renders differently
+   (or as a blank box) across Windows, macOS and a projector's own fonts. #}
+{% set ICON = {
+  'pulse':    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>',
+  'compass':  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>',
+  'route':    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>',
+  'target':   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>',
+  'bridge':   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 20h20"/><path d="M4 20V10"/><path d="M20 20V10"/><path d="M2 10c3-6 17-6 20 0"/></svg>',
+  'document': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>',
+  'chat':     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>',
+  'heart':    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.8 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>',
+  'chart':    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>',
+  'download': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>',
+  'print':    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>',
+  'link':     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>',
+  'building': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16"/><path d="M3 21h18"/><line x1="9" y1="9" x2="10" y2="9"/><line x1="9" y1="13" x2="10" y2="13"/><line x1="14" y1="9" x2="15" y2="9"/><line x1="14" y1="13" x2="15" y2="13"/></svg>',
+  'check':    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
+} %}
 
-<div class="sheet">
-
-  <div class="cover">
-    <div class="kicker">Deeksharambh 2026 · {{ pack.campus }}</div>
-    <h1>Department meeting pack</h1>
-    <p>Registered on the portal against who actually took Deeksharambh, ranked, with the
-       five strongest and five weakest departments — then every department's own
-       reading, question by question, with the {{ pack.picks }} answers its students gave most.</p>
-    <div class="rule"></div>
-    <div class="toolbar">
-      <a class="btn btn-pdf" href="{{ pdf_url }}">⬇ Download PDF</a>
-      <button class="btn btn-ghost" onclick="window.print()">🖨 Print / Save as PDF</button>
-      {% if share_url %}<button class="btn btn-ghost" onclick="copyLink(this)">🔗 Copy this link</button>{% endif %}
+<!-- ── 1. Scroll-expanding hero ─────────────────────────────────────── -->
+<div class="se-wrap" id="hero">
+  <div class="se-sticky">
+    <div class="se-frame" id="seFrame">
+      <div class="se-media"></div>
+      <div class="se-inner">
+        <div class="se-kicker">JAIN University · 2026 · {{ pack.campus }}</div>
+        <h1>Deeksharambh</h1>
+        <p>Who registered on the portal, who actually took Deeksharambh, and what
+           every department's own students said about the week.</p>
+        <div class="se-sub">Department-wise survey</div>
+        <div class="toolbar">
+          <a class="btn btn-pdf" href="{{ pdf_url }}">{{ ICON.download | safe }} Download PDF</a>
+          <button class="btn btn-ghost" onclick="window.print()">{{ ICON.print | safe }} Print</button>
+          {% if share_url %}<button class="btn btn-ghost" data-share="{{ share_url }}"
+                  onclick="copyLink(this)">{{ ICON.link | safe }} Copy share link</button>{% endif %}
+          <a class="btn btn-ghost" href="#departments">{{ ICON.building | safe }} Jump to departments</a>
+        </div>
+        <div class="se-hint">Scroll<i></i></div>
+      </div>
     </div>
   </div>
+</div>
 
-  <div class="pad">
+<div class="wrap">
 
-    <!-- ── 1. The count ──────────────────────────────────────────────── -->
-    <section id="count">
-      <h2><span class="n">01</span>Registered on the portal → took Deeksharambh</h2>
-      <p class="lede">Every student the portal registered is in the denominator, whether or not they
-        ever opened the baseline survey. The numerator is the students with a Deeksharambh reply on file.</p>
+  <!-- ── 2. The count ───────────────────────────────────────────────── -->
+  <section id="count">
+    <div class="head">
+      <div>
+        <h2><span class="n">01</span>Registered on the portal → took Deeksharambh</h2>
+        <p class="lede">Every student the portal registered is in the denominator, whether or not they
+          ever opened the baseline survey. The numerator is the students with a Deeksharambh reply on file.</p>
+      </div>
+    </div>
 
-      <div class="cards">
-        <div class="card"><b>{{ t.registered }}</b><s>Registered in portal</s></div>
-        <div class="card"><b>{{ t.took }}</b><s>Took Deeksharambh</s></div>
-        <div class="card"><b>{{ t.missing }}</b><s>Yet to take it</s></div>
-        <div class="card"><b>{{ t.pct }}%</b><s>Conversion</s></div>
+    <div class="kpis">
+      <div class="kpi p1"><b class="num">{{ t.registered }}</b><s>Registered in portal</s>
+        <em>Across {{ t.departments }} {{ 'department' if t.departments == 1 else 'departments' }}</em></div>
+      <div class="kpi p2"><b class="num">{{ t.took }}</b><s>Took Deeksharambh</s>
+        <em>Replies on file</em></div>
+      <div class="kpi p3"><b class="num">{{ t.missing }}</b><s>Still to reach</s>
+        <em>Where the next push goes</em></div>
+      <div class="kpi p4"><b class="num">{{ t.pct }}%</b><s>Conversion</s>
+        <em>{{ t.took }} of {{ t.registered }}</em></div>
+    </div>
+
+    {% if t.unmatched %}
+    <p class="note"><b>{{ t.unmatched }}</b> Deeksharambh {{ 'reply' if t.unmatched == 1 else 'replies' }}
+      came from an email address with no portal registration. Those replies are read in the
+      department analysis below but cannot appear in this conversion, which is why the two
+      totals differ by exactly {{ t.unmatched }}.</p>
+    {% endif %}
+
+    <div class="grid2">
+      <div class="card">
+        <div class="cap">Cohort conversion<span>Took Deeksharambh against everyone registered.</span></div>
+        <div class="chart-box"><canvas id="donut"></canvas></div>
+        <div class="legend">
+          <span><i style="background:var(--d-primary)"></i>Took it — {{ t.took }}</span>
+          <span><i style="background:var(--d-rest)"></i>Still to reach — {{ t.missing }}</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="cap">Conversion by department<span>Share of each department's registered students who took Deeksharambh.</span></div>
+        <div class="chart-tall"><canvas id="bars"></canvas></div>
+      </div>
+    </div>
+
+    <div class="grid2 even">
+      <div class="card">
+        <div class="cap">Where a push goes furthest<span>Most students still to reach — by headcount, not
+          percentage, because that is where the same effort brings in the most people.</span></div>
+        <ul class="reach">
+          {% for row in pack.gaps %}
+          <li>
+            <span class="r num">{{ loop.index }}</span>
+            <span class="nm">{{ row.dept }}</span>
+            <span class="tk" title="{{ row.pct }}% taken"><i style="width:{{ row.pct }}%"></i></span>
+            <span class="mi num">{{ row.missing }}<s>still to reach · {{ row.pct }}% in</s></span>
+          </li>
+          {% else %}
+          <li><span class="nm">Everyone is in — every registered student has taken Deeksharambh.</span></li>
+          {% endfor %}
+        </ul>
       </div>
 
-      {% if t.unmatched %}
-      <p class="note"><b>{{ t.unmatched }}</b> Deeksharambh {{ 'reply' if t.unmatched == 1 else 'replies' }}
-        came from an email address with no portal registration. Those replies are read in the
-        department analysis below but cannot appear in this conversion, which is why the two
-        totals differ by exactly {{ t.unmatched }}.</p>
-      {% endif %}
+      <div class="card">
+        <div class="cap">By campus<span>The same conversion, split by where students are.</span></div>
+        <div class="campus-grid">
+          {% for c in pack.campuses %}
+          <div class="campus">
+            <h5>{{ c.campus }}</h5>
+            <div class="big num">{{ c.pct }}%</div>
+            <div class="sub">{{ c.took }} of {{ c.registered }} registered</div>
+            <div class="sub">{{ c.departments }} {{ 'department' if c.departments == 1 else 'departments' }}
+              · {{ c.missing }} still to reach</div>
+            <div class="meter" style="height:7px;margin-top:11px">
+              <i style="width:{{ c.pct }}%;background:var(--d-primary)"></i>
+            </div>
+          </div>
+          {% else %}
+          <div class="campus"><h5>No campuses in this scope yet</h5></div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </section>
 
-      <table>
+  <!-- ── 3. Section explorer ────────────────────────────────────────── -->
+  <section id="sections">
+    <div class="head">
+      <div>
+        <h2><span class="n">02</span>The nine sections of the survey</h2>
+        <p class="lede">Open a section to see how the whole cohort answered its headline question,
+          then pick a department to see the same question its own students answered — and every
+          question that section asked, with the {{ pack.picks }} answers those students chose most.</p>
+      </div>
+    </div>
+
+    <div class="dc-shell">
+      <div class="dc-top">
+        <div class="dc-title">Section spotlight
+          <span id="dcCaption">—</span></div>
+      </div>
+      <div class="dc-stage"><div class="dc-track" id="dcTrack"></div></div>
+      <div class="dc-ctrl">
+        <button type="button" onclick="dcMove(-1)" aria-label="Previous section">‹</button>
+        <div class="dc-dots" id="dcDots"></div>
+        <button type="button" onclick="dcMove(1)" aria-label="Next section">›</button>
+      </div>
+    </div>
+
+    <!-- The same nine sections as plain buttons: the carousel is a view of
+         these, and a reader who cannot work a 3D carousel still gets the
+         list. Print keeps these and drops the carousel. -->
+    <div class="sec-cards" id="secCards" role="tablist" aria-label="Survey sections">
+      {% for sec in pack.overall_sections %}
+      <button type="button" class="sec-card {{ 'on' if loop.first }}" role="tab"
+              data-i="{{ loop.index0 }}" aria-selected="{{ 'true' if loop.first else 'false' }}"
+              onclick="pickSection({{ loop.index0 }})"
+              title="{{ sec.questions | length }} questions · {{ sec.answered }} answered">
+        <span class="sec-n">{{ loop.index }}</span>
+        <span class="sec-t">{{ ICON[sec.icon] | safe }}{{ sec.title }}</span>
+        <!-- Off by default; hovering or focusing the card reveals it, so the
+             grid reads as nine clean headings rather than nine cards each
+             carrying a line of fine print. The title attribute above is the
+             fallback for a reader who cannot hover — a touch screen, or
+             assistive tech that skips a custom tooltip. -->
+        <span class="sec-m" aria-hidden="true">{{ sec.questions | length }} questions ·
+          {{ sec.answered }} answered</span>
+      </button>
+      {% endfor %}
+    </div>
+
+    <div class="card sec-panel">
+      <div class="sec-grid">
+        <div class="sec-pie">
+          <div class="cap" id="pieTitle">—<span id="pieScope">Whole cohort</span></div>
+          <div class="pie-box"><canvas id="secPie"></canvas></div>
+          <div id="pieLegend" class="pie-legend"></div>
+          <p id="pieFold" class="pie-note"></p>
+        </div>
+
+        <div class="sec-depts">
+          <div class="cap">Departments<span id="deptCount">Pick one to see its own answers.</span></div>
+          <!-- Pinned above the search and the individual departments, always
+               visible regardless of the filter: the way back to the whole
+               cohort's own reading, not just another row in the list. -->
+          <button type="button" id="secOverallBtn" class="sec-dept sec-dept-overall"
+                  role="option" aria-selected="true" onclick="clearSecDept()">
+            <span class="nm">◆ Overall — all departments</span>
+            <span class="ct">{{ pack.totals.took }}</span>
+          </button>
+          <input type="search" id="secSearch" class="sec-search" placeholder="Search departments…"
+                 aria-label="Search departments" oninput="filterSecDepts(this.value)">
+          <div class="sec-list" id="secDeptList" role="listbox" aria-label="Departments"></div>
+        </div>
+      </div>
+
+      <div id="secDetail" class="sec-detail" hidden>
+        <div class="sec-detail-head">
+          <div>
+            <div class="cap" id="detailName">—<span id="detailMeta"></span></div>
+          </div>
+          <button type="button" class="btn btn-soft-sm" onclick="clearSecDept()">← Whole cohort</button>
+        </div>
+        <div id="detailQuestions"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 4. Department explorer ─────────────────────────────────────── -->
+  <section id="departments">
+    <div class="head">
+      <div>
+        <h2><span class="n">03</span>Department by department, question by question</h2>
+        <p class="lede">Pick a department on the left and its whole reading opens here — every question the
+          form asked, with the {{ pack.picks }} answers its own students chose most. Where a question has a
+          good end, both answers come from it; where a question only ever asked what went wrong, the
+          {{ pack.picks }} biggest asks are shown as asks. Percentages are of the students in that department
+          who answered that question. Printing or the PDF lays out every department in full.</p>
+      </div>
+    </div>
+
+    <div class="explorer">
+      <aside class="rail no-print">
+        <input type="search" id="deptSearch" placeholder="Search {{ pack.departments | length }} departments…"
+               aria-label="Search departments" oninput="filterDepts(this.value)">
+        <div class="rail-list" id="deptList" role="tablist" aria-label="Departments">
+          {% for d in pack.departments %}
+          <button type="button" class="chip" role="tab" data-target="dept-{{ loop.index }}"
+                  data-name="{{ d.dept | lower }}" aria-current="{{ 'true' if loop.first else 'false' }}"
+                  onclick="showDept('dept-{{ loop.index }}', this)">
+            <span class="dot" style="background:{% if d.pct >= 75 %}var(--d-primary){% elif d.pct >= 40 %}#ff8008{% else %}var(--d-alert){% endif %}"></span>
+            <span class="nm">{{ d.dept }}</span>
+            <span class="pc">{{ d.pct }}%</span>
+          </button>
+          {% endfor %}
+        </div>
+        <div class="rail-foot">
+          <button type="button" id="allBtn" onclick="showAllDepts()">Show all departments</button>
+        </div>
+      </aside>
+
+      <div class="stage" id="deptStage">
+        {% for d in pack.departments %}
+        <article class="dept {{ 'on' if loop.first }}" id="dept-{{ loop.index }}">
+          <header class="dept-head">
+            <div class="kick">Department {{ loop.index }} of {{ pack.departments | length }}
+              {%- if d.campuses %} · {{ d.campuses | join(', ') }}{% endif %}</div>
+            <h3>{{ d.dept }}</h3>
+            <div class="dept-stats">
+              <span class="st">Registered <b>{{ d.registered }}</b></span>
+              <span class="st">Took Deeksharambh <b>{{ d.took }}</b></span>
+              <span class="st">Conversion <b>{{ d.pct }}%</b></span>
+              <span class="st">Replies analysed <b>{{ d.responses }}</b></span>
+              {% if d.headline.vibe is not none %}<span class="st">Vibe <b>{{ d.headline.vibe }}/10</b></span>{% endif %}
+              {% if d.headline.nps is not none %}<span class="st">NPS <b>{{ d.headline.nps }}</b></span>{% endif %}
+              {% if d.headline.belonging is not none %}<span class="st">Belonging <b>{{ d.headline.belonging }}/10</b></span>{% endif %}
+            </div>
+          </header>
+          <div class="dept-body">
+            {% if not d.responses %}
+              <p class="small-cell">No Deeksharambh replies from this department yet — the
+                {{ d.registered }} registered {{ 'student has' if d.registered == 1 else 'students have' }}
+                nothing on file to read. Every question below would be empty, so the questions are not
+                printed for this department.</p>
+            {% else %}
+              {% if not d.reportable %}
+              <p class="small-cell">{{ d.responses }} {{ 'reply' if d.responses == 1 else 'replies' }} —
+                below the {{ pack.min_reportable }} this report treats as safe to quote outside the
+                department. The answers are printed here because this is the department's own reading;
+                read them as {{ d.responses }} named {{ 'student' if d.responses == 1 else 'students' }},
+                not as a percentage of anything.</p>
+              {% endif %}
+
+              {% for sec in d.sections %}
+              <div class="qsec">
+                <h4>{{ ICON[sec.icon] | safe }}{{ sec.title }}</h4>
+                {% for q in sec.questions %}
+                <div class="q">
+                  <div class="q-top">
+                    <span class="q-key">{{ q.key | upper }}</span>
+                    <span class="q-label">{{ q.label }}</span>
+                    {% if q.answered %}
+                      <span class="tag {{ 'tag-good' if q.frame == 'positive' else ('tag-ask' if q.frame == 'asked' else 'tag-top') }}">{{ q.frame_label }}</span>
+                      <span class="q-meta">{{ q.answered }} answered{% if q.avg is defined and q.avg is not none %} · avg {{ q.avg }}{% if q.max %}/{{ q.max }}{% endif %}{% endif %}{% if q.nps is defined and q.nps is not none %} · NPS {{ q.nps }}{% endif %}</span>
+                    {% else %}
+                      <span class="q-meta">Not answered by anyone in this department</span>
+                    {% endif %}
+                  </div>
+
+                  {% if q.kind == 'matrix' %}
+                    {% for row in q.rows %}
+                    <div class="mrow">
+                      <b>{{ row.label }}</b> <span class="q-meta">— {{ row.answered }} answered</span>
+                      {% if row.picks %}
+                      <ul class="picks">
+                        {% for p in row.picks %}
+                        <li><span class="i">{{ loop.index }}.</span><span class="lb">{{ p.label }}</span>
+                            <span class="track"><i style="width:{{ p.pct }}%"></i></span>
+                            <span class="pct">{{ p.pct }}%</span><span class="cnt">({{ p.count }})</span></li>
+                        {% endfor %}
+                      </ul>
+                      {% else %}
+                      <div class="none">No answer at the positive end of this statement.</div>
+                      {% endif %}
+                    </div>
+                    {% else %}
+                    <div class="none">Nobody in this department filled this grid in.</div>
+                    {% endfor %}
+                  {% elif q.picks %}
+                    <ul class="picks">
+                      {% for p in q.picks %}
+                      <li><span class="i">{{ loop.index }}.</span><span class="lb">{{ p.label }}</span>
+                          <span class="track"><i style="width:{{ p.pct }}%"></i></span>
+                          <span class="pct">{{ p.pct }}%</span><span class="cnt">({{ p.count }})</span></li>
+                      {% endfor %}
+                    </ul>
+                    {% if q.share is not none %}<div class="none">Between them, {{ q.share }}% of the {{ q.answered }} who answered this question.</div>{% endif %}
+                  {% elif q.answered %}
+                    <div class="none">
+                      {% if q.frame == 'positive' %}{{ q.answered }} answered, but none of them picked
+                        an answer from the positive end of this question.
+                      {% else %}{{ q.answered }} answered, with nothing to rank.{% endif %}
+                    </div>
+                  {% else %}
+                    <div class="none">No answers on file.</div>
+                  {% endif %}
+                </div>
+                {% endfor %}
+              </div>
+              {% endfor %}
+            {% endif %}
+          </div>
+        </article>
+        {% else %}
+          <p class="lede">No departments in this scope yet.</p>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 5. Every department, ranked ────────────────────────────────── -->
+  <section id="all-departments">
+    <div class="head">
+      <div>
+        <h2><span class="n">04</span>Every department, ranked</h2>
+        <p class="lede">The full list, for reference — sorted by conversion, high to low.</p>
+      </div>
+    </div>
+    <div class="card">
+      <div class="t-scroll"><table>
         <thead><tr>
           <th class="n">#</th><th>Department</th><th>Campus</th>
-          <th class="n">Registered</th><th class="n">Took Deeksharambh</th>
-          <th class="n">Yet to take</th><th class="n">Conversion</th>
+          <th class="n">Registered</th><th class="n">Took</th><th class="n">To reach</th>
         </tr></thead>
         <tbody>
         {% for row in pack.conversion %}
           <tr>
-            <td class="n rank">{{ loop.index }}</td>
+            <td class="n num" style="color:var(--muted)">{{ loop.index }}</td>
             <td class="dept-name">{{ row.dept }}</td>
             <td>{{ row.campuses | join(', ') or '—' }}</td>
-            <td class="n">{{ row.registered }}</td>
-            <td class="n">{{ row.took }}</td>
-            <td class="n">{{ row.missing }}</td>
-            <td class="n">{{ row.pct }}%
-              <div class="bar {{ barclass(row.pct) }}"><i style="width:{{ row.pct }}%"></i></div>
-            </td>
+            <td class="n num">{{ row.registered }}</td>
+            <td class="n num">{{ row.took }}</td>
+            <td class="n num">{{ row.missing }}</td>
           </tr>
         {% else %}
-          <tr><td colspan="7">No students registered in this scope yet.</td></tr>
+          <tr><td colspan="6">No students registered in this scope yet.</td></tr>
         {% endfor %}
         </tbody>
-      </table>
-    </section>
+      </table></div>
+    </div>
+  </section>
 
-    <div class="divider"></div>
-
-    <!-- ── 2. Top 5 / least 5 ────────────────────────────────────────── -->
-    <section id="callouts">
-      {% set c = pack.callouts %}
-      {% set shown = [c.top | length, c.least | length] | max %}
-      <h2><span class="n">02</span>The strongest {{ shown }} and the weakest {{ shown }}</h2>
-      <p class="lede">Ranked on the same conversion. Departments level on percentage are split by how
-        many students that percentage stands for, so 100% of forty ranks above 100% of four.</p>
-
-      {% if c.overlap %}
-      <p class="note">Only {{ c.ranked }} {{ 'department has' if c.ranked == 1 else 'departments have' }}
-        students registered in this scope — fewer than the {{ c.size * 2 }} the two lists need, so
-        {{ c.overlap | join(', ') }} {{ 'appears' if c.overlap | length == 1 else 'appear' }} in both.</p>
-      {% endif %}
-
-      <div class="two">
-        <div class="callout good">
-          <h3>▲ Top {{ c.top | length }} by conversion</h3>
-          <p class="lede">Departments whose students turned up.</p>
-          <table>
-            <thead><tr><th class="n">#</th><th>Department</th><th class="n">Took / Reg.</th><th class="n">%</th></tr></thead>
-            <tbody>
-            {% for row in c.top %}
-              <tr><td class="n rank">{{ loop.index }}</td><td class="dept-name">{{ row.dept }}</td>
-                  <td class="n">{{ row.took }} / {{ row.registered }}</td><td class="n">{{ row.pct }}%</td></tr>
-            {% else %}
-              <tr><td colspan="4">Nothing to rank yet.</td></tr>
-            {% endfor %}
-            </tbody>
-          </table>
-        </div>
-
-        <div class="callout work">
-          <h3>▼ Least {{ c.least | length }} by conversion</h3>
-          <p class="lede">Worst first — the departments to chase.</p>
-          <table>
-            <thead><tr><th class="n">#</th><th>Department</th><th class="n">Took / Reg.</th><th class="n">%</th></tr></thead>
-            <tbody>
-            {% for row in c.least %}
-              <tr><td class="n rank">{{ loop.index }}</td><td class="dept-name">{{ row.dept }}</td>
-                  <td class="n">{{ row.took }} / {{ row.registered }}</td><td class="n">{{ row.pct }}%</td></tr>
-            {% else %}
-              <tr><td colspan="4">Nothing to rank yet.</td></tr>
-            {% endfor %}
-            </tbody>
-          </table>
-        </div>
+  {% if share_url %}
+  <section id="share" class="no-print">
+    <div class="card">
+      <div class="cap">Share this pack<span>Opens the same page, with no admin login — the
+        count, the spotlight and every department's reading.</span></div>
+      <div class="share-row">
+        <input id="shareUrl" class="mono" readonly value="{{ share_url }}"
+               aria-label="Shareable link" onclick="this.select()">
+        <button class="btn btn-pdf" data-share="{{ share_url }}" onclick="copyLink(this)">Copy</button>
       </div>
-    </section>
+    </div>
+  </section>
+  {% endif %}
 
-    <div class="divider"></div>
-
-    <!-- ── 3. Department by department ───────────────────────────────── -->
-    <section id="departments">
-      <h2><span class="n">03</span>Department by department, question by question</h2>
-      <p class="lede">Every question the Deeksharambh form asked, for every department, with the
-        {{ pack.picks }} answers its own students chose most. Where a question has a good end, both
-        answers come from it. Where a question only ever asked what went wrong, the {{ pack.picks }}
-        biggest asks are shown as asks. Percentages are of the students in that department who
-        answered that question, not of the department.</p>
-
-      {% for d in pack.departments %}
-      <article class="dept" id="dept-{{ loop.index }}">
-        <header class="dept-head">
-          <div class="kicker">Department {{ loop.index }} of {{ pack.departments | length }}
-            {%- if d.campuses %} · {{ d.campuses | join(', ') }}{% endif %}</div>
-          <h3>{{ d.dept }}</h3>
-          <div class="dept-stats">
-            <span class="chip">Registered <b>{{ d.registered }}</b></span>
-            <span class="chip">Took Deeksharambh <b>{{ d.took }}</b></span>
-            <span class="chip">Conversion <b>{{ d.pct }}%</b></span>
-            <span class="chip">Replies analysed <b>{{ d.responses }}</b></span>
-            {% if d.headline.vibe is not none %}<span class="chip">Vibe <b>{{ d.headline.vibe }}/10</b></span>{% endif %}
-            {% if d.headline.nps is not none %}<span class="chip">NPS <b>{{ d.headline.nps }}</b></span>{% endif %}
-            {% if d.headline.belonging is not none %}<span class="chip">Belonging <b>{{ d.headline.belonging }}/10</b></span>{% endif %}
-          </div>
-        </header>
-        <div class="dept-body">
-
-          {% if not d.responses %}
-            <p class="small-cell">No Deeksharambh replies from this department yet — the
-              {{ d.registered }} registered {{ 'student has' if d.registered == 1 else 'students have' }}
-              nothing on file to read. Every question below would be empty, so the questions are not
-              printed for this department.</p>
-          {% else %}
-            {% if not d.reportable %}
-            <p class="small-cell">{{ d.responses }} {{ 'reply' if d.responses == 1 else 'replies' }} —
-              below the {{ pack.min_reportable }} this report treats as safe to quote outside the
-              department. The answers are printed here because this is the department's own reading;
-              read them as {{ d.responses }} named {{ 'student' if d.responses == 1 else 'students' }},
-              not as a percentage of anything.</p>
-            {% endif %}
-
-            {% for sec in d.sections %}
-            <div class="qsec">
-              <h4>{{ sec.title }}</h4>
-              {% for q in sec.questions %}
-              <div class="q">
-                <div class="q-top">
-                  <span class="q-key">{{ q.key | upper }}</span>
-                  <span class="q-label">{{ q.label }}</span>
-                  {% if q.answered %}
-                    <span class="tag {{ 'tag-good' if q.frame == 'positive' else ('tag-ask' if q.frame == 'asked' else 'tag-top') }}">{{ q.frame_label }}</span>
-                    <span class="q-meta">{{ q.answered }} answered{% if q.avg is defined and q.avg is not none %} · avg {{ q.avg }}{% if q.max %}/{{ q.max }}{% endif %}{% endif %}{% if q.nps is defined and q.nps is not none %} · NPS {{ q.nps }}{% endif %}</span>
-                  {% else %}
-                    <span class="q-meta">Not answered by anyone in this department</span>
-                  {% endif %}
-                </div>
-
-                {% if q.kind == 'matrix' %}
-                  {% for row in q.rows %}
-                  <div class="mrow">
-                    <b>{{ row.label }}</b>
-                    <span class="q-meta">— {{ row.answered }} answered</span>
-                    {% if row.picks %}
-                    <ul class="picks">
-                      {% for p in row.picks %}
-                      <li><span class="i">{{ loop.index }}.</span><span>{{ p.label }}</span>
-                          <span class="pct">{{ p.pct }}%</span><span class="cnt">({{ p.count }})</span></li>
-                      {% endfor %}
-                    </ul>
-                    {% else %}
-                    <div class="none">No answer at the positive end of this statement.</div>
-                    {% endif %}
-                  </div>
-                  {% else %}
-                  <div class="none">Nobody in this department filled this grid in.</div>
-                  {% endfor %}
-                {% elif q.picks %}
-                  <ul class="picks">
-                    {% for p in q.picks %}
-                    <li><span class="i">{{ loop.index }}.</span><span>{{ p.label }}</span>
-                        <span class="pct">{{ p.pct }}%</span><span class="cnt">({{ p.count }})</span></li>
-                    {% endfor %}
-                  </ul>
-                  {% if q.share is not none %}<div class="none">Between them, {{ q.share }}% of the {{ q.answered }} who answered this question.</div>{% endif %}
-                {% elif q.answered %}
-                  <div class="none">
-                    {% if q.frame == 'positive' %}{{ q.answered }} answered, but none of them picked
-                      an answer from the positive end of this question.
-                    {% else %}{{ q.answered }} answered, with nothing to rank.{% endif %}
-                  </div>
-                {% else %}
-                  <div class="none">No answers on file.</div>
-                {% endif %}
-              </div>
-              {% endfor %}
-            </div>
-            {% endfor %}
-          {% endif %}
-
-        </div>
-      </article>
-      {% else %}
-        <p class="lede">No departments in this scope yet.</p>
-      {% endfor %}
-    </section>
-
-    <p class="foot">
-      Deeksharambh 2026 · {{ pack.campus }} · generated {{ generated_at }} ·
-      {{ t.registered }} registered, {{ t.took }} took Deeksharambh across
-      {{ t.departments }} {{ 'department' if t.departments == 1 else 'departments' }}.
-      Counts read from the registration portal and the orientation responses directly;
-      no figure on this page is estimated.
-    </p>
-  </div>
+  <p class="foot">
+    Deeksharambh 2026 · {{ pack.campus }} · generated {{ generated_at }} ·
+    {{ t.registered }} registered, {{ t.took }} took Deeksharambh across
+    {{ t.departments }} {{ 'department' if t.departments == 1 else 'departments' }}.
+    Counts read from the registration portal and the orientation responses directly;
+    no figure on this page is estimated.
+  </p>
 </div>
 
 <script>
-function copyLink(btn) {
-  navigator.clipboard.writeText(location.href).then(function () {
-    var was = btn.textContent;
-    btn.textContent = '✓ Copied';
-    setTimeout(function () { btn.textContent = was; }, 1600);
+"use strict";
+var REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// The same icon markup the server rendered into the section cards and the
+// button chrome, so the carousel's own JS-built cards (and the "Copied"
+// confirmation) draw from one definition rather than a second copy that
+// could drift out of sync with it.
+var ICON_SVG = {{ ICON | tojson }};
+
+/* ── Scroll-expanding hero ──────────────────────────────────────────────
+   One progress value, eased toward its target each frame, published as
+   --p on the frame. Everything else is CSS. */
+(function () {
+  var wrap = document.getElementById('hero');
+  var frame = document.getElementById('seFrame');
+  // The expand runs on every width now that the frame cannot clip its own
+  // content. Only a reader who asked for less motion is handed the opened
+  // state outright.
+  function isStatic() { return REDUCED; }
+  if (!wrap || !frame) return;
+  if (isStatic()) { wrap.style.setProperty('--p', 1); }
+
+  var HOLD = 0.5, SMOOTH = 0.16;
+  var current = 0, target = 0, ticking = false;
+
+  function measure() {
+    var span = wrap.offsetHeight - window.innerHeight;
+    var travelled = -wrap.getBoundingClientRect().top;
+    var raw = span > 0 ? travelled / span : 0;
+    // The last slice of the scroll is a hold at full bleed, so the frame
+    // finishes opening before the page moves on past it.
+    target = Math.max(0, Math.min(1, raw / (1 - HOLD)));
+  }
+  function frameLoop() {
+    current += (target - current) * SMOOTH;
+    if (Math.abs(target - current) < 0.004) current = target;
+    wrap.style.setProperty('--p', current.toFixed(4));
+    if (Math.abs(target - current) > 0.0005) { requestAnimationFrame(frameLoop); }
+    else { ticking = false; }
+  }
+  function onScroll() {
+    if (isStatic()) { wrap.style.setProperty('--p', 1); return; }
+    measure();
+    if (target >= 1) {
+      // Past the hero there is nothing left to open, and a frame caught
+      // part-open here is precisely the hard edge this is meant to remove.
+      current = 1; wrap.style.setProperty('--p', 1); ticking = false; return;
+    }
+    if (!ticking) { ticking = true; requestAnimationFrame(frameLoop); }
+  }
+  window.addEventListener('scroll', onScroll, { passive: true });
+  window.addEventListener('resize', onScroll);
+  onScroll();
+})();
+
+function esc(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+/* ── Section explorer ──────────────────────────────────────────────────
+   Three steps: pick a section, read how the whole cohort answered its
+   headline question, then pick a department and read the same question its
+   own students answered — plus every question that section asked.
+
+   The department's answers are not duplicated into this script. They are
+   already rendered, in full, in the department reading below; this clones the
+   matching block out of that DOM, so the two can never disagree and the page
+   does not carry the same numbers twice. */
+var SEC = {
+  overall: {{ pack.overall_sections | map(attribute='lead') | list | tojson }},
+  titles:  {{ pack.overall_sections | map(attribute='title') | list | tojson }},
+  icons:   {{ pack.overall_sections | map(attribute='icon') | list | tojson }},
+  depts: {{ pack.departments | map(attribute='dept') | list | tojson }},
+  counts: {{ pack.departments | map(attribute='responses') | list | tojson }},
+  /* Only the pie's slices, per department per section — not every option of
+     every question. The question detail is cloned from the DOM below. */
+  leads: {{ pack.dept_leads | tojson }}
+};
+
+var secIndex = 0, secDept = -1, secChart = null;
+
+/* ── Section spotlight ─────────────────────────────────────────────────
+   The depth carousel, carrying the nine sections. Cards stack back along
+   the z-axis with the selected one in front; bringing a card to the front
+   is what selects its section, so the carousel and the button list below
+   are two controls for one piece of state. */
+var DEPTH = 190, SPREAD = 78, TILT = 22, FALLOFF = 0.2, BLUR = 6, VISIBLE = 4;
+
+function dcRender() {
+  var track = document.getElementById('dcTrack');
+  var dots = document.getElementById('dcDots');
+  if (!track) return;
+
+  track.innerHTML = SEC.titles.map(function (title, i) {
+    var lead = SEC.overall[i];
+    var top = (lead && lead.options && lead.options.length) ? lead.options[0] : null;
+    var iconSvg = ICON_SVG[SEC.icons[i]] || '';
+    return '<div class="dc-card" data-i="' + i + '" aria-hidden="true">' +
+      '<div class="dc-rank">Section ' + (i + 1) + ' of ' + SEC.titles.length + '</div>' +
+      '<div class="dc-name"><span class="dc-icon">' + iconSvg + '</span>' + esc(title) + '</div>' +
+      '<div class="dc-sec-q">' + (lead ? esc(lead.label) : 'Not answered yet') + '</div>' +
+      '<div class="dc-big num">' + (top ? top.pct + '%' : '—') + '</div>' +
+      '<div class="dc-sub">' + (top ? esc(top.label) : 'No answers on file') + '</div>' +
+      '<div class="dc-meter"><i style="width:' + (top ? Math.max(2, top.pct) : 0) + '%"></i></div>' +
+      '</div>';
+  }).join('');
+
+  if (dots) {
+    dots.innerHTML = SEC.titles.map(function (title, i) {
+      return '<button type="button" onclick="pickSection(' + i + ')" aria-current="' +
+        (i === secIndex ? 'true' : 'false') + '" aria-label="' + esc(title) + '"></button>';
+    }).join('');
+  }
+  dcPlace();
+}
+
+function dcPlace() {
+  document.querySelectorAll('#dcTrack .dc-card[data-i]').forEach(function (el) {
+    var offset = parseInt(el.dataset.i, 10) - secIndex;
+    var abs = Math.abs(offset);
+    el.style.transform =
+      'translateX(' + (offset * SPREAD) + 'px) translateZ(' + (-abs * DEPTH) + 'px) ' +
+      'rotateY(' + (offset * -TILT) + 'deg)';
+    el.style.filter = 'blur(' + Math.min(abs * FALLOFF * BLUR, BLUR) + 'px)';
+    el.style.opacity = abs > VISIBLE ? 0 : Math.max(0, 1 - abs * FALLOFF * 1.6);
+    el.style.zIndex = String(100 - abs);
+    el.classList.toggle('lead', offset === 0);
+    // Only the card in front can be reached by keyboard or read out; the
+    // ones stacked behind it are decoration until they come forward.
+    // The whole stack is decoration, so none of it takes a click and none of
+    // it is announced: the caption, the dots and the list below carry the
+    // same information in a form that can actually be operated.
+  });
+  document.querySelectorAll('#dcDots button').forEach(function (b, i) {
+    b.setAttribute('aria-current', i === secIndex ? 'true' : 'false');
+  });
+  var cap = document.getElementById('dcCaption');
+  if (cap) {
+    var lead = SEC.overall[secIndex];
+    cap.textContent = SEC.titles[secIndex] +
+      (lead ? ' — ' + lead.answered + ' answered' : ' — nothing answered yet');
+  }
+}
+
+function dcMove(step) {
+  var n = SEC.titles.length;
+  pickSection(((secIndex + step) % n + n) % n);   // loops both ways
+}
+
+document.addEventListener('keydown', function (e) {
+  if (e.target && /^(INPUT|TEXTAREA)$/.test(e.target.tagName)) return;
+  if (e.key === 'ArrowLeft') dcMove(-1);
+  if (e.key === 'ArrowRight') dcMove(1);
+});
+
+
+function secLead(sectionIdx, deptIdx) {
+  if (deptIdx < 0) return SEC.overall[sectionIdx];
+  var perDept = SEC.leads[deptIdx];
+  return perDept ? perDept[sectionIdx] : null;
+}
+
+function drawPie(lead) {
+  var box = document.getElementById('secPie');
+  var legend = document.getElementById('pieLegend');
+  var note = document.getElementById('pieFold');
+  if (secChart) { secChart.destroy(); secChart = null; }
+  if (legend) legend.innerHTML = '';
+  if (note) note.textContent = '';
+
+  if (!lead || !lead.options || !lead.options.length) {
+    if (legend) {
+      legend.innerHTML = '<div style="color:var(--muted);font-style:italic">' +
+        'Nobody in this scope answered this question.</div>';
+    }
+    return;
+  }
+
+  var labels = lead.options.map(function (o) { return o.label });
+  var counts = lead.options.map(function (o) { return o.count });
+  // Colour travels from the server: it is the answer's own position on that
+  // question's own rating scale, not the slice's rank by popularity, so it
+  // has to come from Python rather than a fixed position-indexed ramp.
+  var colours = lead.options.map(function (o) { return o.color });
+
+  if (typeof Chart !== 'undefined' && box) {
+    secChart = new Chart(box, {
+      type: 'doughnut',
+      data: { labels: labels, datasets: [{ data: counts, backgroundColor: colours,
+              borderColor: '#fff', borderWidth: 2, hoverOffset: 8 }] },
+      options: {
+        responsive: true, maintainAspectRatio: false, cutout: '52%',
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: function (ctx) {
+            var pct = lead.answered ? Math.round(ctx.parsed / lead.answered * 1000) / 10 : 0;
+            return ' ' + ctx.label + ': ' + ctx.parsed + ' (' + pct + '%)';
+          } } }
+        }
+      }
+    });
+  }
+
+  if (legend) {
+    legend.innerHTML = lead.options.map(function (o, i) {
+      // Hovering (or focusing, for a keyboard or switch-device reader) a
+      // legend row asks the chart to show that slice active, the same way
+      // hovering the slice itself already does — the legend becomes a
+      // second, larger hit target onto the same chart rather than an inert
+      // list of colours sitting next to it.
+      return '<div tabindex="0" role="button" aria-label="Highlight ' + esc(o.label) + '"' +
+        ' onmouseenter="hoverPieSlice(' + i + ')" onmouseleave="hoverPieSlice(-1)"' +
+        ' onfocus="hoverPieSlice(' + i + ')" onblur="hoverPieSlice(-1)">' +
+        '<i style="background:' + colours[i] + '"></i>' +
+        '<span class="lb">' + esc(o.label) + '</span>' +
+        '<span class="vl">' + o.pct + '%</span>' +
+        '<span class="ct">(' + o.count + ')</span></div>';
+    }).join('');
+  }
+  if (note && lead.folded) {
+    note.textContent = 'The last slice sums the ' + lead.folded +
+      ' least-chosen answers, so nothing is left out of the total.';
+  }
+}
+
+// Hovering (or focusing) a legend row drives the same active-element state
+// Chart.js already shows when the pointer is over the slice itself, so the
+// legend works as a second way to point at a slice rather than a static
+// key sitting beside the chart it describes.
+function hoverPieSlice(i) {
+  if (!secChart) return;
+  var active = i < 0 ? [] : [{ datasetIndex: 0, index: i }];
+  secChart.setActiveElements(active);
+  secChart.tooltip.setActiveElements(active, { x: 0, y: 0 });
+  secChart.update();
+}
+
+function renderSecPanel() {
+  var lead = secLead(secIndex, secDept);
+  var title = document.getElementById('pieTitle');
+  var scope = document.getElementById('pieScope');
+  if (title) {
+    title.childNodes[0].nodeValue = lead ? lead.label : SEC.titles[secIndex];
+  }
+  if (scope) {
+    scope.textContent = secDept < 0
+      ? 'Whole cohort — ' + (lead ? lead.answered + ' answered' : 'nothing answered yet')
+      : SEC.depts[secDept] + ' — ' + (lead ? lead.answered + ' answered' : 'nothing answered yet');
+  }
+  drawPie(lead);
+}
+
+function renderSecDepts() {
+  var host = document.getElementById('secDeptList');
+  var count = document.getElementById('deptCount');
+  if (!host) return;
+  host.innerHTML = SEC.depts.map(function (name, i) {
+    return '<button type="button" class="sec-dept" role="option" data-i="' + i + '"' +
+      ' data-name="' + esc(name.toLowerCase()) + '"' +
+      ' aria-selected="' + (i === secDept ? 'true' : 'false') + '"' +
+      ' onclick="pickSecDept(' + i + ')">' +
+      '<span class="nm">' + esc(name) + '</span>' +
+      '<span class="ct">' + SEC.counts[i] + '</span></button>';
+  }).join('');
+  if (count) {
+    count.textContent = SEC.depts.length + ' in this scope — pick one to see its own answers.';
+  }
+}
+
+function pickSection(i) {
+  secIndex = i;
+  document.querySelectorAll('#secCards .sec-card').forEach(function (b) {
+    var on = +b.dataset.i === i;
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-selected', on ? 'true' : 'false');
+  });
+  dcPlace();
+  renderSecPanel();
+  if (secDept >= 0) showSecDetail();
+}
+
+function pickSecDept(i) {
+  secDept = i;
+  document.querySelectorAll('#secDeptList .sec-dept').forEach(function (b) {
+    b.setAttribute('aria-selected', +b.dataset.i === i ? 'true' : 'false');
+  });
+  var overall = document.getElementById('secOverallBtn');
+  if (overall) overall.setAttribute('aria-selected', 'false');
+  renderSecPanel();
+  showSecDetail();
+}
+
+function clearSecDept() {
+  secDept = -1;
+  document.querySelectorAll('#secDeptList .sec-dept').forEach(function (b) {
+    b.setAttribute('aria-selected', 'false');
+  });
+  var overall = document.getElementById('secOverallBtn');
+  if (overall) overall.setAttribute('aria-selected', 'true');
+  var box = document.getElementById('secDetail');
+  if (box) box.hidden = true;
+  renderSecPanel();
+}
+
+function showSecDetail() {
+  var box = document.getElementById('secDetail');
+  var host = document.getElementById('detailQuestions');
+  var name = document.getElementById('detailName');
+  var meta = document.getElementById('detailMeta');
+  if (!box || !host || secDept < 0) return;
+
+  // The department's reading of this section, cloned out of the full
+  // department panel below rather than re-rendered from a second copy.
+  var source = document.querySelector('#dept-' + (secDept + 1) + ' .qsec:nth-of-type(' +
+                                      (secIndex + 1) + ')');
+  host.innerHTML = '';
+  if (source) {
+    host.appendChild(source.cloneNode(true));
+  } else {
+    host.innerHTML = '<div class="none">No Deeksharambh replies from this department yet, ' +
+      'so this section has nothing on file.</div>';
+  }
+  if (name) name.childNodes[0].nodeValue = SEC.depts[secDept] + ' ';
+  if (meta) {
+    meta.textContent = SEC.titles[secIndex] + ' · ' + SEC.counts[secDept] +
+      (SEC.counts[secDept] === 1 ? ' reply' : ' replies') + ' analysed';
+  }
+  box.hidden = false;
+}
+
+function filterSecDepts(term) {
+  var q = (term || '').trim().toLowerCase();
+  document.querySelectorAll('#secDeptList .sec-dept').forEach(function (b) {
+    b.style.display = (!q || b.dataset.name.indexOf(q) !== -1) ? '' : 'none';
   });
 }
+
+renderSecDepts();
+dcRender();
+pickSection(0);
+
+/* ── Department explorer ───────────────────────────────────────────────
+   Every department is in the page. This only decides which one is on
+   screen, so search, Ctrl+F, print and the PDF still see all of them. */
+function showDept(id, chip) {
+  document.querySelectorAll('#deptStage .dept').forEach(function (el) {
+    el.classList.toggle('on', el.id === id);
+  });
+  document.querySelectorAll('#deptList .chip').forEach(function (b) {
+    b.setAttribute('aria-current', b === chip ? 'true' : 'false');
+  });
+  var btn = document.getElementById('allBtn');
+  if (btn) btn.textContent = 'Show all departments';
+}
+
+function showAllDepts() {
+  var showingAll = document.querySelectorAll('#deptStage .dept.on').length > 1;
+  document.querySelectorAll('#deptStage .dept').forEach(function (el, i) {
+    el.classList.toggle('on', showingAll ? i === 0 : true);
+  });
+  document.querySelectorAll('#deptList .chip').forEach(function (b, i) {
+    b.setAttribute('aria-current', (showingAll && i === 0) ? 'true' : 'false');
+  });
+  var btn = document.getElementById('allBtn');
+  if (btn) btn.textContent = showingAll ? 'Show all departments' : 'Show one at a time';
+}
+
+function filterDepts(term) {
+  var q = (term || '').trim().toLowerCase();
+  document.querySelectorAll('#deptList .chip').forEach(function (b) {
+    b.style.display = (!q || b.dataset.name.indexOf(q) !== -1) ? '' : 'none';
+  });
+}
+
+function copyLink(btn) {
+  // The link to hand out is the token one the server minted, never the URL
+  // this reader happens to be on: from the admin page that would be an
+  // admin-only URL, and everyone it was sent to would get a 403.
+  var url = btn.getAttribute('data-share') || location.href;
+
+  function done() {
+    // innerHTML, not textContent: the button carries an icon, and restoring
+    // plain text after the confirmation would silently drop it.
+    var was = btn.innerHTML;
+    btn.innerHTML = ICON_SVG.check + ' Copied';
+    setTimeout(function () { btn.innerHTML = was; }, 1600);
+  }
+
+  // navigator.clipboard only exists in a secure context, and this app is
+  // served over plain HTTP on some deployments — so there is a fallback, and
+  // under that a prompt the reader can copy out of by hand. A share button
+  // that does nothing on the one server it matters on is not a share button.
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(url).then(done, function () { legacyCopy(url, done, btn); });
+    return;
+  }
+  legacyCopy(url, done, btn);
+}
+
+function legacyCopy(url, done, btn) {
+  var box = document.createElement('textarea');
+  box.value = url;
+  box.setAttribute('readonly', '');
+  box.style.position = 'fixed';
+  box.style.top = '-1000px';
+  document.body.appendChild(box);
+  box.select();
+  var ok = false;
+  try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+  document.body.removeChild(box);
+  if (ok) { done(); return; }
+  window.prompt('Copy this link — it opens without an admin login:', url);
+  if (btn) { btn.blur(); }
+}
+
+/* ── Charts ────────────────────────────────────────────────────────────
+   One measure each, so one hue each and no legend guessing: the donut is
+   a progress ring, the bars are a single ranked series with its values
+   written on the axis. */
+(function () {
+  if (typeof Chart === 'undefined') return;
+  Chart.defaults.font.family = "'Instrument Sans', system-ui, sans-serif";
+  Chart.defaults.color = '#7c748f';
+
+  var css = getComputedStyle(document.documentElement);
+  var PRIMARY = css.getPropertyValue('--d-primary').trim() || '#2a78d6';
+  var REST = css.getPropertyValue('--d-rest').trim() || '#dcd8e8';
+  var GRID = css.getPropertyValue('--d-grid').trim() || '#efecf6';
+
+  var donut = document.getElementById('donut');
+  if (donut) {
+    new Chart(donut, {
+      type: 'doughnut',
+      data: {
+        labels: ['Took Deeksharambh', 'Still to reach'],
+        datasets: [{
+          data: [{{ t.took }}, {{ t.missing }}],
+          backgroundColor: [PRIMARY, REST],
+          borderColor: '#fff', borderWidth: 2, hoverOffset: 6
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, cutout: '68%',
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: function (ctx) {
+                var total = {{ t.registered }};
+                var pct = total ? Math.round(ctx.parsed / total * 1000) / 10 : 0;
+                return ' ' + ctx.label + ': ' + ctx.parsed + ' (' + pct + '%)';
+              }
+            }
+          }
+        }
+      },
+      plugins: [{
+        // The headline lives in the hole — the ring is the only mark, so
+        // the number it stands for should not be somewhere else.
+        id: 'centre',
+        afterDraw: function (chart) {
+          var ctx = chart.ctx, a = chart.getDatasetMeta(0).data[0];
+          if (!a) return;
+          ctx.save();
+          ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          ctx.fillStyle = '#140d1f';
+          ctx.font = '800 30px ' + Chart.defaults.font.family;
+          ctx.fillText('{{ t.pct }}%', a.x, a.y - 8);
+          ctx.fillStyle = '#7c748f';
+          ctx.font = '600 11px ' + Chart.defaults.font.family;
+          ctx.fillText('CONVERSION', a.x, a.y + 16);
+          ctx.restore();
+        }
+      }]
+    });
+  }
+
+  var bars = document.getElementById('bars');
+  var rows = {{ pack.conversion | tojson }};
+  if (bars && rows.length) {
+    new Chart(bars, {
+      type: 'bar',
+      data: {
+        labels: rows.map(function (r) { return r.dept }),
+        datasets: [{
+          label: 'Conversion %',
+          data: rows.map(function (r) { return r.pct }),
+          backgroundColor: PRIMARY,
+          borderRadius: 4, borderSkipped: false, barThickness: 'flex', maxBarThickness: 22
+        }]
+      },
+      options: {
+        indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+        scales: {
+          x: { beginAtZero: true, max: 100, grid: { color: GRID, drawBorder: false },
+               ticks: { callback: function (v) { return v + '%' } } },
+          y: { grid: { display: false }, ticks: { autoSkip: false, font: { size: 11 } } }
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: function (ctx) {
+                var r = rows[ctx.dataIndex];
+                return ' ' + r.pct + '% — ' + r.took + ' of ' + r.registered + ' registered';
+              }
+            }
+          }
+        }
+      }
+    });
+  }
+})();
 </script>
 </body>
 </html>
