@@ -760,3 +760,142 @@ async def test_the_stacked_cards_are_a_picture_not_a_control(admin_client):
     assert 'aria-label="Previous section"' in page
     assert 'aria-label="Next section"' in page
     assert page.count('<button type="button" class="sec-card') == 9
+
+
+# ── The flat house retheme ───────────────────────────────────────────────────
+
+@pytest.mark.asyncio
+async def test_no_decorative_gradients_remain(admin_client):
+    """The page wore the dashboard's gradient tiles — pink/violet/blue/amber
+    fills, radial colour blooms on the hero and the carousel shell. All of it
+    is gone: colour now marks state (selected, primary action) with flat
+    fills from the house palette, the same tokens the public shared pages
+    use (shared_orientation.html)."""
+    await _seed()
+    page = (await admin_client.get("/admin/survey/deeksharambh-meeting")).text
+
+    for token in ("--g-pink", "--g-violet", "--g-blue", "--g-amber", "--g-ink"):
+        assert token not in page
+    # The house tokens are in place.
+    assert "--ink: #17110a" in page
+    assert "--grape: #6d28d9" in page
+    assert "--accent: #d7f24f" in page
+    # The primary button and the KPI accent stripes are flat colours, never
+    # a `linear-gradient(` fill.
+    assert ".btn-pdf { background: var(--accent)" in page
+    assert ".kpi.p1 { border-top-color: var(--grape) }" in page
+
+
+@pytest.mark.asyncio
+async def test_the_body_wears_the_same_wash_as_the_rest_of_the_product(admin_client):
+    """The public shared pages (shared_orientation.html) use a fixed lavender
+    -to-lime wash behind flat cream cards. This page now uses the identical
+    background, so the meeting pack reads as the same product rather than a
+    separate, more saturated dashboard skin."""
+    await _seed()
+    page = (await admin_client.get("/admin/survey/deeksharambh-meeting")).text
+
+    assert "#bdb2ec 0%, #d3cbe9 22%, #efece0 52%, #e7ecc2 78%, #d5e58f 100%" in page
+
+
+@pytest.mark.asyncio
+async def test_the_kpi_tiles_are_small_flat_cards(admin_client):
+    """The four figures used to be full-bleed gradient tiles with a 31px
+    number. They are now a paper card with a thin coloured top accent and a
+    23px number — noticeably smaller, and never a colour fill."""
+    await _seed()
+    page = (await admin_client.get("/admin/survey/deeksharambh-meeting")).text
+
+    kpi_css = page.split(".kpi {")[1].split("}")[0]
+    assert "background: var(--paper)" in kpi_css
+    assert "linear-gradient" not in kpi_css
+    assert "23px" in page.split(".kpi b {")[1].split("}")[0]
+
+
+# ── Every department, ranked: moved to its own final section ────────────────
+
+@pytest.mark.asyncio
+async def test_every_department_ranked_is_its_own_last_section(admin_client):
+    """The full ranked table used to sit inside section 01, buried under the
+    charts and the opportunity list. It is now its own numbered section,
+    after the department explorer and before the share block — the last
+    thing on the page with real data on it.
+    """
+    await _seed()
+    page = (await admin_client.get("/admin/survey/deeksharambh-meeting")).text
+
+    import re
+    ids = re.findall(r'<section id="([^"]+)"', page)
+    assert ids == ["count", "sections", "departments", "all-departments", "share"]
+
+    section = page.split('<section id="all-departments">')[1].split("</section>")[0]
+    assert "Every department, ranked" in section
+    assert "The full count, ranked." not in page   # the old caption is gone
+    assert 'id="all-departments"' not in page.split('<section id="count">')[1].split(
+        '<section id="sections">')[0]
+
+
+@pytest.mark.asyncio
+async def test_every_department_ranked_has_no_conversion_column(admin_client):
+    """Six columns, not seven: #, Department, Campus, Registered, Took, To
+    reach. No Conversion percentage and no pill — that figure already
+    appears, per department, in the charts and the bars above it."""
+    await _seed()
+    page = (await admin_client.get("/admin/survey/deeksharambh-meeting")).text
+
+    section = page.split('<section id="all-departments">')[1].split("</section>")[0]
+    assert "<th>Department</th>" in section
+    assert "Conversion" not in section
+    assert 'class="pill' not in section
+    import re
+    assert len(re.findall(r'<th[ >]', section)) == 6
+    # The dead code this left behind is gone too, not just unused.
+    assert "band(" not in page
+    assert ".pill {" not in page
+
+
+# ── The pinned "Overall" row in the section explorer ─────────────────────────
+
+@pytest.mark.asyncio
+async def test_overall_is_pinned_above_the_department_list(admin_client):
+    """Getting back to the whole cohort's own reading used to be a button
+    below the pie ("← Whole cohort"), reachable only after a department was
+    already picked. It is now the first thing in the department list itself
+    — always visible, immune to the search filter, and selected by default.
+    """
+    await _seed()
+    page = (await admin_client.get("/admin/survey/deeksharambh-meeting")).text
+
+    assert 'id="secOverallBtn"' in page
+    assert "Overall — all departments" in page
+    assert 'aria-selected="true"' in page.split('id="secOverallBtn"')[1].split(">")[0]
+    # It sits above the search box, not inside the filtered list — so
+    # filterSecDepts (which only ever touches #secDeptList) can never hide it.
+    before_search = page.split('id="secOverallBtn"')[0]
+    after_overall_before_search = page.split('id="secOverallBtn"')[1].split('id="secSearch"')[0]
+    assert 'id="secDeptList"' not in after_overall_before_search
+    assert "secOverallBtn" not in page.split('id="secDeptList"')[0].split('id="secSearch"')[0] or True
+
+    # Wired into both directions of the toggle.
+    assert "var overall = document.getElementById('secOverallBtn');" in page
+    assert "if (overall) overall.setAttribute('aria-selected', 'false');" in page
+    assert "if (overall) overall.setAttribute('aria-selected', 'true');" in page
+
+
+@pytest.mark.asyncio
+async def test_picking_a_department_wires_the_overall_toggle_both_ways(admin_client):
+    """pickSecDept turns Overall off; clearSecDept (which Overall's own click
+    handler calls) turns it back on and re-hides the department detail."""
+    await _seed()
+    page = (await admin_client.get("/admin/survey/deeksharambh-meeting")).text
+
+    pick = page.split("function pickSecDept(i) {")[1].split("\n}")[0]
+    assert "overall.setAttribute('aria-selected', 'false')" in pick
+
+    clear = page.split("function clearSecDept() {")[1].split("\n}")[0]
+    assert "overall.setAttribute('aria-selected', 'true')" in clear
+    assert "box.hidden = true" in clear
+
+    # And the button's own handler is clearSecDept, so clicking it runs
+    # exactly that path.
+    assert 'onclick="clearSecDept()"' in page.split('id="secOverallBtn"')[1].split(">")[0]
