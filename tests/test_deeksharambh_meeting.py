@@ -720,3 +720,43 @@ async def test_no_inline_grid_columns_defeat_the_responsive_rules(admin_client):
 
     assert 'style="grid-template-columns' not in page
     assert ".grid2, .grid2.even, .explorer { grid-template-columns: 1fr }" in page
+
+
+@pytest.mark.asyncio
+async def test_the_spotlight_carries_the_nine_sections(admin_client):
+    """The depth carousel is back, holding sections rather than departments,
+    and it is a view of the same state the labelled list drives — one card
+    per section, one dot per section."""
+    await _seed()
+    page = (await admin_client.get("/admin/survey/deeksharambh-meeting")).text
+
+    assert 'class="dc-shell"' in page and 'id="dcTrack"' in page
+    assert "Section spotlight" in page
+    # Built from SEC, the same data the pie and the list read.
+    assert "SEC.titles.map(function (title, i)" in page
+    assert "Section ' + (i + 1) + ' of ' + SEC.titles.length" in page
+    # Every control routes through pickSection, so nothing can drift apart.
+    assert "function dcMove(step)" in page
+    assert "pickSection(((secIndex + step) % n + n) % n)" in page
+
+
+@pytest.mark.asyncio
+async def test_the_stacked_cards_are_a_picture_not_a_control(admin_client):
+    """Cards overlap in 3D, so the one in front covers its neighbours and a
+    click aimed behind it lands on the wrong section — the browser reported
+    "lead intercepts pointer events" when this was tried. The stack takes no
+    clicks and is not announced; the arrows, dots and the labelled list are
+    the controls, and all three are reachable by keyboard.
+    """
+    await _seed()
+    page = (await admin_client.get("/admin/survey/deeksharambh-meeting")).text
+
+    card_css = page.split(".dc-card {")[1].split("}")[0]
+    assert "pointer-events: none" in card_css
+    # No click handler and no tab stop on a card.
+    assert 'class="dc-card" data-i=' in page
+    assert "'<button type=\"button\" class=\"dc-card\"" not in page
+    # The operable controls are still there and labelled.
+    assert 'aria-label="Previous section"' in page
+    assert 'aria-label="Next section"' in page
+    assert page.count('<button type="button" class="sec-card') == 9
