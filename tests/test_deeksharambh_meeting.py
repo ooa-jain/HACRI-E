@@ -408,21 +408,22 @@ async def test_the_admin_link_prints_every_department_in_full(admin_client):
         assert word not in page
 
     # Every question, for every department — 41 questions across 4 departments,
-    # minus Science which answered nothing and says so instead.
+    # minus Science which answered nothing and says so instead. The form's own
+    # key (Q5A, Q31, …) is a title attribute now, not the visible badge — see
+    # test_question_badges_run_1_to_n_with_no_gaps for why.
     from app.orientation_analysis import QUESTIONS
     for key in QUESTIONS:
-        assert f">{key.upper()}<" in page
+        assert f'title="Form question {key.upper()}"' in page
 
     # Nothing on the page can be folded shut.
     assert "<details" not in page
     assert "No Deeksharambh replies from this department yet" in page
     assert "Download PDF" in page
 
-    # The combined figure appears only under exclusive-choice questions, so no
-    # line on the page can claim more than 100% of the students who answered.
+    # No single answer can claim more than 100% of the students who answered.
     import re
-    for share in re.findall(r"Between them, ([\d.]+)% of the", page):
-        assert float(share) <= 100.0, share
+    for pct in re.findall(r'<span class="pct">([\d.]+)%</span>', page):
+        assert float(pct) <= 100.0, pct
 
 
 @pytest.mark.asyncio
@@ -1156,3 +1157,85 @@ async def test_hovering_a_legend_row_highlights_its_slice(admin_client):
     assert 'onfocus="hoverPieSlice(' in page
     # Reachable by keyboard, not only a mouse.
     assert 'tabindex="0" role="button"' in page
+
+
+# ── Every answer, a clean running number, strengths and gaps ────────────────
+
+@pytest.mark.asyncio
+async def test_every_answer_is_shown_not_just_the_top_two(admin_client):
+    """The department detail used to cap every question at its top two picks.
+    It now prints every option a department's students chose from, so a
+    question with five options shows five lines, not two."""
+    await _seed()
+    from app.deeksharambh_meeting import meeting_pack
+    pack = await meeting_pack()
+    law = next(d for d in pack["departments"] if d["dept"] == "Department of Law")
+    q1 = next(q for q in law["sections"][0]["questions"] if q["key"] == "q1")
+    assert len(q1["all"]) > 2
+    assert len(q1["picks"]) <= 2          # the PDF's own summary is untouched
+
+    page = (await admin_client.get("/admin/survey/deeksharambh-meeting")).text
+    # Every label in the full option list appears in the rendered page.
+    for o in q1["all"]:
+        assert o["label"] in page
+
+
+@pytest.mark.asyncio
+async def test_question_badges_run_1_to_n_with_no_gaps(admin_client):
+    """Q5A, Q5B, Q5, Q7 — the form's own numbering, with no Q6 at all — read
+    as a missing question to anyone who has not memorised the form. Every
+    department now counts its questions plainly, 1 through however many the
+    form asks, with the form's own key moved to a title attribute for anyone
+    who does want to cross-reference it."""
+    await _seed()
+    page = (await admin_client.get("/admin/survey/deeksharambh-meeting")).text
+
+    import re
+    from app.orientation_analysis import QUESTIONS
+    total = len(QUESTIONS)
+    dept1 = page.split('id="dept-1"')[1].split('id="dept-2"')[0]
+    badges = re.findall(r'<span class="q-key"[^>]*>Q(\d+)</span>', dept1)
+    assert [int(b) for b in badges] == list(range(1, total + 1))
+    # The original form key is still on the page, just not as the badge text.
+    assert 'title="Form question Q5A"' in dept1
+    assert 'title="Form question Q7"' in dept1
+
+
+@pytest.mark.asyncio
+async def test_each_department_opens_with_its_own_strengths_and_gaps(admin_client):
+    """Above the full question-by-question detail, a department now sees its
+    own best-answered and most-complained-about questions at a glance —
+    strengths from the "positive" frame, gaps from the "asked"
+    (complaint-only) frame, both ranked by the top answer's own share."""
+    await _seed()
+    from app.deeksharambh_meeting import meeting_pack
+    pack = await meeting_pack()
+    law = next(d for d in pack["departments"] if d["dept"] == "Department of Law")
+    assert law["strengths"], "Law has answered positive-framed questions"
+    pcts = [s["pct"] for s in law["strengths"]]
+    assert pcts == sorted(pcts, reverse=True)
+
+    page = (await admin_client.get("/admin/survey/deeksharambh-meeting")).text
+    dept1 = page.split('id="dept-1"')[1].split('id="dept-2"')[0]
+    assert '<div class="hl-col hl-good">' in dept1
+    assert '<div class="hl-col hl-gap">' in dept1
+    for s in law["strengths"]:
+        assert s["label"] in dept1 and s["top"] in dept1
+
+
+@pytest.mark.asyncio
+async def test_a_department_chip_opens_in_its_own_tab(admin_client):
+    """Clicking a department used to switch which article was visible on the
+    same page. Each chip is now a real link with target="_blank", so it opens
+    a fresh tab on this same page, and an init script reads the #dept-N hash
+    on load to pick and scroll to that department — a plain onclick handler
+    cannot do that for a tab that starts from nothing."""
+    await _seed()
+    page = (await admin_client.get("/admin/survey/deeksharambh-meeting")).text
+
+    assert '<a href="#dept-1" target="_blank" rel="noopener" class="chip"' in page
+    assert 'href="#dept-2" target="_blank"' in page
+    # The hash-driven init script that makes a fresh tab land correctly.
+    assert "var id = (location.hash || '').replace('#', '');" in page
+    assert "showDept(id, chip);" in page
+    assert "scrollIntoView({ block: 'start' });" in page

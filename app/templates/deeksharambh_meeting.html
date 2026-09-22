@@ -376,7 +376,7 @@
   .rail-list { margin-top: 10px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px }
   .chip { display: flex; align-items: center; gap: 9px; width: 100%; text-align: left; cursor: pointer;
           border: none; background: transparent; font: inherit; font-size: 12.5px; color: var(--body);
-          border-radius: 10px; padding: 9px 11px; transition: background .12s }
+          border-radius: 10px; padding: 9px 11px; transition: background .12s; text-decoration: none }
   .chip:hover { background: var(--soft) }
   .chip[aria-current="true"] { background: var(--ink); color: #fff; font-weight: 700 }
   .chip .nm { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
@@ -404,6 +404,20 @@
   .dept-body { padding: 6px 24px 24px }
   .small-cell { margin: 18px 0 0; border-left: 3px solid var(--muted); background: var(--soft);
                 padding: 11px 15px; border-radius: 0 10px 10px 0; font-size: 12.5px }
+
+  /* The department's own best-answered and most-complained-about questions,
+     read at a glance before the full question-by-question detail below it. */
+  .highlights { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 20px }
+  .hl-col { border-radius: 12px; padding: 14px 16px; background: var(--soft) }
+  .hl-col h4 { font-size: 11.5px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase;
+               display: flex; align-items: center; gap: 7px; margin: 0 0 10px }
+  .hl-col h4 svg { width: 14px; height: 14px; flex: none }
+  .hl-good h4 { color: #0ca30c } .hl-gap h4 { color: #d03b3b }
+  .hl-col ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 9px }
+  .hl-col li { font-size: 12.5px } .hl-col li b { display: block; color: var(--ink) }
+  .hl-top { display: block; color: var(--muted); margin-top: 1px }
+  .hl-col .none { font-size: 12.5px; color: var(--muted) }
+  @media (max-width: 640px) { .highlights { grid-template-columns: 1fr } }
 
   .qsec { margin-top: 26px }
   .qsec > h4 { font-size: 11.5px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase;
@@ -555,6 +569,7 @@
   'link':     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>',
   'building': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16"/><path d="M3 21h18"/><line x1="9" y1="9" x2="10" y2="9"/><line x1="9" y1="13" x2="10" y2="13"/><line x1="14" y1="9" x2="15" y2="9"/><line x1="14" y1="13" x2="15" y2="13"/></svg>',
   'check':    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
+  'alert':    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
 } %}
 
 <!-- ── 1. Scroll-expanding hero ─────────────────────────────────────── -->
@@ -755,11 +770,10 @@
     <div class="head">
       <div>
         <h2><span class="n">03</span>Department by department, question by question</h2>
-        <p class="lede">Pick a department on the left and its whole reading opens here — every question the
-          form asked, with the {{ pack.picks }} answers its own students chose most. Where a question has a
-          good end, both answers come from it; where a question only ever asked what went wrong, the
-          {{ pack.picks }} biggest asks are shown as asks. Percentages are of the students in that department
-          who answered that question. Printing or the PDF lays out every department in full.</p>
+        <p class="lede">Pick a department on the left — it opens in its own tab, starting with its strengths
+          and gaps, then every question the form asked with every answer its own students gave, not just the
+          top few. Percentages are of the students in that department who answered that question. The PDF
+          lays out every department in full; printing keeps the top-two summary it always has.</p>
       </div>
     </div>
 
@@ -769,13 +783,13 @@
                aria-label="Search departments" oninput="filterDepts(this.value)">
         <div class="rail-list" id="deptList" role="tablist" aria-label="Departments">
           {% for d in pack.departments %}
-          <button type="button" class="chip" role="tab" data-target="dept-{{ loop.index }}"
-                  data-name="{{ d.dept | lower }}" aria-current="{{ 'true' if loop.first else 'false' }}"
-                  onclick="showDept('dept-{{ loop.index }}', this)">
+          <a href="#dept-{{ loop.index }}" target="_blank" rel="noopener" class="chip" role="tab"
+             data-target="dept-{{ loop.index }}"
+             data-name="{{ d.dept | lower }}" aria-current="{{ 'true' if loop.first else 'false' }}">
             <span class="dot" style="background:{% if d.pct >= 75 %}var(--d-primary){% elif d.pct >= 40 %}#ff8008{% else %}var(--d-alert){% endif %}"></span>
             <span class="nm">{{ d.dept }}</span>
             <span class="pc">{{ d.pct }}%</span>
-          </button>
+          </a>
           {% endfor %}
         </div>
         <div class="rail-foot">
@@ -815,13 +829,44 @@
                 not as a percentage of anything.</p>
               {% endif %}
 
+              {% if d.strengths or d.gaps %}
+              <div class="highlights">
+                <div class="hl-col hl-good">
+                  <h4>{{ ICON.check | safe }}Strengths</h4>
+                  {% if d.strengths %}
+                  <ul>
+                    {% for s in d.strengths %}
+                    <li><b>{{ s.label }}</b><span class="hl-top">{{ s.top }} — {{ s.pct }}%</span></li>
+                    {% endfor %}
+                  </ul>
+                  {% else %}
+                  <p class="none">No question had a clear lead on its good end yet.</p>
+                  {% endif %}
+                </div>
+                <div class="hl-col hl-gap">
+                  <h4>{{ ICON.alert | safe }}Gaps</h4>
+                  {% if d.gaps %}
+                  <ul>
+                    {% for g in d.gaps %}
+                    <li><b>{{ g.label }}</b><span class="hl-top">{{ g.top }} — {{ g.pct }}%</span></li>
+                    {% endfor %}
+                  </ul>
+                  {% else %}
+                  <p class="none">Nothing rose to the top of the complaint-only questions.</p>
+                  {% endif %}
+                </div>
+              </div>
+              {% endif %}
+
+              {% set qn = namespace(i=0) %}
               {% for sec in d.sections %}
               <div class="qsec">
                 <h4>{{ ICON[sec.icon] | safe }}{{ sec.title }}</h4>
                 {% for q in sec.questions %}
+                {% set qn.i = qn.i + 1 %}
                 <div class="q">
                   <div class="q-top">
-                    <span class="q-key">{{ q.key | upper }}</span>
+                    <span class="q-key" title="Form question {{ q.key | upper }}">Q{{ qn.i }}</span>
                     <span class="q-label">{{ q.label }}</span>
                     {% if q.answered %}
                       <span class="tag {{ 'tag-good' if q.frame == 'positive' else ('tag-ask' if q.frame == 'asked' else 'tag-top') }}">{{ q.frame_label }}</span>
@@ -835,30 +880,29 @@
                     {% for row in q.rows %}
                     <div class="mrow">
                       <b>{{ row.label }}</b> <span class="q-meta">— {{ row.answered }} answered</span>
-                      {% if row.picks %}
+                      {% if row.all %}
                       <ul class="picks">
-                        {% for p in row.picks %}
+                        {% for p in row.all %}
                         <li><span class="i">{{ loop.index }}.</span><span class="lb">{{ p.label }}</span>
                             <span class="track"><i style="width:{{ p.pct }}%"></i></span>
                             <span class="pct">{{ p.pct }}%</span><span class="cnt">({{ p.count }})</span></li>
                         {% endfor %}
                       </ul>
                       {% else %}
-                      <div class="none">No answer at the positive end of this statement.</div>
+                      <div class="none">No answers on file for this row.</div>
                       {% endif %}
                     </div>
                     {% else %}
                     <div class="none">Nobody in this department filled this grid in.</div>
                     {% endfor %}
-                  {% elif q.picks %}
+                  {% elif q.all %}
                     <ul class="picks">
-                      {% for p in q.picks %}
+                      {% for p in q.all %}
                       <li><span class="i">{{ loop.index }}.</span><span class="lb">{{ p.label }}</span>
                           <span class="track"><i style="width:{{ p.pct }}%"></i></span>
                           <span class="pct">{{ p.pct }}%</span><span class="cnt">({{ p.count }})</span></li>
                       {% endfor %}
                     </ul>
-                    {% if q.share is not none %}<div class="none">Between them, {{ q.share }}% of the {{ q.answered }} who answered this question.</div>{% endif %}
                   {% elif q.answered %}
                     <div class="none">
                       {% if q.frame == 'positive' %}{{ q.answered }} answered, but none of them picked
@@ -1294,6 +1338,18 @@ function showDept(id, chip) {
   var btn = document.getElementById('allBtn');
   if (btn) btn.textContent = 'Show all departments';
 }
+
+// A department chip opens in its own tab (target="_blank" on the link
+// itself); that new tab is this same page loading fresh with a
+// #dept-N hash, so on every load — not just a click — the hash is what
+// picks and scrolls to a department, a plain button click cannot do that.
+(function () {
+  var id = (location.hash || '').replace('#', '');
+  if (!/^dept-\d+$/.test(id)) return;
+  var chip = document.querySelector('#deptList .chip[data-target="' + id + '"]');
+  showDept(id, chip);
+  document.getElementById(id).scrollIntoView({ block: 'start' });
+})();
 
 function showAllDepts() {
   var showingAll = document.querySelectorAll('#deptStage .dept.on').length > 1;

@@ -486,7 +486,7 @@ def question_picks(report: dict) -> list[dict]:
             if not stats:
                 questions.append({
                     "key": key, "label": label, "kind": kind,
-                    "answered": 0, "picks": [], "frame": "top",
+                    "answered": 0, "picks": [], "all": [], "frame": "top",
                     "frame_label": "", "share": None, "rows": [],
                 })
                 continue
@@ -503,12 +503,17 @@ def question_picks(report: dict) -> list[dict]:
                         "label": clean_label(row["label"]),
                         "answered": row.get("answered", 0),
                         "picks": _clean_options(picks),
+                        # Every option this row's students chose from, not
+                        # just the two picked out above — the department view
+                        # prints all of them, the PDF's summary still reads
+                        # off `picks`.
+                        "all": _clean_options(options),
                         "share": _share(picks, "single"),
                     })
                 questions.append({
                     "key": key, "label": label, "kind": kind,
                     "answered": stats.get("answered", 0),
-                    "picks": [], "rows": rows,
+                    "picks": [], "rows": rows, "all": [],
                     "frame": "positive",
                     "frame_label": FRAME_LABEL["positive"],
                     "share": None,
@@ -523,6 +528,9 @@ def question_picks(report: dict) -> list[dict]:
                 "max": stats.get("max"),
                 "nps": stats.get("nps"),
                 "picks": _clean_options(picks),
+                # The full option list, in the same most- to least-chosen
+                # order the two picks above were taken from.
+                "all": _clean_options(stats.get("options") or []),
                 "rows": [],
                 "frame": frame,
                 "frame_label": FRAME_LABEL[frame],
@@ -540,6 +548,41 @@ def question_picks(report: dict) -> list[dict]:
             "answered": max((q["answered"] for q in questions), default=0),
         })
     return out
+
+
+# How many strengths or gaps a department's own summary names.
+HIGHLIGHTS = 5
+
+
+def department_highlights(sections: list[dict]) -> tuple[list[dict], list[dict]]:
+    """A department's own best-answered and most-complained-about questions,
+    read off the same frame every question already carries in the detail
+    below it.
+
+    A "positive" question — one with a good end its students could pick —
+    counts as a strength, ranked by how large a share of the department
+    picked its single most-chosen answer. A question that only ever
+    collected what went wrong ("asked") counts as a gap, ranked the same
+    way. Matrix grids are skipped: they carry a reading per row rather than
+    one top pick, so they print in the full detail below but do not
+    summarise into either list.
+    """
+    strengths, gaps = [], []
+    for sec in sections:
+        for q in sec["questions"]:
+            if q["kind"] == "matrix" or not q["answered"] or not q["all"]:
+                continue
+            top = q["all"][0]
+            if not top["count"]:
+                continue
+            entry = {"label": q["label"], "top": top["label"], "pct": top["pct"]}
+            if q["frame"] == "positive":
+                strengths.append(entry)
+            elif q["frame"] == "asked":
+                gaps.append(entry)
+    strengths.sort(key=lambda s: -s["pct"])
+    gaps.sort(key=lambda g: -g["pct"])
+    return strengths[:HIGHLIGHTS], gaps[:HIGHLIGHTS]
 
 
 # ── The count ────────────────────────────────────────────────────────────────
@@ -668,6 +711,8 @@ async def meeting_pack(*, campus: str = "") -> dict:
         report = summarize_orientation([r["data"] for r in answers])
         count = counted.get(name, {"registered": 0, "took": len(answers),
                                    "missing": 0, "pct": 0.0, "campuses": []})
+        sections = question_picks(report)
+        strengths, gaps = department_highlights(sections)
         departments.append({
             "dept": name,
             "registered": count["registered"],
@@ -682,7 +727,9 @@ async def meeting_pack(*, campus: str = "") -> dict:
             "responses": len(answers),
             "headline": report["headline"],
             "reportable": len(answers) >= MIN_REPORTABLE,
-            "sections": question_picks(report),
+            "sections": sections,
+            "strengths": strengths,
+            "gaps": gaps,
         })
 
     registered = len(students)
