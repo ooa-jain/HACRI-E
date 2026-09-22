@@ -209,6 +209,8 @@ async def test_every_question_is_printed_for_every_department(app_with_mock):
     from app.deeksharambh_meeting import meeting_pack
     from app.orientation_analysis import QUESTIONS, SECTIONS
 
+    from app.deeksharambh_meeting import SECTION_DISPLAY
+
     pack = await meeting_pack()
     assert [d["dept"] for d in pack["departments"]] == [
         r["dept"] for r in pack["conversion"]
@@ -216,8 +218,10 @@ async def test_every_question_is_printed_for_every_department(app_with_mock):
 
     for dept in pack["departments"]:
         # Every section, and inside them every question the form asks — not
-        # only the ones this department happened to answer.
-        assert [s["title"] for s in dept["sections"]] == [t for t, _ in SECTIONS]
+        # only the ones this department happened to answer. Titles are the
+        # leadership-facing clean ones, not the form's own emoji-led names.
+        assert [s["title"] for s in dept["sections"]] == [
+            SECTION_DISPLAY[t][0] for t, _ in SECTIONS]
         keys = [q["key"] for s in dept["sections"] for q in s["questions"]]
         assert keys == list(QUESTIONS)
         for q in (q for s in dept["sections"] for q in s["questions"]):
@@ -242,17 +246,21 @@ async def test_the_two_answers_come_from_the_good_end(app_with_mock):
 
     # Law: Asha and Bela glowing, Cara middling. Q3's positive answers are the
     # top two rungs of the agreement scale, so Cara's "Neutral" is not picked.
+    # The label is the leadership-facing Likert term, not the form's own
+    # "Absolutely yes!" — the underlying classification still ran on the raw
+    # text, so this proves the two never drifted apart.
     assert q["q3"]["frame"] == "positive"
-    assert [p["label"] for p in q["q3"]["picks"]] == ["🤗 Absolutely yes!"]
+    assert [p["label"] for p in q["q3"]["picks"]] == ["Strongly Agree"]
     assert q["q3"]["picks"][0]["count"] == 2
 
     # Q1 splits into an upbeat set and a critical set in the form itself; only
     # the upbeat labels are eligible, and Cara's "Overwhelming" is not one.
-    assert {p["label"] for p in q["q1"]["picks"]} == {"🔥 Inspiring", "🚀 Exciting"}
+    assert {p["label"] for p in q["q1"]["picks"]} == {"Inspiring", "Exciting"}
 
     # Q5 is stored without its emoji by the emoji picker; the curated list
-    # carries the emoji. They still have to match.
-    assert [p["label"] for p in q["q5"]["picks"]] == ["Super easy"]
+    # carries the emoji. They still have to match — and the label a report
+    # shows is the leadership-facing term, not the form's own "Super easy".
+    assert [p["label"] for p in q["q5"]["picks"]] == ["Very Easy"]
     assert q["q5"]["picks"][0]["count"] == 2
 
     # Sliders: the good end of a 1-10 scale is 8, 9, 10 — Cara's 6 is not shown.
@@ -262,23 +270,25 @@ async def test_the_two_answers_come_from_the_good_end(app_with_mock):
     assert [p["label"] for p in q["q34"]["picks"]] == ["10"]
 
     # A question with no bad answer to exclude is simply the two most-chosen.
+    # Its labels are nominal topic names, not a rating scale, so cleanup here
+    # is mechanical (emoji stripped, "&" spelled out) rather than reworded.
     assert q["q11"]["frame"] == "top"
     assert [p["label"] for p in q["q11"]["picks"]] == [
-        "🎪 Student Club Fair", "🏛️ University Overview & Vision"]
+        "Student Club Fair", "University Overview and Vision"]
 
     # A question that only ever asked what went wrong is shown as asks, not
     # dressed up as good news.
     assert q["q12"]["frame"] == "asked"
     assert q["q12"]["frame_label"] == "What would lift it"
-    assert [p["label"] for p in q["q12"]["picks"]][0] == "🚶 Campus Tour"
+    assert [p["label"] for p in q["q12"]["picks"]][0] == "Campus Tour"
     assert q["q28"]["frame"] == "asked"
 
     # The matrix questions keep one line per statement, each with its own picks.
     assert q["q8"]["kind"] == "matrix"
     assert {r["label"] for r in q["q8"]["rows"]} == {
-        "🏛️ University overview", "🏫 My School & Department"}
-    overview = next(r for r in q["q8"]["rows"] if r["label"] == "🏛️ University overview")
-    assert [p["label"] for p in overview["picks"]] == ["✅ Yes"]
+        "University overview", "My School and Department"}
+    overview = next(r for r in q["q8"]["rows"] if r["label"] == "University overview")
+    assert [p["label"] for p in overview["picks"]] == ["Yes"]
     assert overview["picks"][0]["count"] == 2
 
 
@@ -293,11 +303,11 @@ async def test_a_department_with_nothing_good_to_report_says_so(app_with_mock):
 
     # Esha glowing, Farid unhappy. Q3 has one positive answer between them and
     # the report shows that one rather than padding it with "Not at all".
-    assert [p["label"] for p in q["q3"]["picks"]] == ["🤗 Absolutely yes!"]
+    assert [p["label"] for p in q["q3"]["picks"]] == ["Strongly Agree"]
     assert q["q3"]["answered"] == 2
     # Both students answered Q35, but only one from the good end.
     assert q["q35"]["answered"] == 2
-    assert [p["label"] for p in q["q35"]["picks"]] == ["Absolutely loved it"]
+    assert [p["label"] for p in q["q35"]["picks"]] == ["Excellent"]
 
 
 @pytest.mark.asyncio
@@ -331,7 +341,7 @@ async def test_percentages_are_of_the_students_who_answered_that_question(app_wi
                if x["kind"] == "multi")
 
     # The matrix rows do add up: one answer per statement per student.
-    overview = next(r for r in q["q8"]["rows"] if r["label"] == "🏛️ University overview")
+    overview = next(r for r in q["q8"]["rows"] if r["label"] == "University overview")
     assert overview["picks"][0]["pct"] == 66.7
 
 
@@ -477,7 +487,12 @@ async def test_the_pdf_carries_the_whole_pack(admin_client):
     # Questions carried across, with their labels intact once the emoji that no
     # PDF core font can set are dropped.
     assert "Felt welcomed during Deeksharambh" in text
-    assert "Absolutely yes!" in text
+    # The PDF reads from the same pack the page does, so it carries the same
+    # leadership-facing Likert term rather than the form's own casual phrase
+    # — and never the phrase itself, since the cleanup runs before either
+    # document is built.
+    assert "Strongly Agree" in text
+    assert "Absolutely yes!" not in text
     assert "Sessions that need the most improvement" in text
     assert "What would lift it" in text
     # Page furniture.
@@ -569,19 +584,25 @@ async def test_the_page_charts_from_the_vendored_bundle_not_a_cdn(admin_client):
 
 @pytest.mark.asyncio
 async def test_the_section_explorer_offers_all_nine_sections(admin_client):
-    """Nine cards, one per section the form actually asked, in form order."""
+    """Nine cards, one per section the form actually asked, in form order —
+    titled and iconed for a leadership report, not the form's own emoji-led
+    names."""
     await _seed()
     page = (await admin_client.get("/admin/survey/deeksharambh-meeting")).text
 
     import html
 
+    from app.deeksharambh_meeting import SECTION_DISPLAY
     from app.orientation_analysis import SECTIONS
     # The container is class="sec-cards", so match the button itself.
     assert page.count('<button type="button" class="sec-card') == len(SECTIONS) == 9
     for i, (title, _) in enumerate(SECTIONS, start=1):
         assert f'data-i="{i - 1}"' in page
-        # Two titles carry an "&", which the template escapes.
-        assert html.escape(title, quote=False) in page
+        clean_title, icon = SECTION_DISPLAY[title]
+        assert html.escape(clean_title, quote=False) in page
+        assert icon in page
+        # The form's own emoji-led name never reaches this page.
+        assert title not in page
 
 
 @pytest.mark.asyncio
@@ -899,3 +920,143 @@ async def test_picking_a_department_wires_the_overall_toggle_both_ways(admin_cli
     # And the button's own handler is clearSecDept, so clicking it runs
     # exactly that path.
     assert 'onclick="clearSecDept()"' in page.split('id="secOverallBtn"')[1].split(">")[0]
+
+
+# ── Professional language for a leadership audience ──────────────────────────
+
+@pytest.mark.asyncio
+async def test_no_emoji_anywhere_on_the_rendered_page(admin_client):
+    """The page carried the student-facing form's own emoji throughout — nine
+    section titles, and every answer option a department's own students
+    picked. None of it belongs in front of a leadership team: this sweeps
+    the whole rendered response for anything in the emoji ranges and fails
+    on the first one found, so a future edit that reintroduces one emoji
+    label is caught here rather than noticed live in a meeting."""
+    await _seed()
+    page = (await admin_client.get("/admin/survey/deeksharambh-meeting")).text
+
+    import re
+    emoji_re = re.compile(
+        "["
+        "\U0001F300-\U0001FAFF"
+        "\U00002600-\U000027BF"
+        "\U0001F1E6-\U0001F1FF"
+        "\U0001F000-\U0001F0FF"
+        "]"
+    )
+    hits = emoji_re.findall(page)
+    assert not hits, f"emoji still on the page: {set(hits)}"
+
+
+@pytest.mark.asyncio
+async def test_no_emoji_in_the_pdf_either(admin_client):
+    """The PDF is built from the same pack the page reads, so the cleanup
+    reaches it for free — checked directly rather than assumed."""
+    await _seed()
+    r = await admin_client.get("/admin/survey/deeksharambh-meeting.pdf")
+
+    from io import BytesIO
+
+    from pypdf import PdfReader
+
+    text = "\n".join(p.extract_text() or "" for p in PdfReader(BytesIO(r.content)).pages)
+    import re
+    emoji_re = re.compile(
+        "["
+        "\U0001F300-\U0001FAFF"
+        "\U00002600-\U000027BF"
+        "\U0001F1E6-\U0001F1FF"
+        "\U0001F000-\U0001F0FF"
+        "]"
+    )
+    assert not emoji_re.findall(text)
+
+
+def test_clean_label_uses_the_curated_scale_vocabulary():
+    """The rating scales get the academic term; a topic or session name is
+    only ever emoji-stripped and lightly tidied, never reworded, because it
+    is already a descriptive, professional label once the emoji is gone."""
+    from app.deeksharambh_meeting import clean_label
+
+    # A five-point agreement scale, reworded to standard Likert terms.
+    assert clean_label("🤗 Absolutely yes!") == "Strongly Agree"
+    assert clean_label("😞 Not at all") == "Strongly Disagree"
+
+    # An emoji-picker value the form already stores without its emoji.
+    assert clean_label("Sleep Mode") == "Disengaged"
+
+    # A nominal topic: emoji stripped, ampersand spelled out, nothing reworded.
+    assert clean_label("🎪 Student Club Fair") == "Student Club Fair"
+    assert clean_label("💻 ERP / LMS Onboarding") == "ERP / LMS Onboarding"
+    assert clean_label("🏛️ University Overview & Vision") == "University Overview and Vision"
+
+    # A trailing exclamation point is the form's enthusiasm, not the report's.
+    assert clean_label("Fully interactive!") == "Fully Interactive"
+
+    # Nothing to clean passes straight through, and an empty label never
+    # crashes the lookup.
+    assert clean_label("Neutral") == clean_label("😐 Neutral") == "Neutral"
+    assert clean_label(None) == ""
+    assert clean_label("") == ""
+
+
+@pytest.mark.asyncio
+async def test_clean_label_never_changes_which_answer_was_positive(app_with_mock):
+    """The whole point of cleaning up for display only: `_pick()` still
+    classifies q3's "Absolutely yes!" as the top of a positive scale using
+    the ORIGINAL raw text, before any relabelling happens. Renaming a
+    display label can never quietly flip what counts as good news."""
+    await _seed()
+    from app.deeksharambh_meeting import meeting_pack
+
+    pack = await meeting_pack()
+    law = next(d for d in pack["departments"] if d["dept"] == "Department of Law")
+    q3 = next(q for s in law["sections"] for q in s["questions"] if q["key"] == "q3")
+
+    assert q3["frame"] == "positive"
+    assert q3["picks"][0]["label"] == "Strongly Agree"
+    assert q3["picks"][0]["count"] == 2   # Asha and Bela, unaffected by the label
+
+
+@pytest.mark.asyncio
+async def test_every_section_has_an_icon_and_a_leadership_facing_title(admin_client):
+    """All nine section cards carry an inline SVG icon and the clean title —
+    never the form's own emoji, in the page or in the carousel's own
+    JS-built cards."""
+    await _seed()
+    page = (await admin_client.get("/admin/survey/deeksharambh-meeting")).text
+
+    from app.deeksharambh_meeting import SECTION_DISPLAY
+
+    icons_used = {icon for _, icon in SECTION_DISPLAY.values()}
+    assert len(icons_used) == 9   # nine distinct icons, one per section
+    # The Jinja {% set ICON = {...} %} dict is server-side source, consumed
+    # at render time — what actually reaches the page is its JSON dump, so
+    # each icon name is checked in that form: `"pulse":`, not `'pulse':`.
+    assert "var ICON_SVG = " in page
+    icon_json = page.split("var ICON_SVG = ")[1].split(";\n")[0]
+    for icon in icons_used:
+        assert f'"{icon}":' in icon_json
+        # tojson escapes "<" to \u003c for safe embedding inside <script>,
+        # so the real markup is checked in that escaped form.
+        assert "\\u003csvg" in icon_json   # real markup, not an empty placeholder
+    # The carousel's own cards read from that same lookup, not a second copy.
+    assert "ICON_SVG[SEC.icons[i]]" in page
+
+
+@pytest.mark.asyncio
+async def test_the_button_chrome_uses_icons_not_emoji(admin_client):
+    """Download PDF, Print, Copy share link and Jump to departments all drew
+    an emoji before their label. Each is now an inline SVG, and the "Copied"
+    confirmation swaps in a check icon via innerHTML — textContent would
+    have silently dropped the icon on the next restore."""
+    await _seed()
+    page = (await admin_client.get("/admin/survey/deeksharambh-meeting")).text
+
+    assert "{{ ICON.download" not in page   # actually rendered, not left literal
+    assert "Download PDF</a>" in page
+    icon_json = page.split("var ICON_SVG = ")[1].split(";\n")[0]
+    for icon in ("download", "print", "link", "building", "check"):
+        assert f'"{icon}":' in icon_json
+    assert "btn.innerHTML = ICON_SVG.check + ' Copied'" in page
+    assert "var was = btn.innerHTML;" in page

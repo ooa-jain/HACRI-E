@@ -26,6 +26,7 @@ and not "registered and already past the baseline". The answers come from
 """
 from __future__ import annotations
 
+import re
 import unicodedata
 
 from app.orientation_analysis import (
@@ -194,6 +195,177 @@ MAX_SLICES = 5
 OTHER = "Other answers"
 
 
+# ── Presentation for a leadership audience ───────────────────────────────────
+# Everything above this line matches and ranks answers by their original,
+# unaltered text — a curated label here can never change what counts as a
+# good answer, because that classification has already happened by the time
+# a label reaches this section. All that changes below is the words a label
+# is printed in: no emoji, and — for the rating-scale questions — the
+# vocabulary an academic reader already reads comfortably (a five-point
+# agreement scale becomes "Strongly Agree .. Strongly Disagree", not
+# "Absolutely yes! .. Not at all"). The ordinal meaning and the ranking are
+# untouched; only the register is.
+_EMOJI_RE = re.compile(
+    "["
+    "🌀-🫿"   # pictographs, emoticons, symbols, supplemental
+    "☀-➿"   # misc symbols & dingbats
+    "🇦-🇿"   # regional indicators
+    "️"              # variation selector-16
+    "‍"              # zero-width joiner (emoji sequences)
+    "]+"
+)
+
+
+def _strip_emoji(text: str) -> str:
+    return _EMOJI_RE.sub("", text).strip()
+
+
+# The rating and sentiment scales only — copied by exact raw string from the
+# orientation form, the same way POSITIVE_OPTIONS is. A string not listed
+# here (every topic, session and expectation list — nominal categories, not
+# a scale) falls back to the mechanical cleanup in `clean_label` below, which
+# is already enough: "🎪 Student Club Fair" reads perfectly once the emoji is
+# gone, without inventing a new vocabulary for it.
+_SCALE_LABELS: dict[str, str] = {
+    # q3 — felt welcomed during Deeksharambh
+    "🤗 Absolutely yes!": "Strongly Agree",
+    "🙂 Yes, mostly": "Agree",
+    "😐 Neutral": "Neutral",
+    "🤔 Not really": "Disagree",
+    "😞 Not at all": "Strongly Disagree",
+    # q18 — feels prepared for regular classes
+    "💪 Totally ready!": "Very Well Prepared",
+    "🙂 Mostly ready": "Well Prepared",
+    "😐 Somewhat ready": "Moderately Prepared",
+    "😬 Not quite": "Somewhat Unprepared",
+    "😰 Not ready at all": "Not Prepared",
+    # q21 — understands ABC ID / APAAR / credits, after
+    "🧠 Crystal clear now!": "Fully Understood",
+    "🙂 Mostly understand": "Mostly Understood",
+    "😐 Kind of": "Partially Understood",
+    "🤔 Still confused": "Limited Understanding",
+    "😕 No idea still": "Not Understood",
+    # q5 — ease of transition (the emoji-picker widget stores no emoji, so
+    # these keys already match the raw stored value exactly)
+    "Very hard": "Very Difficult",
+    "Tough": "Difficult",
+    "Okay": "Moderate",
+    "Smooth": "Manageable",
+    "Super easy": "Very Easy",
+    # q10 — would watch a Footsteps season 2
+    "Absolutely!": "Definitely",
+    "Maybe": "Possibly",
+    "Not sure": "Uncertain",
+    "Probably not": "Unlikely",
+    # q14 — how hands-on / interactive the sessions were
+    "All sitting, no doing": "Entirely Passive",
+    "Mostly passive": "Largely Passive",
+    "Some activities": "Moderately Interactive",
+    "Quite hands-on": "Highly Interactive",
+    "Fully interactive!": "Fully Interactive",
+    # q15 — how engaging the sessions were
+    "Sleep Mode": "Disengaged",
+    "Interesting": "Engaged",
+    "Super Engaging": "Highly Engaged",
+    "Couldn't Stop": "Exceptionally Engaged",
+    # q20 — knew what NEP 2020 means, before
+    "No idea": "Not Aware",
+    "Heard of it": "Minimally Aware",
+    "Basic idea": "Somewhat Aware",
+    "I knew well": "Well Informed",
+    # q25 — the first week felt like
+    "A rollercoaster": "An Eventful Experience",
+    "A blur": "An Overwhelming Experience",
+    "A celebration": "A Positive Experience",
+    "Study mode": "An Academically Focused Experience",
+    "Fresh start": "A New Beginning",
+    "Survive mode": "A Challenging Experience",
+    # q35 — overall learning experience
+    "Not great": "Unsatisfactory",
+    "Could be better": "Below Expectations",
+    "It was okay": "Satisfactory",
+    "Pretty good!": "Good",
+    "Absolutely loved it": "Excellent",
+    # q41 — their JAIN avatar (mkAv stores no emoji either)
+    "Future CEO": "Aspiring Executive Leader",
+    "Startup Founder": "Aspiring Entrepreneur",
+    "Academic Achiever": "Academically Driven",
+    "Change Maker": "Aspiring Social Change Agent",
+    "AI Innovator": "Technology and Innovation Focused",
+    "Creative Maverick": "Creatively Driven",
+    "Corporate Leader": "Aspiring Corporate Leader",
+    "The Rule Changer": "Reform-Minded",
+    "Sports Star": "Athletically Driven",
+    "Still Figuring It Out": "Exploring Options",
+    # q7 — the one answer to the challenges question that is not a challenge
+    "✅ Nothing — it was smooth!": "No Challenges Reported",
+    # q36 — reasons behind the NPS rating (the positive set)
+    "🌟 Great overall experience": "Excellent Overall Experience",
+    "👩‍🏫 Faculty impressed me": "Strong Faculty Impression",
+    "🏫 Campus is outstanding": "Outstanding Campus Facilities",
+    "🤗 Felt very welcomed & included": "Strong Sense of Welcome and Inclusion",
+    "🏆 Strong academic reputation": "Strong Academic Reputation",
+    "💼 Good career support visible": "Visible Career Support",
+    # q40 — Deeksharambh left them feeling (the positive set)
+    "🚀 Excited & ready to begin": "Excited and Ready to Begin",
+    "💪 Motivated to excel here": "Motivated to Excel",
+    "😎 Confident & positive": "Confident and Positive",
+    "❤️ Happy & glad to be here": "Happy to Be Here",
+}
+
+
+def clean_label(label) -> str:
+    """One label, in the words a leadership report reads in.
+
+    Looks the raw text up in the curated scale vocabulary first; anything
+    else is emoji-stripped and lightly tidied (an ampersand spelled out, a
+    trailing exclamation point dropped) rather than reworded, since a topic
+    or session name is already descriptive and a report should not invent a
+    new one for it.
+    """
+    text = str(label or "")
+    if text in _SCALE_LABELS:
+        return _SCALE_LABELS[text]
+    cleaned = _strip_emoji(text)
+    cleaned = cleaned.replace(" & ", " and ")
+    if cleaned.endswith("!") and len(cleaned) > 1:
+        cleaned = cleaned[:-1].strip()
+    return cleaned or text
+
+
+def _clean_options(options: list[dict]) -> list[dict]:
+    """A copy of an options/picks list with every label cleaned for display.
+
+    A copy, not a mutation: `options` here is what `_pick()` and the matrix
+    branch already selected using the original text, and nothing downstream
+    should ever compare against the cleaned version.
+    """
+    return [{**o, "label": clean_label(o["label"])} for o in options]
+
+
+# The nine section titles, exactly as `orientation_analysis.SECTIONS` writes
+# them (emoji included), mapped to the title and the icon a leadership report
+# shows instead. Changing this touches only this page — the shared SECTIONS
+# constant everywhere else (the admin dashboard, the shared report, every
+# export) keeps its own emoji-led titles unchanged.
+SECTION_DISPLAY: dict[str, tuple[str, str]] = {
+    "🔥 The Vibe Check":               ("Orientation Sentiment", "pulse"),
+    "🧭 Settling In":                  ("Transition and Settling In", "compass"),
+    "👣 Footsteps (pre-arrival)":      ("Pre-Arrival Preparation (Footsteps)", "route"),
+    "🎯 Orientation Experience":       ("Orientation Programme Experience", "target"),
+    "🌉 Bridge Course":                ("Bridge Course", "bridge"),
+    "📜 NEP 2020 & Digital Readiness": ("NEP 2020 and Digital Readiness", "document"),
+    "💬 The Gen Z Lens":               ("Student Perspective", "chat"),
+    "❤️ Belonging & Expectations":     ("Belonging and Expectations", "heart"),
+    "📊 Score & Mic Drop":             ("Outcomes Summary", "chart"),
+}
+
+
+def _display_section(title: str) -> tuple[str, str]:
+    """A section's title and icon key, for a leadership-facing report."""
+    return SECTION_DISPLAY.get(title, (clean_label(title), "document"))
+
+
 def lead_slices(stats: dict | None) -> dict | None:
     """One question's answers, ready to draw as a pie.
 
@@ -219,9 +391,9 @@ def lead_slices(stats: dict | None) -> dict | None:
         }]
     return {
         "key": stats["key"],
-        "label": stats["label"],
+        "label": clean_label(stats["label"]),
         "answered": stats["answered"],
-        "options": head,
+        "options": _clean_options(head),
         "folded": len(tail) + 1 if tail else 0,
     }
 
@@ -261,9 +433,9 @@ def question_picks(report: dict) -> list[dict]:
                             if wanted else options)
                     picks = good[:PICKS]
                     rows.append({
-                        "label": row["label"],
+                        "label": clean_label(row["label"]),
                         "answered": row.get("answered", 0),
-                        "picks": picks,
+                        "picks": _clean_options(picks),
                         "share": _share(picks, "single"),
                     })
                 questions.append({
@@ -283,14 +455,16 @@ def question_picks(report: dict) -> list[dict]:
                 "avg": stats.get("avg"),
                 "max": stats.get("max"),
                 "nps": stats.get("nps"),
-                "picks": picks,
+                "picks": _clean_options(picks),
                 "rows": [],
                 "frame": frame,
                 "frame_label": FRAME_LABEL[frame],
                 "share": _share(picks, kind),
             })
+        clean_title, icon = _display_section(title)
         out.append({
-            "title": title,
+            "title": clean_title,
+            "icon": icon,
             "questions": questions,
             # What the section's card draws before a department is picked.
             "lead": lead_slices(answered.get(SECTION_LEAD.get(title, ""))),

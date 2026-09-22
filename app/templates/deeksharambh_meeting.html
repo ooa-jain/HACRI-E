@@ -176,6 +176,7 @@
          border-radius: 10px; padding: 10px 17px; font: inherit; font-size: 13px;
          font-weight: 700; text-decoration: none; transition: transform .15s, box-shadow .15s }
   .btn:hover { transform: translateY(-1px) }
+  .btn svg { width: 15px; height: 15px; flex: none }
   .btn-pdf { background: var(--accent); color: var(--ink); box-shadow: none }
   .btn-pdf:hover { background: #c7e23e }
   .btn-ghost { background: rgba(255,255,255,.12); color: #fdf9ec; box-shadow: inset 0 0 0 1px rgba(255,255,255,.26) }
@@ -232,7 +233,10 @@
   .dc-rank { font-size: 10.5px; font-weight: 800; letter-spacing: 1.6px; text-transform: uppercase;
              color: var(--accent) }
   .dc-sec-q { font-size: 12.5px; color: #c7bda3; margin-top: 12px; line-height: 1.35 }
-  .dc-name { font-size: 19px; font-weight: 800; line-height: 1.2; margin-top: 10px; letter-spacing: -.3px }
+  .dc-name { font-size: 19px; font-weight: 800; line-height: 1.2; margin-top: 10px; letter-spacing: -.3px;
+             display: flex; align-items: center; gap: 8px }
+  .dc-icon { flex: none; display: inline-flex }
+  .dc-icon svg { width: 18px; height: 18px; color: var(--accent) }
   .dc-big { font-size: 36px; font-weight: 800; letter-spacing: -1.4px; margin-top: auto }
   .dc-sub { font-size: 12px; color: #c7bda3; margin-top: 2px }
   .dc-meter { height: 6px; border-radius: 4px; background: rgba(255,255,255,.16); margin-top: 14px; overflow: hidden }
@@ -262,8 +266,11 @@
   .sec-n { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700;
            color: var(--grape); letter-spacing: 1px }
   .sec-card.on .sec-n { color: var(--accent) }
-  .sec-t { font-size: 14px; font-weight: 800; color: var(--ink); line-height: 1.25 }
+  .sec-t { font-size: 14px; font-weight: 800; color: var(--ink); line-height: 1.25;
+           display: flex; align-items: center; gap: 7px }
+  .sec-t svg { width: 15px; height: 15px; flex: none; color: var(--grape) }
   .sec-card.on .sec-t { color: #fff }
+  .sec-card.on .sec-t svg { color: var(--accent) }
   .sec-m { font-size: 11.5px; color: var(--muted); margin-top: 3px }
   .sec-card.on .sec-m { color: #d8cdb0 }
 
@@ -384,7 +391,9 @@
 
   .qsec { margin-top: 26px }
   .qsec > h4 { font-size: 11.5px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase;
-               color: var(--grape); border-bottom: 1px solid var(--line); padding-bottom: 7px }
+               color: var(--grape); border-bottom: 1px solid var(--line); padding-bottom: 7px;
+               display: flex; align-items: center; gap: 7px }
+  .qsec > h4 svg { width: 13px; height: 13px; flex: none }
   .q { padding: 13px 0; border-bottom: 1px dashed var(--line) }
   .q:last-child { border-bottom: none }
   .q-top { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap }
@@ -509,6 +518,28 @@
 <body>
 {% set t = pack.totals %}
 {% set c = pack.callouts %}
+{# Every icon this page draws, in one place: the nine section glyphs and the
+   five pieces of button chrome that used to be an emoji. Line-stroke SVGs,
+   matching the icon style already used on the survey admin dashboard, so a
+   leadership audience reads a consistent, professional mark rather than a
+   platform-dependent emoji glyph — the same character renders differently
+   (or as a blank box) across Windows, macOS and a projector's own fonts. #}
+{% set ICON = {
+  'pulse':    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>',
+  'compass':  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>',
+  'route':    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>',
+  'target':   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>',
+  'bridge':   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 20h20"/><path d="M4 20V10"/><path d="M20 20V10"/><path d="M2 10c3-6 17-6 20 0"/></svg>',
+  'document': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>',
+  'chat':     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>',
+  'heart':    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.8 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>',
+  'chart':    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>',
+  'download': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>',
+  'print':    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>',
+  'link':     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>',
+  'building': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16"/><path d="M3 21h18"/><line x1="9" y1="9" x2="10" y2="9"/><line x1="9" y1="13" x2="10" y2="13"/><line x1="14" y1="9" x2="15" y2="9"/><line x1="14" y1="13" x2="15" y2="13"/></svg>',
+  'check':    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
+} %}
 
 <!-- ── 1. Scroll-expanding hero ─────────────────────────────────────── -->
 <div class="se-wrap" id="hero">
@@ -522,11 +553,11 @@
            every department's own students said about the week.</p>
         <div class="se-sub">Department-wise survey</div>
         <div class="toolbar">
-          <a class="btn btn-pdf" href="{{ pdf_url }}">⬇ Download PDF</a>
-          <button class="btn btn-ghost" onclick="window.print()">🖨 Print</button>
+          <a class="btn btn-pdf" href="{{ pdf_url }}">{{ ICON.download | safe }} Download PDF</a>
+          <button class="btn btn-ghost" onclick="window.print()">{{ ICON.print | safe }} Print</button>
           {% if share_url %}<button class="btn btn-ghost" data-share="{{ share_url }}"
-                  onclick="copyLink(this)">🔗 Copy share link</button>{% endif %}
-          <a class="btn btn-ghost" href="#departments">🏛 Jump to departments</a>
+                  onclick="copyLink(this)">{{ ICON.link | safe }} Copy share link</button>{% endif %}
+          <a class="btn btn-ghost" href="#departments">{{ ICON.building | safe }} Jump to departments</a>
         </div>
         <div class="se-hint">Scroll<i></i></div>
       </div>
@@ -652,7 +683,7 @@
               data-i="{{ loop.index0 }}" aria-selected="{{ 'true' if loop.first else 'false' }}"
               onclick="pickSection({{ loop.index0 }})">
         <span class="sec-n">{{ '%02d' % loop.index }}</span>
-        <span class="sec-t">{{ sec.title }}</span>
+        <span class="sec-t">{{ ICON[sec.icon] | safe }}{{ sec.title }}</span>
         <span class="sec-m">{{ sec.questions | length }} questions ·
           {{ sec.answered }} answered</span>
       </button>
@@ -763,7 +794,7 @@
 
               {% for sec in d.sections %}
               <div class="qsec">
-                <h4>{{ sec.title }}</h4>
+                <h4>{{ ICON[sec.icon] | safe }}{{ sec.title }}</h4>
                 {% for q in sec.questions %}
                 <div class="q">
                   <div class="q-top">
@@ -887,6 +918,12 @@
 "use strict";
 var REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+// The same icon markup the server rendered into the section cards and the
+// button chrome, so the carousel's own JS-built cards (and the "Copied"
+// confirmation) draw from one definition rather than a second copy that
+// could drift out of sync with it.
+var ICON_SVG = {{ ICON | tojson }};
+
 /* ── Scroll-expanding hero ──────────────────────────────────────────────
    One progress value, eased toward its target each frame, published as
    --p on the frame. Everything else is CSS. */
@@ -951,6 +988,7 @@ function esc(s) {
 var SEC = {
   overall: {{ pack.overall_sections | map(attribute='lead') | list | tojson }},
   titles:  {{ pack.overall_sections | map(attribute='title') | list | tojson }},
+  icons:   {{ pack.overall_sections | map(attribute='icon') | list | tojson }},
   depts: {{ pack.departments | map(attribute='dept') | list | tojson }},
   counts: {{ pack.departments | map(attribute='responses') | list | tojson }},
   /* Only the pie's slices, per department per section — not every option of
@@ -980,9 +1018,10 @@ function dcRender() {
   track.innerHTML = SEC.titles.map(function (title, i) {
     var lead = SEC.overall[i];
     var top = (lead && lead.options && lead.options.length) ? lead.options[0] : null;
+    var iconSvg = ICON_SVG[SEC.icons[i]] || '';
     return '<div class="dc-card" data-i="' + i + '" aria-hidden="true">' +
       '<div class="dc-rank">Section ' + (i + 1) + ' of ' + SEC.titles.length + '</div>' +
-      '<div class="dc-name">' + esc(title) + '</div>' +
+      '<div class="dc-name"><span class="dc-icon">' + iconSvg + '</span>' + esc(title) + '</div>' +
       '<div class="dc-sec-q">' + (lead ? esc(lead.label) : 'Not answered yet') + '</div>' +
       '<div class="dc-big num">' + (top ? top.pct + '%' : '—') + '</div>' +
       '<div class="dc-sub">' + (top ? esc(top.label) : 'No answers on file') + '</div>' +
@@ -1241,9 +1280,11 @@ function copyLink(btn) {
   var url = btn.getAttribute('data-share') || location.href;
 
   function done() {
-    var was = btn.textContent;
-    btn.textContent = '✓ Copied';
-    setTimeout(function () { btn.textContent = was; }, 1600);
+    // innerHTML, not textContent: the button carries an icon, and restoring
+    // plain text after the confirmation would silently drop it.
+    var was = btn.innerHTML;
+    btn.innerHTML = ICON_SVG.check + ' Copied';
+    setTimeout(function () { btn.innerHTML = was; }, 1600);
   }
 
   // navigator.clipboard only exists in a secure context, and this app is
