@@ -201,51 +201,66 @@
   .kpi em { font-style: normal; font-size: 11.5px; opacity: .92; display: block; margin-top: 9px }
   .kpi svg { position: absolute; right: -6px; bottom: -6px; opacity: .3 }
 
-  /* ── 2. Depth carousel ─────────────────────────────────────────────── */
-  .dc-shell { margin-top: 20px; background: #12081f; border-radius: 22px; padding: 22px;
-              position: relative; overflow: hidden }
-  .dc-shell::before { content: ''; position: absolute; inset: 0;
-    background: radial-gradient(700px 320px at 22% 6%, rgba(245,49,127,.3), transparent 60%),
-                radial-gradient(620px 320px at 82% 92%, rgba(31,162,255,.26), transparent 60%) }
-  .dc-top { position: relative; z-index: 2; display: flex; align-items: center;
-            justify-content: space-between; gap: 14px; flex-wrap: wrap; margin-bottom: 8px }
-  .dc-title { color: #fff; font-size: 15px; font-weight: 800 }
-  .dc-title span { display: block; font-size: 11.5px; font-weight: 500; color: #b9a9d6; margin-top: 3px }
-  .seg { display: inline-flex; background: rgba(255,255,255,.1); border-radius: 999px; padding: 4px; gap: 4px }
-  .seg button { border: none; cursor: pointer; font: inherit; font-size: 12px; font-weight: 700;
-                color: #d8ccef; background: transparent; border-radius: 999px; padding: 7px 15px }
-  .seg button[aria-pressed="true"] { background: #fff; color: #1b1030 }
-  .dc-stage { position: relative; z-index: 2; height: 400px; perspective: 1400px;
-              display: grid; place-items: center }
-  .dc-track { position: relative; width: 300px; height: 380px; transform-style: preserve-3d }
-  .dc-card {
-    position: absolute; inset: 0; border-radius: 18px; padding: 22px 20px;
-    background: linear-gradient(160deg, #241338 0%, #150c24 100%);
-    border: 1px solid rgba(255,255,255,.14); color: #fff;
-    display: flex; flex-direction: column;
-    transition: transform .7s cubic-bezier(.16,1,.3,1), opacity .7s, filter .7s;
-    box-shadow: 0 26px 50px -22px rgba(0,0,0,.85);
+  /* ── Section explorer ──────────────────────────────────────────────── */
+  .sec-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 18px }
+  .sec-card { text-align: left; cursor: pointer; font: inherit; border-radius: 16px; padding: 16px 18px;
+              background: var(--paper); border: 1px solid var(--line); color: var(--body);
+              display: flex; flex-direction: column; gap: 3px; transition: transform .15s, box-shadow .15s }
+  .sec-card:hover { transform: translateY(-2px); box-shadow: 0 10px 24px -12px rgba(43,12,70,.4) }
+  .sec-card.on { background: var(--g-violet); border-color: transparent; color: #fff;
+                 box-shadow: 0 14px 30px -14px rgba(123,63,228,.7) }
+  .sec-n { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700;
+           color: #a56bff; letter-spacing: 1px }
+  .sec-card.on .sec-n { color: #ffd7e7 }
+  .sec-t { font-size: 15px; font-weight: 800; color: var(--ink); line-height: 1.25 }
+  .sec-card.on .sec-t { color: #fff }
+  .sec-m { font-size: 11.5px; color: var(--muted); margin-top: 3px }
+  .sec-card.on .sec-m { color: #e4d8fa }
+
+  .sec-panel { margin-top: 16px }
+  .sec-grid { display: grid; grid-template-columns: 1fr 340px; gap: 24px; align-items: start }
+  .sec-grid > * { min-width: 0 }
+  .pie-box { position: relative; height: 290px; margin-top: 14px }
+  .pie-legend { display: flex; flex-direction: column; gap: 7px; margin-top: 14px }
+  .pie-legend div { display: flex; align-items: center; gap: 10px; font-size: 13px }
+  .pie-legend i { width: 12px; height: 12px; border-radius: 3px; flex: none }
+  .pie-legend .lb { flex: 1; min-width: 0 }
+  .pie-legend .vl { font-variant-numeric: tabular-nums; font-weight: 800; color: var(--ink) }
+  .pie-legend .ct { font-variant-numeric: tabular-nums; font-size: 11.5px; color: var(--muted) }
+  .pie-note { font-size: 11.5px; color: var(--muted); margin-top: 10px; font-style: italic }
+
+  .sec-search { width: 100%; margin-top: 12px; padding: 9px 12px; border: 1px solid var(--line);
+                border-radius: 10px; font: inherit; font-size: 12.5px; background: var(--soft); outline: none }
+  .sec-search:focus { border-color: #a56bff; background: #fff }
+  .sec-list { margin-top: 10px; max-height: 330px; overflow-y: auto; display: flex;
+              flex-direction: column; gap: 4px }
+  .sec-dept { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+              cursor: pointer; border: none; background: transparent; font: inherit; font-size: 12.5px;
+              color: var(--body); border-radius: 10px; padding: 9px 11px }
+  .sec-dept:hover { background: var(--soft) }
+  .sec-dept[aria-selected="true"] { background: var(--g-violet); color: #fff; font-weight: 700 }
+  .sec-dept .nm { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+  .sec-dept .ct { font-variant-numeric: tabular-nums; font-size: 11.5px; opacity: .8 }
+
+  .sec-detail { margin-top: 22px; border-top: 1px solid var(--line); padding-top: 18px }
+  .sec-detail-head { display: flex; align-items: flex-start; justify-content: space-between;
+                     gap: 14px; flex-wrap: wrap }
+  .btn-soft-sm { cursor: pointer; border: 1px solid var(--line); background: var(--soft);
+                 color: var(--body); font: inherit; font-size: 12px; font-weight: 700;
+                 border-radius: 9px; padding: 8px 13px }
+  .btn-soft-sm:hover { background: #fff }
+
+  @media (max-width: 1040px) { .sec-cards { grid-template-columns: repeat(2, 1fr) }
+                               .sec-grid { grid-template-columns: 1fr } }
+  @media (max-width: 640px) {
+    .sec-cards { grid-template-columns: 1fr }
+    /* Index, label, bar, percent and count will not sit on one phone line.
+       The bar is the redundant one — the percent beside it says the same
+       thing — so it goes and the rest wraps. */
+    .picks .track { display: none }
+    .picks li { flex-wrap: wrap }
+    .picks .lb { flex: 1 1 100% }
   }
-  .dc-card.lead { background: linear-gradient(160deg, #3a1450 0%, #1d0f30 100%);
-                  border-color: rgba(255,255,255,.3) }
-  .dc-rank { font-size: 10.5px; font-weight: 800; letter-spacing: 1.6px; text-transform: uppercase;
-             color: #ff9ec4 }
-  .dc-card.down .dc-rank { color: #9fd2ff }
-  .dc-name { font-size: 19px; font-weight: 800; line-height: 1.2; margin-top: 10px; letter-spacing: -.3px }
-  .dc-big { font-size: 46px; font-weight: 800; letter-spacing: -2px; margin-top: auto }
-  .dc-sub { font-size: 12px; color: #c2b3dd; margin-top: 2px }
-  .dc-meter { height: 6px; border-radius: 4px; background: rgba(255,255,255,.16); margin-top: 14px; overflow: hidden }
-  .dc-meter i { display: block; height: 100%; border-radius: 4px; background: var(--g-pink) }
-  .dc-card.down .dc-meter i { background: var(--g-blue) }
-  .dc-ctrl { position: relative; z-index: 3; display: flex; align-items: center;
-             justify-content: center; gap: 12px; margin-top: 6px }
-  .dc-ctrl button { width: 38px; height: 38px; border-radius: 50%; border: none; cursor: pointer;
-                    background: rgba(255,255,255,.14); color: #fff; font-size: 16px }
-  .dc-ctrl button:hover { background: rgba(255,255,255,.26) }
-  .dc-dots { display: flex; gap: 7px }
-  .dc-dots button { width: 8px; height: 8px; padding: 0; border-radius: 50%; border: none;
-                    cursor: pointer; background: rgba(255,255,255,.3) }
-  .dc-dots button[aria-current="true"] { background: #fff; width: 22px; border-radius: 4px }
 
   /* ── Charts & tables ───────────────────────────────────────────────── */
   .grid2 { display: grid; grid-template-columns: 340px 1fr; gap: 16px; margin-top: 20px; align-items: start }
@@ -276,7 +291,7 @@
   .pill.hi { background: #e7f3ff; color: #17508f } .pill.mid { background: #fff3e0; color: #8a4b06 }
   .pill.lo { background: #ffe9e9; color: #9c2020 }
 
-  /* ── 3. Department explorer — the fix for endless scrolling ────────── */
+  /* ── Department explorer — the fix for endless scrolling ──────────── */
   .explorer { display: grid; grid-template-columns: 286px 1fr; gap: 16px; margin-top: 20px; align-items: start }
   .rail { background: var(--paper); border: 1px solid var(--line); border-radius: 18px; padding: 14px;
           position: sticky; top: 16px; max-height: calc(100vh - 32px); display: flex; flex-direction: column }
@@ -347,7 +362,7 @@
   .mrow > b { font-size: 12.5px; color: var(--ink) }
   .mrow .picks { margin-left: 0 }
 
-  /* ── Opportunity list, campus split ────────────────────────────────── */
+  /* ── Section explorer, opportunity list, campus split ──────────────── */
   .meter { display: flex; height: 13px; border-radius: 7px; overflow: hidden; margin-top: 16px;
            background: var(--d-grid) }
   .meter i { display: block; height: 100% }
@@ -388,7 +403,6 @@
   }
   @media (max-width: 640px) {
     .wrap { padding: 0 14px 70px }
-    .dc-track { width: 252px; height: 350px }
     /* The expand runs here too. A 42% frame is a letterbox on a phone, so it
        opens from 86%, and the run is shorter because scroll is dearer on a
        small screen. Nothing can clip: the frame's height is a floor, not a
@@ -409,14 +423,15 @@
     .se-wrap { --p: 1 }
     .se-frame { width: 100%; height: auto }
     .se-media { transform: none }
-    .dc-card { transition: none } .dept.on { animation: none }
+    .dept.on { animation: none }
   }
 
   /* ── Print / Save as PDF — everything comes back ───────────────────── */
   @media print {
     body { background: #fff; font-size: 10.5pt }
     .wrap { max-width: none; padding: 0 }
-    .toolbar, .se-hint, .dc-shell, .rail, .no-print, .chart-box, .chart-tall { display: none !important }
+    .toolbar, .se-hint, .sec-cards, .sec-search, .rail, .no-print,
+    .chart-box, .chart-tall, .pie-box { display: none !important }
     .se-wrap { height: auto } .se-sticky { position: static; height: auto; display: block }
     .se-wrap { --p: 1 }
     .se-frame { width: 100% !important; height: auto !important; border-radius: 0 !important;
@@ -580,71 +595,55 @@
     </div>
   </section>
 
-  <!-- ── 3. Depth carousel: top / least ─────────────────────────────── -->
-  <section id="callouts">
-    {% set shown = [c.top | length, c.least | length] | max %}
+  <!-- ── 3. Section explorer ────────────────────────────────────────── -->
+  <section id="sections">
     <div class="head">
       <div>
-        <h2><span class="n">02</span>Most active departments, and where a push goes furthest</h2>
-        <p class="lede">Ranked on the same conversion. Departments level on percentage are split by how
-          many students that percentage stands for, so 100% of forty ranks above 100% of four.
-          The second list is not a ranking of failure — it is where the next push reaches the most students.</p>
+        <h2><span class="n">02</span>The nine sections of the survey</h2>
+        <p class="lede">Open a section to see how the whole cohort answered its headline question,
+          then pick a department to see the same question its own students answered — and every
+          question that section asked, with the {{ pack.picks }} answers those students chose most.</p>
       </div>
     </div>
 
-    {% if c.overlap %}
-    <p class="note">Only {{ c.ranked }} {{ 'department has' if c.ranked == 1 else 'departments have' }}
-      students registered in this scope — fewer than the {{ c.size * 2 }} the two lists need, so
-      {{ c.overlap | join(', ') }} {{ 'appears' if c.overlap | length == 1 else 'appear' }} in both.</p>
-    {% endif %}
+    <div class="sec-cards" id="secCards" role="tablist" aria-label="Survey sections">
+      {% for sec in pack.overall_sections %}
+      <button type="button" class="sec-card {{ 'on' if loop.first }}" role="tab"
+              data-i="{{ loop.index0 }}" aria-selected="{{ 'true' if loop.first else 'false' }}"
+              onclick="pickSection({{ loop.index0 }})">
+        <span class="sec-n">{{ '%02d' % loop.index }}</span>
+        <span class="sec-t">{{ sec.title }}</span>
+        <span class="sec-m">{{ sec.questions | length }} questions ·
+          {{ sec.answered }} answered</span>
+      </button>
+      {% endfor %}
+    </div>
 
-    <div class="dc-shell">
-      <div class="dc-top">
-        <div class="dc-title">Department spotlight
-          <span id="dcCaption">Most active {{ c.top | length }} — departments whose students turned up in force.</span></div>
-        <div class="seg" role="group" aria-label="Which list to show">
-          <button type="button" id="segTop" aria-pressed="true" onclick="dcSet('top')">★ Most active {{ c.top | length }}</button>
-          <button type="button" id="segLeast" aria-pressed="false" onclick="dcSet('least')">↗ Room to grow {{ c.least | length }}</button>
+    <div class="card sec-panel">
+      <div class="sec-grid">
+        <div class="sec-pie">
+          <div class="cap" id="pieTitle">—<span id="pieScope">Whole cohort</span></div>
+          <div class="pie-box"><canvas id="secPie"></canvas></div>
+          <div id="pieLegend" class="pie-legend"></div>
+          <p id="pieFold" class="pie-note"></p>
+        </div>
+
+        <div class="sec-depts">
+          <div class="cap">Departments<span id="deptCount">Pick one to see its own answers.</span></div>
+          <input type="search" id="secSearch" class="sec-search" placeholder="Search departments…"
+                 aria-label="Search departments" oninput="filterSecDepts(this.value)">
+          <div class="sec-list" id="secDeptList" role="listbox" aria-label="Departments"></div>
         </div>
       </div>
-      <div class="dc-stage"><div class="dc-track" id="dcTrack"></div></div>
-      <div class="dc-ctrl">
-        <button type="button" onclick="dcMove(-1)" aria-label="Previous department">‹</button>
-        <div class="dc-dots" id="dcDots"></div>
-        <button type="button" onclick="dcMove(1)" aria-label="Next department">›</button>
-      </div>
-    </div>
 
-    <!-- The same two lists as plain tables: the carousel is a view of these,
-         not the only copy. Print keeps these and drops the carousel. -->
-    <div class="grid2 even">
-      <div class="card">
-        <div class="cap">Most active {{ c.top | length }}<span>Departments whose students turned up in force.</span></div>
-        <div class="t-scroll" style="margin-top:16px"><table>
-          <thead><tr><th class="n">#</th><th>Department</th><th class="n">Took / Reg.</th><th class="n">%</th></tr></thead>
-          <tbody>
-          {% for row in c.top %}
-            <tr><td class="n num" style="color:var(--muted)">{{ loop.index }}</td>
-                <td class="dept-name">{{ row.dept }}</td>
-                <td class="n num">{{ row.took }} / {{ row.registered }}</td>
-                <td class="n"><span class="pill {{ band(row.pct) }}">{{ row.pct }}%</span></td></tr>
-          {% else %}<tr><td colspan="4">Nothing to rank yet.</td></tr>{% endfor %}
-          </tbody>
-        </table></div>
-      </div>
-      <div class="card">
-        <div class="cap">Room to grow — {{ c.least | length }} departments<span>Biggest opportunity first — where a push reaches the most students.</span></div>
-        <div class="t-scroll" style="margin-top:16px"><table>
-          <thead><tr><th class="n">#</th><th>Department</th><th class="n">Took / Reg.</th><th class="n">%</th></tr></thead>
-          <tbody>
-          {% for row in c.least %}
-            <tr><td class="n num" style="color:var(--muted)">{{ loop.index }}</td>
-                <td class="dept-name">{{ row.dept }}</td>
-                <td class="n num">{{ row.took }} / {{ row.registered }}</td>
-                <td class="n"><span class="pill {{ band(row.pct) }}">{{ row.pct }}%</span></td></tr>
-          {% else %}<tr><td colspan="4">Nothing to rank yet.</td></tr>{% endfor %}
-          </tbody>
-        </table></div>
+      <div id="secDetail" class="sec-detail" hidden>
+        <div class="sec-detail-head">
+          <div>
+            <div class="cap" id="detailName">—<span id="detailMeta"></span></div>
+          </div>
+          <button type="button" class="btn btn-soft-sm" onclick="clearSecDept()">← Whole cohort</button>
+        </div>
+        <div id="detailQuestions"></div>
       </div>
     </div>
   </section>
@@ -854,98 +853,193 @@ var REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   onScroll();
 })();
 
-/* ── Depth carousel ────────────────────────────────────────────────────
-   Cards stacked back along the z-axis, the active one in front. Data comes
-   from the same rows the tables above print, so the two cannot disagree. */
-var DC = {
-  top: {{ c.top | tojson }},
-  least: {{ c.least | tojson }}
-};
-var dcList = 'top', dcIndex = 0;
-var DEPTH = 220, SPREAD = 90, TILT = 22, FALLOFF = 0.2, BLUR = 6, VISIBLE = 4;
-
 function esc(s) {
   return String(s == null ? '' : s)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;')
     .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-function dcRender() {
-  var rows = DC[dcList] || [];
-  var track = document.getElementById('dcTrack');
-  var dots = document.getElementById('dcDots');
-  if (!track) return;
+/* ── Section explorer ──────────────────────────────────────────────────
+   Three steps: pick a section, read how the whole cohort answered its
+   headline question, then pick a department and read the same question its
+   own students answered — plus every question that section asked.
 
-  if (!rows.length) {
-    track.innerHTML = '<div class="dc-card lead"><div class="dc-rank">Nothing to rank</div>' +
-      '<div class="dc-name">No departments in this scope yet</div></div>';
-    if (dots) dots.innerHTML = '';
+   The department's answers are not duplicated into this script. They are
+   already rendered, in full, in the department reading below; this clones the
+   matching block out of that DOM, so the two can never disagree and the page
+   does not carry the same numbers twice. */
+var SEC = {
+  overall: {{ pack.overall_sections | map(attribute='lead') | list | tojson }},
+  titles:  {{ pack.overall_sections | map(attribute='title') | list | tojson }},
+  depts: {{ pack.departments | map(attribute='dept') | list | tojson }},
+  counts: {{ pack.departments | map(attribute='responses') | list | tojson }},
+  /* Only the pie's slices, per department per section — not every option of
+     every question. The question detail is cloned from the DOM below. */
+  leads: {{ pack.dept_leads | tojson }}
+};
+
+/* The validated five-step ordinal ramp: one hue, light to dark, so the
+   slices read most-chosen to least. Every slice is named in the legend, so
+   colour never carries the meaning alone. */
+var PIE_RAMP = ['#86b6ef', '#5598e7', '#2a78d6', '#1c5cab', '#104281'];
+
+var secIndex = 0, secDept = -1, secChart = null;
+
+function secLead(sectionIdx, deptIdx) {
+  if (deptIdx < 0) return SEC.overall[sectionIdx];
+  var perDept = SEC.leads[deptIdx];
+  return perDept ? perDept[sectionIdx] : null;
+}
+
+function drawPie(lead) {
+  var box = document.getElementById('secPie');
+  var legend = document.getElementById('pieLegend');
+  var note = document.getElementById('pieFold');
+  if (secChart) { secChart.destroy(); secChart = null; }
+  if (legend) legend.innerHTML = '';
+  if (note) note.textContent = '';
+
+  if (!lead || !lead.options || !lead.options.length) {
+    if (legend) {
+      legend.innerHTML = '<div style="color:var(--muted);font-style:italic">' +
+        'Nobody in this scope answered this question.</div>';
+    }
     return;
   }
 
-  track.innerHTML = rows.map(function (r, i) {
-    return '<article class="dc-card' + (dcList === 'least' ? ' down' : '') + '" data-i="' + i + '">' +
-      '<div class="dc-rank">' + (dcList === 'top' ? 'Most active ' : 'Room to grow ') + (i + 1) +
-        ' of ' + rows.length + '</div>' +
-      '<div class="dc-name">' + esc(r.dept) + '</div>' +
-      '<div class="dc-big num">' + r.pct + '%</div>' +
-      '<div class="dc-sub">' + r.took + ' of ' + r.registered + ' registered took Deeksharambh</div>' +
-      '<div class="dc-meter"><i style="width:' + Math.max(2, r.pct) + '%"></i></div>' +
-      '</article>';
-  }).join('');
+  var labels = lead.options.map(function (o) { return o.label });
+  var counts = lead.options.map(function (o) { return o.count });
+  var colours = lead.options.map(function (o, i) { return PIE_RAMP[i % PIE_RAMP.length] });
 
-  if (dots) {
-    dots.innerHTML = rows.map(function (r, i) {
-      return '<button type="button" onclick="dcGo(' + i + ')" aria-current="' +
-        (i === dcIndex ? 'true' : 'false') + '" aria-label="Show ' + esc(r.dept) + '"></button>';
+  if (typeof Chart !== 'undefined' && box) {
+    secChart = new Chart(box, {
+      type: 'doughnut',
+      data: { labels: labels, datasets: [{ data: counts, backgroundColor: colours,
+              borderColor: '#fff', borderWidth: 2, hoverOffset: 8 }] },
+      options: {
+        responsive: true, maintainAspectRatio: false, cutout: '52%',
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: function (ctx) {
+            var pct = lead.answered ? Math.round(ctx.parsed / lead.answered * 1000) / 10 : 0;
+            return ' ' + ctx.label + ': ' + ctx.parsed + ' (' + pct + '%)';
+          } } }
+        }
+      }
+    });
+  }
+
+  if (legend) {
+    legend.innerHTML = lead.options.map(function (o, i) {
+      return '<div><i style="background:' + colours[i] + '"></i>' +
+        '<span class="lb">' + esc(o.label) + '</span>' +
+        '<span class="vl">' + o.pct + '%</span>' +
+        '<span class="ct">(' + o.count + ')</span></div>';
     }).join('');
   }
-  dcPlace();
-}
-
-function dcPlace() {
-  var cards = document.querySelectorAll('#dcTrack .dc-card[data-i]');
-  cards.forEach(function (el) {
-    var offset = parseInt(el.dataset.i, 10) - dcIndex;
-    var abs = Math.abs(offset);
-    el.style.transform =
-      'translateX(' + (offset * SPREAD) + 'px) translateZ(' + (-abs * DEPTH) + 'px) ' +
-      'rotateY(' + (offset * -TILT) + 'deg)';
-    el.style.filter = 'blur(' + Math.min(abs * FALLOFF * BLUR, BLUR) + 'px)';
-    el.style.opacity = abs > VISIBLE ? 0 : Math.max(0, 1 - abs * FALLOFF * 1.6);
-    el.style.zIndex = String(100 - abs);
-    el.classList.toggle('lead', offset === 0);
-    el.setAttribute('aria-hidden', offset === 0 ? 'false' : 'true');
-  });
-  document.querySelectorAll('#dcDots button').forEach(function (b, i) {
-    b.setAttribute('aria-current', i === dcIndex ? 'true' : 'false');
-  });
-}
-
-function dcGo(i) {
-  var rows = DC[dcList] || [];
-  if (!rows.length) return;
-  dcIndex = (i % rows.length + rows.length) % rows.length;   // loop
-  dcPlace();
-}
-function dcMove(step) { dcGo(dcIndex + step); }
-function dcSet(which) {
-  dcList = which; dcIndex = 0;
-  document.getElementById('segTop').setAttribute('aria-pressed', which === 'top' ? 'true' : 'false');
-  document.getElementById('segLeast').setAttribute('aria-pressed', which === 'least' ? 'true' : 'false');
-  var cap = document.getElementById('dcCaption');
-  if (cap) {
-    cap.textContent = which === 'top'
-      ? 'Most active ' + DC.top.length + ' — departments whose students turned up in force.'
-      : 'Room to grow — ' + DC.least.length + ' departments where a push reaches the most students.';
+  if (note && lead.folded) {
+    note.textContent = 'The last slice sums the ' + lead.folded +
+      ' least-chosen answers, so nothing is left out of the total.';
   }
-  dcRender();
 }
-document.addEventListener('keydown', function (e) {
-  if (e.key === 'ArrowLeft') dcMove(-1);
-  if (e.key === 'ArrowRight') dcMove(1);
-});
-dcRender();
+
+function renderSecPanel() {
+  var lead = secLead(secIndex, secDept);
+  var title = document.getElementById('pieTitle');
+  var scope = document.getElementById('pieScope');
+  if (title) {
+    title.childNodes[0].nodeValue = lead ? lead.label : SEC.titles[secIndex];
+  }
+  if (scope) {
+    scope.textContent = secDept < 0
+      ? 'Whole cohort — ' + (lead ? lead.answered + ' answered' : 'nothing answered yet')
+      : SEC.depts[secDept] + ' — ' + (lead ? lead.answered + ' answered' : 'nothing answered yet');
+  }
+  drawPie(lead);
+}
+
+function renderSecDepts() {
+  var host = document.getElementById('secDeptList');
+  var count = document.getElementById('deptCount');
+  if (!host) return;
+  host.innerHTML = SEC.depts.map(function (name, i) {
+    return '<button type="button" class="sec-dept" role="option" data-i="' + i + '"' +
+      ' data-name="' + esc(name.toLowerCase()) + '"' +
+      ' aria-selected="' + (i === secDept ? 'true' : 'false') + '"' +
+      ' onclick="pickSecDept(' + i + ')">' +
+      '<span class="nm">' + esc(name) + '</span>' +
+      '<span class="ct">' + SEC.counts[i] + '</span></button>';
+  }).join('');
+  if (count) {
+    count.textContent = SEC.depts.length + ' in this scope — pick one to see its own answers.';
+  }
+}
+
+function pickSection(i) {
+  secIndex = i;
+  document.querySelectorAll('#secCards .sec-card').forEach(function (b) {
+    var on = +b.dataset.i === i;
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-selected', on ? 'true' : 'false');
+  });
+  renderSecPanel();
+  if (secDept >= 0) showSecDetail();
+}
+
+function pickSecDept(i) {
+  secDept = i;
+  document.querySelectorAll('#secDeptList .sec-dept').forEach(function (b) {
+    b.setAttribute('aria-selected', +b.dataset.i === i ? 'true' : 'false');
+  });
+  renderSecPanel();
+  showSecDetail();
+}
+
+function clearSecDept() {
+  secDept = -1;
+  document.querySelectorAll('#secDeptList .sec-dept').forEach(function (b) {
+    b.setAttribute('aria-selected', 'false');
+  });
+  var box = document.getElementById('secDetail');
+  if (box) box.hidden = true;
+  renderSecPanel();
+}
+
+function showSecDetail() {
+  var box = document.getElementById('secDetail');
+  var host = document.getElementById('detailQuestions');
+  var name = document.getElementById('detailName');
+  var meta = document.getElementById('detailMeta');
+  if (!box || !host || secDept < 0) return;
+
+  // The department's reading of this section, cloned out of the full
+  // department panel below rather than re-rendered from a second copy.
+  var source = document.querySelector('#dept-' + (secDept + 1) + ' .qsec:nth-of-type(' +
+                                      (secIndex + 1) + ')');
+  host.innerHTML = '';
+  if (source) {
+    host.appendChild(source.cloneNode(true));
+  } else {
+    host.innerHTML = '<div class="none">No Deeksharambh replies from this department yet, ' +
+      'so this section has nothing on file.</div>';
+  }
+  if (name) name.childNodes[0].nodeValue = SEC.depts[secDept] + ' ';
+  if (meta) {
+    meta.textContent = SEC.titles[secIndex] + ' · ' + SEC.counts[secDept] +
+      (SEC.counts[secDept] === 1 ? ' reply' : ' replies') + ' analysed';
+  }
+  box.hidden = false;
+}
+
+function filterSecDepts(term) {
+  var q = (term || '').trim().toLowerCase();
+  document.querySelectorAll('#secDeptList .sec-dept').forEach(function (b) {
+    b.style.display = (!q || b.dataset.name.indexOf(q) !== -1) ? '' : 'none';
+  });
+}
+
+renderSecDepts();
+pickSection(0);
 
 /* ── Department explorer ───────────────────────────────────────────────
    Every department is in the page. This only decides which one is on
