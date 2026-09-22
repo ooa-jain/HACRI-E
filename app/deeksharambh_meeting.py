@@ -170,6 +170,61 @@ def _share(picks: list[dict], kind: str) -> float | None:
     return round(sum(o["pct"] for o in picks), 1)
 
 
+# ── The section explorer ─────────────────────────────────────────────────────
+# One question per section carries that section's headline as a pie: the
+# single-choice question whose answers say most about what the section asked.
+# A multi-select cannot be a pie — one student ticks several options, so the
+# slices would add past the whole — so every lead here is single-choice.
+SECTION_LEAD: dict[str, str] = {
+    "🔥 The Vibe Check":                "q3",   # felt welcomed
+    "🧭 Settling In":                   "q5",   # ease of transition
+    "👣 Footsteps (pre-arrival)":       "q10",  # would watch a season 2
+    "🎯 Orientation Experience":        "q15",  # how engaging
+    "🌉 Bridge Course":                 "q18",  # feels prepared
+    "📜 NEP 2020 & Digital Readiness":  "q21",  # understands ABC ID / credits
+    "💬 The Gen Z Lens":                "q25",  # the first week felt like
+    "❤️ Belonging & Expectations":      "q31",  # knows whom to contact
+    "📊 Score & Mic Drop":              "q35",  # overall learning experience
+}
+
+# The validated ordinal ramp is five steps deep, so a question with more
+# answers than that folds its smallest into one final slice. Five named
+# slices and an "Other" beats six slices nobody can tell apart.
+MAX_SLICES = 5
+OTHER = "Other answers"
+
+
+def lead_slices(stats: dict | None) -> dict | None:
+    """One question's answers, ready to draw as a pie.
+
+    Ordered by how many chose each, so the ramp reads most-chosen to least,
+    and capped: everything past the fifth is summed into one honest "Other"
+    slice rather than being dropped. Every slice is labelled in the legend,
+    so the colour never carries the meaning on its own.
+    """
+    if not stats or not stats.get("answered"):
+        return None
+
+    options = list(stats.get("options") or [])
+    if not options:
+        return None
+
+    head = options[:MAX_SLICES]
+    tail = options[MAX_SLICES:]
+    if tail:
+        head = head[:MAX_SLICES - 1] + [{
+            "label": OTHER,
+            "count": sum(o["count"] for o in options[MAX_SLICES - 1:]),
+            "pct": round(sum(o["pct"] for o in options[MAX_SLICES - 1:]), 1),
+        }]
+    return {
+        "key": stats["key"],
+        "label": stats["label"],
+        "answered": stats["answered"],
+        "options": head,
+        "folded": len(tail) + 1 if tail else 0,
+    }
+
 def question_picks(report: dict) -> list[dict]:
     """Every question the form asks, in form order, with its two answers.
 
@@ -234,7 +289,15 @@ def question_picks(report: dict) -> list[dict]:
                 "frame_label": FRAME_LABEL[frame],
                 "share": _share(picks, kind),
             })
-        out.append({"title": title, "questions": questions})
+        out.append({
+            "title": title,
+            "questions": questions,
+            # What the section's card draws before a department is picked.
+            "lead": lead_slices(answered.get(SECTION_LEAD.get(title, ""))),
+            # How many of this scope's students answered anything in the
+            # section at all — the card's own headline number.
+            "answered": max((q["answered"] for q in questions), default=0),
+        })
     return out
 
 
@@ -400,6 +463,15 @@ async def meeting_pack(*, campus: str = "") -> dict:
         },
         "conversion": conversion,
         "callouts": callouts(conversion),
+        # The nine sections as the whole scope answered them: what the
+        # explorer opens on before anybody picks a department.
+        "overall_sections": question_picks(summarize_orientation(
+            [r["data"] for r in filled])),
+        # Just the pie's slices, per department per section, so the explorer
+        # can redraw without the page carrying every option of every question
+        # a second time. The question detail it shows is cloned out of the
+        # department reading that is already on the page.
+        "dept_leads": [[sec["lead"] for sec in d["sections"]] for d in departments],
         "gaps": gap_rows(conversion),
         "campuses": campus_rows(students),
         "departments": departments,

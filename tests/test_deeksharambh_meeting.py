@@ -390,10 +390,10 @@ async def test_the_admin_link_prints_every_department_in_full(admin_client):
     assert "Registered in portal" in page
     assert ">11<" in page and ">6<" in page and ">54.5%<" in page
 
-    # Both call-out lists, named for what a department can do about them
-    # rather than as a verdict on it.
-    assert "Most active 4" in page
-    assert "Room to grow — 4 departments" in page
+    # The ranked lists moved out of the page and live in the PDF; the
+    # page keeps the full ranked table and the opportunity list instead.
+    assert "Every department" in page
+    assert "Where a push goes furthest" in page
     for word in ("worst", "Worst", "weakest", "chase list"):
         assert word not in page
 
@@ -568,194 +568,79 @@ async def test_the_page_charts_from_the_vendored_bundle_not_a_cdn(admin_client):
 
 
 @pytest.mark.asyncio
-async def test_the_carousel_reads_the_same_rows_the_tables_print(admin_client):
-    """The spotlight is a view of the call-out lists, never a second copy.
-
-    Both are rendered from `callouts`, so a department cannot lead the
-    carousel while the table under it says something else — and the tables
-    survive into print, where the carousel is dropped.
-    """
+async def test_the_section_explorer_offers_all_nine_sections(admin_client):
+    """Nine cards, one per section the form actually asked, in form order."""
     await _seed()
     page = (await admin_client.get("/admin/survey/deeksharambh-meeting")).text
 
-    # The carousel's data is handed over as JSON from the same structure.
-    assert '"dept": "Department of Commerce"' in page or \
-           '"dept":"Department of Commerce"' in page
-    # Both plain tables are present for the reader and the printer.
-    assert "Most active 4" in page
-    assert "Room to grow — 4 departments" in page
-    assert ".dc-shell, .rail, .no-print" in page   # dropped when printing
-
-
-@pytest.mark.asyncio
-async def test_the_hero_photo_is_served_locally_and_dropped_when_printing(admin_client):
-    """The campus behind the hero is an asset of this app, not a hotlink, and
-    it is chrome: paper gets the words, not a full-bleed photograph."""
-    await _seed()
-    page = (await admin_client.get("/admin/survey/deeksharambh-meeting")).text
-
-    # Served from our own /static, cache-stamped like every other asset.
-    assert "/static/img/campus-hero.jpg?v=" in page
-    assert "http://" not in page.split("<style>")[1].split("</style>")[0]
-
-    # And it really is on disk, or the page would render a broken frame.
-    from pathlib import Path
-    from app.main import BASE_DIR
-    photo = Path(BASE_DIR) / "static" / "img" / "campus-hero.jpg"
-    assert photo.is_file() and photo.stat().st_size > 20_000
-
-    # Print drops it — the rule also hides the seam gradient now, so this
-    # checks the print block rather than one exact declaration.
-    print_block = page.split("@media print {")[1]
-    assert ".se-media" in print_block.split("@page")[0]
-    assert "display: none" in print_block.split(".se-media")[1][:80]
-
-
-@pytest.mark.asyncio
-async def test_the_hero_cannot_clip_its_own_buttons(admin_client):
-    """A fixed-height frame cut the Download PDF row off on a short laptop.
-
-    The fix is that the frame's height is a floor, not a size: the scroll
-    interpolates `min-height` while `height` stays `auto`, so at any progress
-    value on any screen the frame grows to whatever the headline, the pill and
-    the button row need. That is also what let the expand come back on mobile,
-    where it had been switched off to dodge this very bug.
-    """
-    await _seed()
-    page = (await admin_client.get("/admin/survey/deeksharambh-meeting")).text
-
-    frame = page.split(".se-frame {")[1].split("}")[0]
-    assert "height: auto;" in frame
-    assert "min-height: calc(var(--h0) + (100vh - var(--h0)) * var(--p, 0));" in frame
-    # svh too, so a phone's URL bar hiding does not resize the frame
-    # mid-animation — the vh line above it is the fallback.
-    assert "min-height: calc(var(--h0) + (100svh - var(--h0)) * var(--p, 0));" in frame
-    # No fixed height anywhere in the frame's own rule (min-height is not
-    # a fixed height, so the check has to exclude it).
-    import re
-    assert re.search(r"(?<!min-)height: calc\(", frame) is None
-
-
-@pytest.mark.asyncio
-async def test_the_hero_expands_on_a_phone_too(admin_client):
-    """It was switched off below 640px to dodge the clipping bug above. Now
-    that the frame cannot clip, the only reader handed the opened state
-    outright is one who asked for less motion."""
-    await _seed()
-    page = (await admin_client.get("/admin/survey/deeksharambh-meeting")).text
-
-    # No width breakpoint stands the animation down any more.
-    assert "window.matchMedia('(max-width: 640px)')" not in page
-    assert "function isStatic() { return REDUCED; }" in page
-    # The phone rule opens from a sensible inset instead of a letterbox.
-    assert "width: calc(86% + (100% - 86%) * var(--pw, 0))" in page
-    assert "@media (prefers-reduced-motion: reduce)" in page
-
-
-@pytest.mark.asyncio
-async def test_the_hero_backdrop_is_clipped_on_every_screen(admin_client):
-    """The campus also fills the plate the frame sits on, and must stay in it.
-
-    The backdrop is an absolutely positioned layer inset past its box, so it
-    is only contained by an ancestor that establishes a containing block.
-    A phone rule once made that ancestor `static`, the layer escaped
-    `overflow: hidden`, and its negative inset pushed the page 44px sideways.
-    The plate is sticky at every width now, so it is always a containing
-    block — this pins the clip and the positioning that makes it work.
-    """
-    await _seed()
-    page = (await admin_client.get("/admin/survey/deeksharambh-meeting")).text
-
-    sticky = page.split(".se-sticky {")[1].split("}")[0]
-    assert "position: sticky" in sticky and "overflow: hidden" in sticky
-    # Every on-screen rule for the plate keeps it a containing block. Print
-    # is exempt: there the backdrop is display:none, so it has nothing to
-    # escape from.
-    screen_css = page.split("@media print")[0]
-    for block in screen_css.split(".se-sticky {")[1:]:
-        assert "position: static" not in block.split("}")[0]
-    # Same photo as the frame's own media, served locally.
-    assert page.count("/static/img/campus-hero.jpg?v=") == 2
-
-
-@pytest.mark.asyncio
-async def test_the_hero_names_the_survey_and_leaves_the_figures_to_the_tiles(admin_client):
-    """The four figures moved out of the hero into the KPI row below it.
-
-    They are not gone — repeating them twice in one screen was what crowded
-    the hero into clipping its own buttons — so this checks both halves: the
-    hero says what the page is, and the numbers are still on the page.
-    """
-    await _seed()
-    page = (await admin_client.get("/admin/survey/deeksharambh-meeting")).text
-
-    assert "<h1>Deeksharambh</h1>" in page
-    assert 'class="se-sub">Department-wise survey<' in page
-    assert "se-stage" not in page          # the old tile grid is gone entirely
-
-    # …and every figure it used to show still appears, in the tiles below.
-    for label in ("Registered in portal", "Took Deeksharambh",
-                  "Still to reach", "Conversion"):
-        assert label in page
-    assert ">11<" in page and ">6<" in page and ">54.5%<" in page
-
-
-@pytest.mark.asyncio
-async def test_the_copy_button_hands_out_a_link_that_works_without_a_login(admin_client, client):
-    """The share button used to copy whatever URL the reader was on.
-
-    From the admin page that is an admin-only URL, so every person it was sent
-    to got a 403 — a share button that silently shared nothing. It now carries
-    the token link the server minted, and this walks that exact link through a
-    client with no admin cookie.
-    """
-    await _seed()
-    page = (await admin_client.get("/admin/survey/deeksharambh-meeting")).text
-
-    # Pull the link straight out of the rendered page, the way a reader would.
     import html
-    import re
-    match = re.search(r'id="shareUrl"[^>]*value="([^"]+)"', page)
-    assert match, "the page offers no shareable link"
-    url = html.unescape(match.group(1))
-    assert "token=" in url and "/shared/deeksharambh-meeting" in url
 
-    # The button copies that same link, not location.href.
-    assert 'data-share="' in page
-    assert "location.href" in page   # only as the fallback, after data-share
-    assert "btn.getAttribute('data-share') || location.href" in page
-
-    # A reader with no admin cookie can open it and read the whole pack.
-    from urllib.parse import urlparse
-    path = urlparse(url)
-    shared = await client.get(f"{path.path}?{path.query}")
-    assert shared.status_code == 200
-    assert "Department of Law" in shared.text
-    assert "<h1>Deeksharambh</h1>" in shared.text
-    # …and every department is in it, same as the admin copy.
-    for dept in ("Department of Commerce", "Department of Design", "Department of Science"):
-        assert dept in shared.text
-
-    # The PDF on that same token works too.
-    pdf = await client.get(f"{path.path}.pdf?{path.query}")
-    assert pdf.status_code == 200
-    assert pdf.content.startswith(b"%PDF-")
+    from app.orientation_analysis import SECTIONS
+    # The container is class="sec-cards", so match the button itself.
+    assert page.count('<button type="button" class="sec-card') == len(SECTIONS) == 9
+    for i, (title, _) in enumerate(SECTIONS, start=1):
+        assert f'data-i="{i - 1}"' in page
+        # Two titles carry an "&", which the template escapes.
+        assert html.escape(title, quote=False) in page
 
 
 @pytest.mark.asyncio
-async def test_copying_still_works_where_the_clipboard_api_is_missing(admin_client):
-    """This app is served over plain HTTP on some deployments, and
-    navigator.clipboard does not exist outside a secure context. Without a
-    fallback the share button would do nothing on the one server it matters
-    on."""
+async def test_every_section_pie_is_a_single_choice_question(app_with_mock):
+    """A pie has to be a part-to-whole, so its question has to be one where a
+    student picked exactly one answer. A multi-select would have slices that
+    add past the total, which is the classic way to publish a wrong chart."""
+    from app.deeksharambh_meeting import SECTION_LEAD
+    from app.orientation_analysis import QUESTIONS, SECTIONS
+
+    assert set(SECTION_LEAD) == {title for title, _ in SECTIONS}
+    for title, key in SECTION_LEAD.items():
+        label, kind, _ = QUESTIONS[key]
+        assert kind == "single", f"{title} leads on {key}, which is {kind}"
+
+
+@pytest.mark.asyncio
+async def test_a_pie_never_shows_more_slices_than_the_ramp_has(app_with_mock):
+    """The validated ordinal ramp is five steps. A question with more answers
+    folds its smallest into one "Other" slice rather than dropping them, so
+    the slices still sum to everyone who answered."""
+    await _seed()
+    from app.deeksharambh_meeting import MAX_SLICES, OTHER, lead_slices
+
+    stats = {
+        "key": "q1", "label": "Test", "answered": 100,
+        "options": [{"label": f"opt{i}", "count": 10 - i, "pct": float(10 - i)}
+                    for i in range(8)],
+    }
+    lead = lead_slices(stats)
+    assert len(lead["options"]) == MAX_SLICES
+    assert lead["options"][-1]["label"] == OTHER
+    # Nothing is lost: the folded slice carries the rest of the count.
+    assert sum(o["count"] for o in lead["options"]) == sum(o["count"] for o in stats["options"])
+    assert lead["folded"] == 4
+
+    # A question that fits is left exactly as it is.
+    small = dict(stats, options=stats["options"][:3])
+    assert lead_slices(small)["folded"] == 0
+    assert [o["label"] for o in lead_slices(small)["options"]] == ["opt0", "opt1", "opt2"]
+    # And a question nobody answered draws nothing rather than an empty ring.
+    assert lead_slices({"key": "q1", "label": "x", "answered": 0, "options": []}) is None
+
+
+@pytest.mark.asyncio
+async def test_the_explorer_carries_pie_data_but_not_a_second_copy_of_the_answers(admin_client):
+    """The department's answers are cloned out of the department reading that
+    is already on the page, so the two cannot drift and the page does not
+    carry the same numbers twice. Only the pie's slices are emitted."""
     await _seed()
     page = (await admin_client.get("/admin/survey/deeksharambh-meeting")).text
 
-    assert "window.isSecureContext" in page
-    assert "document.execCommand('copy')" in page
-    assert "window.prompt(" in page
-    # And the link is on the page as selectable text regardless.
-    assert 'id="shareUrl"' in page
+    assert "leads: [[" in page or '"leads":' in page or "leads: [" in page
+    assert "source = document.querySelector('#dept-'" in page
+    assert "cloneNode(true)" in page
+    # The ramp is the validated five-step one, and every slice is named in
+    # the legend so colour never carries the meaning alone.
+    assert "var PIE_RAMP = ['#86b6ef', '#5598e7', '#2a78d6', '#1c5cab', '#104281']" in page
+    assert 'id="pieLegend"' in page
 
 
 # ── The added components ─────────────────────────────────────────────────────
