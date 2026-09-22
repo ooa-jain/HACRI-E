@@ -29,6 +29,10 @@
     --plane: #f3efe0;
     --grape: #6d28d9; --sun: #f5b731; --lime: #58cc4a;
     --accent: #d7f24f;
+    /* JAIN University's own navy and gold, sampled off the JGI mark — used
+       only in the hero, which carries the university's own identity rather
+       than the pack's house palette. */
+    --jain-navy: #0a1626; --jain-gold: #eebd1b;
 
     /* Data colours — validated against a white surface (ΔE 32.3 normal,
        21.6 protan). Used for marks only; text keeps ink tokens. */
@@ -65,21 +69,18 @@
     display: grid; place-items: center;
     overflow: hidden; isolation: isolate;
   }
-  /* The same campus, filling the plate the frame sits on. Blurred and pushed
-     back so the sharp frame reads as the thing in front of it, and fading as
-     the frame opens to take the whole stage. */
+  /* JAIN University's own navy, opening out to white — pushed back so the
+     sharp frame reads as the thing in front of it, and fading as the frame
+     opens to take the whole stage. */
   .se-sticky::before {
     content: ''; position: absolute; inset: -30px; z-index: -2;
-    background-image: url('{{ asset("/static/img/campus-hero.jpg") }}');
-    background-size: cover; background-position: center 40%;
-    filter: blur(14px) saturate(1.02) brightness(.92);
-    transform: scale(1.06);
+    background: linear-gradient(135deg, var(--jain-navy) 0%, var(--jain-navy) 48%, #fff 100%);
     opacity: calc(1 - .55 * var(--p, 0));
   }
   .se-sticky::after {
     content: ''; position: absolute; inset: 0; z-index: -1;
-    background: linear-gradient(150deg, rgba(230,224,204,.55) 0%, rgba(239,236,224,.4) 45%,
-                                        rgba(213,229,143,.5) 100%);
+    background: linear-gradient(150deg, rgba(255,255,255,.12) 0%, rgba(255,255,255,.04) 45%,
+                                        rgba(10,22,38,.3) 100%);
     opacity: calc(1 - .35 * var(--p, 0));
   }
   .se-frame {
@@ -109,25 +110,18 @@
   .se-media {
     position: absolute; inset: 0;
     transform: scale(calc(1.35 - .35 * var(--p, 0)));
-    background-image: url('{{ asset("/static/img/campus-hero.jpg") }}');
-    background-size: cover; background-position: center 42%;
-    background-color: #1b1030;
+    background: linear-gradient(135deg, var(--jain-navy) 0%, var(--jain-navy) 52%, #fff 100%);
   }
-  /* Two layers over the photo. The first is the brand wash that ties the
-     hero to the rest of the page; the second is a flat scrim that lifts as
-     the frame opens, so the campus comes through as you scroll while the
-     headline never loses its footing. A daylight aerial is bright enough
-     that white text needs both. */
+  /* A wash over the gradient, darkest where the headline sits, so white text
+     keeps its footing even where the gradient itself has opened out to white. */
   .se-media::before {
     content: ''; position: absolute; inset: 0;
-    /* One tone, not a bloom of colours: darkest where the headline sits,
-       opening out over the campus below. */
-    background: linear-gradient(175deg, rgba(23,17,10,.82) 0%, rgba(23,17,10,.48) 42%,
-                                        rgba(23,17,10,.3) 68%, rgba(23,17,10,.56) 100%);
+    background: linear-gradient(175deg, rgba(10,22,38,.82) 0%, rgba(10,22,38,.5) 42%,
+                                        rgba(10,22,38,.34) 68%, rgba(10,22,38,.6) 100%);
   }
   .se-media::after {
     content: ''; position: absolute; inset: 0;
-    background: rgba(23, 17, 10, calc(.3 - .12 * var(--p, 0)));
+    background: rgba(10, 22, 38, calc(.3 - .12 * var(--p, 0)));
   }
   /* The handover: a band of the page's own colour, rising out of the frame's
      floor only once the frame is open enough to touch the content below it. */
@@ -143,9 +137,17 @@
     position: relative; z-index: 4; color: #fff; text-align: center;
     padding: 0 26px 30px; max-width: 900px;
   }
+  /* A white plate under the mark: the wordmark is dark ink, so it needs its
+     own light ground to read wherever the hero's gradient sits behind it. */
+  .se-logo {
+    display: inline-block; background: #fff; padding: 10px 20px;
+    border-radius: 12px; margin-bottom: 20px;
+    box-shadow: 0 10px 26px -8px rgba(6,2,14,.4);
+  }
+  .se-logo img { display: block; height: 34px; width: auto }
   .se-kicker {
     font-size: 11px; font-weight: 800; letter-spacing: 2.6px; text-transform: uppercase;
-    color: var(--accent);
+    color: var(--jain-gold);
   }
   .se-inner h1 {
     font-size: clamp(38px, 7vw, 76px); font-weight: 800; letter-spacing: -2.2px;
@@ -566,6 +568,7 @@
     <div class="se-frame" id="seFrame">
       <div class="se-media"></div>
       <div class="se-inner">
+        <div class="se-logo"><img src="{{ asset('/static/img/jain-logo.png') }}" alt="JAIN University"></div>
         <div class="se-kicker">JAIN University · 2026 · {{ pack.campus }}</div>
         <h1>Deeksharambh</h1>
         <p>Who registered on the portal, who actually took Deeksharambh, and what
