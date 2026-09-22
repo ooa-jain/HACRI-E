@@ -366,13 +366,73 @@ def _display_section(title: str) -> tuple[str, str]:
     return SECTION_DISPLAY.get(title, (clean_label(title), "document"))
 
 
+# ── Colour for the one chart on this page that has a real best/worst axis ────
+# A pie is only ever drawn for a SECTION_LEAD question, and every one of them
+# is a rating: an agreement scale, a readiness scale, an engagement scale.
+# That is the case the house dataviz rules call out by name — "when a series
+# means good/bad, it wears status tokens" — so colour here is not decoration,
+# it is the same worst-to-best axis the numbers already show. The four
+# reserved status steps (good, warning, serious, critical) are the same ones
+# used everywhere else a state is shown; the fifth, for a five-point scale's
+# very best answer, is one shade deeper than "good" in the same hue rather
+# than a new colour family.
+_SENTIMENT_RAMP: tuple[str, ...] = (
+    "#d03b3b",  # critical — the worst answer on the scale
+    "#ec835a",  # serious
+    "#fab219",  # warning — the midpoint
+    "#0ca30c",  # good
+    "#0a7d0a",  # the best answer, one shade deeper than "good"
+)
+# A slice this page has no ranking for — the folded "Other answers" bucket,
+# or a label that reaches here from outside the curated scales below.
+_NEUTRAL_SLICE = "#9099a8"
+
+# Each SECTION_LEAD question's options, worst to best, by the CLEAN label
+# `clean_label` already produces for it — not the raw form text. A question
+# not listed here draws every slice in the neutral grey rather than guessing
+# at an order it was never given.
+_SCALE_ORDER: dict[str, tuple[str, ...]] = {
+    "q3":  ("Strongly Disagree", "Disagree", "Neutral", "Agree", "Strongly Agree"),
+    "q5":  ("Very Difficult", "Difficult", "Moderate", "Manageable", "Very Easy"),
+    "q10": ("Unlikely", "Uncertain", "Possibly", "Definitely"),
+    "q15": ("Disengaged", "Moderate", "Engaged", "Highly Engaged", "Exceptionally Engaged"),
+    "q18": ("Not Prepared", "Somewhat Unprepared", "Moderately Prepared",
+            "Well Prepared", "Very Well Prepared"),
+    "q21": ("Not Understood", "Limited Understanding", "Partially Understood",
+            "Mostly Understood", "Fully Understood"),
+    "q25": ("A Challenging Experience", "An Overwhelming Experience",
+            "An Eventful Experience", "An Academically Focused Experience",
+            "A New Beginning", "A Positive Experience"),
+    "q31": ("Not really — need more clarity", "Somewhat — have a rough idea",
+            "Yes — I know exactly who to reach"),
+    "q35": ("Unsatisfactory", "Below Expectations", "Satisfactory", "Good", "Excellent"),
+}
+
+
+def _slice_color(question_key: str, label: str) -> str:
+    """Where one answer sits on its question's own worst-to-best axis.
+
+    A scale of any length spreads evenly across the same five-stop ramp, so
+    a three-point scale still reads as clearly red/amber/green as a
+    five-point one — position on its own scale, not the raw option count,
+    is what a colour like this can honestly represent.
+    """
+    order = _SCALE_ORDER.get(question_key)
+    if not order or label not in order:
+        return _NEUTRAL_SLICE
+    span = len(order) - 1
+    step = round(order.index(label) * (len(_SENTIMENT_RAMP) - 1) / span) if span else 2
+    return _SENTIMENT_RAMP[step]
+
+
 def lead_slices(stats: dict | None) -> dict | None:
     """One question's answers, ready to draw as a pie.
 
     Ordered by how many chose each, so the ramp reads most-chosen to least,
     and capped: everything past the fifth is summed into one honest "Other"
-    slice rather than being dropped. Every slice is labelled in the legend,
-    so the colour never carries the meaning on its own.
+    slice rather than being dropped. Every slice carries its own worst-to-best
+    colour and is named in the legend, so neither the ranking nor the colour
+    has to be read off a swatch alone.
     """
     if not stats or not stats.get("answered"):
         return None
@@ -389,11 +449,18 @@ def lead_slices(stats: dict | None) -> dict | None:
             "count": sum(o["count"] for o in options[MAX_SLICES - 1:]),
             "pct": round(sum(o["pct"] for o in options[MAX_SLICES - 1:]), 1),
         }]
+
+    key = stats["key"]
+    coloured = []
+    for o in head:
+        label = clean_label(o["label"])
+        coloured.append({**o, "label": label, "color": _slice_color(key, label)})
+
     return {
-        "key": stats["key"],
+        "key": key,
         "label": clean_label(stats["label"]),
         "answered": stats["answered"],
-        "options": _clean_options(head),
+        "options": coloured,
         "folded": len(tail) + 1 if tail else 0,
     }
 

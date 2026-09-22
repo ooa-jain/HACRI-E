@@ -658,9 +658,11 @@ async def test_the_explorer_carries_pie_data_but_not_a_second_copy_of_the_answer
     assert "leads: [[" in page or '"leads":' in page or "leads: [" in page
     assert "source = document.querySelector('#dept-'" in page
     assert "cloneNode(true)" in page
-    # The ramp is the validated five-step one, and every slice is named in
-    # the legend so colour never carries the meaning alone.
-    assert "var PIE_RAMP = ['#86b6ef', '#5598e7', '#2a78d6', '#1c5cab', '#104281']" in page
+    # Each slice's own colour comes from Python with the rest of its data —
+    # there is no separate JS-side ramp to keep in step with it — and every
+    # slice is still named in the legend, so colour never carries the
+    # meaning alone.
+    assert "var colours = lead.options.map(function (o) { return o.color });" in page
     assert 'id="pieLegend"' in page
 
 
@@ -1060,3 +1062,96 @@ async def test_the_button_chrome_uses_icons_not_emoji(admin_client):
         assert f'"{icon}":' in icon_json
     assert "btn.innerHTML = ICON_SVG.check + ' Copied'" in page
     assert "var was = btn.innerHTML;" in page
+
+
+# ── Plain numbering, hover-revealed meta, and sentiment colour on the pie ────
+
+@pytest.mark.asyncio
+async def test_section_cards_are_numbered_plainly(admin_client):
+    """1..9, not the zero-padded 01..09 the carousel still uses for its own
+    "Section N of 9" caption — the two are different pieces of UI and only
+    one of them was asked to change."""
+    await _seed()
+    page = (await admin_client.get("/admin/survey/deeksharambh-meeting")).text
+
+    for n in range(1, 10):
+        assert f'<span class="sec-n">{n}</span>' in page
+        assert f'<span class="sec-n">{n:02d}</span>' not in page
+
+
+@pytest.mark.asyncio
+async def test_the_question_count_is_a_hover_tip_not_a_caption(admin_client):
+    """"N questions - N answered" used to sit permanently under every
+    title. It is now off by default (aria-hidden, zero opacity until
+    :hover/:focus) and reachable two ways for a reader who cannot hover: the
+    button's own `title` attribute, and the CSS still ships the text for a
+    screen reader that reads hidden-but-present content."""
+    await _seed()
+    from app.deeksharambh_meeting import meeting_pack
+    pack = await meeting_pack()
+    sec = pack["overall_sections"][0]
+    caption = f'{len(sec["questions"])} questions · {sec["answered"]} answered'
+
+    page = (await admin_client.get("/admin/survey/deeksharambh-meeting")).text
+
+    assert f'title="{caption}"' in page
+    assert f'<span class="sec-m" aria-hidden="true">{len(sec["questions"])} questions ·' in page
+    css = page.split(".sec-m {")[1].split("}")[0]
+    assert "opacity: 0" in css
+    assert ":hover .sec-m" in page or ".sec-card:hover .sec-m" in page
+
+
+@pytest.mark.asyncio
+async def test_pie_slices_are_coloured_by_answer_not_by_popularity(app_with_mock):
+    """A slice's colour is the answer's own place on a red-to-green scale,
+    never a fixed position-in-the-list ramp — so the same label gets the
+    same colour everywhere it appears, however many people picked it."""
+    await _seed()
+    from app.deeksharambh_meeting import _slice_color, meeting_pack
+
+    assert _slice_color("q3", "Strongly Agree") == "#0a7d0a"     # deep green
+    assert _slice_color("q3", "Strongly Disagree") == "#d03b3b"  # red
+    assert _slice_color("q3", "Neutral") == "#fab219"            # amber
+    # A question with no known scale, or a label outside it (the folded
+    # "Other answers" slice), draws neutral rather than guessing.
+    assert _slice_color("q3", "Other answers") == "#9099a8"
+    assert _slice_color("q99", "Anything") == "#9099a8"
+
+    pack = await meeting_pack()
+    law = next(d for d in pack["departments"] if d["dept"] == "Department of Law")
+    q3_lead = next(s["lead"] for s in law["sections"] if s["lead"] and s["lead"]["key"] == "q3")
+    colours = {o["label"]: o["color"] for o in q3_lead["options"]}
+    assert colours["Strongly Agree"] == "#0a7d0a"
+
+
+@pytest.mark.asyncio
+async def test_a_three_and_a_four_point_scale_still_span_red_to_green(app_with_mock):
+    """A scale shorter than five options still reaches both ends of the
+    ramp — a 3-point scale is not left looking like three shades of orange."""
+    from app.deeksharambh_meeting import _slice_color
+
+    # q31 — a 3-point "who to contact" scale.
+    assert _slice_color("q31", "Not really — need more clarity") == "#d03b3b"
+    assert _slice_color("q31", "Somewhat — have a rough idea") == "#fab219"
+    assert _slice_color("q31", "Yes — I know exactly who to reach") == "#0a7d0a"
+
+    # q10 — a 4-point scale.
+    assert _slice_color("q10", "Unlikely") == "#d03b3b"
+    assert _slice_color("q10", "Definitely") == "#0a7d0a"
+
+
+@pytest.mark.asyncio
+async def test_hovering_a_legend_row_highlights_its_slice(admin_client):
+    """The legend used to be an inert list of colour swatches beside the
+    chart. Each row is now a real hover/focus target that asks Chart.js to
+    show that slice active, the same way hovering the slice itself already
+    does."""
+    await _seed()
+    page = (await admin_client.get("/admin/survey/deeksharambh-meeting")).text
+
+    assert "function hoverPieSlice(i)" in page
+    assert "secChart.setActiveElements(active);" in page
+    assert 'onmouseenter="hoverPieSlice(' in page
+    assert 'onfocus="hoverPieSlice(' in page
+    # Reachable by keyboard, not only a mouse.
+    assert 'tabindex="0" role="button"' in page

@@ -257,7 +257,8 @@
 
   /* ── Section explorer ──────────────────────────────────────────────── */
   .sec-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 18px }
-  .sec-card { text-align: left; cursor: pointer; font: inherit; border-radius: 12px; padding: 12px 14px;
+  .sec-card { position: relative; text-align: left; cursor: pointer; font: inherit;
+              border-radius: 12px; padding: 12px 14px;
               background: var(--paper); border: 1px solid var(--line); color: var(--body);
               display: flex; flex-direction: column; gap: 3px; transition: transform .15s, box-shadow .15s }
   .sec-card:hover { transform: translateY(-2px); box-shadow: 0 6px 14px -8px rgba(23,17,10,.16) }
@@ -271,15 +272,33 @@
   .sec-t svg { width: 15px; height: 15px; flex: none; color: var(--grape) }
   .sec-card.on .sec-t { color: #fff }
   .sec-card.on .sec-t svg { color: var(--accent) }
-  .sec-m { font-size: 11.5px; color: var(--muted); margin-top: 3px }
-  .sec-card.on .sec-m { color: #d8cdb0 }
+  /* A tooltip, not a caption: off by default, so nine cards read as nine
+     clean headings — the count is still one hover or focus away, and the
+     `title` attribute on the button covers a reader who cannot hover. */
+  .sec-m {
+    position: absolute; left: 14px; bottom: calc(100% + 8px); z-index: 5;
+    background: var(--ink); color: #fdf9ec; font-size: 11px; font-weight: 600;
+    white-space: nowrap; padding: 6px 10px; border-radius: 8px;
+    box-shadow: 0 8px 20px -8px rgba(23,17,10,.4);
+    opacity: 0; transform: translateY(4px); pointer-events: none;
+    transition: opacity .12s, transform .12s;
+  }
+  .sec-m::after {
+    content: ''; position: absolute; top: 100%; left: 16px;
+    border: 5px solid transparent; border-top-color: var(--ink);
+  }
+  .sec-card:hover .sec-m, .sec-card:focus-visible .sec-m { opacity: 1; transform: none }
 
   .sec-panel { margin-top: 16px }
   .sec-grid { display: grid; grid-template-columns: 1fr 340px; gap: 24px; align-items: start }
   .sec-grid > * { min-width: 0 }
   .pie-box { position: relative; height: 290px; margin-top: 14px }
   .pie-legend { display: flex; flex-direction: column; gap: 7px; margin-top: 14px }
-  .pie-legend div { display: flex; align-items: center; gap: 10px; font-size: 13px }
+  .pie-legend div { display: flex; align-items: center; gap: 10px; font-size: 13px;
+                    border-radius: 8px; padding: 4px 6px; margin: 0 -6px;
+                    cursor: pointer; transition: background .1s }
+  .pie-legend div:hover, .pie-legend div:focus-visible {
+    background: var(--soft); outline: none }
   .pie-legend i { width: 12px; height: 12px; border-radius: 3px; flex: none }
   .pie-legend .lb { flex: 1; min-width: 0 }
   .pie-legend .vl { font-variant-numeric: tabular-nums; font-weight: 800; color: var(--ink) }
@@ -681,10 +700,16 @@
       {% for sec in pack.overall_sections %}
       <button type="button" class="sec-card {{ 'on' if loop.first }}" role="tab"
               data-i="{{ loop.index0 }}" aria-selected="{{ 'true' if loop.first else 'false' }}"
-              onclick="pickSection({{ loop.index0 }})">
-        <span class="sec-n">{{ '%02d' % loop.index }}</span>
+              onclick="pickSection({{ loop.index0 }})"
+              title="{{ sec.questions | length }} questions · {{ sec.answered }} answered">
+        <span class="sec-n">{{ loop.index }}</span>
         <span class="sec-t">{{ ICON[sec.icon] | safe }}{{ sec.title }}</span>
-        <span class="sec-m">{{ sec.questions | length }} questions ·
+        <!-- Off by default; hovering or focusing the card reveals it, so the
+             grid reads as nine clean headings rather than nine cards each
+             carrying a line of fine print. The title attribute above is the
+             fallback for a reader who cannot hover — a touch screen, or
+             assistive tech that skips a custom tooltip. -->
+        <span class="sec-m" aria-hidden="true">{{ sec.questions | length }} questions ·
           {{ sec.answered }} answered</span>
       </button>
       {% endfor %}
@@ -996,11 +1021,6 @@ var SEC = {
   leads: {{ pack.dept_leads | tojson }}
 };
 
-/* The validated five-step ordinal ramp: one hue, light to dark, so the
-   slices read most-chosen to least. Every slice is named in the legend, so
-   colour never carries the meaning alone. */
-var PIE_RAMP = ['#86b6ef', '#5598e7', '#2a78d6', '#1c5cab', '#104281'];
-
 var secIndex = 0, secDept = -1, secChart = null;
 
 /* ── Section spotlight ─────────────────────────────────────────────────
@@ -1102,7 +1122,10 @@ function drawPie(lead) {
 
   var labels = lead.options.map(function (o) { return o.label });
   var counts = lead.options.map(function (o) { return o.count });
-  var colours = lead.options.map(function (o, i) { return PIE_RAMP[i % PIE_RAMP.length] });
+  // Colour travels from the server: it is the answer's own position on that
+  // question's own rating scale, not the slice's rank by popularity, so it
+  // has to come from Python rather than a fixed position-indexed ramp.
+  var colours = lead.options.map(function (o) { return o.color });
 
   if (typeof Chart !== 'undefined' && box) {
     secChart = new Chart(box, {
@@ -1124,7 +1147,15 @@ function drawPie(lead) {
 
   if (legend) {
     legend.innerHTML = lead.options.map(function (o, i) {
-      return '<div><i style="background:' + colours[i] + '"></i>' +
+      // Hovering (or focusing, for a keyboard or switch-device reader) a
+      // legend row asks the chart to show that slice active, the same way
+      // hovering the slice itself already does — the legend becomes a
+      // second, larger hit target onto the same chart rather than an inert
+      // list of colours sitting next to it.
+      return '<div tabindex="0" role="button" aria-label="Highlight ' + esc(o.label) + '"' +
+        ' onmouseenter="hoverPieSlice(' + i + ')" onmouseleave="hoverPieSlice(-1)"' +
+        ' onfocus="hoverPieSlice(' + i + ')" onblur="hoverPieSlice(-1)">' +
+        '<i style="background:' + colours[i] + '"></i>' +
         '<span class="lb">' + esc(o.label) + '</span>' +
         '<span class="vl">' + o.pct + '%</span>' +
         '<span class="ct">(' + o.count + ')</span></div>';
@@ -1134,6 +1165,18 @@ function drawPie(lead) {
     note.textContent = 'The last slice sums the ' + lead.folded +
       ' least-chosen answers, so nothing is left out of the total.';
   }
+}
+
+// Hovering (or focusing) a legend row drives the same active-element state
+// Chart.js already shows when the pointer is over the slice itself, so the
+// legend works as a second way to point at a slice rather than a static
+// key sitting beside the chart it describes.
+function hoverPieSlice(i) {
+  if (!secChart) return;
+  var active = i < 0 ? [] : [{ datasetIndex: 0, index: i }];
+  secChart.setActiveElements(active);
+  secChart.tooltip.setActiveElements(active, { x: 0, y: 0 });
+  secChart.update();
 }
 
 function renderSecPanel() {
