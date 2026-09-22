@@ -212,9 +212,12 @@ async def test_every_question_is_printed_for_every_department(app_with_mock):
     from app.deeksharambh_meeting import SECTION_DISPLAY
 
     pack = await meeting_pack()
-    assert [d["dept"] for d in pack["departments"]] == [
-        r["dept"] for r in pack["conversion"]
-    ]
+    # Every department the count knows about is here — listed most replies
+    # first, not in the count's own best-conversion order.
+    assert sorted(d["dept"] for d in pack["departments"]) == sorted(
+        r["dept"] for r in pack["conversion"])
+    replies = [d["responses"] for d in pack["departments"]]
+    assert replies == sorted(replies, reverse=True)
 
     # The drill-down folds the first and last of the form's nine sections —
     # Orientation Sentiment and Outcomes Summary — into one, renamed and
@@ -594,9 +597,11 @@ async def test_the_page_charts_from_the_vendored_bundle_not_a_cdn(admin_client):
 
 
 @pytest.mark.asyncio
-async def test_the_section_explorer_offers_all_nine_sections(admin_client):
-    """Nine cards, one per section the form actually asked, in form order —
-    titled and iconed for a leadership report, not the form's own emoji-led
+async def test_the_section_explorer_offers_eight_sections(admin_client):
+    """Eight cards: the seven middle sections of the form in form order, then
+    Orientation Sentiment and Outcomes Summary folded into one "Student
+    Experience Ratings" card — the same eight the drill-down below uses.
+    Titled and iconed for a leadership report, not the form's own emoji-led
     names."""
     await _seed()
     page = (await admin_client.get("/admin/survey/deeksharambh-meeting")).text
@@ -606,14 +611,18 @@ async def test_the_section_explorer_offers_all_nine_sections(admin_client):
     from app.deeksharambh_meeting import SECTION_DISPLAY
     from app.orientation_analysis import SECTIONS
     # The container is class="sec-cards", so match the button itself.
-    assert page.count('<button type="button" class="sec-card') == len(SECTIONS) == 9
-    for i, (title, _) in enumerate(SECTIONS, start=1):
-        assert f'data-i="{i - 1}"' in page
+    assert page.count('<button type="button" class="sec-card') == len(SECTIONS) - 1 == 8
+    for i in range(8):
+        assert f'data-i="{i}"' in page
+    for title, _ in SECTIONS[1:-1]:
         clean_title, icon = SECTION_DISPLAY[title]
         assert html.escape(clean_title, quote=False) in page
         assert icon in page
+    assert "Student Experience Ratings" in page
+    for title, _ in SECTIONS:
         # The form's own emoji-led name never reaches this page.
         assert title not in page
+    assert "The 8 sections of the survey" in page
 
 
 @pytest.mark.asyncio
@@ -793,7 +802,7 @@ async def test_the_stacked_cards_are_a_picture_not_a_control(admin_client):
     # The operable controls are still there and labelled.
     assert 'aria-label="Previous section"' in page
     assert 'aria-label="Next section"' in page
-    assert page.count('<button type="button" class="sec-card') == 9
+    assert page.count('<button type="button" class="sec-card') == 8
 
 
 # ── The flat house retheme ───────────────────────────────────────────────────
@@ -1080,15 +1089,15 @@ async def test_the_button_chrome_uses_icons_not_emoji(admin_client):
 
 @pytest.mark.asyncio
 async def test_section_cards_are_numbered_plainly(admin_client):
-    """1..9, not the zero-padded 01..09 the carousel still uses for its own
-    "Section N of 9" caption — the two are different pieces of UI and only
-    one of them was asked to change."""
+    """1..8, never zero-padded, and no ninth card now that two sections are
+    one."""
     await _seed()
     page = (await admin_client.get("/admin/survey/deeksharambh-meeting")).text
 
-    for n in range(1, 10):
+    for n in range(1, 9):
         assert f'<span class="sec-n">{n}</span>' in page
         assert f'<span class="sec-n">{n:02d}</span>' not in page
+    assert '<span class="sec-n">9</span>' not in page
 
 
 @pytest.mark.asyncio
@@ -1130,14 +1139,13 @@ async def test_pie_slices_are_coloured_by_answer_not_by_popularity(app_with_mock
     assert _slice_color("q99", "Anything") == "#9099a8"
 
     pack = await meeting_pack()
-    # q3's own section (Orientation Sentiment) is folded into the drill
-    # -down's merged "Student Experience Ratings" section, which carries no
-    # lead of its own — the pie data survives the fold in `dept_leads`,
-    # indexed the same way as `pack["overall_sections"]`'s own nine.
+    # The merged "Student Experience Ratings" section leads on q35, overall
+    # learning experience — Excellent is the top of its scale.
     law_i = next(i for i, d in enumerate(pack["departments"]) if d["dept"] == "Department of Law")
-    q3_lead = next(lead for lead in pack["dept_leads"][law_i] if lead and lead["key"] == "q3")
-    colours = {o["label"]: o["color"] for o in q3_lead["options"]}
-    assert colours["Strongly Agree"] == "#0a7d0a"
+    lead = pack["dept_leads"][law_i][-1]
+    assert lead["key"] == "q35"
+    colours = {o["label"]: o["color"] for o in lead["options"]}
+    assert colours["Excellent"] == "#0a7d0a"
 
 
 @pytest.mark.asyncio
@@ -1292,10 +1300,11 @@ async def test_orientation_sentiment_and_outcomes_summary_merge_into_one_last_se
     assert "Orientation Sentiment" not in [s["title"] for s in law["sections"]]
     assert "Outcomes Summary" not in [s["title"] for s in law["sections"]]
 
-    # The section explorer's own nine cards are untouched by the merge.
-    assert len(pack["overall_sections"]) == 9
-    assert [s["title"] for s in pack["overall_sections"]][0] == "Orientation Sentiment"
-    assert [s["title"] for s in pack["overall_sections"]][-1] == "Outcomes Summary"
+    # The section explorer's cards are the same eight, in the same order.
+    assert [s["title"] for s in pack["overall_sections"]] == [
+        s["title"] for s in law["sections"]]
+    # The merged card still draws a pie — overall learning experience.
+    assert pack["overall_sections"][-1]["lead"]["key"] == "q35"
 
     page = (await admin_client.get("/admin/survey/deeksharambh-meeting")).text
     dept1 = page.split('id="dept-1"')[1].split('id="dept-2"')[0]
@@ -1324,17 +1333,17 @@ async def test_a_section_lists_its_questions_only_once_clicked(admin_client):
 @pytest.mark.asyncio
 async def test_the_section_explorers_department_detail_still_finds_the_merged_section(admin_client):
     """The section explorer clones a department's own reading of a section
-    straight out of the drill-down below it, by position. That position
-    broke when the drill-down folded its first and last section into one —
-    fixed by tagging every drill-down section with the explorer index (or,
-    for the merged one, both indexes) it corresponds to."""
+    straight out of the drill-down below it. Both are the same eight sections
+    in the same order, and every drill-down section is tagged with that
+    shared index so the lookup never depends on DOM position."""
     await _seed()
     page = (await admin_client.get("/admin/survey/deeksharambh-meeting")).text
 
-    import re
-    assert 'data-sec="0 8"' in page       # the merged section carries both
-    assert re.search(r'data-sec="[1-7]"', page)
-    assert "qsec[data-sec~=\"' + secIndex + '\"]" in page
+    dept1 = page.split('id="dept-1"')[1].split('id="dept-2"')[0]
+    for i in range(8):
+        assert f'<div class="qsec" data-sec="{i}">' in dept1
+    assert 'data-sec="8"' not in dept1
+    assert "qsec[data-sec=\"' + secIndex + '\"]" in page
     assert "clone.classList.add('open');" in page
 
 
@@ -1350,3 +1359,43 @@ async def test_the_department_explorer_accents_are_blue_not_violet(admin_client)
     assert ".qsec-h { width: 100%; text-align: left; cursor: pointer; border: none; background: none;\n            font: inherit; font-size: 11.5px; font-weight: 800; letter-spacing: 1.2px;\n            text-transform: uppercase; color: var(--d-primary);" in page
     assert ".rail input:focus { border-color: var(--d-primary); background: #fff }" in page
     assert ".picks .i { font-variant-numeric: tabular-nums; font-weight: 800; color: var(--d-primary); min-width: 17px }" in page
+
+
+@pytest.mark.asyncio
+async def test_the_department_list_runs_most_replies_first_with_full_names_on_hover(admin_client):
+    """Long names ("Department of Computer Science and Eng…") are cut short by
+    the rail's width. Each chip now carries its full name, reply count and
+    conversion as a hover title. The list itself runs most replies first,
+    and shows that reply count where the conversion percentage used to be."""
+    await _seed()
+    from app.deeksharambh_meeting import meeting_pack
+    pack = await meeting_pack()
+    page = (await admin_client.get("/admin/survey/deeksharambh-meeting")).text
+
+    rail = page.split('id="deptList"')[1].split("</div>")[0]
+    for d in pack["departments"]:
+        assert f'title="{d["dept"]} — {d["responses"]}' in rail
+    import re
+    shown = [int(n) for n in re.findall(r'<span class="pc">(\d+)</span>', rail)]
+    assert shown == [d["responses"] for d in pack["departments"]]
+    assert shown == sorted(shown, reverse=True)
+
+    # The section explorer's own department list carries full names too.
+    assert "' title=\"' + esc(name) + '\"'" in page
+
+
+@pytest.mark.asyncio
+async def test_nps_is_explained_in_words_not_shown_as_an_acronym(admin_client):
+    """"NPS -7.5" meant nothing to a department head. The stat reads "Would
+    recommend", a note under the chips says exactly how it is worked out and
+    what range it runs over, and the acronym is gone from the page's own
+    labels."""
+    await _seed()
+    page = (await admin_client.get("/admin/survey/deeksharambh-meeting")).text
+
+    assert '<span class="st">Would recommend <b>' in page
+    assert '<p class="st-note"><b>Would recommend</b>' in page
+    assert "minus the share" in page and "−100" in page and "+100" in page
+    assert "NPS <b>" not in page
+    assert "Likelihood to recommend JAIN (NPS)" not in page
+    assert "would-recommend score" in page

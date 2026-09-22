@@ -482,6 +482,9 @@ def question_picks(report: dict) -> list[dict]:
     for title, items in SECTIONS:
         questions = []
         for key, label, kind, maximum in items:
+            # The form's own label ends "(NPS)"; this page explains the score
+            # in words wherever it shows it, so the acronym is dropped here.
+            label = label.replace(" (NPS)", "")
             stats = answered.get(key)
             if not stats:
                 questions.append({
@@ -592,29 +595,26 @@ def merge_ratings_section(sections: list[dict]) -> list[dict]:
     detail works through the specific sections first and closes on the two
     headline reads together.
 
-    Only the department view calls this. The section explorer (nine cards,
-    one pie each) reads `question_picks()` straight, unmerged — merging
-    there would drop a section the pie/carousel/department-pick machinery
-    all key off by title, which is a much larger change than was asked for.
-    Each section still carries `explorer_index`, the position (or, for the
-    merged one, both positions) it held in that unmerged nine — the section
-    explorer clones a department's own reading of a section straight out of
-    this drill-down's markup by that index, so the mapping has to survive
-    the fold.
+    Both the section explorer's cards and every department's drill-down go
+    through this, so the two stay the same eight sections in the same order
+    — the explorer clones a department's reading of a section out of the
+    drill-down by `explorer_index`, which is just that shared position.
+
+    The merged section's pie is Outcomes Summary's own lead, overall
+    learning experience: the one question that rates the whole week.
     """
-    indexed = list(enumerate(sections))
-    (i0, first), *middle, (i8, last) = indexed
+    first, *middle, last = sections
     questions = first["questions"] + last["questions"]
     merged = {
         "title": "Student Experience Ratings",
         "icon": "chart",
         "questions": questions,
-        "lead": None,
+        "lead": last["lead"],
         "answered": max((q["answered"] for q in questions), default=0),
-        "explorer_index": f"{i0} {i8}",
     }
-    out = [{**sec, "explorer_index": str(i)} for i, sec in middle]
-    out.append(merged)
+    out = [dict(sec) for sec in middle] + [merged]
+    for i, sec in enumerate(out):
+        sec["explorer_index"] = str(i)
     return out
 
 
@@ -763,12 +763,6 @@ async def meeting_pack(*, campus: str = "") -> dict:
 
     counted = {r["dept"]: r for r in conversion}
     departments = []
-    # One lead per section per department, in `question_picks()`'s own nine
-    # -section order — kept apart from `sections` below, because the section
-    # explorer's per-department pie indexes into this by the same position
-    # as its own nine cards, and the drill-down's sections are about to be
-    # folded down to eight.
-    dept_leads: list[list[dict | None]] = []
     for name in names:
         answers = by_dept.get(name, [])
         report = summarize_orientation([r["data"] for r in answers])
@@ -777,7 +771,6 @@ async def meeting_pack(*, campus: str = "") -> dict:
         sections = question_picks(report)
         strengths, gaps = department_highlights(sections)
         synopsis = department_synopsis(len(answers), report["headline"], strengths, gaps)
-        dept_leads.append([sec["lead"] for sec in sections])
         departments.append({
             "dept": name,
             "registered": count["registered"],
@@ -792,13 +785,18 @@ async def meeting_pack(*, campus: str = "") -> dict:
             "responses": len(answers),
             "headline": report["headline"],
             "reportable": len(answers) >= MIN_REPORTABLE,
-            # The drill-down's own eight sections: Orientation Sentiment and
-            # Outcomes Summary folded into one, moved to the end.
+            # Eight sections, the same eight the section explorer shows:
+            # Orientation Sentiment and Outcomes Summary folded into one.
             "sections": merge_ratings_section(sections),
             "strengths": strengths,
             "gaps": gaps,
             "synopsis": synopsis,
         })
+
+    # The department list reads most replies first — the departments with the
+    # most to say open the list. The ranked conversion table and the call-outs
+    # keep their own order (best conversion first) from `conversion` itself.
+    departments.sort(key=lambda d: (-d["responses"], -d["pct"], d["dept"].lower()))
 
     registered = len(students)
     took = sum(1 for r in students if r["orientation"])
@@ -819,17 +817,15 @@ async def meeting_pack(*, campus: str = "") -> dict:
         },
         "conversion": conversion,
         "callouts": callouts(conversion),
-        # The nine sections as the whole scope answered them: what the
+        # The eight sections as the whole scope answered them: what the
         # explorer opens on before anybody picks a department.
-        "overall_sections": question_picks(summarize_orientation(
-            [r["data"] for r in filled])),
+        "overall_sections": merge_ratings_section(question_picks(summarize_orientation(
+            [r["data"] for r in filled]))),
         # Just the pie's slices, per department per section, so the explorer
         # can redraw without the page carrying every option of every question
         # a second time. The question detail it shows is cloned out of the
-        # department reading that is already on the page. Built from the
-        # nine unmerged sections, matching `overall_sections`' own order —
-        # `departments[i]["sections"]` has since been folded to eight.
-        "dept_leads": dept_leads,
+        # department reading that is already on the page.
+        "dept_leads": [[sec["lead"] for sec in d["sections"]] for d in departments],
         "gaps": gap_rows(conversion),
         "campuses": campus_rows(students),
         "departments": departments,

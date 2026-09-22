@@ -204,7 +204,7 @@
   .kpi em { font-style: normal; font-size: 11px; color: var(--muted); display: block; margin-top: 7px }
 
   /* ── Section spotlight ─────────────────────────────────────────────
-     The depth carousel, carrying the survey's nine sections. The card in
+     The depth carousel, carrying the survey's eight sections. The card in
      front is the selected section; the pie and the department list below
      follow it. */
   .dc-shell { margin-top: 20px; background: var(--ink); border-radius: 18px; padding: 18px;
@@ -269,7 +269,7 @@
   .sec-t svg { width: 15px; height: 15px; flex: none; color: var(--grape) }
   .sec-card.on .sec-t { color: #fff }
   .sec-card.on .sec-t svg { color: var(--accent) }
-  /* A tooltip, not a caption: off by default, so nine cards read as nine
+  /* A tooltip, not a caption: off by default, so eight cards read as eight
      clean headings — the count is still one hover or focus away, and the
      `title` attribute on the button covers a reader who cannot hover. */
   .sec-m {
@@ -401,6 +401,8 @@
   .st { background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.16);
         border-radius: 999px; padding: 5px 13px; font-size: 11.5px; font-weight: 600; color: #d8cdb0 }
   .st b { color: #fff; font-variant-numeric: tabular-nums }
+  .st-note { margin-top: 12px; font-size: 11.5px; line-height: 1.5; color: #c9bfa8; max-width: 80ch }
+  .st-note b { color: #fff }
   .dept-body { padding: 6px 24px 24px }
   .small-cell { margin: 18px 0 0; border-left: 3px solid var(--muted); background: var(--soft);
                 padding: 11px 15px; border-radius: 0 10px 10px 0; font-size: 12.5px }
@@ -566,7 +568,7 @@
 <body>
 {% set t = pack.totals %}
 {% set c = pack.callouts %}
-{# Every icon this page draws, in one place: the nine section glyphs and the
+{# Every icon this page draws, in one place: the section glyphs and the
    five pieces of button chrome that used to be an emoji. Line-stroke SVGs,
    matching the icon style already used on the survey admin dashboard, so a
    leadership audience reads a consistent, professional mark rather than a
@@ -705,10 +707,10 @@
   <section id="sections">
     <div class="head">
       <div>
-        <h2><span class="n">02</span>The nine sections of the survey</h2>
+        <h2><span class="n">02</span>The {{ pack.overall_sections | length }} sections of the survey</h2>
         <p class="lede">Open a section to see how the whole cohort answered its headline question,
           then pick a department to see the same question its own students answered — and every
-          question that section asked, with the {{ pack.picks }} answers those students chose most.</p>
+          question that section asked, with every answer those students gave.</p>
       </div>
     </div>
 
@@ -725,7 +727,7 @@
       </div>
     </div>
 
-    <!-- The same nine sections as plain buttons: the carousel is a view of
+    <!-- The same eight sections as plain buttons: the carousel is a view of
          these, and a reader who cannot work a 3D carousel still gets the
          list. Print keeps these and drops the carousel. -->
     <div class="sec-cards" id="secCards" role="tablist" aria-label="Survey sections">
@@ -737,7 +739,7 @@
         <span class="sec-n">{{ loop.index }}</span>
         <span class="sec-t">{{ ICON[sec.icon] | safe }}{{ sec.title }}</span>
         <!-- Off by default; hovering or focusing the card reveals it, so the
-             grid reads as nine clean headings rather than nine cards each
+             grid reads as eight clean headings rather than eight cards each
              carrying a line of fine print. The title attribute above is the
              fallback for a reader who cannot hover — a touch screen, or
              assistive tech that skips a custom tooltip. -->
@@ -789,10 +791,10 @@
     <div class="head">
       <div>
         <h2><span class="n">03</span>Department by department, question by question</h2>
-        <p class="lede">Pick a department on the left — it opens in its own tab, starting with its strengths
-          and gaps, then every question the form asked with every answer its own students gave, not just the
-          top few. Percentages are of the students in that department who answered that question. The PDF
-          lays out every department in full; printing keeps the top-two summary it always has.</p>
+        <p class="lede">Pick a department on the left — listed most replies first — and its reading opens here:
+          a short summary, its strengths and gaps, then each section of the survey; open a section to see
+          every question with every answer its own students gave. Percentages are of the students in that
+          department who answered that question. Printing lays out every department in full.</p>
       </div>
     </div>
 
@@ -804,10 +806,11 @@
           {% for d in pack.departments %}
           <button type="button" class="chip" role="tab" data-target="dept-{{ loop.index }}"
                   data-name="{{ d.dept | lower }}" aria-current="{{ 'true' if loop.first else 'false' }}"
+                  title="{{ d.dept }} — {{ d.responses }} {{ 'reply' if d.responses == 1 else 'replies' }} · {{ d.pct }}% of {{ d.registered }} registered"
                   onclick="showDept('dept-{{ loop.index }}', this)">
             <span class="dot" style="background:{% if d.pct >= 75 %}var(--d-primary){% elif d.pct >= 40 %}#ff8008{% else %}var(--d-alert){% endif %}"></span>
             <span class="nm">{{ d.dept }}</span>
-            <span class="pc">{{ d.pct }}%</span>
+            <span class="pc">{{ d.responses }}</span>
           </button>
           {% endfor %}
         </div>
@@ -829,9 +832,14 @@
               <span class="st">Conversion <b>{{ d.pct }}%</b></span>
               <span class="st">Replies analysed <b>{{ d.responses }}</b></span>
               {% if d.headline.vibe is not none %}<span class="st">Vibe <b>{{ d.headline.vibe }}/10</b></span>{% endif %}
-              {% if d.headline.nps is not none %}<span class="st">NPS <b>{{ d.headline.nps }}</b></span>{% endif %}
+              {% if d.headline.nps is not none %}<span class="st">Would recommend <b>{{ '%+g' % d.headline.nps }}</b></span>{% endif %}
               {% if d.headline.belonging is not none %}<span class="st">Belonging <b>{{ d.headline.belonging }}/10</b></span>{% endif %}
             </div>
+            {% if d.headline.nps is not none %}
+            <p class="st-note"><b>Would recommend</b> — students were asked how likely they are to
+              recommend JAIN, from 0 to 10. This is the share who answered 9 or 10, minus the share
+              who answered 0 to 6. It runs from −100 (none would recommend) to +100 (all would).</p>
+            {% endif %}
           </header>
           <div class="dept-body">
             {% if not d.responses %}
@@ -900,7 +908,7 @@
                     <span class="q-label">{{ q.label }}</span>
                     {% if q.answered %}
                       <span class="tag {{ 'tag-good' if q.frame == 'positive' else ('tag-ask' if q.frame == 'asked' else 'tag-top') }}">{{ q.frame_label }}</span>
-                      <span class="q-meta">{{ q.answered }} answered{% if q.avg is defined and q.avg is not none %} · avg {{ q.avg }}{% if q.max %}/{{ q.max }}{% endif %}{% endif %}{% if q.nps is defined and q.nps is not none %} · NPS {{ q.nps }}{% endif %}</span>
+                      <span class="q-meta">{{ q.answered }} answered{% if q.avg is defined and q.avg is not none %} · avg {{ q.avg }}{% if q.max %}/{{ q.max }}{% endif %}{% endif %}{% if q.nps is defined and q.nps is not none %} · would-recommend score {{ '%+g' % q.nps }} (−100 to +100){% endif %}</span>
                     {% else %}
                       <span class="q-meta">Not answered by anyone in this department</span>
                     {% endif %}
@@ -1097,7 +1105,7 @@ var SEC = {
 var secIndex = 0, secDept = -1, secChart = null;
 
 /* ── Section spotlight ─────────────────────────────────────────────────
-   The depth carousel, carrying the nine sections. Cards stack back along
+   The depth carousel, carrying the eight sections. Cards stack back along
    the z-axis with the selected one in front; bringing a card to the front
    is what selects its section, so the carousel and the button list below
    are two controls for one piece of state. */
@@ -1275,6 +1283,7 @@ function renderSecDepts() {
     return '<button type="button" class="sec-dept" role="option" data-i="' + i + '"' +
       ' data-name="' + esc(name.toLowerCase()) + '"' +
       ' aria-selected="' + (i === secDept ? 'true' : 'false') + '"' +
+      ' title="' + esc(name) + '"' +
       ' onclick="pickSecDept(' + i + ')">' +
       '<span class="nm">' + esc(name) + '</span>' +
       '<span class="ct">' + SEC.counts[i] + '</span></button>';
@@ -1328,11 +1337,8 @@ function showSecDetail() {
 
   // The department's reading of this section, cloned out of the full
   // department panel below rather than re-rendered from a second copy.
-  // Matched by data-sec, not position: the drill-down's own sections fold
-  // the first and last of these nine into one "Student Experience Ratings"
-  // section carrying both their indexes, so nth-of-type no longer lines up.
   var source = document.querySelector('#dept-' + (secDept + 1) +
-                                      ' .qsec[data-sec~="' + secIndex + '"]');
+                                      ' .qsec[data-sec="' + secIndex + '"]');
   host.innerHTML = '';
   if (source) {
     var clone = source.cloneNode(true);
