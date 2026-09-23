@@ -1433,3 +1433,21 @@ async def test_the_department_header_is_blue_and_both_highlight_headings_green(a
     assert ".dept-head { background: var(--dept-blue);" in page
     assert '.chip[aria-current="true"] { background: var(--dept-blue);' in page
     assert ".hl-good h4, .hl-gap h4 { color: #0ca30c }" in page
+
+
+@pytest.mark.asyncio
+async def test_the_ranked_table_runs_most_took_first(admin_client):
+    """The reference table used to run best conversion first, so a department
+    with 3 of 3 sat above one with 624 of 1181. It now runs by how many took
+    Deeksharambh, highest first."""
+    await _seed()
+    page = (await admin_client.get("/admin/survey/deeksharambh-meeting")).text
+
+    table = page.split('id="all-departments"')[1].split("</tbody>")[0]
+    import re
+    rows = re.findall(r'<td class="dept-name">([^<]+)</td>.*?<td class="n num">(\d+)</td>\s*'
+                      r'<td class="n num">(\d+)</td>', table, re.S)
+    took = [int(t) for _, _, t in rows]
+    assert took == sorted(took, reverse=True)
+    assert [name for name, _, _ in rows][0] == "Department of Law"   # 3 took
+    assert "sorted by how many took Deeksharambh, highest first" in page

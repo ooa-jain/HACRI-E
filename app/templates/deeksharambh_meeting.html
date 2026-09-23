@@ -986,7 +986,7 @@
     <div class="head">
       <div>
         <h2><span class="n">04</span>Every department, ranked</h2>
-        <p class="lede">The full list, for reference — sorted by conversion, high to low.</p>
+        <p class="lede">The full list, for reference — sorted by how many took Deeksharambh, highest first.</p>
       </div>
     </div>
     <div class="card">
@@ -996,7 +996,7 @@
           <th class="n">Registered</th><th class="n">Took</th><th class="n">To reach</th>
         </tr></thead>
         <tbody>
-        {% for row in pack.conversion %}
+        {% for row in pack.conversion | sort(attribute="took", reverse=true) %}
           <tr>
             <td class="n num" style="color:var(--muted)">{{ loop.index }}</td>
             <td class="dept-name">{{ row.dept }}</td>
