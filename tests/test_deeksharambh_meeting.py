@@ -1451,3 +1451,96 @@ async def test_the_ranked_table_runs_most_took_first(admin_client):
     assert took == sorted(took, reverse=True)
     assert [name for name, _, _ in rows][0] == "Department of Law"   # 3 took
     assert "sorted by how many took Deeksharambh, highest first" in page
+
+
+# ── One department's own page ────────────────────────────────────────────────
+
+@pytest.mark.asyncio
+async def test_a_department_has_its_own_page_in_the_same_style(admin_client):
+    """The same meeting pack, one department alone: the same hero and the same
+    department reading, with none of the cross-department count, explorer,
+    department list or ranked table."""
+    await _seed()
+    r = await admin_client.get("/admin/survey/deeksharambh-meeting/department",
+                               params={"dept": "Department of Law"})
+    assert r.status_code == 200
+    page = r.text
+    assert "<title>Deeksharambh 2026 — Department of Law —" in page
+    assert '<div class="se-sub">Department of Law</div>' in page
+    assert '<article class="dept on" id="dept-focus">' in page
+    assert page.count('<article class="dept') == 1
+    assert "Department report" in page
+    # The reading itself is all there.
+    assert '<p class="dept-synopsis">' in page and 'class="hl-col hl-good"' in page
+    assert page.count('<div class="qsec" data-sec=') == 8
+    # Nothing that compares departments.
+    for gone in ('id="count"', 'id="sections"', 'id="all-departments"', 'id="deptList"',
+                 "Department of Commerce", "Download PDF"):
+        assert gone not in page
+    # It comes with its own share link.
+    assert "/shared/deeksharambh-meeting/department?" in page
+
+
+@pytest.mark.asyncio
+async def test_a_department_page_is_admin_only_and_names_a_real_department(client, admin_client):
+    await _seed()
+    assert (await client.get("/admin/survey/deeksharambh-meeting/department",
+                             params={"dept": "Department of Law"})).status_code == 403
+    assert (await admin_client.get("/admin/survey/deeksharambh-meeting/department",
+                                   params={"dept": "Department of Nothing"})).status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_a_department_share_link_opens_that_department_and_nothing_else(client):
+    """Its token is bound to the department and the campus: it cannot be edited
+    into another department, and it is not the whole pack's token."""
+    await _seed()
+    from app.routes.shared_analysis import get_dept_meeting_token, get_meeting_token
+    url = "/shared/deeksharambh-meeting/department"
+    law = get_dept_meeting_token("Department of Law")
+
+    r = await client.get(url, params={"dept": "Department of Law", "token": law})
+    assert r.status_code == 200 and '<div class="se-sub">Department of Law</div>' in r.text
+
+    # The same token, another department.
+    assert (await client.get(url, params={"dept": "Department of Commerce",
+                                          "token": law})).status_code == 403
+    # The whole pack's token does not open a department page…
+    assert (await client.get(url, params={"dept": "Department of Law",
+                                          "token": get_meeting_token()})).status_code == 403
+    # …and a department's token does not open the whole pack.
+    assert (await client.get("/shared/deeksharambh-meeting",
+                             params={"token": law})).status_code == 403
+    # Nor another campus's view of the same department.
+    assert (await client.get(url, params={"dept": "Department of Law", "campus": "Kochi",
+                                          "token": law})).status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_the_dashboard_lists_every_department_page(client, admin_client):
+    await _seed()
+    assert (await client.get(
+        "/admin/survey/deeksharambh-meeting/department-links")).status_code == 403
+
+    rows = (await admin_client.get(
+        "/admin/survey/deeksharambh-meeting/department-links")).json()["departments"]
+    assert [r["dept"] for r in rows] == [
+        "Department of Law", "Department of Commerce",
+        "Department of Design", "Department of Science"]
+    law = rows[0]
+    assert (law["registered"], law["took"]) == (4, 3)
+
+    # Both links on every row actually open that department.
+    opened = await admin_client.get(law["open_url"])
+    assert opened.status_code == 200 and '<div class="se-sub">Department of Law</div>' in opened.text
+    from urllib.parse import urlsplit
+    share = urlsplit(law["share_url"])
+    shared = await client.get(f"{share.path}?{share.query}")
+    assert shared.status_code == 200 and '<div class="se-sub">Department of Law</div>' in shared.text
+
+    # The orientation dashboard carries the list under the meeting pack.
+    from pathlib import Path
+    tpl = Path("app/templates/admin_survey.html").read_text()
+    assert "Department meeting pages" in tpl
+    assert "/admin/survey/deeksharambh-meeting/department-links?campus=" in tpl
+    assert tpl.index("Department meeting pack") < tpl.index("Department meeting pages")

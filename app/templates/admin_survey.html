@@ -569,6 +569,30 @@
 
           <div id="cohort-host" class="coh-report"></div>
 
+          <div class="card">
+            <div class="panel-head">
+              <div>
+                <div class="h-card">🏛️ Department AI survey pages</div>
+                <div class="sub">Every department's own analysis: baseline filled (before) and post filled
+                  (after), how the AI scores rose section by section, who wants to join each PRaiSE pillar,
+                  and students from entrepreneur families. <b>Open</b> a department's page, download its
+                  <b>Excel</b>, or <b>Copy share link</b> for a link that opens that department only.</div>
+              </div>
+              <div class="panel-actions">
+                <div class="search-wrap" style="min-width:200px">
+                  <svg class="search-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                       stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg>
+                  <input id="outcome-dept-search" class="field" placeholder="Filter departments…"
+                         oninput="renderOutcomeDepts()">
+                </div>
+                <a id="outcome-all-xlsx" href="/admin/survey/outcome/departments.xlsx" class="btn btn-dark">⬇️ Excel — all departments</a>
+              </div>
+            </div>
+            <div class="overflow-x-auto pt-4" style="max-height:460px;overflow-y:auto">
+              <table id="outcome-dept-table"></table>
+            </div>
+          </div>
+
           <div class="card space-y-3">
             <div>
               <div class="h-card">Share this report</div>
@@ -638,6 +662,28 @@
                   <a id="ori-meeting" href="/admin/survey/deeksharambh-meeting" target="_blank" class="btn btn-dark">🔗 Open</a>
                   <a id="ori-meeting-pdf" href="/admin/survey/deeksharambh-meeting.pdf" class="btn btn-soft">⬇️ PDF</a>
                 </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="panel-head">
+                <div>
+                  <div class="h-card">🏛️ Department meeting pages</div>
+                  <div class="sub">The same meeting pack, one department at a time — its own summary,
+                    strengths and gaps, then every section and every answer. <b>Open</b> it here, or
+                    <b>Copy share link</b> for a link that opens that department and nothing else.</div>
+                </div>
+                <div class="panel-actions">
+                  <div class="search-wrap" style="min-width:220px">
+                    <svg class="search-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                         stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg>
+                    <input id="ori-dept-pages-search" class="field" placeholder="Filter departments…"
+                           oninput="renderOriDeptPages()">
+                  </div>
+                </div>
+              </div>
+              <div class="overflow-x-auto pt-4" style="max-height:420px;overflow-y:auto">
+                <table id="ori-dept-pages-table"></table>
               </div>
             </div>
 
@@ -3059,6 +3105,7 @@ async function loadCohort() {
   $('ov-ppt').href = '/admin/survey/cohort-ppt?' + cohortParams();
   if (!cohortShareLinks) loadCohortShareLinks();
   loadVibeLinks();
+  loadOutcomeDepts();
 
   let d;
   try { d = await api('/admin/api/cohort?' + cohortParams()); }
@@ -3076,6 +3123,58 @@ async function loadCohort() {
 
   // Clicking a campus tile is the same as pressing its tab.
   CohortReport.render(host, d, { activeCampus: cohortCampus, onCampus: pickCohortCampus });
+}
+
+// Every department's own AI survey page — fetched once per campus.
+let outcomeDepts = null, outcomeDeptsCampus = null;
+
+async function loadOutcomeDepts() {
+  if (!$('outcome-dept-table')) return;
+  $('outcome-all-xlsx').href = '/admin/survey/outcome/departments.xlsx?campus=' +
+                               encodeURIComponent(cohortCampus);
+  if (outcomeDepts && outcomeDeptsCampus === cohortCampus) return renderOutcomeDepts();
+  tableBusy('outcome-dept-table', 'Loading departments…');
+  const campus = cohortCampus;
+  try {
+    const r = await fetch('/admin/survey/outcome/department-links?campus=' + encodeURIComponent(campus));
+    if (!r.ok) throw new Error(r.status);
+    const data = await r.json();
+    if (campus !== cohortCampus) return;        // the campus changed while loading
+    outcomeDepts = data.departments;
+    outcomeDeptsCampus = campus;
+    renderOutcomeDepts();
+  } catch (err) {
+    table('outcome-dept-table', ['Department'], [], null, 'Could not load the department pages');
+  }
+}
+
+function renderOutcomeDepts() {
+  if (!outcomeDepts) return;
+  const q = ($('outcome-dept-search').value || '').toLowerCase();
+  const rows = outcomeDepts.filter(r => r.dept.toLowerCase().includes(q));
+  const score = v => v === null || v === undefined ? '—' : v;
+  const change = c => c === null || c === undefined ? '<span class="text-slate-400">—</span>'
+    : `<span class="font-bold ${c > 0 ? 'text-emerald-700' : c < 0 ? 'text-rose-700' : 'text-slate-500'}">${c > 0 ? '+' : ''}${c.toFixed(2)}</span>`;
+  table('outcome-dept-table',
+    ['#', 'Department', 'Registered', 'Before (baseline)', 'After (post)', 'Score before → after',
+     'Change', 'PRaiSE', 'Entrepreneur families', ''],
+    rows, (row, i) => [
+      i + 1,
+      `<span class="font-semibold text-slate-900">${e(row.dept)}</span>`,
+      row.registered,
+      `<span class="font-bold text-blue-700">${row.baseline}</span>`,
+      `<span class="font-bold text-emerald-700">${row.post}</span>`,
+      `${score(row.before)} → ${score(row.after)}`,
+      change(row.change),
+      row.praise_joining,
+      row.entrepreneurs,
+      `<div class="flex items-center gap-1.5 justify-end">
+         <a href="${e(row.open_url)}" target="_blank" class="btn-xs btn-primary">🔗 Open</a>
+         <a href="${e(row.excel_url)}" class="btn-xs btn-soft">⬇️ Excel</a>
+         <button class="btn-xs btn-soft" data-url="${e(row.share_url)}"
+                 onclick="copy(this.dataset.url)">Copy share link</button>
+       </div>`,
+    ], 'No departments in this scope yet');
 }
 
 function pickCohortCampus(name) {
@@ -3304,6 +3403,46 @@ function openOriCampus(campus) {
   setOriView('analysis');
 }
 
+// One department's own page of the meeting pack: the admin link and a share
+// link that opens that department alone. Fetched once per campus.
+let oriDeptPages = null, oriDeptPagesCampus = null;
+
+async function loadOriDeptPages() {
+  if (!$('ori-dept-pages-table')) return;
+  if (oriDeptPages && oriDeptPagesCampus === oriCampus) return renderOriDeptPages();
+  tableBusy('ori-dept-pages-table', 'Loading departments…');
+  const campus = oriCampus;
+  try {
+    const r = await fetch('/admin/survey/deeksharambh-meeting/department-links?campus=' +
+                          encodeURIComponent(campus));
+    if (!r.ok) throw new Error(r.status);
+    const data = await r.json();
+    if (campus !== oriCampus) return;          // the campus changed while loading
+    oriDeptPages = data.departments;
+    oriDeptPagesCampus = campus;
+    renderOriDeptPages();
+  } catch (err) {
+    table('ori-dept-pages-table', ['Department'], [], null, 'Could not load the department pages');
+  }
+}
+
+function renderOriDeptPages() {
+  if (!oriDeptPages) return;
+  const q = ($('ori-dept-pages-search').value || '').toLowerCase();
+  const rows = oriDeptPages.filter(r => r.dept.toLowerCase().includes(q));
+  table('ori-dept-pages-table', ['#', 'Department', 'Registered', 'Took', ''], rows, (row, i) => [
+    i + 1,
+    `<span class="font-semibold text-slate-900">${e(row.dept)}</span>`,
+    row.registered,
+    `<span class="font-bold text-blue-700">${row.took}</span>`,
+    `<div class="flex items-center gap-1.5 justify-end">
+       <a href="${e(row.open_url)}" target="_blank" class="btn-xs btn-primary">🔗 Open</a>
+       <button class="btn-xs btn-soft" data-url="${e(row.share_url)}"
+               onclick="copy(this.dataset.url)">Copy share link</button>
+     </div>`,
+  ], 'No departments in this scope yet');
+}
+
 function setOriView(view) {
   oriView = view;
   document.querySelectorAll('#ori-views .tabbtn').forEach(b => b.classList.toggle('on', b.dataset.view === view));
@@ -3314,6 +3453,7 @@ function setOriView(view) {
   const meetingScope = 'campus=' + encodeURIComponent(oriCampus);
   if ($('ori-meeting')) $('ori-meeting').href = '/admin/survey/deeksharambh-meeting?' + meetingScope;
   if ($('ori-meeting-pdf')) $('ori-meeting-pdf').href = '/admin/survey/deeksharambh-meeting.pdf?' + meetingScope;
+  loadOriDeptPages();
   if (view === 'analysis')    loadOriCampusReport();
   if (view === 'departments') loadOriDepartments();
   if (view === 'filled')      loadOriStudents();

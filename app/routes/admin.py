@@ -1649,6 +1649,97 @@ async def admin_deeksharambh_meeting(request: Request, campus: str = Query(defau
     )
 
 
+@router.get("/admin/survey/deeksharambh-meeting/department", response_class=HTMLResponse)
+async def admin_deeksharambh_meeting_department(
+    request: Request, dept: str = Query(...), campus: str = Query(default=""),
+):
+    """One department's own page of the meeting pack."""
+    if not _is_survey_admin(request):
+        raise HTTPException(status_code=403)
+
+    from app.deeksharambh_meeting import meeting_page
+    from app.routes.shared_analysis import dept_meeting_share_url
+
+    return await meeting_page(
+        request, campus=campus, dept=dept,
+        share_url=dept_meeting_share_url(str(request.base_url).rstrip("/"), dept, campus),
+    )
+
+
+@router.get("/admin/survey/deeksharambh-meeting/department-links")
+async def admin_deeksharambh_meeting_department_links(
+    request: Request, campus: str = Query(default=""),
+):
+    """Every department's own page — admin link and shareable link — for the
+    list under the meeting pack on the orientation dashboard."""
+    if not _is_survey_admin(request):
+        raise HTTPException(status_code=403)
+
+    from app.deeksharambh_meeting import department_links
+
+    return {"departments": await department_links(
+        str(request.base_url).rstrip("/"), campus=campus)}
+
+
+@router.get("/admin/survey/outcome/department", response_class=HTMLResponse)
+async def admin_outcome_department(
+    request: Request, dept: str = Query(...), campus: str = Query(default=""),
+):
+    """One department's AI survey analysis: before, after, PRaiSE, entrepreneurs."""
+    if not _is_survey_admin(request):
+        raise HTTPException(status_code=403)
+
+    from urllib.parse import urlencode
+
+    from app.outcome_departments import department_outcome_for, outcome_page
+    from app.routes.shared_analysis import outcome_dept_share_url
+
+    o = await department_outcome_for(dept, campus=campus)
+    if o is None:
+        raise HTTPException(status_code=404, detail="No such department.")
+    query = {"dept": dept, **({"campus": campus} if campus else {})}
+    return outcome_page(
+        request, o, campus=campus, shared=False,
+        excel_url=f"/admin/survey/outcome/department.xlsx?{urlencode(query)}",
+        share_url=outcome_dept_share_url(str(request.base_url).rstrip("/"), dept, campus),
+    )
+
+
+@router.get("/admin/survey/outcome/department.xlsx")
+async def admin_outcome_department_xlsx(
+    request: Request, dept: str = Query(...), campus: str = Query(default=""),
+):
+    if not _is_survey_admin(request):
+        raise HTTPException(status_code=403)
+
+    from app.outcome_departments import workbook_response
+
+    return await workbook_response(campus=campus, dept=dept)
+
+
+@router.get("/admin/survey/outcome/departments.xlsx")
+async def admin_outcome_departments_xlsx(request: Request, campus: str = Query(default="")):
+    """Every department's AI survey analysis in one workbook."""
+    if not _is_survey_admin(request):
+        raise HTTPException(status_code=403)
+
+    from app.outcome_departments import workbook_response
+
+    return await workbook_response(campus=campus)
+
+
+@router.get("/admin/survey/outcome/department-links")
+async def admin_outcome_department_links(request: Request, campus: str = Query(default="")):
+    """The list under Outcome & impact: one row per department, with its links."""
+    if not _is_survey_admin(request):
+        raise HTTPException(status_code=403)
+
+    from app.outcome_departments import department_links
+
+    return {"departments": await department_links(
+        str(request.base_url).rstrip("/"), campus=campus)}
+
+
 @router.get("/admin/survey/deeksharambh-meeting.pdf")
 async def admin_deeksharambh_meeting_pdf(request: Request, campus: str = Query(default="")):
     """The meeting pack as a PDF."""

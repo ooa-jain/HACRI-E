@@ -867,20 +867,56 @@ def _filename(campus: str) -> str:
     return "".join(c if (c.isalnum() or c in "._-") else "_" for c in name)
 
 
-async def meeting_page(request, *, campus: str = "", pdf_url: str,
-                       share_url: str = ""):
-    """The meeting pack as one page — every department, nothing folded away."""
+async def meeting_page(request, *, campus: str = "", pdf_url: str = "",
+                       share_url: str = "", dept: str = ""):
+    """The meeting pack as one page — every department, nothing folded away.
+
+    With `dept`, the same page for that one department alone: its own header,
+    summary, strengths and gaps, and every section — none of the cross
+    -department count, explorer or ranked table.
+    """
     from datetime import datetime
 
+    from fastapi import HTTPException
+
     pack = await meeting_pack(campus=campus)
+    focus = None
+    if dept:
+        focus = next((d for d in pack["departments"] if d["dept"] == dept), None)
+        if focus is None:
+            raise HTTPException(status_code=404, detail="No such department.")
     return request.app.state.templates.TemplateResponse(
         request, "deeksharambh_meeting.html", {
             "pack": pack,
+            "focus": focus,
             "pdf_url": pdf_url,
             "share_url": share_url,
             "generated_at": datetime.now().strftime("%d %b %Y, %H:%M"),
         },
     )
+
+
+async def department_links(base_url: str, *, campus: str = "") -> list[dict]:
+    """Every department's own page: the admin link and the shareable one."""
+    from urllib.parse import urlencode
+
+    from app.routes.shared_analysis import dept_meeting_share_url
+
+    pack = await meeting_pack(campus=campus)
+    out = []
+    for d in pack["departments"]:
+        query = {"dept": d["dept"]}
+        if campus:
+            query["campus"] = campus
+        out.append({
+            "dept": d["dept"],
+            "took": d["took"],
+            "registered": d["registered"],
+            "responses": d["responses"],
+            "open_url": f"/admin/survey/deeksharambh-meeting/department?{urlencode(query)}",
+            "share_url": dept_meeting_share_url(base_url, d["dept"], campus),
+        })
+    return out
 
 
 async def meeting_pdf_response(*, campus: str = ""):

@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Survey — {{ o.dept }} — Outcome &amp; Impact — {{ campus }} — JAIN University</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  /* One department's AI survey (outcome & impact) page — the same house
+     style as the department meeting pages: JAIN blue header, cream cards on
+     the navy-to-gold wash. */
+  :root {
+    --ink: #17110a; --body: #4a3f31; --muted: #7d7060;
+    --line: #ece0cc; --soft: #fbf4e6; --paper: #fffdf8;
+    --blue: #1e4f9a; --data: #2a78d6; --data-2: #9fbfe6;
+    --good: #0ca30c; --bad: #d03b3b; --gold: #eebd1b;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0 }
+  body {
+    font-family: 'Instrument Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: linear-gradient(135deg, #b7c6e8 0%, #cfd9ec 22%, #efece0 52%, #f2e7c4 78%, #e6cf82 100%) fixed;
+    color: var(--body); font-size: 14px; line-height: 1.5; -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1160px; margin: 0 auto; padding: 24px 20px 70px }
+
+  .head { background: var(--blue); color: #fff; border-radius: 18px; padding: 22px 24px }
+  .head-top { display: flex; align-items: center; gap: 16px; flex-wrap: wrap }
+  .head-top img { height: 44px; width: auto }
+  .kick { font-size: 10.5px; font-weight: 800; letter-spacing: 1.7px; text-transform: uppercase; color: var(--gold) }
+  .head h1 { font-size: 26px; font-weight: 800; letter-spacing: -.5px; margin-top: 4px }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px }
+  .chip { background: rgba(255,255,255,.13); border: 1px solid rgba(255,255,255,.2); border-radius: 999px;
+          padding: 5px 13px; font-size: 12px; font-weight: 600; color: #dbe6f7 }
+  .chip b { color: #fff; font-variant-numeric: tabular-nums }
+  .tools { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px }
+  .btn { display: inline-flex; align-items: center; gap: 7px; border: none; cursor: pointer; font: inherit;
+         font-size: 13px; font-weight: 700; border-radius: 10px; padding: 9px 16px; text-decoration: none }
+  .btn-main { background: var(--gold); color: var(--ink) }
+  .btn-ghost { background: rgba(255,255,255,.12); color: #fff; box-shadow: inset 0 0 0 1px rgba(255,255,255,.26) }
+
+  .synopsis { margin-top: 18px; font-size: 14px; line-height: 1.6; color: var(--body);
+              background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px }
+
+  section { margin-top: 26px }
+  h2 { font-size: 19px; font-weight: 800; color: var(--ink); letter-spacing: -.3px }
+  h2 .n { color: var(--blue); margin-right: 8px }
+  .lede { color: var(--muted); font-size: 12.5px; margin-top: 4px; max-width: 90ch }
+  .card { background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 16px;
+          margin-top: 12px; box-shadow: 0 1px 2px rgba(23,17,10,.06) }
+
+  .scores { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 12px }
+  .score { background: var(--paper); border: 1px solid var(--line); border-top: 3px solid var(--blue);
+           border-radius: 12px; padding: 14px 16px }
+  .score .lb { font-size: 10.5px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: var(--muted) }
+  .score .ba { display: flex; align-items: baseline; gap: 10px; margin-top: 8px; color: var(--ink) }
+  .score .ba b { font-size: 26px; font-weight: 800; letter-spacing: -.6px }
+  .score .ba span { color: var(--muted); font-size: 18px }
+  .score .sub { font-size: 11.5px; color: var(--muted); margin-top: 6px }
+
+  .delta { display: inline-block; font-weight: 800; font-size: 12px; border-radius: 999px; padding: 2px 9px;
+           font-variant-numeric: tabular-nums }
+  .up { background: #e3f5e3; color: #0a7d0a } .down { background: #fbe4e4; color: #b52a2a }
+  .flat { background: #eef0f4; color: #5b6570 }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px }
+  th { text-align: left; font-size: 10.5px; font-weight: 800; letter-spacing: .8px; text-transform: uppercase;
+       color: var(--muted); padding: 8px 10px; border-bottom: 1px solid var(--line) }
+  td { padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: middle }
+  tr:last-child td { border-bottom: none }
+  td.n, th.n { text-align: right; font-variant-numeric: tabular-nums }
+  .t-scroll { overflow-x: auto }
+  .pair { display: flex; flex-direction: column; gap: 3px; min-width: 160px }
+  .bar { height: 7px; border-radius: 4px; background: #eef0f4; overflow: hidden }
+  .bar i { display: block; height: 100% }
+  .bar.b i { background: var(--data-2) } .bar.a i { background: var(--data) }
+  .key { display: flex; gap: 14px; font-size: 11.5px; color: var(--muted); margin-top: 10px }
+  .key i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px }
+
+  .pillars { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 12px }
+  .pillar { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px }
+  .pillar h3 { font-size: 13.5px; font-weight: 800; color: var(--blue) }
+  .pillar .big { font-size: 24px; font-weight: 800; color: var(--ink); margin-top: 4px }
+  .pillar .big span { font-size: 12px; font-weight: 600; color: var(--muted); margin-left: 4px }
+  .names { margin-top: 10px; font-size: 12.5px; color: var(--body); display: flex; flex-direction: column; gap: 3px;
+           max-height: 220px; overflow-y: auto }
+  .names .none { color: var(--muted); font-style: italic }
+  .muted { color: var(--muted) }
+  .mono { font-family: 'JetBrains Mono', monospace; font-size: 11.5px }
+
+  .share { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap }
+  .share input { flex: 1; min-width: 240px; border: 1px solid var(--line); border-radius: 9px; padding: 9px 12px;
+                 background: #fff; font-family: 'JetBrains Mono', monospace; font-size: 12px }
+  .foot { margin-top: 28px; font-size: 11.5px; color: var(--muted) }
+
+  @media (max-width: 900px) { .pillars { grid-template-columns: repeat(2, 1fr) } }
+  @media (max-width: 640px) {
+    .scores, .pillars { grid-template-columns: 1fr }
+    .head h1 { font-size: 21px }
+  }
+  @media print {
+    body { background: #fff }
+    .tools, .no-print { display: none !important }
+    .head { -webkit-print-color-adjust: exact; print-color-adjust: exact }
+    .names { max-height: none; overflow: visible }
+    section, .card { break-inside: avoid }
+  }
+</style>
+</head>
+<body>
+{% set j = o.journey %}
+{% set s = o.scores %}
+{% macro change(c) -%}
+  {%- if c is none %}<span class="delta flat">—</span>
+  {%- elif c > 0 %}<span class="delta up">{{ '%+.2f' % c }}</span>
+  {%- elif c < 0 %}<span class="delta down">{{ '%+.2f' % c }}</span>
+  {%- else %}<span class="delta flat">0.00</span>{% endif -%}
+{%- endmacro %}
+{% macro num(v) %}{{ v if v is not none else '—' }}{% endmacro %}
+
+<div class="wrap">
+  <header class="head">
+    <div class="head-top">
+      <img src="{{ asset('/static/img/jain-logo.png') }}" alt="JAIN University">
+      <div>
+        <div class="kick">AI Survey · Outcome &amp; Impact · {{ campus }}</div>
+        <h1>{{ o.dept }}</h1>
+      </div>
+    </div>
+    <div class="chips">
+      <span class="chip">Registered <b>{{ j.registered }}</b></span>
+      <span class="chip">Baseline filled (before) <b>{{ j.baseline }}</b> · {{ j.baseline_pct }}%</span>
+      <span class="chip">Post filled (after) <b>{{ j.post }}</b> · {{ j.post_pct }}%</span>
+      <span class="chip">Still owe the post survey <b>{{ j.pending_post }}</b></span>
+      <span class="chip">Want to join PRaiSE <b>{{ o.praise.joining }}</b></span>
+      <span class="chip">Entrepreneur families <b>{{ o.entrepreneurs.count }}</b></span>
+    </div>
+    <div class="tools">
+      <a class="btn btn-main" href="{{ excel_url }}">⬇ Download Excel</a>
+      <button class="btn btn-ghost" onclick="window.print()">Print</button>
+      {% if share_url %}<button class="btn btn-ghost" data-share="{{ share_url }}" onclick="copyLink(this)">Copy share link</button>{% endif %}
+    </div>
+  </header>
+
+  {% if o.synopsis %}<p class="synopsis">{{ o.synopsis }}</p>{% endif %}
+
+  <!-- ── 1. Before and after ──────────────────────────────────────────── -->
+  <section id="scores">
+    <h2><span class="n">01</span>Before and after the workshop</h2>
+    <p class="lede">Average AI scores out of 5 — the baseline survey (before) against the post survey
+      (after). Literacy is knowing how AI works and where it fails; readiness is being willing and able
+      to work with it.</p>
+    <div class="scores">
+      {% for key, label in [('literacy', 'AI literacy'), ('readiness', 'AI readiness'), ('overall', 'Overall AI score')] %}
+      <div class="score">
+        <div class="lb">{{ label }}</div>
+        <div class="ba"><b>{{ num(s[key].before) }}</b><span>→</span><b>{{ num(s[key].after) }}</b>{{ change(s[key].change) }}</div>
+        <div class="sub">{{ s.before_n }} scored before · {{ s.after_n }} scored after</div>
+      </div>
+      {% endfor %}
+    </div>
+    {% set m = o.movement %}
+    <div class="card">
+      {% if m.matched %}
+      <b>{{ m.matched }}</b> students filled both surveys. <b style="color:var(--good)">{{ m.gained }}</b> improved
+      ({{ m.gained_pct }}%), <b>{{ m.unchanged }}</b> held steady and <b style="color:var(--bad)">{{ m.declined }}</b>
+      slipped. {{ m.moved_quadrant }} moved to a different quadrant.
+      {% else %}<span class="muted">Nobody in this department has filled both surveys yet, so there is no
+      student-by-student change to read.</span>{% endif %}
+    </div>
+  </section>
+
+  <!-- ── 2. Section by section ────────────────────────────────────────── -->
+  <section id="sections">
+    <h2><span class="n">02</span>Section by section — how each area moved</h2>
+    <p class="lede">Each section's average out of 5, before and after. Reversed questions are flipped so a
+      higher number is always better. Section G is AI for entrepreneurship.</p>
+    <div class="card t-scroll">
+      <table>
+        <thead><tr><th>Section</th><th>Before → after</th><th class="n">Before</th><th class="n">After</th><th class="n">Change</th></tr></thead>
+        <tbody>
+        {% for sec in o.sections %}
+          <tr>
+            <td><b>{{ sec.key }}</b> · {{ sec.title }}</td>
+            <td><div class="pair">
+              <div class="bar b"><i style="width:{{ ((sec.before or 0) / 5 * 100) | round(1) }}%"></i></div>
+              <div class="bar a"><i style="width:{{ ((sec.after or 0) / 5 * 100) | round(1) }}%"></i></div>
+            </div></td>
+            <td class="n">{{ num(sec.before) }}</td>
+            <td class="n">{{ num(sec.after) }}</td>
+            <td class="n">{{ change(sec.change) }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      <div class="key"><span><i style="background:var(--data-2)"></i>Before</span><span><i style="background:var(--data)"></i>After</span></div>
+    </div>
+  </section>
+
+  <!-- ── 3. Where students sit ────────────────────────────────────────── -->
+  <section id="quadrants">
+    <h2><span class="n">03</span>Where students sit, before and after</h2>
+    <p class="lede">Quadrant is literacy against readiness (3 out of 5 is the dividing line on each). Band
+      is the overall AI profile.</p>
+    <div class="card t-scroll">
+      <table>
+        <thead><tr><th>Group</th><th class="n">Before</th><th class="n">%</th><th class="n">After</th><th class="n">%</th></tr></thead>
+        <tbody>
+        {% for x in o.quadrants + o.bands %}
+          <tr><td>{{ x.label }}</td><td class="n">{{ x.before }}</td><td class="n">{{ x.before_pct }}%</td>
+              <td class="n">{{ x.after }}</td><td class="n">{{ x.after_pct }}%</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ── 4. PRaiSE ────────────────────────────────────────────────────── -->
+  {% set p = o.praise %}
+  <section id="praise">
+    <h2><span class="n">04</span>Who wants to contribute to PRaiSE</h2>
+    <p class="lede">From the post survey: the one PRaiSE pillar each student chose to contribute to.
+      {{ p.joining }} of {{ p.answered }} who answered chose a pillar ({{ p.joining_pct }}%); {{ p.none }}
+      chose None.</p>
+    <div class="pillars">
+      {% for x in p.pillars %}
+      <div class="pillar">
+        <h3>{{ x.pillar }}</h3>
+        <div class="big">{{ x.count }}<span>{{ x.pct }}%</span></div>
+        <div class="names">
+          {% for st in x.students %}<div>{{ st.name or '(no name)' }}{% if st.email %} <span class="muted mono">{{ st.email }}</span>{% endif %}</div>
+          {% else %}<div class="none">Nobody yet</div>{% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <!-- ── 5. Entrepreneur families ─────────────────────────────────────── -->
+  {% set e = o.entrepreneurs %}
+  <section id="entrepreneurs">
+    <h2><span class="n">05</span>Students from an entrepreneur family</h2>
+    <p class="lede">From the post survey: {{ e.count }} of {{ e.of_post }} ({{ e.pct }}%) have a parent whose
+      occupation is Entrepreneur.</p>
+    <div class="card t-scroll">
+      <table>
+        <thead><tr><th>Student</th>{% if not shared %}<th>Email</th>{% endif %}<th>Parent</th><th>Business</th><th>Type</th></tr></thead>
+        <tbody>
+        {% for st in e.students %}{% for par in st.parents %}
+          <tr><td>{{ st.name }}</td>{% if not shared %}<td class="mono">{{ st.email }}</td>{% endif %}
+              <td>{{ par.parent }}{% if par.name %} · {{ par.name }}{% endif %}</td>
+              <td>{{ par.business or '—' }}</td><td>{{ par.type or '—' }}</td></tr>
+        {% endfor %}{% else %}
+          <tr><td colspan="5" class="muted">No entrepreneur families recorded yet.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ── 6. Every student ─────────────────────────────────────────────── -->
+  <section id="students">
+    <h2><span class="n">06</span>Every student</h2>
+    <p class="lede">Overall AI score out of 5, before and after. A dash means that survey was not filled.</p>
+    <div class="card t-scroll">
+      <table>
+        <thead><tr><th>Student</th>{% if not shared %}<th>Email</th>{% endif %}<th>Baseline</th><th>Post</th>
+          <th class="n">Before</th><th class="n">After</th><th class="n">Change</th><th>PRaiSE pillar</th><th>Entrepreneur family</th></tr></thead>
+        <tbody>
+        {% for st in o.students %}
+          <tr><td>{{ st.name or '(no name)' }}</td>{% if not shared %}<td class="mono">{{ st.email }}</td>{% endif %}
+              <td>{{ 'Filled' if st.baseline_done else '—' }}</td><td>{{ 'Filled' if st.post_done else '—' }}</td>
+              <td class="n">{{ num(st.before.overall) }}</td><td class="n">{{ num(st.after.overall) }}</td>
+              <td class="n">{{ change(st.change) }}</td>
+              <td>{{ st.praise or '—' }}</td><td>{{ 'Yes' if st.entrepreneur_family else '—' }}</td></tr>
+        {% else %}
+          <tr><td colspan="9" class="muted">No students registered in this department yet.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  {% if share_url %}
+  <section class="no-print">
+    <div class="card">
+      <b>Share this department's page</b>
+      <div class="muted" style="font-size:12.5px">Opens {{ o.dept }}'s analysis with no admin login — and nothing
+        else. Students are named; their email addresses are left out of the shared page and its Excel.</div>
+      <div class="share">
+        <input readonly value="{{ share_url }}" onclick="this.select()" aria-label="Shareable link">
+        <button class="btn btn-main" data-share="{{ share_url }}" onclick="copyLink(this)">Copy</button>
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
+  <p class="foot">AI survey · {{ o.dept }} · {{ campus }} · generated {{ generated_at }}. Scores read from the
+    baseline and post survey answers directly; no figure on this page is estimated.</p>
+</div>
+
+<script>
+function copyLink(btn) {
+  var url = btn.getAttribute('data-share') || location.href;
+  var label = btn.textContent;
+  function done() { btn.textContent = 'Copied'; setTimeout(function () { btn.textContent = label; }, 1600); }
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(url).then(done, function () { fallback(); });
+  } else { fallback(); }
+  function fallback() {
+    var ta = document.createElement('textarea');
+    ta.value = url; ta.setAttribute('readonly', ''); ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); done(); } catch (e) { window.prompt('Copy this link:', url); }
+    document.body.removeChild(ta);
+  }
+}
+</script>
+</body>
+</html>

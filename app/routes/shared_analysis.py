@@ -204,6 +204,58 @@ def meeting_share_url(base_url: str, campus: str = "",
     return f"{base_url.rstrip('/')}{path}?{query}"
 
 
+# One department's own page of the meeting pack. Its own scope again, bound to
+# the department name as well as the campus, so a link handed to one
+# department opens that department and nothing else — not another department
+# by editing the name in the URL, and not the whole pack.
+DEPT_MEETING_KEY = "__meeting_dept__"
+
+
+def get_dept_meeting_token(dept: str, campus: str = "") -> str:
+    return get_dept_token(f"{DEPT_MEETING_KEY}:{campus or 'all'}:{dept}", "meeting")
+
+
+def require_dept_meeting_token(dept: str, campus: str, token: str) -> None:
+    if not dept or not hmac.compare_digest(get_dept_meeting_token(dept, campus), token or ""):
+        raise HTTPException(
+            status_code=403, detail="Access denied: Invalid or expired sharing link.")
+
+
+def dept_meeting_share_url(base_url: str, dept: str, campus: str = "") -> str:
+    from urllib.parse import urlencode
+
+    query = {"dept": dept, "token": get_dept_meeting_token(dept, campus)}
+    if campus:
+        query["campus"] = campus
+    return f"{base_url.rstrip('/')}/shared/deeksharambh-meeting/department?{urlencode(query)}"
+
+
+# One department's AI survey (outcome & impact) page. Its own scope, bound to
+# the department and campus like the meeting pages above — and it lists
+# students by name, so a link opens its one department and nothing else.
+OUTCOME_DEPT_KEY = "__outcome_dept__"
+
+
+def get_outcome_dept_token(dept: str, campus: str = "") -> str:
+    return get_dept_token(f"{OUTCOME_DEPT_KEY}:{campus or 'all'}:{dept}", "outcome")
+
+
+def require_outcome_dept_token(dept: str, campus: str, token: str) -> None:
+    if not dept or not hmac.compare_digest(get_outcome_dept_token(dept, campus), token or ""):
+        raise HTTPException(
+            status_code=403, detail="Access denied: Invalid or expired sharing link.")
+
+
+def outcome_dept_share_url(base_url: str, dept: str, campus: str = "",
+                           path: str = "/shared/outcome/department") -> str:
+    from urllib.parse import urlencode
+
+    query = {"dept": dept, "token": get_outcome_dept_token(dept, campus)}
+    if campus:
+        query["campus"] = campus
+    return f"{base_url.rstrip('/')}{path}?{urlencode(query)}"
+
+
 def directory_url(base_url: str) -> str:
     return f"{base_url.rstrip('/')}/shared/departments?token={get_directory_token()}"
 
@@ -741,6 +793,63 @@ async def shared_deeksharambh_meeting_pdf(
     from app.deeksharambh_meeting import meeting_pdf_response
 
     return await meeting_pdf_response(campus=campus)
+
+
+@router.get("/shared/deeksharambh-meeting/department", response_class=HTMLResponse)
+async def shared_deeksharambh_meeting_department(
+    request: Request,
+    token: str = Query(...),
+    dept: str = Query(...),
+    campus: str = Query(default=""),
+):
+    """One department's own page of the meeting pack, for whoever holds its link."""
+    require_dept_meeting_token(dept, campus, token)
+
+    from app.deeksharambh_meeting import meeting_page
+
+    base = str(request.base_url).rstrip("/")
+    return await meeting_page(
+        request, campus=campus, dept=dept,
+        share_url=dept_meeting_share_url(base, dept, campus),
+    )
+
+
+@router.get("/shared/outcome/department", response_class=HTMLResponse)
+async def shared_outcome_department(
+    request: Request,
+    token: str = Query(...),
+    dept: str = Query(...),
+    campus: str = Query(default=""),
+):
+    """One department's AI survey analysis, for whoever holds its link.
+    Students are named; their emails are not."""
+    require_outcome_dept_token(dept, campus, token)
+
+    from app.outcome_departments import department_outcome_for, outcome_page
+
+    o = await department_outcome_for(dept, campus=campus)
+    if o is None:
+        raise HTTPException(status_code=404, detail="No such department.")
+    base = str(request.base_url).rstrip("/")
+    return outcome_page(
+        request, o, campus=campus, shared=True,
+        excel_url=outcome_dept_share_url(base, dept, campus, "/shared/outcome/department.xlsx"),
+        share_url=outcome_dept_share_url(base, dept, campus),
+    )
+
+
+@router.get("/shared/outcome/department.xlsx")
+async def shared_outcome_department_xlsx(
+    token: str = Query(...),
+    dept: str = Query(...),
+    campus: str = Query(default=""),
+):
+    """The same department's workbook, without student emails."""
+    require_outcome_dept_token(dept, campus, token)
+
+    from app.outcome_departments import workbook_response
+
+    return await workbook_response(campus=campus, dept=dept, include_emails=False)
 
 
 @router.get("/shared/cohort", response_class=HTMLResponse)
