@@ -78,6 +78,12 @@
   .key { display: flex; gap: 14px; font-size: 11.5px; color: var(--muted); margin-top: 10px }
   .key i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px }
 
+  .quad { max-width: 680px; margin: 10px auto 0 }
+  .quad svg { display: block; width: 100%; height: auto }
+  .legend { display: flex; flex-wrap: wrap; gap: 16px; font-size: 12px; color: var(--body); margin-top: 6px }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: -1px }
+  .legend i.line { width: 14px; height: 3px; border-radius: 2px; vertical-align: 2px }
+
   .pillars { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 12px }
   .pillar { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px }
   .pillar h3 { font-size: 13.5px; font-weight: 800; color: var(--blue) }
@@ -202,7 +208,84 @@
   <section id="quadrants">
     <h2><span class="n">03</span>Where students sit, before and after</h2>
     <p class="lede">Quadrant is literacy against readiness (3 out of 5 is the dividing line on each). Band
-      is the overall AI profile.</p>
+      is the overall AI profile. The chart follows the students who filled both surveys; the table under it
+      counts everyone who filled each survey.</p>
+
+    {% set qc = o.quadrant_chart %}
+    {% set g = qc.geo %}
+    <div class="card">
+      <b>Literacy against readiness — the students who filled both surveys</b>
+      <div class="muted" style="font-size:12.5px;margin-top:2px">Each line runs from where a student sat at the
+        baseline to where they sat after the workshop; the large markers are the average of these same students.</div>
+      {% if qc.matched %}
+      <div class="legend">
+        <span><i style="background:#3b3020"></i>Baseline</span>
+        <span><i style="background:#15803d"></i>Post workshop</span>
+        <span><i class="line" style="background:#c2410c"></i>Moved backwards</span>
+      </div>
+      <div class="quad">
+        <svg viewBox="0 0 {{ g.w }} {{ g.h }}" role="img"
+             aria-label="AI literacy against AI readiness for {{ qc.matched }} students in {{ o.dept }}, baseline and post workshop">
+          <defs>
+            <marker id="oq-up" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="5" markerHeight="5" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#15803d"/></marker>
+            <marker id="oq-down" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="5" markerHeight="5" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#c2410c"/></marker>
+          </defs>
+          <rect x="{{ g.l }}" y="{{ g.t }}" width="{{ g.mid_x - g.l }}" height="{{ g.mid_y - g.t }}" fill="#fff9e6"/>
+          <rect x="{{ g.mid_x }}" y="{{ g.t }}" width="{{ g.right - g.mid_x }}" height="{{ g.mid_y - g.t }}" fill="#ebf5ec"/>
+          <rect x="{{ g.l }}" y="{{ g.mid_y }}" width="{{ g.mid_x - g.l }}" height="{{ g.bottom - g.mid_y }}" fill="#fbeee6"/>
+          <rect x="{{ g.mid_x }}" y="{{ g.mid_y }}" width="{{ g.right - g.mid_x }}" height="{{ g.bottom - g.mid_y }}" fill="#f4eee2"/>
+
+          <text x="{{ g.l + 10 }}" y="{{ g.t + 18 }}" fill="#7a5f22" font-size="11" font-weight="700">Q2  AI Enthusiast</text>
+          <text x="{{ g.l + 10 }}" y="{{ g.t + 31 }}" fill="#7a5f22" font-size="9.5" opacity=".8">Low literacy · high readiness</text>
+          <text x="{{ g.right - 10 }}" y="{{ g.t + 18 }}" text-anchor="end" fill="#15803d" font-size="11" font-weight="700">Q1  AI Champion</text>
+          <text x="{{ g.right - 10 }}" y="{{ g.t + 31 }}" text-anchor="end" fill="#15803d" font-size="9.5" opacity=".8">High literacy · high readiness</text>
+          <text x="{{ g.l + 10 }}" y="{{ g.bottom - 18 }}" fill="#8a3a12" font-size="11" font-weight="700">Q3  AI Novice</text>
+          <text x="{{ g.l + 10 }}" y="{{ g.bottom - 5 }}" fill="#8a3a12" font-size="9.5" opacity=".8">Low literacy · low readiness</text>
+          <text x="{{ g.right - 10 }}" y="{{ g.bottom - 18 }}" text-anchor="end" fill="#2e271c" font-size="11" font-weight="700">Q4  AI Sceptic</text>
+          <text x="{{ g.right - 10 }}" y="{{ g.bottom - 5 }}" text-anchor="end" fill="#2e271c" font-size="9.5" opacity=".8">High literacy · low readiness</text>
+
+          <line x1="{{ g.mid_x }}" y1="{{ g.t }}" x2="{{ g.mid_x }}" y2="{{ g.bottom }}" stroke="#94a3b8" stroke-dasharray="4 4"/>
+          <line x1="{{ g.l }}" y1="{{ g.mid_y }}" x2="{{ g.right }}" y2="{{ g.mid_y }}" stroke="#94a3b8" stroke-dasharray="4 4"/>
+          <rect x="{{ g.l }}" y="{{ g.t }}" width="{{ g.right - g.l }}" height="{{ g.bottom - g.t }}" fill="none" stroke="#cbd5e1"/>
+
+          {% for p in qc.pairs %}
+          <line x1="{{ p.x1 }}" y1="{{ p.y1 }}" x2="{{ p.x2 }}" y2="{{ p.y2 }}"
+                stroke="{{ '#15803d' if p.rising else '#c2410c' }}" stroke-width="1.1" opacity=".5"
+                marker-end="url(#oq-{{ 'up' if p.rising else 'down' }})"/>
+          {% endfor %}
+          {% for p in qc.pairs %}
+          <circle cx="{{ p.x1 }}" cy="{{ p.y1 }}" r="4" fill="#3b3020" fill-opacity=".7" stroke="#fff" stroke-width=".8">
+            <title>{{ p.name or 'Student' }} — baseline: literacy {{ p.pre_lit }}, readiness {{ p.pre_read }}</title></circle>
+          {% endfor %}
+          {% for p in qc.pairs %}
+          <circle cx="{{ p.x2 }}" cy="{{ p.y2 }}" r="4" fill="#15803d" fill-opacity=".7" stroke="#fff" stroke-width=".8">
+            <title>{{ p.name or 'Student' }} — after: literacy {{ p.post_lit }}, readiness {{ p.post_read }}</title></circle>
+          {% endfor %}
+
+          {% for c, colour, label in [(qc.pre_centre, '#3b3020', 'Baseline average'), (qc.post_centre, '#15803d', 'Post average')] %}
+          <circle cx="{{ c.x }}" cy="{{ c.y }}" r="8" fill="{{ colour }}" stroke="#fff" stroke-width="2"/>
+          <text x="{{ c.x }}" y="{{ c.y - 15 }}" text-anchor="middle" font-size="10.5" font-weight="700" fill="{{ colour }}"
+                paint-order="stroke" stroke="#fff" stroke-width="3.5" stroke-linejoin="round">{{ label }}</text>
+          {% endfor %}
+
+          {% for t in g.ticks %}
+          <text x="{{ t.x }}" y="{{ g.bottom + 18 }}" text-anchor="middle" font-size="11" fill="#667085">{{ t.v }}</text>
+          <text x="{{ g.l - 12 }}" y="{{ t.y + 4 }}" text-anchor="end" font-size="11" fill="#667085">{{ t.v }}</text>
+          {% endfor %}
+          <text x="{{ (g.l + g.right) / 2 }}" y="{{ g.h - 10 }}" text-anchor="middle" font-size="11.5" font-weight="600" fill="#344054">AI Literacy — do I understand AI?</text>
+          <text x="16" y="{{ (g.t + g.bottom) / 2 }}" text-anchor="middle" font-size="11.5" font-weight="600" fill="#344054"
+                transform="rotate(-90 16 {{ (g.t + g.bottom) / 2 }})">AI Readiness — am I ready to use AI?</text>
+        </svg>
+      </div>
+      <p class="muted" style="font-size:12.5px;margin-top:8px">{{ qc.matched }} students filled both surveys.
+        {{ qc.moved }} moved to a different quadrant{% if qc.backwards %} and {{ qc.backwards }}
+        moved backwards{% endif %}. Hover a dot to see who it is.</p>
+      {% else %}
+      <p class="muted" style="margin-top:10px">Nobody in this department has filled both surveys yet, so there is
+        no student to draw a line for.</p>
+      {% endif %}
+    </div>
+
     <div class="card t-scroll">
       <table>
         <thead><tr><th>Group</th><th class="n">Before</th><th class="n">%</th><th class="n">After</th><th class="n">%</th></tr></thead>

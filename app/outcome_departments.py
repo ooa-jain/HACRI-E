@@ -163,6 +163,67 @@ def entrepreneur_block(students: list[dict]) -> dict:
     }
 
 
+# The literacy × readiness chart: a 1-5 square split at 3, drawn as SVG. The
+# numbers are laid out here so the page only has to place them.
+PLOT_W, PLOT_H, PLOT_L, PLOT_R, PLOT_T, PLOT_B = 620, 520, 58, 22, 20, 52
+
+
+def _px(v: float) -> float:
+    return round(PLOT_L + (v - 1) / 4 * (PLOT_W - PLOT_L - PLOT_R), 1)
+
+
+def _py(v: float) -> float:
+    return round(PLOT_H - PLOT_B - (v - 1) / 4 * (PLOT_H - PLOT_T - PLOT_B), 1)
+
+
+def paired_quadrant(rows: list[dict]) -> dict:
+    """Literacy × readiness for the students who filled BOTH surveys.
+
+    One baseline point, one post point and the line between them per student;
+    the averages are of the same students, so the two big markers compare like
+    with like. Students who filled only one survey are left out on purpose —
+    a line needs both ends.
+    """
+    pairs = []
+    for r in rows:
+        if not r.get("pre") or not r.get("post"):
+            continue
+        pre, post = score_for_user(r["pre"]), score_for_user(r["post"])
+        if None in (pre["lit"], pre["read"], post["lit"], post["read"]):
+            continue
+        pairs.append({
+            "name": r.get("name") or "",
+            "pre_lit": pre["lit"], "pre_read": pre["read"],
+            "post_lit": post["lit"], "post_read": post["read"],
+            "x1": _px(pre["lit"]), "y1": _py(pre["read"]),
+            "x2": _px(post["lit"]), "y2": _py(post["read"]),
+            "rising": post["lit"] + post["read"] >= pre["lit"] + pre["read"],
+            "moved": pre["quadrant"] != post["quadrant"],
+        })
+
+    def centre(prefix: str) -> dict | None:
+        if not pairs:
+            return None
+        lit = round(sum(p[f"{prefix}_lit"] for p in pairs) / len(pairs), 2)
+        read = round(sum(p[f"{prefix}_read"] for p in pairs) / len(pairs), 2)
+        return {"lit": lit, "read": read, "x": _px(lit), "y": _py(read)}
+
+    return {
+        "pairs": pairs,
+        "matched": len(pairs),
+        "moved": sum(1 for p in pairs if p["moved"]),
+        "backwards": sum(1 for p in pairs if not p["rising"]),
+        "pre_centre": centre("pre"),
+        "post_centre": centre("post"),
+        "geo": {
+            "w": PLOT_W, "h": PLOT_H, "l": PLOT_L, "r": PLOT_R, "t": PLOT_T, "b": PLOT_B,
+            "mid_x": _px(3), "mid_y": _py(3),
+            "right": PLOT_W - PLOT_R, "bottom": PLOT_H - PLOT_B,
+            "ticks": [{"v": v, "x": _px(v), "y": _py(v)} for v in (1, 2, 3, 4, 5)],
+        },
+    }
+
+
 def _mix(before: list[dict], after: list[dict]) -> list[dict]:
     """The quadrant or band mix before and after, side by side."""
     after_by = {x["label"]: x for x in after}
@@ -227,6 +288,7 @@ def department_outcome(rows: list[dict], dept: str) -> dict:
         "movement": movement_block(rows),
         "sections": section_rows(rows),
         "quadrants": _mix(before["quadrants"], after["quadrants"]),
+        "quadrant_chart": paired_quadrant(rows),
         "bands": _mix(before["bands"], after["bands"]),
         "praise": praise_block(students),
         "entrepreneurs": entrepreneur_block(students),

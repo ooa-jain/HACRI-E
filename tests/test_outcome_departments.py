@@ -156,7 +156,60 @@ async def test_a_campus_narrows_the_department_to_that_campus(app_with_mock):
     assert [s["name"] for s in kochi["students"]] == ["F"]
 
 
+@pytest.mark.asyncio
+async def test_the_quadrant_chart_follows_only_students_who_filled_both(app_with_mock):
+    """C filled only the baseline: one end of a line is not a line, so C is
+    not on the chart. A, B and F filled both."""
+    await _seed()
+    from app.outcome_departments import outcome_pack
+    law = _law(await outcome_pack())
+    chart = law["quadrant_chart"]
+
+    assert chart["matched"] == 3
+    assert sorted(p["name"] for p in chart["pairs"]) == ["A", "B", "F"]
+    for p in chart["pairs"]:
+        assert (p["pre_lit"], p["pre_read"], p["post_lit"], p["post_read"]) == (2.0, 2.0, 4.0, 4.0)
+        assert p["rising"] and p["moved"]           # Novice → Champion
+    assert (chart["moved"], chart["backwards"]) == (3, 0)
+    # The averages are of these same students, and sit where the maths says.
+    assert (chart["pre_centre"]["lit"], chart["pre_centre"]["read"]) == (2.0, 2.0)
+    assert (chart["post_centre"]["lit"], chart["post_centre"]["read"]) == (4.0, 4.0)
+    assert chart["post_centre"]["x"] > chart["geo"]["mid_x"] > chart["pre_centre"]["x"]
+    assert chart["post_centre"]["y"] < chart["geo"]["mid_y"] < chart["pre_centre"]["y"]
+
+    # Commerce has nobody who filled both — an empty chart, not a broken one.
+    commerce = next(d for d in (await outcome_pack())["departments"]
+                    if d["dept"] == "Department of Commerce")
+    assert commerce["quadrant_chart"]["matched"] == 0
+    assert commerce["quadrant_chart"]["pre_centre"] is None
+
+
 # ── The pages ────────────────────────────────────────────────────────────────
+
+@pytest.mark.asyncio
+async def test_the_department_page_draws_the_literacy_readiness_chart(client, admin_client):
+    await _seed()
+    page = (await admin_client.get("/admin/survey/outcome/department",
+                                   params={"dept": "Department of Law"})).text
+    assert "the students who filled both surveys" in page
+    assert page.count('marker-end="url(#oq-up)"') == 3          # one line per student
+    assert "Q1  AI Champion" in page and "Q3  AI Novice" in page
+    assert "Baseline average" in page and "Post average" in page
+    assert "AI Literacy — do I understand AI?" in page
+    assert "3 students filled both surveys." in page
+    assert "3 moved to a different quadrant." in page
+
+    empty = (await admin_client.get("/admin/survey/outcome/department",
+                                    params={"dept": "Department of Commerce"})).text
+    assert "Nobody in this department has filled both surveys yet" in empty
+    assert "<svg viewBox" not in empty
+
+    # A shared page draws it too, and still leaves emails out.
+    from app.routes.shared_analysis import get_outcome_dept_token
+    shared = (await client.get("/shared/outcome/department", params={
+        "dept": "Department of Law",
+        "token": get_outcome_dept_token("Department of Law")})).text
+    assert shared.count('marker-end="url(#oq-up)"') == 3 and "@x.com" not in shared
 
 @pytest.mark.asyncio
 async def test_the_admin_department_page_shows_everything_with_emails(client, admin_client):
