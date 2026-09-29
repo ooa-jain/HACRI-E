@@ -3261,6 +3261,7 @@ function closeOriCampus() {
   $('ori-report').classList.add('hidden');
   $('ori-picker').classList.remove('hidden');
   loadOriCampuses();
+  loadOriDeptPages();          // the list sits on this picker, beside the meeting pack
   if (!oriShareLinks) loadOriShareLinks();
 }
 
@@ -3453,7 +3454,6 @@ function setOriView(view) {
   const meetingScope = 'campus=' + encodeURIComponent(oriCampus);
   if ($('ori-meeting')) $('ori-meeting').href = '/admin/survey/deeksharambh-meeting?' + meetingScope;
   if ($('ori-meeting-pdf')) $('ori-meeting-pdf').href = '/admin/survey/deeksharambh-meeting.pdf?' + meetingScope;
-  loadOriDeptPages();
   if (view === 'analysis')    loadOriCampusReport();
   if (view === 'departments') loadOriDepartments();
   if (view === 'filled')      loadOriStudents();

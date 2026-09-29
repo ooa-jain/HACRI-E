@@ -1544,3 +1544,8 @@ async def test_the_dashboard_lists_every_department_page(client, admin_client):
     assert "Department meeting pages" in tpl
     assert "/admin/survey/deeksharambh-meeting/department-links?campus=" in tpl
     assert tpl.index("Department meeting pack") < tpl.index("Department meeting pages")
+    # The card sits on the campus picker, so that is where its list must load —
+    # not only when a campus is opened, which left it empty on first sight.
+    picker = tpl.split("function closeOriCampus()")[1].split("\n}\n")[0]
+    assert "loadOriDeptPages();" in picker
+    assert "loadOriDeptPages();" not in tpl.split("function setOriView(view)")[1].split("\n}\n")[0]
