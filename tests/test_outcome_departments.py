@@ -370,3 +370,25 @@ async def test_the_shared_outcome_page_lists_every_department_with_its_own_links
     kochi = await client.get(path, params={"token": get_cohort_token("Kochi"), "campus": "Kochi"})
     assert [x["dept"] for x in kochi.json()["departments"]] == ["Department of Law"]
     assert kochi.json()["departments"][0]["registered"] == 1
+
+
+@pytest.mark.asyncio
+async def test_each_department_page_links_to_every_other_department(client, admin_client):
+    await _seed()
+    from app.routes.shared_analysis import get_outcome_dept_token
+
+    # Admin: admin links, biggest department first, this one marked.
+    a = (await admin_client.get("/admin/survey/outcome/department",
+                                params={"dept": "Department of Law"})).text
+    assert 'aria-label="Departments"' in a
+    assert a.index("Department of Law <b>4</b>") < a.index("Department of Commerce <b>2</b>")
+    assert 'class="on" aria-current="page">Department of Law' in a
+    assert "/admin/survey/outcome/department?dept=Department+of+Commerce" in a
+
+    # Shared: shared links that open, each with its own token, and no emails.
+    s = (await client.get("/shared/outcome/department", params={
+        "dept": "Department of Law", "token": get_outcome_dept_token("Department of Law")})).text
+    assert "/admin/" not in s.split('aria-label="Departments"')[1].split("</nav>")[0]
+    tok = get_outcome_dept_token("Department of Commerce")
+    assert f"dept=Department+of+Commerce&amp;token={tok}" in s or f"token={tok}" in s
+    assert "@x.com" not in s

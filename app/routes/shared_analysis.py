@@ -825,7 +825,7 @@ async def shared_outcome_department(
     Students are named; their emails are not."""
     require_outcome_dept_token(dept, campus, token)
 
-    from app.outcome_departments import department_outcome_for, outcome_page
+    from app.outcome_departments import department_nav, department_outcome_for, outcome_page
 
     o = await department_outcome_for(dept, campus=campus)
     if o is None:
@@ -833,6 +833,7 @@ async def shared_outcome_department(
     base = str(request.base_url).rstrip("/")
     return outcome_page(
         request, o, campus=campus, shared=True,
+        nav=await department_nav(base, campus=campus, current=dept, shared=True),
         excel_url=outcome_dept_share_url(base, dept, campus, "/shared/outcome/department.xlsx"),
         share_url=outcome_dept_share_url(base, dept, campus),
     )

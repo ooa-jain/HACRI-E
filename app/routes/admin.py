@@ -1691,7 +1691,7 @@ async def admin_outcome_department(
 
     from urllib.parse import urlencode
 
-    from app.outcome_departments import department_outcome_for, outcome_page
+    from app.outcome_departments import department_nav, department_outcome_for, outcome_page
     from app.routes.shared_analysis import outcome_dept_share_url
 
     o = await department_outcome_for(dept, campus=campus)
@@ -1700,6 +1700,8 @@ async def admin_outcome_department(
     query = {"dept": dept, **({"campus": campus} if campus else {})}
     return outcome_page(
         request, o, campus=campus, shared=False,
+        nav=await department_nav(str(request.base_url).rstrip("/"), campus=campus,
+                                 current=dept, shared=False),
         excel_url=f"/admin/survey/outcome/department.xlsx?{urlencode(query)}",
         share_url=outcome_dept_share_url(str(request.base_url).rstrip("/"), dept, campus),
     )

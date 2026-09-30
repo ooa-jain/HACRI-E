@@ -334,8 +334,32 @@ def strip_emails(o: dict) -> dict:
     return o
 
 
+async def department_nav(base_url: str, *, campus: str, current: str, shared: bool) -> list[dict]:
+    """A link to every department, biggest first, for the switcher on each page.
+
+    Shared pages link to shared pages (each with its own token); admin pages link
+    to admin pages. Only names and registration counts are read, so it stays cheap.
+    """
+    from urllib.parse import urlencode
+
+    from app.routes.shared_analysis import outcome_dept_share_url
+
+    counts: dict[str, int] = {}
+    for r in await cohort_dataset(campus=campus):
+        counts[r["program"]] = counts.get(r["program"], 0) + 1
+    nav = []
+    for dept, n in sorted(counts.items(), key=lambda kv: (-kv[1], kv[0].lower())):
+        if shared:
+            url = outcome_dept_share_url(base_url, dept, campus)
+        else:
+            url = "/admin/survey/outcome/department?" + urlencode(
+                {"dept": dept, **({"campus": campus} if campus else {})})
+        nav.append({"dept": dept, "count": n, "url": url, "current": dept == current})
+    return nav
+
+
 def outcome_page(request, o: dict, *, campus: str, excel_url: str, share_url: str,
-                 shared: bool):
+                 shared: bool, nav: list[dict] | None = None):
     """One department's page. Share links (`shared`) carry no student emails."""
     from datetime import datetime
 
@@ -346,6 +370,7 @@ def outcome_page(request, o: dict, *, campus: str, excel_url: str, share_url: st
             "excel_url": excel_url,
             "share_url": share_url,
             "shared": shared,
+            "nav": nav or [],
             "sections_meta": [(k, SECTION_TITLES.get(k, k)) for k in SECTIONS],
             "generated_at": datetime.now().strftime("%d %b %Y, %H:%M"),
         },
