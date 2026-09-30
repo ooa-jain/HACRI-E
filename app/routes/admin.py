@@ -1728,6 +1728,19 @@ async def admin_outcome_departments_xlsx(request: Request, campus: str = Query(d
     return await workbook_response(campus=campus)
 
 
+@router.get("/admin/api/career-interest")
+async def admin_career_interest(
+    request: Request, campus: str = Query(default=""), dept: str = Query(default=""),
+):
+    """How many students lean toward higher education, a business or a career."""
+    if not _is_survey_admin(request):
+        raise HTTPException(status_code=403)
+
+    from app.career_interest import career_interest
+
+    return await career_interest(campus=campus, dept=dept)
+
+
 @router.get("/admin/survey/outcome/department-links")
 async def admin_outcome_department_links(request: Request, campus: str = Query(default="")):
     """The list under Outcome & impact: one row per department, with its links."""

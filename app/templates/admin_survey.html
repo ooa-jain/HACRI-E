@@ -548,7 +548,35 @@
 
       <!-- ── COHORT: OUTCOME & IMPACT ─────────────────────────────────── -->
       <div class="panel" id="p-cohort">
-        <div class="space-y-5">
+        <div class="flex gap-2 mb-4" id="cohort-tabs">
+          <button class="tabbtn on" data-tab="report" onclick="setCohortTab('report')">Outcome &amp; impact</button>
+          <button class="tabbtn" data-tab="career" onclick="setCohortTab('career')">Career interest</button>
+        </div>
+
+        <!-- ── Career interest: higher education, entrepreneur, career ── -->
+        <div id="cohort-view-career" class="space-y-5 hidden">
+          <div class="card space-y-3">
+            <div>
+              <div class="h-card">Career interest — higher education, entrepreneur, career</div>
+              <div class="sub">How many students lean toward further study, starting a business or a
+                career. No question asks this outright, so it is read from the answers that hint at it —
+                each interest lists exactly which answers count. A student can count under more than one.</div>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+              <div class="flex flex-wrap gap-2" id="career-campus-tabs">
+                <button class="tabbtn on" data-campus="" onclick="setCareerCampus('')">All campuses</button>
+                <button class="tabbtn" data-campus="Bangalore" onclick="setCareerCampus('Bangalore')">Bangalore</button>
+                <button class="tabbtn" data-campus="Kochi" onclick="setCareerCampus('Kochi')">Kochi</button>
+              </div>
+              <select id="career-dept" class="field" style="min-width:260px;max-width:100%" onchange="loadCareerInterest()"
+                      aria-label="Department"><option value="">All departments</option></select>
+            </div>
+            <div id="career-scope" class="note note-info">Loading…</div>
+          </div>
+          <div id="career-host" class="space-y-5"></div>
+        </div>
+
+        <div id="cohort-view-report" class="space-y-5">
           <div class="card space-y-4">
             <div class="flex flex-col lg:flex-row lg:items-center gap-3">
               <div class="mr-auto">
@@ -3123,6 +3151,83 @@ async function loadCohort() {
 
   // Clicking a campus tile is the same as pressing its tab.
   CohortReport.render(host, d, { activeCampus: cohortCampus, onCampus: pickCohortCampus });
+}
+
+// ── Career interest: higher education, entrepreneur, career ──────────────
+let careerCampus = '', careerFirstLoad = true;
+
+function setCohortTab(tab) {
+  document.querySelectorAll('#cohort-tabs .tabbtn')
+    .forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
+  $('cohort-view-report').classList.toggle('hidden', tab !== 'report');
+  $('cohort-view-career').classList.toggle('hidden', tab !== 'career');
+  if (tab === 'career') loadCareerInterest();
+}
+
+function setCareerCampus(campus) {
+  careerCampus = campus;
+  document.querySelectorAll('#career-campus-tabs .tabbtn')
+    .forEach(b => b.classList.toggle('on', b.dataset.campus === campus));
+  loadCareerInterest();
+}
+
+async function loadCareerInterest() {
+  const host = $('career-host'), sel = $('career-dept');
+  host.innerHTML = '<div class="card text-center text-xs text-slate-400">Reading the answers…</div>';
+  let d;
+  try {
+    d = await api('/admin/api/career-interest?' +
+                  new URLSearchParams({ campus: careerCampus, dept: sel.value }));
+  } catch (err) {
+    host.innerHTML = '<div class="card text-center text-xs text-rose-500">Could not load career interest</div>';
+    return;
+  }
+
+  // The department list comes with the answer; keep whatever was picked.
+  const keep = sel.value;
+  sel.innerHTML = '<option value="">All departments</option>' + d.departments.map(x =>
+    `<option value="${e(x)}"${x === keep ? ' selected' : ''}>${e(x)}</option>`).join('');
+  // First look: open on a BBA department if there is one.
+  if (careerFirstLoad) {
+    careerFirstLoad = false;
+    const bba = d.departments.find(x => /bba/i.test(x));
+    if (bba) { sel.value = bba; return loadCareerInterest(); }
+  }
+
+  note($('career-scope'), 'info',
+    `<b>${e(d.scope.campus)} · ${e(d.scope.dept)}</b> — ${d.students} students, ` +
+    `${d.answered} answered at least one of the questions these figures are read from. ` +
+    `Percentages are of those ${d.answered}. ${d.unsure} said they are still figuring it out; ` +
+    `${d.none} gave answers that point to none of the three.`);
+
+  const card = g => `
+    <div class="card">
+      <div class="h-card">${e(g.label)}</div>
+      ${g.proxy ? '<div class="badge b-amber" style="margin-top:6px">rough proxy — nothing asks about further study</div>' : ''}
+      <div style="display:flex;align-items:baseline;gap:10px;margin-top:10px">
+        <span style="font-size:34px;font-weight:800;letter-spacing:-1px">${g.count}</span>
+        <span class="text-slate-500">${g.pct}% of ${d.answered}</span>
+      </div>
+      <div class="sub" style="margin-top:10px">Counted when any of these is true:</div>
+      <ul style="margin-top:6px;font-size:12.5px">
+        ${g.signals.map(s => `<li style="display:flex;justify-content:space-between;gap:12px;padding:3px 0;border-top:1px solid #eef0f4">
+          <span>${e(s.label)}</span><b>${s.count}</b></li>`).join('')}
+      </ul>
+    </div>`;
+
+  host.innerHTML = d.answered ? `
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">${d.groups.map(card).join('')}</div>
+    <div class="card">
+      <div class="h-card">What students said they will be — the JAIN avatar question</div>
+      <div id="career-avatars" class="overflow-x-auto pt-2"></div>
+    </div>` : `
+    <div class="card text-center text-slate-500">Nobody in this scope has answered the avatar,
+      expectations or PRaiSE questions yet, so there is nothing to count.</div>`;
+  if (d.answered) {
+    table('career-avatars', ['Avatar', 'Students', '% of answered'], d.avatars,
+      a => [e(a.label), a.count, (100 * a.count / d.answered).toFixed(1) + '%'],
+      'No avatar answers yet');
+  }
 }
 
 // Every department's own AI survey page — fetched once per campus.
