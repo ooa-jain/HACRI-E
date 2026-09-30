@@ -897,6 +897,22 @@ async def shared_cohort_data(
     })
 
 
+@router.get("/shared/cohort/departments")
+async def shared_cohort_departments(
+    request: Request,
+    token: str = Query(...),
+    campus: str = Query(default=""),
+):
+    """Every department with its own analysis link, for the shared cohort page."""
+    if not verify_cohort_token(campus, token):
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    from app.outcome_departments import shared_department_links
+
+    return {"departments": await shared_department_links(
+        str(request.base_url).rstrip("/"), campus=campus)}
+
+
 @router.get("/shared/cohort/ppt")
 async def shared_cohort_ppt(
     token: str = Query(...),

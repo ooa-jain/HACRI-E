@@ -414,6 +414,24 @@ async def department_links(base_url: str, *, campus: str = "") -> list[dict]:
     return out
 
 
+async def shared_department_links(base_url: str, *, campus: str = "") -> list[dict]:
+    """The list on the shared Outcome & impact page: each department's headline
+    numbers and the shared links to its analysis and its workbook. No admin URLs."""
+    from app.routes.shared_analysis import outcome_dept_share_url
+
+    out = []
+    for row in await department_links(base_url, campus=campus):
+        dept = row["dept"]
+        out.append({
+            **{k: row[k] for k in ("dept", "registered", "baseline", "post", "before",
+                                   "after", "change", "praise_joining", "entrepreneurs")},
+            "open_url": outcome_dept_share_url(base_url, dept, campus),
+            "excel_url": outcome_dept_share_url(base_url, dept, campus,
+                                                "/shared/outcome/department.xlsx"),
+        })
+    return out
+
+
 # Kept here so both the page and the workbook label quadrants/bands the same.
 QUADRANT_ORDER = QUADRANTS
 BAND_ORDER = BANDS

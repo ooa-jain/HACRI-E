@@ -335,3 +335,38 @@ async def test_the_dashboard_lists_every_department_with_working_links(client, a
     assert "Department AI survey pages" in tpl
     assert "/admin/survey/outcome/department-links?campus=" in tpl
     assert "/admin/survey/outcome/departments.xlsx" in tpl
+
+
+@pytest.mark.asyncio
+async def test_the_shared_outcome_page_lists_every_department_with_its_own_links(client):
+    await _seed()
+    from app.routes.shared_analysis import get_cohort_token
+    path = "/shared/cohort/departments"
+
+    # Only the cohort link's own token lists them.
+    assert (await client.get(path, params={"token": "nope"})).status_code == 403
+    page = await client.get("/shared/cohort", params={"token": get_cohort_token()})
+    assert page.status_code == 200 and "Every department's own analysis" in page.text
+    assert "loadDeptPages()" in page.text
+
+    r = await client.get(path, params={"token": get_cohort_token()})
+    assert r.status_code == 200
+    rows = r.json()["departments"]
+    assert [x["dept"] for x in rows] == ["Department of Law", "Department of Commerce"]
+    law = rows[0]
+    assert (law["registered"], law["baseline"], law["post"]) == (4, 4, 3)
+    assert (law["before"], law["after"], law["entrepreneurs"]) == (2.0, 4.0, 2)
+
+    # Shared links only — no admin URLs, no emails — and each one opens its department.
+    assert "/admin/" not in r.text and "@x.com" not in r.text
+    for key, expect in (("open_url", "<h1>Department of Law</h1>"), ("excel_url", None)):
+        u = urlsplit(law[key])
+        got = await client.get(f"{u.path}?{u.query}")
+        assert got.status_code == 200
+        if expect:
+            assert expect in got.text
+
+    # A Kochi link lists only that campus's departments.
+    kochi = await client.get(path, params={"token": get_cohort_token("Kochi"), "campus": "Kochi"})
+    assert [x["dept"] for x in kochi.json()["departments"]] == ["Department of Law"]
+    assert kochi.json()["departments"][0]["registered"] == 1
