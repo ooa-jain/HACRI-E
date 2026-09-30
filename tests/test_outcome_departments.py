@@ -421,7 +421,7 @@ async def test_each_department_page_says_who_wants_higher_education_a_business_o
                                    params={"dept": "Department of Law"})).text
     assert page.index("<span class=\"n\">03</span>What students want next") < \
         page.index("<span class=\"n\">04</span>Where students sit")
-    assert "Interested in being an entrepreneur" in page and "Rough proxy" in page
+    assert "Interested in being an entrepreneur" in page and "Rough proxy" not in page
     assert "Startup Founder" in page
 
     wb = _book((await admin_client.get("/admin/survey/outcome/department.xlsx",

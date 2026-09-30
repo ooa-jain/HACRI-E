@@ -137,8 +137,7 @@ def build_outcome_workbook(departments: list[dict], *, scope: str, generated_at:
     ws = _sheet(wb, "Career interest", "What students want next — higher education, a business or a career",
                 "From the Deeksharambh survey (JAIN avatar, expectations) and the post survey (PRaiSE "
                 "pillar). A student counts when any listed answer points that way, and can count under "
-                "more than one. % is of students who answered at least one of these questions. Higher "
-                "education is a rough proxy — no question asks about further study.")
+                "more than one. % is of students who answered at least one of these questions.")
     headers = ["Department", "Interest", "Counted from", "Students", "% of answered", "Answered"]
     rows = []
     for o in every:

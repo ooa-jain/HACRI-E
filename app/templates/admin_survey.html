@@ -3203,7 +3203,6 @@ async function loadCareerInterest() {
   const card = g => `
     <div class="card">
       <div class="h-card">${e(g.label)}</div>
-      ${g.proxy ? '<div class="badge b-amber" style="margin-top:6px">rough proxy — nothing asks about further study</div>' : ''}
       <div style="display:flex;align-items:baseline;gap:10px;margin-top:10px">
         <span style="font-size:34px;font-weight:800;letter-spacing:-1px">${g.count}</span>
         <span class="text-slate-500">${g.pct}% of ${d.answered}</span>

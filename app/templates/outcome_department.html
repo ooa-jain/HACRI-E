@@ -253,7 +253,7 @@
     <div class="interests">
       {% for g in c.groups %}
       <div class="interest {{ cls[g.key] }}">
-        <h3>{{ g.label }}{% if g.proxy %}<span class="tag">Rough proxy</span>{% endif %}</h3>
+        <h3>{{ g.label }}</h3>
         <div class="big">{{ g.count }}<span>{{ g.pct }}% of {{ c.answered }}</span></div>
         <div class="bar"><i style="width:{{ g.pct }}%"></i></div>
         <ul>
