@@ -50,8 +50,9 @@
   footer { text-align: center; margin-top: 30px; font-size: 11.5px; color: #98a2b3; line-height: 1.7 }
 
   .dept-card {
+    margin-bottom: 22px;
     background: #fff; border: 1px solid #e4e7ec; border-radius: 16px;
-    padding: 22px 24px; margin-top: 22px; border-top: 3px solid #c9a84c;
+    padding: 22px 24px; border-top: 3px solid #c9a84c;
   }
   .dept-card h2 { font-size: 17px; font-weight: 700; color: #0d2147 }
   .dept-card .sub { font-size: 12.5px; color: #667085; margin: 4px 0 14px; line-height: 1.5 }
@@ -104,9 +105,6 @@
     <button class="btn btn-soft" onclick="window.print()">Print</button>
   </div>
 
-  <div id="loading" class="loading">Loading the outcome and impact report…</div>
-  <div id="report" class="coh-report" hidden></div>
-
   <section id="dept-pages" class="dept-card" hidden>
     <h2>Every department's own analysis</h2>
     <p class="sub">Before and after the workshop, who joined PRaiSE, entrepreneur families, and the
@@ -121,6 +119,9 @@
       </table>
     </div>
   </section>
+
+  <div id="loading" class="loading">Loading the outcome and impact report…</div>
+  <div id="report" class="coh-report" hidden></div>
 
   <footer>
     HACRI-E · JAIN (Deemed-to-be University) · Office of Academics<br>
