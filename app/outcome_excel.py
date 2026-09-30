@@ -6,7 +6,8 @@ here is the one the department's own page shows. One workbook serves both the
 whole cohort (every department, one row each) and a single department (the
 same sheets, holding only that department).
 
-Sheets: Summary · Sections · Quadrants · PRaiSE · Entrepreneurs · Students.
+Sheets: Summary · Sections · Quadrants · Career interest · PRaiSE · Entrepreneurs ·
+Students.
 Share links pass `include_emails=False`, which drops every email column.
 """
 from __future__ import annotations
@@ -88,7 +89,10 @@ def build_outcome_workbook(departments: list[dict], *, scope: str, generated_at:
                "Filled both", "Improved", "Held steady", "Slipped", "Improved %",
                "PRaiSE answered", "Want to join PRaiSE", "Join %",
                *[f"PRaiSE: {p}" for p in PRAISE_PILLARS], "PRaiSE: None",
-               "Entrepreneur families", "Entrepreneur %"]
+               "Entrepreneur families", "Entrepreneur %",
+               "Deeksharambh answered",
+               "Higher education", "Higher education %", "Entrepreneur interest",
+               "Entrepreneur interest %", "Career", "Career %"]
     rows = []
     for o in every:
         j, s, m, p, e = o["journey"], o["scores"], o["movement"], o["praise"], o["entrepreneurs"]
@@ -102,6 +106,7 @@ def build_outcome_workbook(departments: list[dict], *, scope: str, generated_at:
             p["answered"], p["joining"], p["joining_pct"],
             *[x["count"] for x in p["pillars"]], p["none"],
             e["count"], e["pct"],
+            *_career_cells(o.get("career")),
         ])
     _table(ws, headers, rows, [42] + [13] * (len(headers) - 1), bold_first_row=bool(overall))
 
@@ -127,6 +132,25 @@ def build_outcome_workbook(departments: list[dict], *, scope: str, generated_at:
                 rows.append([o["dept"], kind, x["label"], x["before"], x["before_pct"],
                              x["after"], x["after_pct"]])
     _table(ws, headers, rows, [42, 11, 24, 10, 10, 10, 10])
+
+    # ── Career interest ─────────────────────────────────────────────────────
+    ws = _sheet(wb, "Career interest", "What students want next — higher education, a business or a career",
+                "From the Deeksharambh survey (JAIN avatar, expectations) and the post survey (PRaiSE "
+                "pillar). A student counts when any listed answer points that way, and can count under "
+                "more than one. % is of students who answered at least one of these questions. Higher "
+                "education is a rough proxy — no question asks about further study.")
+    headers = ["Department", "Interest", "Counted from", "Students", "% of answered", "Answered"]
+    rows = []
+    for o in every:
+        c = o.get("career")
+        if not c:
+            continue
+        for g in c["groups"]:
+            rows.append([o["dept"], g["label"], "Any of the answers below", g["count"], g["pct"],
+                         c["answered"]])
+            rows.extend([o["dept"], g["label"], sg["label"], sg["count"], None, None]
+                        for sg in g["signals"])
+    _table(ws, headers, rows, [42, 34, 46, 11, 13, 11])
 
     # ── PRaiSE ──────────────────────────────────────────────────────────────
     ws = _sheet(wb, "PRaiSE", "Who wants to contribute to PRaiSE, by pillar",
@@ -181,6 +205,16 @@ def build_outcome_workbook(departments: list[dict], *, scope: str, generated_at:
     buf = io.BytesIO()
     wb.save(buf)
     return buf.getvalue()
+
+
+def _career_cells(c: dict | None) -> list:
+    if not c:
+        return [None] * 7
+    g = {x["key"]: x for x in c["groups"]}
+    return [c["answered"],
+            g["higher_education"]["count"], g["higher_education"]["pct"],
+            g["entrepreneur"]["count"], g["entrepreneur"]["pct"],
+            g["career"]["count"], g["career"]["pct"]]
 
 
 def workbook_filename(scope: str) -> str:

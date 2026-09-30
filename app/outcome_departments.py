@@ -306,17 +306,33 @@ async def outcome_pack(*, campus: str = "", dept: str = "") -> dict:
         groups.setdefault(r["program"], []).append(r)
     departments = [department_outcome(members, name) for name, members in groups.items()]
     departments.sort(key=lambda d: (-d["journey"]["registered"], d["dept"].lower()))
-    return {
-        "campus": campus,
-        "overall": department_outcome(rows, ALL_DEPARTMENTS),
-        "departments": departments,
-    }
+    overall = department_outcome(rows, ALL_DEPARTMENTS)
+    by_email = await _orientation_by_email(campus)
+    for o, members in [(overall, rows)] + [(d, groups[d["dept"]]) for d in departments]:
+        o["career"] = _career(members, by_email, campus, o["dept"])
+    return {"campus": campus, "overall": overall, "departments": departments}
+
+
+async def _orientation_by_email(campus: str) -> dict[str, dict]:
+    from app.career_interest import orientation_by_email
+    return await orientation_by_email(campus)
+
+
+def _career(rows: list[dict], by_email: dict[str, dict], campus: str, dept: str) -> dict:
+    """Higher education / entrepreneur / career, from the Deeksharambh and post answers."""
+    from app.career_interest import career_for_rows
+    return career_for_rows(rows, by_email,
+                           scope={"campus": campus or "All campuses", "dept": dept})
 
 
 async def department_outcome_for(dept: str, *, campus: str = "") -> dict | None:
     rows = await cohort_dataset(campus=campus, dept=dept)
     rows = [r for r in rows if r["program"] == dept]
-    return department_outcome(rows, dept) if rows else None
+    if not rows:
+        return None
+    o = department_outcome(rows, dept)
+    o["career"] = _career(rows, await _orientation_by_email(campus), campus, dept)
+    return o
 
 
 def strip_emails(o: dict) -> dict:

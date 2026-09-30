@@ -268,7 +268,7 @@ async def test_the_all_departments_workbook_carries_every_analysis(client, admin
     assert r.status_code == 200
     assert "spreadsheetml" in r.headers["content-type"]
     wb = _book(r.content)
-    assert wb.sheetnames == ["Summary", "Sections", "Quadrants", "PRaiSE",
+    assert wb.sheetnames == ["Summary", "Sections", "Quadrants", "Career interest", "PRaiSE",
                              "Entrepreneurs", "Students"]
 
     summary = wb["Summary"]
@@ -373,22 +373,61 @@ async def test_the_shared_outcome_page_lists_every_department_with_its_own_links
 
 
 @pytest.mark.asyncio
-async def test_each_department_page_links_to_every_other_department(client, admin_client):
+async def test_a_dropdown_switches_to_every_other_department(client, admin_client):
     await _seed()
     from app.routes.shared_analysis import get_outcome_dept_token
 
-    # Admin: admin links, biggest department first, this one marked.
+    # Admin: admin links, biggest department first, this one selected — no chip row.
     a = (await admin_client.get("/admin/survey/outcome/department",
                                 params={"dept": "Department of Law"})).text
-    assert 'aria-label="Departments"' in a
-    assert a.index("Department of Law <b>4</b>") < a.index("Department of Commerce <b>2</b>")
-    assert 'class="on" aria-current="page">Department of Law' in a
-    assert "/admin/survey/outcome/department?dept=Department+of+Commerce" in a
+    assert 'class="switch"' not in a
+    picker = a.split('aria-label="Switch department"')[1].split("</select>")[0]
+    assert picker.index("Department of Law (4)") < picker.index("Department of Commerce (2)")
+    assert 'selected>Department of Law (4)' in picker
+    assert "/admin/survey/outcome/department?dept=Department+of+Commerce" in picker
 
-    # Shared: shared links that open, each with its own token, and no emails.
+    # Shared: shared links, each with its own token, and no emails.
     s = (await client.get("/shared/outcome/department", params={
         "dept": "Department of Law", "token": get_outcome_dept_token("Department of Law")})).text
-    assert "/admin/" not in s.split('aria-label="Departments"')[1].split("</nav>")[0]
-    tok = get_outcome_dept_token("Department of Commerce")
-    assert f"dept=Department+of+Commerce&amp;token={tok}" in s or f"token={tok}" in s
+    picker = s.split('aria-label="Switch department"')[1].split("</select>")[0]
+    assert "/admin/" not in picker
+    assert get_outcome_dept_token("Department of Commerce") in picker
     assert "@x.com" not in s
+
+
+@pytest.mark.asyncio
+async def test_each_department_page_says_who_wants_higher_education_a_business_or_a_career(
+        client, admin_client):
+    """A: Startup Founder avatar + PRaiSE Entrepreneurship → entrepreneur.
+    B: Academic Achiever → higher education. C: Future CEO, expects placement → career.
+    F (Kochi) and the Commerce students answered no Deeksharambh questions."""
+    await _seed()
+    now = datetime.now(timezone.utc)
+    for email, avatar, expects in (("a@x.com", "Startup Founder", []),
+                                   ("b@x.com", "Academic Achiever", []),
+                                   ("c@x.com", "Future CEO", ["Career support & placement prep"])):
+        await db.get_db()["orientation_responses"].insert_one({
+            "email": email, "submitted_at": now,
+            "data": {"location": "Bangalore", "q41": avatar, "q33": expects}})
+
+    from app.outcome_departments import department_outcome_for
+    c = (await department_outcome_for("Department of Law"))["career"]
+    g = {x["key"]: x for x in c["groups"]}
+    # A, B, C answered; B's post survey pillar (Social Good) alone points nowhere.
+    assert (c["students"], c["answered"]) == (4, 4)          # F answered PRaiSE (None)
+    assert (g["higher_education"]["count"], g["entrepreneur"]["count"], g["career"]["count"]) == (1, 1, 1)
+
+    page = (await admin_client.get("/admin/survey/outcome/department",
+                                   params={"dept": "Department of Law"})).text
+    assert page.index("<span class=\"n\">03</span>What students want next") < \
+        page.index("<span class=\"n\">04</span>Where students sit")
+    assert "Interested in being an entrepreneur" in page and "Rough proxy" in page
+    assert "Startup Founder" in page
+
+    wb = _book((await admin_client.get("/admin/survey/outcome/department.xlsx",
+                                       params={"dept": "Department of Law"})).content)
+    law = dict(zip(_headers(wb["Summary"]),
+                   [wb["Summary"].cell(row=5, column=i + 1).value
+                    for i in range(len(_headers(wb["Summary"])))]))
+    assert (law["Higher education"], law["Entrepreneur interest"], law["Career"]) == (1, 1, 1)
+    assert wb["Career interest"].max_row > 4

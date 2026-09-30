@@ -34,16 +34,32 @@
   .chip { background: rgba(255,255,255,.13); border: 1px solid rgba(255,255,255,.2); border-radius: 999px;
           padding: 5px 13px; font-size: 12px; font-weight: 600; color: #dbe6f7 }
   .chip b { color: #fff; font-variant-numeric: tabular-nums }
-  .switch { margin: 14px 0 0; background: #fff; border: 1px solid #d9e1ee; border-radius: 14px; padding: 12px 14px }
-  .switch h3 { font-size: 10.5px; font-weight: 800; letter-spacing: 1.4px; text-transform: uppercase; color: var(--blue); margin-bottom: 8px }
-  .switch .row { display: flex; flex-wrap: wrap; gap: 7px }
-  .switch a { display: inline-flex; align-items: center; gap: 7px; padding: 5px 12px; border-radius: 999px; font-size: 12px;
-              font-weight: 600; text-decoration: none; color: var(--blue); background: #eef3fb; border: 1px solid #d3def0 }
-  .switch a b { font-variant-numeric: tabular-nums; color: #5b6b86; font-weight: 700 }
-  .switch a:hover { background: #dfe9f8 }
-  .switch a.on { background: var(--blue); color: #fff; border-color: var(--blue) }
-  .switch a.on b { color: var(--gold) }
-  @media print { .switch { display: none } }
+  .pick { display: inline-flex; align-items: center; gap: 8px; margin-left: auto; color: #dbe6f7;
+          font-size: 12px; font-weight: 700 }
+  .pick select { font: inherit; font-size: 13px; font-weight: 600; color: var(--ink); background: #fff;
+                 border: none; border-radius: 10px; padding: 9px 12px; max-width: 340px; cursor: pointer }
+
+  .interests { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 12px }
+  .interest { background: var(--paper); border: 1px solid var(--line); border-top: 3px solid var(--blue);
+              border-radius: 12px; padding: 14px 16px }
+  .interest.ent { border-top-color: var(--gold) } .interest.car { border-top-color: #15803d }
+  .interest h3 { font-size: 13.5px; font-weight: 800; color: var(--ink) }
+  .interest .tag { display: inline-block; font-size: 10px; font-weight: 800; letter-spacing: .6px;
+                   text-transform: uppercase; color: #9a6b00; background: #fdf3d7; border-radius: 999px;
+                   padding: 2px 8px; margin-left: 6px; vertical-align: 1px }
+  .interest .big { font-size: 30px; font-weight: 800; color: var(--ink); margin-top: 6px; letter-spacing: -.6px }
+  .interest .big span { font-size: 13px; font-weight: 700; color: var(--muted); margin-left: 6px; letter-spacing: 0 }
+  .interest .bar { margin-top: 8px; height: 8px }
+  .interest .bar i { background: var(--blue) } .interest.ent .bar i { background: var(--gold) }
+  .interest.car .bar i { background: #15803d }
+  .interest ul { list-style: none; margin-top: 12px; font-size: 12.5px; color: var(--body);
+                 display: flex; flex-direction: column; gap: 5px }
+  .interest li { display: flex; justify-content: space-between; gap: 10px }
+  .interest li b { font-variant-numeric: tabular-nums; color: var(--ink) }
+  .avatars { display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px 28px }
+  .avatars div { display: grid; grid-template-columns: 1fr 110px 44px; align-items: center; gap: 10px; font-size: 12.5px }
+  .avatars .bar { display: block } .avatars .bar i { background: var(--data) }
+  .avatars b { text-align: right; font-variant-numeric: tabular-nums }
   .tools { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px }
   .btn { display: inline-flex; align-items: center; gap: 7px; border: none; cursor: pointer; font: inherit;
          font-size: 13px; font-weight: 700; border-radius: 10px; padding: 9px 16px; text-decoration: none }
@@ -110,14 +126,16 @@
                  background: #fff; font-family: 'JetBrains Mono', monospace; font-size: 12px }
   .foot { margin-top: 28px; font-size: 11.5px; color: var(--muted) }
 
-  @media (max-width: 900px) { .pillars { grid-template-columns: repeat(2, 1fr) } }
+  @media (max-width: 900px) { .pillars { grid-template-columns: repeat(2, 1fr) }
+                              .interests { grid-template-columns: 1fr } .avatars { grid-template-columns: 1fr } }
   @media (max-width: 640px) {
     .scores, .pillars { grid-template-columns: 1fr }
+    .pick { margin-left: 0; width: 100% } .pick select { flex: 1; max-width: none }
     .head h1 { font-size: 21px }
   }
   @media print {
     body { background: #fff }
-    .tools, .no-print { display: none !important }
+    .tools, .no-print, .pick { display: none !important }
     .head { -webkit-print-color-adjust: exact; print-color-adjust: exact }
     .names { max-height: none; overflow: visible }
     section, .card { break-inside: avoid }
@@ -156,17 +174,15 @@
       <a class="btn btn-main" href="{{ excel_url }}">⬇ Download Excel</a>
       <button class="btn btn-ghost" onclick="window.print()">Print</button>
       {% if share_url %}<button class="btn btn-ghost" data-share="{{ share_url }}" onclick="copyLink(this)">Copy share link</button>{% endif %}
+      {% if nav|length > 1 %}
+      <label class="pick">Switch department
+        <select aria-label="Switch department" onchange="if (this.value) location.href = this.value">
+          {% for d in nav %}<option value="{{ d.url }}"{% if d.current %} selected{% endif %}>{{ d.dept }} ({{ d.count }})</option>{% endfor %}
+        </select>
+      </label>
+      {% endif %}
     </div>
   </header>
-
-  {% if nav|length > 1 %}
-  <nav class="switch" aria-label="Departments">
-    <h3>Every department · biggest first</h3>
-    <div class="row">
-      {% for d in nav %}<a href="{{ d.url }}"{% if d.current %} class="on" aria-current="page"{% endif %}>{{ d.dept }} <b>{{ d.count }}</b></a>{% endfor %}
-    </div>
-  </nav>
-  {% endif %}
 
   {% if o.synopsis %}<p class="synopsis">{{ o.synopsis }}</p>{% endif %}
 
@@ -223,9 +239,47 @@
     </div>
   </section>
 
-  <!-- ── 3. Where students sit ────────────────────────────────────────── -->
+  <!-- ── 3. Higher education, business or a career ────────────────────── -->
+  {% set c = o.career %}
+  {% if c %}
+  <section id="career">
+    <h2><span class="n">03</span>What students want next — higher education, a business or a career</h2>
+    <p class="lede">From the Deeksharambh survey (the JAIN avatar each student picked and what they expect from
+      JAIN) and the AI post survey (the PRaiSE pillar). No question asks this outright, so each count is the
+      students whose answers point that way; one student can count under more than one.
+      <b>{{ c.answered }}</b> of {{ c.students }} registered students answered at least one of these questions,
+      and the percentages are of them.</p>
+    {% set cls = {'higher_education': 'hed', 'entrepreneur': 'ent', 'career': 'car'} %}
+    <div class="interests">
+      {% for g in c.groups %}
+      <div class="interest {{ cls[g.key] }}">
+        <h3>{{ g.label }}{% if g.proxy %}<span class="tag">Rough proxy</span>{% endif %}</h3>
+        <div class="big">{{ g.count }}<span>{{ g.pct }}% of {{ c.answered }}</span></div>
+        <div class="bar"><i style="width:{{ g.pct }}%"></i></div>
+        <ul>
+          {% for sg in g.signals %}<li><span>{{ sg.label }}</span><b>{{ sg.count }}</b></li>{% endfor %}
+        </ul>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="card">
+      <b>Every JAIN avatar picked in Deeksharambh</b>
+      <span class="muted" style="font-size:12.5px"> · {{ c.none }} answered but pointed to none of the three;
+        {{ c.unsure }} picked “Still Figuring It Out”.</span>
+      <div class="avatars" style="margin-top:10px">
+        {% for a in c.avatars %}
+        <div><span>{{ a.label }}</span>
+          <span class="bar"><i style="width:{{ (100 * a.count / c.answered) | round(1) if c.answered else 0 }}%"></i></span>
+          <b>{{ a.count }}</b></div>
+        {% else %}<div class="muted">No Deeksharambh avatar answers from this department yet.</div>{% endfor %}
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
+  <!-- ── 4. Where students sit ────────────────────────────────────────── -->
   <section id="quadrants">
-    <h2><span class="n">03</span>Where students sit, before and after</h2>
+    <h2><span class="n">04</span>Where students sit, before and after</h2>
     <p class="lede">Quadrant is literacy against readiness (3 out of 5 is the dividing line on each). Band
       is the overall AI profile. The chart follows the students who filled both surveys; the table under it
       counts everyone who filled each survey.</p>
@@ -318,10 +372,10 @@
     </div>
   </section>
 
-  <!-- ── 4. PRaiSE ────────────────────────────────────────────────────── -->
+  <!-- ── 5. PRaiSE ────────────────────────────────────────────────────── -->
   {% set p = o.praise %}
   <section id="praise">
-    <h2><span class="n">04</span>Who wants to contribute to PRaiSE</h2>
+    <h2><span class="n">05</span>Who wants to contribute to PRaiSE</h2>
     <p class="lede">From the post survey: the one PRaiSE pillar each student chose to contribute to.
       {{ p.joining }} of {{ p.answered }} who answered chose a pillar ({{ p.joining_pct }}%); {{ p.none }}
       chose None.</p>
@@ -339,10 +393,10 @@
     </div>
   </section>
 
-  <!-- ── 5. Entrepreneur families ─────────────────────────────────────── -->
+  <!-- ── 6. Entrepreneur families ─────────────────────────────────────── -->
   {% set e = o.entrepreneurs %}
   <section id="entrepreneurs">
-    <h2><span class="n">05</span>Students from an entrepreneur family</h2>
+    <h2><span class="n">06</span>Students from an entrepreneur family</h2>
     <p class="lede">From the post survey: {{ e.count }} of {{ e.of_post }} ({{ e.pct }}%) have a parent whose
       occupation is Entrepreneur.</p>
     <div class="card t-scroll">
@@ -361,9 +415,9 @@
     </div>
   </section>
 
-  <!-- ── 6. Every student ─────────────────────────────────────────────── -->
+  <!-- ── 7. Every student ─────────────────────────────────────────────── -->
   <section id="students">
-    <h2><span class="n">06</span>Every student</h2>
+    <h2><span class="n">07</span>Every student</h2>
     <p class="lede">Overall AI score out of 5, before and after. A dash means that survey was not filled.</p>
     <div class="card t-scroll">
       <table>

@@ -139,19 +139,27 @@ def career_interest_report(students: list[dict], *, scope: dict) -> dict:
     }
 
 
+async def orientation_by_email(campus: str = "") -> dict[str, dict]:
+    """Each student's Deeksharambh (orientation) answers, by lower-cased email."""
+    ori = await orientation_dataset(campus=campus)
+    return {(r.get("email") or "").strip().lower(): r.get("data") or {}
+            for r in ori["filled"]}
+
+
+def career_for_rows(rows: list[dict], by_email: dict[str, dict], *, scope: dict) -> dict:
+    """The report for these cohort rows (see cohort_dataset), joined by email."""
+    students = [{"orientation": by_email.get((r.get("email") or "").strip().lower()),
+                 "post": r.get("post")} for r in rows]
+    return career_interest_report(students, scope=scope)
+
+
 async def career_interest(*, campus: str = "", dept: str = "") -> dict:
     """The report for one department (or all) on one campus (or all)."""
     rows = await cohort_dataset(campus=campus)
     departments = sorted({r["program"] for r in rows}, key=str.lower)
-    ori = await orientation_dataset(campus=campus)
-    by_email = {(r.get("email") or "").strip().lower(): r.get("data") or {}
-                for r in ori["filled"]}
-
     chosen = [r for r in rows if not dept or r["program"] == dept]
-    students = [{"orientation": by_email.get((r["email"] or "").strip().lower()),
-                 "post": r.get("post")} for r in chosen]
-    report = career_interest_report(
-        students, scope={"campus": campus or "All campuses",
-                         "dept": dept or "All departments"})
+    report = career_for_rows(
+        chosen, await orientation_by_email(campus),
+        scope={"campus": campus or "All campuses", "dept": dept or "All departments"})
     report["departments"] = departments
     return report
