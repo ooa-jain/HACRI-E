@@ -94,6 +94,9 @@ def build_meeting_pdf(pack: dict, *, generated_at: str, dept: str = "") -> bytes
     else:
         d = pack.get("overall_dept") or {}
         scope_name = "All departments"
+    # The line at the foot of every page, and the document's own title.
+    label = (f"Deeksharambh 2026 {scope_name} Analysis" if dept
+             else "Deeksharambh 2026 Overall Analysis").replace("&amp;", "&")
 
     def style(name, **kw):
         base = dict(fontName="Times-Roman", fontSize=11.5, leading=15.5, textColor=C(BODY))
@@ -140,8 +143,7 @@ def build_meeting_pdf(pack: dict, *, generated_at: str, dept: str = "") -> bytes
                              mask="auto")
         canvas.setFont("Times-Roman", 9)
         canvas.setFillColor(C(MUTED))
-        canvas.drawString(margin, 12 * mm, f"Deeksharambh 2026 - {scope_name} - "
-                          f"{campus}".replace("&amp;", "&"))
+        canvas.drawString(margin, 12 * mm, label)
         canvas.drawRightString(page_w - margin, 12 * mm, f"Page {doc.page}")
         canvas.restoreState()
 
@@ -149,7 +151,7 @@ def build_meeting_pdf(pack: dict, *, generated_at: str, dept: str = "") -> bytes
     doc = BaseDocTemplate(
         buffer, pagesize=A4, leftMargin=margin, rightMargin=margin,
         topMargin=8 * mm + header_h, bottomMargin=20 * mm,
-        title=f"Deeksharambh 2026 - {scope_name} - {campus}".replace("&amp;", "&"),
+        title=label,
         author="JAIN University",
     )
     doc.addPageTemplates([PageTemplate(id="page", onPage=page, frames=[Frame(
@@ -215,7 +217,7 @@ def build_meeting_pdf(pack: dict, *, generated_at: str, dept: str = "") -> bytes
         Paragraph("Objective", S["h1"]),
         Paragraph("To understand how students experienced the Deeksharambh orientation week and what "
                   "they expect next, across three areas:", S["body"]),
-        bullets(["Participation: how many registered students took Deeksharambh",
+        bullets(["Participation: how many registered students completed Deeksharambh",
                  "Experience: how each part of the week was rated, its strengths and its gaps",
                  "Aspirations: interest in higher education, a business or a career"]),
     ]
@@ -224,7 +226,7 @@ def build_meeting_pdf(pack: dict, *, generated_at: str, dept: str = "") -> bytes
     h = d.get("headline") or {}
     figures = [
         ["Registered on the portal", str(d.get("registered", 0))],
-        ["Took Deeksharambh", str(d.get("took", 0))],
+        ["Completed Deeksharambh", str(d.get("took", 0))],
         ["Still to reach", str(d.get("missing", 0))],
         ["Conversion", _pct(d.get("pct"))],
         ["Replies analysed", str(d.get("responses", 0))],

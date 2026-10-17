@@ -513,6 +513,10 @@ async def test_the_pdf_is_the_overall_report_in_a_clean_document(admin_client):
     for word in ("worst", "weakest", "chase"):
         assert word not in text
     assert "Page 1" in text
+    # The page foot names the document, and completion is called completion.
+    assert "Deeksharambh 2026 Overall Analysis" in text
+    assert "Completed Deeksharambh" in text and "Took Deeksharambh" not in text
+    assert "Deeksharambh 2026 - All departments - All campuses" not in text
 
 
 @pytest.mark.asyncio
