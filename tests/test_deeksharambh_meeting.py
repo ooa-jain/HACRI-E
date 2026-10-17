@@ -470,79 +470,49 @@ async def test_the_meeting_link_is_admin_only_until_it_is_shared(client, admin_c
 # ── The PDF ──────────────────────────────────────────────────────────────────
 
 @pytest.mark.asyncio
-async def test_the_pdf_carries_the_whole_pack(admin_client):
+async def test_the_pdf_is_the_overall_report_in_a_clean_document(admin_client):
     await _seed()
+    await db.get_db()["orientation_responses"].update_one(
+        {"email": "asha@x.com"}, {"$set": {"data.q41": "Startup Founder"}})
     r = await admin_client.get("/admin/survey/deeksharambh-meeting.pdf")
     assert r.status_code == 200
     assert r.headers["content-type"] == "application/pdf"
-    assert "Department_Wise_Report" in r.headers["content-disposition"]
+    assert "Overall_Report" in r.headers["content-disposition"]
     assert r.content.startswith(b"%PDF-")
 
     from io import BytesIO
 
     from pypdf import PdfReader
 
-    pages = PdfReader(BytesIO(r.content)).pages
-    # A cover, the count, the call-outs and one page-break per department: this
-    # is a document, not a one-pager.
-    assert len(pages) >= 6
-    text = "\n".join(page.extract_text() or "" for page in pages)
+    reader = PdfReader(BytesIO(r.content))
+    text = "\n".join(page.extract_text() or "" for page in reader.pages)
+    # The JAIN logo sits at the top of every page.
+    assert all("/XObject" in (p.get("/Resources") or {}) for p in reader.pages)
 
-    assert "Deeksharambh" in text and "Department-wise survey report" in text
-    for dept in ("Department of Law", "Department of Commerce",
-                 "Department of Design", "Department of Science"):
-        assert dept in text
-    # The count, and both call-out lists.
-    assert "Registered on the portal" in text and "54.5%" in text
-    assert "Most active 4" in text
-    assert "Room to grow - 4 departments" in text
+    # The document's own headings, in order.
+    heads = ["Deeksharambh 2026 Report", "Report Title", "Objective", "Key Figures", "Summary",
+             "Strengths", "Gaps", "What Students Want Next", "Survey Findings", "About the Data"]
+    at = [text.index(h) for h in heads]
+    assert at == sorted(at)
+
+    # Overall only: the scope's figures, no department-by-department readings.
+    assert "All departments" in text and "54.5%" in text and "Registered on the portal" in text
+    for dept in ("Department of Law", "Department of Commerce", "Department of Design"):
+        assert dept not in text
+    assert "students across all departments replied" in text
+    # "Would recommend" spelled out, never the acronym.
+    assert "Would recommend" in text and "NPS" not in text
+    assert "Interested in being an entrepreneur: 1" in text
+    # Every answer, not just the top two: q1's third answer prints too.
+    assert "Overwhelming" in text
+    # Labels intact once the emoji no PDF core font can set are dropped, and
+    # the leadership-facing Likert term rather than the form's own phrase.
+    assert "Felt welcomed during Deeksharambh" in text
+    assert "Strongly Agree" in text and "Absolutely yes!" not in text
+    assert "Sessions that need the most improvement" in text
     for word in ("worst", "weakest", "chase"):
         assert word not in text
-    # Questions carried across, with their labels intact once the emoji that no
-    # PDF core font can set are dropped.
-    assert "Felt welcomed during Deeksharambh" in text
-    # The PDF reads from the same pack the page does, so it carries the same
-    # leadership-facing Likert term rather than the form's own casual phrase
-    # — and never the phrase itself, since the cleanup runs before either
-    # document is built.
-    assert "Strongly Agree" in text
-    assert "Absolutely yes!" not in text
-    assert "Sessions that need the most improvement" in text
-    assert "What would lift it" in text
-    # Page furniture.
     assert "Page 1" in text
-
-
-@pytest.mark.asyncio
-async def test_the_report_carries_everything_the_page_does_with_the_jain_logo(admin_client):
-    await _seed()
-    await db.get_db()["orientation_responses"].update_one(
-        {"email": "asha@x.com"}, {"$set": {"data.q41": "Startup Founder"}})
-    r = await admin_client.get("/admin/survey/deeksharambh-meeting.pdf")
-    from io import BytesIO
-
-    from pypdf import PdfReader
-
-    reader = PdfReader(BytesIO(r.content))
-    text = "\n".join(p.extract_text() or "" for p in reader.pages)
-    # The JAIN logo is drawn on the cover and across the top of every page.
-    assert all("/XObject" in (p.get("/Resources") or {}) for p in reader.pages)
-    # The overall reading and each department's: summary, strengths and gaps,
-    # "Would recommend" spelled out (never NPS), and what students want next.
-    assert "Overall - all departments" in text
-    assert "Strengths" in text and "Gaps" in text
-    assert "Would recommend" in text and "NPS" not in text
-    assert "students across all departments replied" in text
-    assert "What students want next" in text
-    assert "Interested in being an entrepreneur" in text
-    assert "Avatar: Startup Founder: 1" in text
-    # Every answer, not just the top two: Law's q1 had Inspiring, Exciting and
-    # Overwhelming, and the third one prints too.
-    law = text.split("Department of Law")[-1]
-    assert "Overwhelming" in law
-    # Departments read most replies first, as on the page.
-    order = [text.rfind(f"DEPARTMENT {i} OF 4") for i in (1, 2, 3, 4)]
-    assert order == sorted(order) and order[0] > 0
 
 
 @pytest.mark.asyncio

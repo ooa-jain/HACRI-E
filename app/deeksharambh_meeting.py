@@ -879,7 +879,7 @@ async def meeting_pack(*, campus: str = "") -> dict:
 
 def _filename(campus: str, dept: str = "") -> str:
     name = (f"Deeksharambh_2026_{dept}_{campus or 'All'}.pdf" if dept
-            else f"Deeksharambh_2026_Department_Wise_Report_{campus or 'All'}.pdf")
+            else f"Deeksharambh_2026_Overall_Report_{campus or 'All'}.pdf")
     return "".join(c if (c.isalnum() or c in "._-") else "_" for c in name)
 
 
