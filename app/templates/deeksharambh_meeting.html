@@ -431,6 +431,24 @@
   .hl-col .none { font-size: 12.5px; color: var(--muted) }
   @media (max-width: 640px) { .highlights { grid-template-columns: 1fr } }
 
+  /* What the department's students want next — the same three counts the
+     report and the AI survey page carry. */
+  .career { margin-top: 18px }
+  .career h4 { font-size: 11.5px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase;
+               color: var(--dept-blue); margin: 0 0 4px }
+  .career .lede { margin: 0 0 10px }
+  .career-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px }
+  .career-card { background: var(--soft); border-radius: 12px; padding: 12px 14px;
+                 border-top: 3px solid var(--dept-blue) }
+  .career-card.ent { border-top-color: #c9a84c } .career-card.car { border-top-color: #15803d }
+  .career-card b.l { display: block; font-size: 12.5px; color: var(--ink) }
+  .career-card .n { font-size: 24px; font-weight: 800; color: var(--ink); margin-top: 2px }
+  .career-card .n span { font-size: 12px; font-weight: 700; color: var(--muted); margin-left: 5px }
+  .career-card ul { list-style: none; margin: 8px 0 0; padding: 0; font-size: 12px; color: var(--body);
+                    display: flex; flex-direction: column; gap: 3px }
+  .career-card li { display: flex; justify-content: space-between; gap: 8px }
+  @media (max-width: 760px) { .career-row { grid-template-columns: 1fr } }
+
   /* Collapsed by default — a section lists its questions only once its own
      header is clicked or activated by keyboard, so the drill-down opens as
      eight headings rather than every answer to every question at once. */
@@ -618,7 +636,7 @@
         <div class="se-sub">Department-wise survey</div>
         {% endif %}
         <div class="toolbar">
-          {% if pdf_url %}<a class="btn btn-pdf" href="{{ pdf_url }}">{{ ICON.download | safe }} Download PDF</a>{% endif %}
+          {% if pdf_url %}<a class="btn btn-pdf" href="{{ pdf_url }}">{{ ICON.download | safe }} Download report (PDF)</a>{% endif %}
           <button class="btn btn-ghost" onclick="window.print()">{{ ICON.print | safe }} Print</button>
           {% if share_url %}<button class="btn btn-ghost" data-share="{{ share_url }}"
                   onclick="copyLink(this)">{{ ICON.link | safe }} Copy share link</button>{% endif %}
@@ -916,6 +934,26 @@
                   {% else %}
                   <p class="none">Nothing rose to the top of the complaint-only questions.</p>
                   {% endif %}
+                </div>
+              </div>
+              {% endif %}
+
+              {% set c = d.career %}
+              {% if c and c.answered %}
+              <div class="career">
+                <h4>What students want next</h4>
+                <p class="lede">Higher education, a business or a career — from the JAIN avatar and
+                  expectations in Deeksharambh, and the PRaiSE pillar in the AI post survey.
+                  {{ c.answered }} of {{ c.students }} registered students answered; a student can count
+                  under more than one.</p>
+                <div class="career-row">
+                  {% for g in c.groups %}
+                  <div class="career-card {{ {'higher_education': 'hed', 'entrepreneur': 'ent', 'career': 'car'}[g.key] }}">
+                    <b class="l">{{ g.label }}</b>
+                    <div class="n">{{ g.count }}<span>{{ g.pct }}% of {{ c.answered }}</span></div>
+                    <ul>{% for sg in g.signals %}<li><span>{{ sg.label }}</span><b>{{ sg.count }}</b></li>{% endfor %}</ul>
+                  </div>
+                  {% endfor %}
                 </div>
               </div>
               {% endif %}

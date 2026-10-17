@@ -484,7 +484,8 @@ def question_picks(report: dict) -> list[dict]:
         for key, label, kind, maximum in items:
             # The form's own label ends "(NPS)"; this page explains the score
             # in words wherever it shows it, so the acronym is dropped here.
-            label = label.replace(" (NPS)", "")
+            label = (label.replace(" (NPS)", "")
+                     .replace("the NPS rating", "the would-recommend rating"))
             stats = answered.get(key)
             if not stats:
                 questions.append({
@@ -793,6 +794,18 @@ async def meeting_pack(*, campus: str = "") -> dict:
             "synopsis": synopsis,
         })
 
+    # Higher education / a business / a career, read from the same Deeksharambh
+    # replies (JAIN avatar, expectations) plus the AI post survey's PRaiSE
+    # pillar — the same reading each department's AI survey page carries.
+    from app.career_interest import career_for_rows
+    by_email = {(r.get("email") or "").strip().lower(): r.get("data") or {} for r in filled}
+    cohort_by_dept: dict[str, list[dict]] = {}
+    for r in students:
+        cohort_by_dept.setdefault(r["program"] or NO_DEPARTMENT, []).append(r)
+    for d in departments:
+        d["career"] = career_for_rows(cohort_by_dept.get(d["dept"], []), by_email,
+                                      scope={"campus": campus, "dept": d["dept"]})
+
     # The department list reads most replies first — the departments with the
     # most to say open the list. The ranked conversion table and the call-outs
     # keep their own order (best conversion first) from `conversion` itself.
@@ -824,6 +837,8 @@ async def meeting_pack(*, campus: str = "") -> dict:
         "synopsis": department_synopsis(len(filled), everyone["headline"],
                                         all_strengths, all_gaps,
                                         scope="across all departments"),
+        "career": career_for_rows(students, by_email,
+                                  scope={"campus": campus, "dept": "All departments"}),
     }
 
     return {
@@ -862,8 +877,9 @@ async def meeting_pack(*, campus: str = "") -> dict:
 # The admin route and the shared-link route serve exactly the same document, so
 # they build it here rather than each assembling their own and drifting.
 
-def _filename(campus: str) -> str:
-    name = f"Deeksharambh_2026_Department_Meeting_Pack_{campus or 'All'}.pdf"
+def _filename(campus: str, dept: str = "") -> str:
+    name = (f"Deeksharambh_2026_{dept}_{campus or 'All'}.pdf" if dept
+            else f"Deeksharambh_2026_Department_Wise_Report_{campus or 'All'}.pdf")
     return "".join(c if (c.isalnum() or c in "._-") else "_" for c in name)
 
 
@@ -914,13 +930,14 @@ async def department_links(base_url: str, *, campus: str = "") -> list[dict]:
             "registered": d["registered"],
             "responses": d["responses"],
             "open_url": f"/admin/survey/deeksharambh-meeting/department?{urlencode(query)}",
+            "pdf_url": f"/admin/survey/deeksharambh-meeting/department.pdf?{urlencode(query)}",
             "share_url": dept_meeting_share_url(base_url, d["dept"], campus),
         })
     return out
 
 
-async def meeting_pdf_response(*, campus: str = ""):
-    """The same document as a PDF attachment."""
+async def meeting_pdf_response(*, campus: str = "", dept: str = ""):
+    """The same document as a PDF attachment — every department, or `dept` alone."""
     import io
     from datetime import datetime
 
@@ -929,12 +946,16 @@ async def meeting_pdf_response(*, campus: str = ""):
     from app.deeksharambh_meeting_pdf import build_meeting_pdf
     from app.routes.shared_analysis import _in_thread
 
+    from fastapi import HTTPException
+
     pack = await meeting_pack(campus=campus)
+    if dept and not any(d["dept"] == dept for d in pack["departments"]):
+        raise HTTPException(status_code=404, detail="No such department.")
     generated_at = datetime.now().strftime("%d %b %Y, %H:%M")
-    pdf_bytes = await _in_thread(build_meeting_pdf, pack, generated_at=generated_at)
+    pdf_bytes = await _in_thread(build_meeting_pdf, pack, generated_at=generated_at, dept=dept)
 
     return StreamingResponse(
         io.BytesIO(pdf_bytes),
         media_type="application/pdf",
-        headers={"Content-Disposition": f'attachment; filename="{_filename(campus)}"'},
+        headers={"Content-Disposition": f'attachment; filename="{_filename(campus, dept)}"'},
     )

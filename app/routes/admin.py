@@ -1657,13 +1657,30 @@ async def admin_deeksharambh_meeting_department(
     if not _is_survey_admin(request):
         raise HTTPException(status_code=403)
 
+    from urllib.parse import urlencode
+
     from app.deeksharambh_meeting import meeting_page
     from app.routes.shared_analysis import dept_meeting_share_url
 
+    query = urlencode({"dept": dept, **({"campus": campus} if campus else {})})
     return await meeting_page(
         request, campus=campus, dept=dept,
+        pdf_url=f"/admin/survey/deeksharambh-meeting/department.pdf?{query}",
         share_url=dept_meeting_share_url(str(request.base_url).rstrip("/"), dept, campus),
     )
+
+
+@router.get("/admin/survey/deeksharambh-meeting/department.pdf")
+async def admin_deeksharambh_meeting_department_pdf(
+    request: Request, dept: str = Query(...), campus: str = Query(default=""),
+):
+    """One department's report as a PDF."""
+    if not _is_survey_admin(request):
+        raise HTTPException(status_code=403)
+
+    from app.deeksharambh_meeting import meeting_pdf_response
+
+    return await meeting_pdf_response(campus=campus, dept=dept)
 
 
 @router.get("/admin/survey/deeksharambh-meeting/department-links")

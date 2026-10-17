@@ -682,13 +682,14 @@
                   <div class="h-card">🧾 Department meeting pack</div>
                   <div class="sub">One link for the meeting: how many students each department
                     registered on the portal against how many actually took Deeksharambh, ranked,
-                    with the top five and least five called out — then every department's own
-                    analysis, every question, with the two answers its students gave most.
-                    Nothing folded away.</div>
+                    with the top five and least five called out — then the overall reading and every
+                    department's own analysis: summary, strengths and gaps, higher education /
+                    entrepreneur / career, and every question with every answer. The report downloads
+                    all of it as one PDF with the JAIN logo.</div>
                 </div>
                 <div class="panel-actions">
                   <a id="ori-meeting" href="/admin/survey/deeksharambh-meeting" target="_blank" class="btn btn-dark">🔗 Open</a>
-                  <a id="ori-meeting-pdf" href="/admin/survey/deeksharambh-meeting.pdf" class="btn btn-soft">⬇️ PDF</a>
+                  <a id="ori-meeting-pdf" href="/admin/survey/deeksharambh-meeting.pdf" class="btn btn-soft">⬇️ Download full report (PDF)</a>
                 </div>
               </div>
             </div>
@@ -3542,6 +3543,7 @@ function renderOriDeptPages() {
     `<span class="font-bold text-blue-700">${row.took}</span>`,
     `<div class="flex items-center gap-1.5 justify-end">
        <a href="${e(row.open_url)}" target="_blank" class="btn-xs btn-primary">🔗 Open</a>
+       <a href="${e(row.pdf_url)}" class="btn-xs btn-soft">⬇️ PDF report</a>
        <button class="btn-xs btn-soft" data-url="${e(row.share_url)}"
                onclick="copy(this.dataset.url)">Copy share link</button>
      </div>`,

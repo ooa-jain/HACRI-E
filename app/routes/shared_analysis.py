@@ -221,13 +221,14 @@ def require_dept_meeting_token(dept: str, campus: str, token: str) -> None:
             status_code=403, detail="Access denied: Invalid or expired sharing link.")
 
 
-def dept_meeting_share_url(base_url: str, dept: str, campus: str = "") -> str:
+def dept_meeting_share_url(base_url: str, dept: str, campus: str = "",
+                           path: str = "/shared/deeksharambh-meeting/department") -> str:
     from urllib.parse import urlencode
 
     query = {"dept": dept, "token": get_dept_meeting_token(dept, campus)}
     if campus:
         query["campus"] = campus
-    return f"{base_url.rstrip('/')}/shared/deeksharambh-meeting/department?{urlencode(query)}"
+    return f"{base_url.rstrip('/')}{path}?{urlencode(query)}"
 
 
 # One department's AI survey (outcome & impact) page. Its own scope, bound to
@@ -810,8 +811,24 @@ async def shared_deeksharambh_meeting_department(
     base = str(request.base_url).rstrip("/")
     return await meeting_page(
         request, campus=campus, dept=dept,
+        pdf_url=dept_meeting_share_url(base, dept, campus,
+                                       "/shared/deeksharambh-meeting/department.pdf"),
         share_url=dept_meeting_share_url(base, dept, campus),
     )
+
+
+@router.get("/shared/deeksharambh-meeting/department.pdf")
+async def shared_deeksharambh_meeting_department_pdf(
+    token: str = Query(...),
+    dept: str = Query(...),
+    campus: str = Query(default=""),
+):
+    """The same department's report as a PDF, for whoever holds its link."""
+    require_dept_meeting_token(dept, campus, token)
+
+    from app.deeksharambh_meeting import meeting_pdf_response
+
+    return await meeting_pdf_response(campus=campus, dept=dept)
 
 
 @router.get("/shared/outcome/department", response_class=HTMLResponse)

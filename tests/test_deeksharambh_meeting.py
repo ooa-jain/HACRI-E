@@ -431,7 +431,7 @@ async def test_the_admin_link_prints_every_department_in_full(admin_client):
     # Nothing on the page can be folded shut.
     assert "<details" not in page
     assert "No Deeksharambh replies from this department yet" in page
-    assert "Download PDF" in page
+    assert "Download report (PDF)" in page
 
     # No single answer can claim more than 100% of the students who answered.
     import re
@@ -475,7 +475,7 @@ async def test_the_pdf_carries_the_whole_pack(admin_client):
     r = await admin_client.get("/admin/survey/deeksharambh-meeting.pdf")
     assert r.status_code == 200
     assert r.headers["content-type"] == "application/pdf"
-    assert "Department_Meeting_Pack" in r.headers["content-disposition"]
+    assert "Department_Wise_Report" in r.headers["content-disposition"]
     assert r.content.startswith(b"%PDF-")
 
     from io import BytesIO
@@ -488,12 +488,12 @@ async def test_the_pdf_carries_the_whole_pack(admin_client):
     assert len(pages) >= 6
     text = "\n".join(page.extract_text() or "" for page in pages)
 
-    assert "Department meeting pack" in text
+    assert "Deeksharambh" in text and "Department-wise survey report" in text
     for dept in ("Department of Law", "Department of Commerce",
                  "Department of Design", "Department of Science"):
         assert dept in text
     # The count, and both call-out lists.
-    assert "REGISTERED IN PORTAL" in text and "54.5%" in text
+    assert "Registered on the portal" in text and "54.5%" in text
     assert "Most active 4" in text
     assert "Room to grow - 4 departments" in text
     for word in ("worst", "weakest", "chase"):
@@ -511,6 +511,71 @@ async def test_the_pdf_carries_the_whole_pack(admin_client):
     assert "What would lift it" in text
     # Page furniture.
     assert "Page 1" in text
+
+
+@pytest.mark.asyncio
+async def test_the_report_carries_everything_the_page_does_with_the_jain_logo(admin_client):
+    await _seed()
+    await db.get_db()["orientation_responses"].update_one(
+        {"email": "asha@x.com"}, {"$set": {"data.q41": "Startup Founder"}})
+    r = await admin_client.get("/admin/survey/deeksharambh-meeting.pdf")
+    from io import BytesIO
+
+    from pypdf import PdfReader
+
+    reader = PdfReader(BytesIO(r.content))
+    text = "\n".join(p.extract_text() or "" for p in reader.pages)
+    # The JAIN logo is drawn on the cover and across the top of every page.
+    assert all("/XObject" in (p.get("/Resources") or {}) for p in reader.pages)
+    # The overall reading and each department's: summary, strengths and gaps,
+    # "Would recommend" spelled out (never NPS), and what students want next.
+    assert "Overall - all departments" in text
+    assert "Strengths" in text and "Gaps" in text
+    assert "Would recommend" in text and "NPS" not in text
+    assert "students across all departments replied" in text
+    assert "What students want next" in text
+    assert "Interested in being an entrepreneur" in text
+    assert "Avatar: Startup Founder: 1" in text
+    # Every answer, not just the top two: Law's q1 had Inspiring, Exciting and
+    # Overwhelming, and the third one prints too.
+    law = text.split("Department of Law")[-1]
+    assert "Overwhelming" in law
+    # Departments read most replies first, as on the page.
+    order = [text.rfind(f"DEPARTMENT {i} OF 4") for i in (1, 2, 3, 4)]
+    assert order == sorted(order) and order[0] > 0
+
+
+@pytest.mark.asyncio
+async def test_each_department_downloads_its_own_report(client, admin_client):
+    await _seed()
+    from io import BytesIO
+
+    from pypdf import PdfReader
+
+    from app.routes.shared_analysis import dept_meeting_share_url
+
+    url = "/admin/survey/deeksharambh-meeting/department.pdf"
+    assert (await client.get(url, params={"dept": "Department of Law"})).status_code == 403
+    r = await admin_client.get(url, params={"dept": "Department of Law"})
+    assert r.status_code == 200 and r.content.startswith(b"%PDF-")
+    assert "Department_of_Law" in r.headers["content-disposition"]
+    text = "\n".join(p.extract_text() or "" for p in PdfReader(BytesIO(r.content)).pages)
+    assert "Department of Law" in text and "Department of Commerce" not in text
+    assert "Strengths" in text and "Felt welcomed during Deeksharambh" in text
+    assert (await admin_client.get(url, params={"dept": "Nope"})).status_code == 404
+
+    # The department's own page offers it, and so does its share link.
+    page = (await admin_client.get("/admin/survey/deeksharambh-meeting/department",
+                                   params={"dept": "Department of Law"})).text
+    assert "/admin/survey/deeksharambh-meeting/department.pdf?dept=Department+of+Law" in page
+    shared = dept_meeting_share_url("http://test", "Department of Law", "",
+                                    "/shared/deeksharambh-meeting/department.pdf")
+    r = await client.get(shared.replace("http://test", ""))
+    assert r.status_code == 200 and r.content.startswith(b"%PDF-")
+    assert (await client.get("/shared/deeksharambh-meeting/department.pdf",
+                             params={"dept": "Department of Law", "token": "x"})).status_code == 403
+    links = (await admin_client.get("/admin/survey/deeksharambh-meeting/department-links")).json()
+    assert all(d["pdf_url"].startswith(url) for d in links["departments"])
 
 
 @pytest.mark.asyncio
@@ -1077,7 +1142,7 @@ async def test_the_button_chrome_uses_icons_not_emoji(admin_client):
     page = (await admin_client.get("/admin/survey/deeksharambh-meeting")).text
 
     assert "{{ ICON.download" not in page   # actually rendered, not left literal
-    assert "Download PDF</a>" in page
+    assert "Download report (PDF)</a>" in page
     icon_json = page.split("var ICON_SVG = ")[1].split(";\n")[0]
     for icon in ("download", "print", "link", "building", "check"):
         assert f'"{icon}":' in icon_json
@@ -1475,8 +1540,10 @@ async def test_a_department_has_its_own_page_in_the_same_style(admin_client):
     assert page.count('<div class="qsec" data-sec=') == 8
     # Nothing that compares departments.
     for gone in ('id="count"', 'id="sections"', 'id="all-departments"', 'id="deptList"',
-                 "Department of Commerce", "Download PDF"):
+                 "Department of Commerce", "deeksharambh-meeting.pdf"):
         assert gone not in page
+    # Its own report downloads instead of the whole pack.
+    assert "deeksharambh-meeting/department.pdf?" in page
     # It comes with its own share link.
     assert "/shared/deeksharambh-meeting/department?" in page
 
