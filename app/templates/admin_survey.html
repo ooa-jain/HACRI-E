@@ -697,6 +697,20 @@
             <div class="card">
               <div class="panel-head">
                 <div>
+                  <div class="h-card">📝 Short summary</div>
+                  <div class="sub">Deeksharambh in three pages of text: our approach, the department
+                    approach, the figures at a glance, a short explanation of every section of the
+                    student feedback, what students want next, and the way forward.</div>
+                </div>
+                <div class="panel-actions">
+                  <a id="ori-summary-pdf" href="/admin/survey/deeksharambh-summary.pdf" class="btn btn-dark">⬇️ Download PDF</a>
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="panel-head">
+                <div>
                   <div class="h-card">🏛️ Department meeting pages</div>
                   <div class="sub">The same meeting pack, one department at a time — its own summary,
                     strengths and gaps, then every section and every answer. <b>Open</b> it here, or
@@ -3560,6 +3574,7 @@ function setOriView(view) {
   const meetingScope = 'campus=' + encodeURIComponent(oriCampus);
   if ($('ori-meeting')) $('ori-meeting').href = '/admin/survey/deeksharambh-meeting?' + meetingScope;
   if ($('ori-meeting-pdf')) $('ori-meeting-pdf').href = '/admin/survey/deeksharambh-meeting.pdf?' + meetingScope;
+  if ($('ori-summary-pdf')) $('ori-summary-pdf').href = '/admin/survey/deeksharambh-summary.pdf?' + meetingScope;
   if (view === 'analysis')    loadOriCampusReport();
   if (view === 'departments') loadOriDepartments();
   if (view === 'filled')      loadOriStudents();

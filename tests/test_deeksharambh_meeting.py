@@ -1590,3 +1590,50 @@ async def test_the_dashboard_lists_every_department_page(client, admin_client):
     picker = tpl.split("function closeOriCampus()")[1].split("\n}\n")[0]
     assert "loadOriDeptPages();" in picker
     assert "loadOriDeptPages();" not in tpl.split("function setOriView(view)")[1].split("\n}\n")[0]
+
+
+# ── The short summary ────────────────────────────────────────────────────────
+
+@pytest.mark.asyncio
+async def test_the_short_summary_is_three_pages_of_text_from_the_live_answers(client, admin_client):
+    await _seed()
+    url = "/admin/survey/deeksharambh-summary.pdf"
+    assert (await client.get(url)).status_code == 403
+    r = await admin_client.get(url)
+    assert r.status_code == 200 and r.content.startswith(b"%PDF-")
+    assert "Short_Summary_All" in r.headers["content-disposition"]
+
+    from io import BytesIO
+
+    from pypdf import PdfReader
+
+    reader = PdfReader(BytesIO(r.content))
+    assert len(reader.pages) <= 3
+    text = "\n".join(p.extract_text() or "" for p in reader.pages)
+    heads = ["Deeksharambh 2026 Report", "Report Title", "Objective", "Our Approach",
+             "Department Approach", "At a Glance", "Student Feedback", "What Students Want Next"]
+    at = [text.index(h) for h in heads]
+    assert at == sorted(at)
+    # Read from this cohort: 11 registered across 4 departments, 6 completed.
+    assert "11 students registered across 4 departments" in " ".join(text.split())
+    assert "Transition and Settling In" in text and "NPS" not in text
+    assert "Deeksharambh 2026 Overall Analysis" in text
+    # Text only: no answer tables.
+    assert "Students Share" not in text
+
+    from pathlib import Path
+    page = Path("app/templates/admin_survey.html").read_text()
+    assert "📝 Short summary" in page and 'id="ori-summary-pdf"' in page
+    assert "/admin/survey/deeksharambh-summary.pdf?" in page
+
+
+def test_the_short_summary_leaves_out_what_is_not_on_file():
+    """No answers at all: nothing claimed, nothing printed as zero, and it still builds."""
+    from app.deeksharambh_summary_pdf import build_summary_pdf, summary_paragraphs
+
+    pack = {"campus": "", "totals": {}, "overall_dept": {"sections": [], "headline": {}}}
+    t = summary_paragraphs(pack)
+    assert t["glance"] == "" and t["way"] == []
+    assert [title for title, _p in t["feedback"]] == ["NEP 2020 and Digital Readiness"]
+    assert "registered across" in t["approach"]
+    assert build_summary_pdf(pack, generated_at="now").startswith(b"%PDF-")
