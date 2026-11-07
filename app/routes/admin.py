@@ -1772,6 +1772,17 @@ async def admin_outcome_department_links(request: Request, campus: str = Query(d
         str(request.base_url).rstrip("/"), campus=campus)}
 
 
+@router.get("/admin/survey/deeksharambh-meeting.docx")
+async def admin_deeksharambh_meeting_docx(request: Request, campus: str = Query(default="")):
+    """The Deeksharambh 2026 overall report as Word, laid out like the AI survey reports."""
+    if not _is_survey_admin(request):
+        raise HTTPException(status_code=403)
+
+    from app.deeksharambh_report_docx import report_docx_response
+
+    return await report_docx_response(campus=campus)
+
+
 @router.get("/admin/survey/deeksharambh-summary.pdf")
 async def admin_deeksharambh_summary_pdf(request: Request, campus: str = Query(default="")):
     """The three-page short summary of Deeksharambh, as a PDF."""

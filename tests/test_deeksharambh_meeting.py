@@ -1651,3 +1651,72 @@ def test_the_short_summary_leaves_out_what_is_not_on_file():
     assert "students completed it" not in t["approach_steps"][0]
     assert "average AI score moved" not in t["approach_steps"][-1]
     assert build_summary_pdf(pack, generated_at="now").startswith(b"%PDF-")
+
+
+# ── The overall Word report ──────────────────────────────────────────────────
+
+@pytest.mark.asyncio
+async def test_the_word_report_carries_theme_flow_feedback_and_tables(client, admin_client):
+    await _seed()
+    url = "/admin/survey/deeksharambh-meeting.docx"
+    assert (await client.get(url)).status_code == 403
+    r = await admin_client.get(url)
+    assert r.status_code == 200 and r.content[:2] == b"PK"
+    assert "Overall_Report_All.docx" in r.headers["content-disposition"]
+
+    from io import BytesIO
+
+    import docx
+
+    d = docx.Document(BytesIO(r.content))
+    text = "\n".join(p.text for p in d.paragraphs)
+    cells = "\n".join(c.text for t in d.tables for row in t.rows for c in row.cells)
+    # The cover and the numbered sections, in order.
+    assert "Deeksharambh 2026 — Overall Report" in text
+    heads = ["1. Executive Summary", "2. Theme", "3. Our Approach", "Student Feedback",
+             "What Students Want Next"]
+    at = [text.index(h) for h in heads]
+    assert at == sorted(at)
+    # This cohort's baseline answers carry no scores, so the before-and-after
+    # section is left out rather than printed empty.
+    assert "AI Survey: Before and After" not in text
+    assert "Human & AI: The Dawn of Collaborative Intelligence" in text
+    assert "Key findings" in text and "28 departments" in text
+    assert "Department Approach" not in text and "NPS" not in text
+    # The flow, the theme by school, the participation stages and the sub-sections.
+    assert "AI pre survey (baseline)." in text and "AI post survey." in text
+    assert "Finance Meets Intelligence" in cells
+    for stage in ("Registered on the portal", "AI pre survey (baseline)", "Completed Deeksharambh",
+                  "AI post survey"):
+        assert stage in cells
+    assert ".1 Transition and Settling In" in text
+    # Charts are pictures in the document, and every page carries the logo.
+    assert len(d.inline_shapes) >= 4
+    assert d.sections[0].header.paragraphs[0].runs
+
+    from pathlib import Path
+    page = Path("app/templates/admin_survey.html").read_text()
+    assert 'id="ori-meeting-docx"' in page and "/admin/survey/deeksharambh-meeting.docx?" in page
+
+
+def test_the_word_report_shows_the_ai_survey_before_and_after_when_scored():
+    from io import BytesIO
+
+    import docx
+
+    from app.deeksharambh_report_docx import build_report_docx
+
+    pack = {"campus": "", "totals": {"registered": 100, "took": 40, "pct": 40.0},
+            "overall_dept": {"sections": [], "headline": {}}}
+    ai = {"journey": {"baseline": 80, "baseline_pct": 80.0, "post": 20, "post_pct": 20.0},
+          "scores": {"overall": {"before": 3.5, "after": 3.9, "change": 0.4},
+                     "literacy": {"before": 3.4, "after": 3.8, "change": 0.4},
+                     "readiness": {"before": 3.6, "after": 4.0, "change": 0.4},
+                     "before_n": 80, "after_n": 20}}
+    d = docx.Document(BytesIO(build_report_docx(pack, generated_at="now", ai=ai)))
+    text = "\n".join(p.text for p in d.paragraphs)
+    cells = [[c.text for c in row.cells] for t in d.tables for row in t.rows]
+    assert "4. AI Survey: Before and After" in text
+    assert ["Overall AI score", "3.5", "3.9", "+0.40"] in cells
+    assert ["AI pre survey (baseline)", "80", "80.0%"] in cells
+    assert "average AI score moved from 3.5 to 3.9" in text
