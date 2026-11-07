@@ -65,6 +65,21 @@ def _rgb(hex_colour: str):
     return RGBColor.from_string(hex_colour)
 
 
+# Characters Word's XML cannot hold — tabs and line breaks aside. A typed answer
+# carrying one (a pasted vertical tab, a stray NUL) would otherwise stop the
+# whole report with "All strings must be XML compatible".
+_XML_BAD = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\ufffe\uffff]")
+
+
+def _xml_safe(text) -> str:
+    return _XML_BAD.sub(" ", str(text if text is not None else ""))
+
+
+def _add(paragraph, text):
+    """A run holding `text`, with anything Word's XML cannot hold taken out first."""
+    return paragraph.add_run(_xml_safe(text))
+
+
 def _font(run, *, size=12, bold=False, italic=False, colour=INK):
     from docx.oxml.ns import qn
     from docx.shared import Pt
@@ -86,8 +101,8 @@ def _rich(paragraph, markup: str, *, size=12, colour=INK):
         elif part in ("<i>", "</i>"):
             italic = part == "<i>"
         elif part:
-            _font(paragraph.add_run(html.unescape(part)), size=size, bold=bold, italic=italic,
-                  colour=colour)
+            _font(_add(paragraph, html.unescape(part)), size=size, bold=bold,
+                  italic=italic, colour=colour)
     return paragraph
 
 
@@ -167,11 +182,11 @@ class _Doc:
         head.paragraph_format.tab_stops.add_tab_stop(Cm(17.0), alignment=2)
         if LOGO.exists():
             head.add_run().add_picture(str(LOGO), height=Cm(0.9))
-        _font(head.add_run(f"\tDeeksharambh 2026 · Overall Report · {campus}"), size=8,
+        _font(_add(head, f"\tDeeksharambh 2026 · Overall Report · {campus}"), size=8,
               colour=GREY)
         foot = sec.footer.paragraphs[0]
         foot.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        run = _font(foot.add_run("Page "), size=8, colour=GREY)
+        run = _font(_add(foot, "Page "), size=8, colour=GREY)
         fld = OxmlElement("w:fldSimple")
         fld.set(qn("w:instr"), "PAGE")
         r = OxmlElement("w:r")
@@ -191,7 +206,7 @@ class _Doc:
         self.sub = 0
         p = self.d.add_paragraph()
         _spacing(p, before=14, after=8)
-        _font(p.add_run(f"{self.n}. {title}"), size=20, bold=True, colour=NAVY)
+        _font(_add(p, f"{self.n}. {title}"), size=20, bold=True, colour=NAVY)
         _bottom_rule(p)
         return p
 
@@ -200,14 +215,14 @@ class _Doc:
         p = self.d.add_paragraph()
         _spacing(p, before=10, after=4)
         p.paragraph_format.keep_with_next = True
-        _font(p.add_run(f"{self.n}.{self.sub} {title}"), size=14, bold=True, colour=NAVY)
+        _font(_add(p, f"{self.n}.{self.sub} {title}"), size=14, bold=True, colour=NAVY)
         return p
 
     def label(self, text: str):
         p = self.d.add_paragraph()
         _spacing(p, before=8, after=3)
         p.paragraph_format.keep_with_next = True
-        _font(p.add_run(text), size=14, bold=True, colour=TEAL)
+        _font(_add(p, text), size=14, bold=True, colour=TEAL)
         return p
 
     # Text ------------------------------------------------------------------
@@ -240,11 +255,11 @@ class _Doc:
             v = cell.paragraphs[0]
             v.alignment = WD_ALIGN_PARAGRAPH.CENTER
             _spacing(v, before=4, after=0)
-            _font(v.add_run(value), size=20 if len(value) < 12 else 16, bold=True, colour=NAVY)
+            _font(_add(v, value), size=20 if len(value) < 12 else 16, bold=True, colour=NAVY)
             lp = cell.add_paragraph()
             lp.alignment = WD_ALIGN_PARAGRAPH.CENTER
             _spacing(lp, after=4)
-            _font(lp.add_run(lab), size=9, colour=GREY)
+            _font(_add(lp, lab), size=9, colour=GREY)
         self.d.add_paragraph()
 
     def table(self, head: list[str], rows: list[list[str]], widths: list[float]):
@@ -268,7 +283,7 @@ class _Doc:
             _cell_borders(cell)
             p = cell.paragraphs[0]
             p.alignment = align[i]
-            _font(p.add_run(text), size=11, bold=True, colour="FFFFFF")
+            _font(_add(p, text), size=11, bold=True, colour="FFFFFF")
         for k, row in enumerate(rows):
             cells = t.add_row().cells
             for i, (cell, text) in enumerate(zip(cells, row)):
@@ -277,7 +292,7 @@ class _Doc:
                     _shade(cell, ZEBRA)
                 p = cell.paragraphs[0]
                 p.alignment = align[i]
-                _font(p.add_run(text), size=11)
+                _font(_add(p, text), size=11)
         for i, col in enumerate(t.columns):
             col.width = self.Inches(widths[i])
             for cell in col.cells:
@@ -306,7 +321,7 @@ class _Doc:
         c = self.d.add_paragraph()
         c.alignment = WD_ALIGN_PARAGRAPH.CENTER
         _spacing(c, after=10)
-        _font(c.add_run(f"Figure {self.fig} — {caption}"), size=10, italic=True, colour=GREY)
+        _font(_add(c, f"Figure {self.fig} — {caption}"), size=10, italic=True, colour=GREY)
 
     def page_break(self):
         from docx.enum.text import WD_BREAK
@@ -317,10 +332,10 @@ class _Doc:
         from docx.shared import Cm
         p = self.d.add_paragraph()
         _spacing(p, before=30, after=4)
-        _font(p.add_run("JAIN (DEEMED-TO-BE UNIVERSITY)"), size=11, colour=INK)
+        _font(_add(p, "JAIN (DEEMED-TO-BE UNIVERSITY)"), size=11, colour=INK)
         p = self.d.add_paragraph()
         _spacing(p, after=40, line=1.0)
-        _font(p.add_run(title), size=36, bold=True, colour=NAVY)
+        _font(_add(p, title), size=36, bold=True, colour=NAVY)
         if LOGO.exists():
             p = self.d.add_paragraph()
             p.alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -328,11 +343,11 @@ class _Doc:
             p.add_run().add_picture(str(LOGO), width=Cm(11))
         p = self.d.add_paragraph()
         _spacing(p, after=2)
-        _font(p.add_run(theme), size=16, colour=NAVY)
+        _font(_add(p, theme), size=16, colour=NAVY)
         _bottom_rule(p, size=14)
         p = self.d.add_paragraph()
         _spacing(p, before=4)
-        _font(p.add_run(line), size=11, colour=GREY)
+        _font(_add(p, line), size=11, colour=GREY)
         self.page_break()
 
     def save(self) -> bytes:

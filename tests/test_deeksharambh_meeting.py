@@ -1713,3 +1713,25 @@ def test_the_word_report_shows_the_ai_survey_before_and_after_when_scored():
     assert ["Overall AI score", "3.5", "3.9", "+0.40"] in cells
     assert ["AI pre survey (baseline)", "80", "80.0%"] in cells
     assert "average AI score moved from 3.5 to 3.9" in text
+
+
+def test_the_word_report_survives_control_characters_in_typed_answers():
+    """A pasted vertical tab or NUL in an answer must not stop the report:
+    Word's XML cannot hold them, so they are taken out, and the rest prints."""
+    from io import BytesIO
+
+    import docx
+
+    from app.deeksharambh_report_docx import build_report_docx, build_report_pdf
+
+    q = {"key": "q5", "answered": 3, "kind": "single", "rows": [],
+         "all": [{"label": "Manageable", "pct": 66.7, "count": 2},
+                 {"label": "Other: too\x0bmuch\x00 noise", "pct": 33.3, "count": 1}]}
+    pack = {"campus": "Bangalore\x0c", "totals": {"registered": 3, "took": 3, "pct": 100.0},
+            "overall_dept": {"sections": [{"title": "x", "questions": [q]}], "headline": {},
+                             "strengths": [{"label": "Ease\x0b of transition", "top": "Man\x01ageable",
+                                            "pct": 66.7}], "gaps": []}}
+    d = docx.Document(BytesIO(build_report_docx(pack, generated_at="now")))
+    cells = " ".join(c.text for t in d.tables for row in t.rows for c in row.cells)
+    assert "Ease of transition" in cells and "Man ageable" in cells
+    assert build_report_pdf(pack, generated_at="now").startswith(b"%PDF-")
