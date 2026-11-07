@@ -1,5 +1,5 @@
 """
-deeksharambh_report_docx.py — the Deeksharambh 2026 overall report as Word.
+deeksharambh_report_docx.py — the Deeksharambh 2026 overall report, as Word and PDF.
 
 Laid out like the department AI Survey Outcome & Impact reports (the BBA one is
 the model): a cover with the JAIN logo, numbered sections in navy Times New
@@ -312,6 +312,249 @@ class _Doc:
         from docx.enum.text import WD_BREAK
         self.d.add_paragraph().add_run().add_break(WD_BREAK.PAGE)
 
+    def cover(self, title: str, theme: str, line: str):
+        from docx.enum.text import WD_ALIGN_PARAGRAPH
+        from docx.shared import Cm
+        p = self.d.add_paragraph()
+        _spacing(p, before=30, after=4)
+        _font(p.add_run("JAIN (DEEMED-TO-BE UNIVERSITY)"), size=11, colour=INK)
+        p = self.d.add_paragraph()
+        _spacing(p, after=40, line=1.0)
+        _font(p.add_run(title), size=36, bold=True, colour=NAVY)
+        if LOGO.exists():
+            p = self.d.add_paragraph()
+            p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            _spacing(p, after=60)
+            p.add_run().add_picture(str(LOGO), width=Cm(11))
+        p = self.d.add_paragraph()
+        _spacing(p, after=2)
+        _font(p.add_run(theme), size=16, colour=NAVY)
+        _bottom_rule(p, size=14)
+        p = self.d.add_paragraph()
+        _spacing(p, before=4)
+        _font(p.add_run(line), size=11, colour=GREY)
+        self.page_break()
+
+    def save(self) -> bytes:
+        buf = io.BytesIO()
+        self.d.save(buf)
+        return buf.getvalue()
+
+
+class _Pdf:
+    """The `_Doc` interface drawn as a PDF: Times, navy titles, a teal rule, the
+    logo and report name across the top of every page, the page number below."""
+
+    def __init__(self, campus: str):
+        from reportlab.lib import colors
+        from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib.styles import ParagraphStyle
+        from reportlab.lib.units import cm
+
+        self.C = lambda h: colors.HexColor("#" + h)
+        self.cm, self.A4 = cm, A4
+        self.campus = campus
+        self.story = []
+        self.n = self.sub = self.fig = 0
+        self.width = A4[0] - 4.0 * cm
+
+        def st(name, **kw):
+            base = dict(fontName="Times-Roman", fontSize=12, leading=16, textColor=self.C(INK),
+                        alignment=TA_JUSTIFY)
+            base.update(kw)
+            return ParagraphStyle(name, **base)
+
+        self.S = {
+            "body": st("body", spaceAfter=6),
+            "small": st("small", fontSize=10, leading=13, textColor=self.C(GREY)),
+            "h1": st("h1", fontName="Times-Bold", fontSize=20, leading=24, textColor=self.C(NAVY),
+                     alignment=0, spaceBefore=12, spaceAfter=2),
+            "h2": st("h2", fontName="Times-Bold", fontSize=14, leading=18, textColor=self.C(NAVY),
+                     alignment=0, spaceBefore=9, spaceAfter=3),
+            "label": st("label", fontName="Times-Bold", fontSize=14, leading=18,
+                        textColor=self.C(TEAL), alignment=0, spaceBefore=8, spaceAfter=3),
+            "list": st("list", spaceAfter=3),
+            "cell": st("cell", fontSize=11, leading=13.5, alignment=0),
+            "cellc": st("cellc", fontSize=11, leading=13.5, alignment=TA_CENTER),
+            "th": st("th", fontName="Times-Bold", fontSize=11, leading=13.5,
+                     textColor=colors.white, alignment=0),
+            "thc": st("thc", fontName="Times-Bold", fontSize=11, leading=13.5,
+                      textColor=colors.white, alignment=TA_CENTER),
+            "tile_v": st("tile_v", fontName="Times-Bold", fontSize=20, leading=24,
+                         textColor=self.C(NAVY), alignment=TA_CENTER),
+            "tile_vs": st("tile_vs", fontName="Times-Bold", fontSize=15, leading=19,
+                          textColor=self.C(NAVY), alignment=TA_CENTER),
+            "tile_l": st("tile_l", fontSize=9, leading=11, textColor=self.C(GREY),
+                         alignment=TA_CENTER),
+            "caption": st("caption", fontName="Times-Italic", fontSize=10, leading=12,
+                          textColor=self.C(GREY), alignment=TA_CENTER, spaceAfter=10),
+            "kicker": st("kicker", fontSize=11, leading=14, alignment=0),
+            "title": st("title", fontName="Times-Bold", fontSize=36, leading=40,
+                        textColor=self.C(NAVY), alignment=0),
+            "theme": st("theme", fontSize=16, leading=20, textColor=self.C(NAVY), alignment=0),
+            "line": st("line", fontSize=11, leading=14, textColor=self.C(GREY), alignment=0),
+        }
+
+    @staticmethod
+    def _esc(text) -> str:
+        return (str(text).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"))
+
+    def _rule(self, colour=TEAL, thickness=1.2, space=4):
+        from reportlab.platypus import HRFlowable
+        return HRFlowable(width="100%", thickness=thickness, color=self.C(colour),
+                          spaceBefore=1, spaceAfter=space)
+
+    # Headings ------------------------------------------------------------
+    def h1(self, title: str):
+        from reportlab.platypus import CondPageBreak, Paragraph
+        self.n += 1
+        self.sub = 0
+        self.story += [CondPageBreak(4 * self.cm),
+                       Paragraph(f"{self.n}. {self._esc(title)}", self.S["h1"]), self._rule()]
+
+    def h2(self, title: str):
+        from reportlab.platypus import CondPageBreak, Paragraph
+        self.sub += 1
+        self.story += [CondPageBreak(3 * self.cm),
+                       Paragraph(f"{self.n}.{self.sub} {self._esc(title)}", self.S["h2"])]
+
+    def label(self, text: str):
+        from reportlab.platypus import CondPageBreak, Paragraph
+        self.story += [CondPageBreak(3 * self.cm), Paragraph(self._esc(text), self.S["label"])]
+
+    # Text ------------------------------------------------------------------
+    def para(self, markup: str, *, size=12, colour=INK, after=6):
+        from reportlab.platypus import Paragraph
+        style = self.S["small"] if size < 12 else self.S["body"]
+        self.story.append(Paragraph(markup, style))
+
+    def _list(self, items, kind):
+        from reportlab.platypus import ListFlowable, ListItem, Paragraph
+        self.story.append(ListFlowable(
+            [ListItem(Paragraph(m, self.S["list"]), leftIndent=16) for m in items],
+            bulletType=kind, start="\u2022" if kind == "bullet" else None,
+            bulletFormat="%s." if kind == "1" else None, leftIndent=18,
+            bulletFontName="Times-Roman", bulletFontSize=12, spaceAfter=6))
+
+    def bullets(self, items: list[str]):
+        self._list(items, "bullet")
+
+    def numbered(self, items: list[str]):
+        self._list(items, "1")
+
+    # Tiles and tables ------------------------------------------------------
+    def tiles(self, items: list[tuple[str, str]]):
+        from reportlab.platypus import Paragraph, Spacer, Table, TableStyle
+        w = self.width / len(items)
+        cells = [[Paragraph(self._esc(v), self.S["tile_v" if len(v) < 12 else "tile_vs"]),
+                  Paragraph(self._esc(lab), self.S["tile_l"])] for v, lab in items]
+        t = Table([cells], colWidths=[w] * len(items))
+        style = [("BACKGROUND", (0, 0), (-1, -1), self.C(TILE)),
+                 ("LINEABOVE", (0, 0), (-1, 0), 2.2, self.C(TEAL)),
+                 ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                 ("TOPPADDING", (0, 0), (-1, -1), 7), ("BOTTOMPADDING", (0, 0), (-1, -1), 7)]
+        for i in range(1, len(items)):
+            style.append(("LINEBEFORE", (i, 0), (i, 0), 3, self.C("FFFFFF")))
+        t.setStyle(TableStyle(style))
+        self.story += [t, Spacer(1, 10)]
+
+    def table(self, head: list[str], rows: list[list[str]], widths: list[float]):
+        from reportlab.platypus import KeepTogether, Paragraph, Spacer, Table, TableStyle
+
+        def figure_like(text: str) -> bool:
+            return bool(re.fullmatch(r"[\d.,%+\-–→ /()]+|-|—", text.strip()))
+
+        numeric = [all(figure_like(r[i]) for r in rows) if rows else False
+                   for i in range(len(head))]
+        scale = self.width / (sum(widths) * 72)
+        data = [[Paragraph(self._esc(h), self.S["thc" if numeric[i] else "th"])
+                 for i, h in enumerate(head)]]
+        data += [[Paragraph(self._esc(v), self.S["cellc" if numeric[i] else "cell"])
+                  for i, v in enumerate(r)] for r in rows]
+        t = Table(data, colWidths=[w * 72 * scale for w in widths], repeatRows=1)
+        style = [("BACKGROUND", (0, 0), (-1, 0), self.C(NAVY)),
+                 ("GRID", (0, 0), (-1, -1), 0.5, self.C(RULE)),
+                 ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                 ("TOPPADDING", (0, 0), (-1, -1), 4), ("BOTTOMPADDING", (0, 0), (-1, -1), 4)]
+        for k in range(2, len(data), 2):
+            style.append(("BACKGROUND", (0, k), (-1, k), self.C(ZEBRA)))
+        t.setStyle(TableStyle(style))
+        self.story += [KeepTogether([t]), Spacer(1, 10)]
+
+    def figure(self, png: bytes, caption: str, width: float = 6.0):
+        from reportlab.lib.utils import ImageReader
+        from reportlab.platypus import Image, KeepTogether, Paragraph
+        self.fig += 1
+        iw, ih = ImageReader(io.BytesIO(png)).getSize()
+        w = min(width * 72, self.width)
+        img = Image(io.BytesIO(png), width=w, height=w * ih / iw)
+        self.story.append(KeepTogether([img, Paragraph(
+            f"Figure {self.fig} — {self._esc(caption)}", self.S["caption"])]))
+
+    def page_break(self):
+        from reportlab.platypus import PageBreak
+        self.story.append(PageBreak())
+
+    def cover(self, title: str, theme: str, line: str):
+        from reportlab.platypus import Image, NextPageTemplate, Paragraph, Spacer
+        self.story += [Spacer(1, 30), Paragraph("JAIN (DEEMED-TO-BE UNIVERSITY)", self.S["kicker"]),
+                       Spacer(1, 4), Paragraph(self._esc(title), self.S["title"]), Spacer(1, 50)]
+        if LOGO.exists():
+            from reportlab.lib.utils import ImageReader
+            iw, ih = ImageReader(str(LOGO)).getSize()
+            w = 11 * self.cm
+            self.story += [Image(str(LOGO), width=w, height=w * ih / iw), Spacer(1, 70)]
+        self.story += [Paragraph(self._esc(theme), self.S["theme"]), self._rule(thickness=1.6),
+                       Paragraph(self._esc(line), self.S["line"]),
+                       NextPageTemplate("body"), self.page_break_flowable()]
+
+    def page_break_flowable(self):
+        from reportlab.platypus import PageBreak
+        return PageBreak()
+
+    def save(self) -> bytes:
+        from reportlab.platypus import BaseDocTemplate, Frame, PageTemplate
+
+        cm, (W, H) = self.cm, self.A4
+        campus = self.campus
+
+        def header(canvas, doc):
+            canvas.saveState()
+            if LOGO.exists():
+                from reportlab.lib.utils import ImageReader
+                img = ImageReader(str(LOGO))
+                iw, ih = img.getSize()
+                h = 0.9 * cm
+                canvas.drawImage(img, 2 * cm, H - 1.25 * cm - h, width=h * iw / ih, height=h,
+                                 mask="auto")
+            canvas.setFont("Times-Roman", 8)
+            canvas.setFillColor(self.C(GREY))
+            canvas.drawRightString(W - 2 * cm, H - 1.25 * cm - 0.6 * cm,
+                                   f"Deeksharambh 2026 · Overall Report · {campus}")
+            canvas.restoreState()
+
+        def footer(canvas, doc):
+            canvas.saveState()
+            canvas.setFont("Times-Roman", 8)
+            canvas.setFillColor(self.C(GREY))
+            canvas.drawCentredString(W / 2, 1.1 * cm, f"Page {doc.page}")
+            canvas.restoreState()
+
+        def body(canvas, doc):
+            header(canvas, doc)
+            footer(canvas, doc)
+
+        buf = io.BytesIO()
+        doc = BaseDocTemplate(buf, pagesize=self.A4, title="Deeksharambh 2026 — Overall Report",
+                              author="JAIN University")
+        frame = Frame(2 * cm, 2.1 * cm, W - 4 * cm, H - 2.1 * cm - 2.6 * cm, id="f",
+                      leftPadding=0, rightPadding=0, topPadding=0, bottomPadding=0)
+        doc.addPageTemplates([PageTemplate(id="cover", frames=[frame], onPage=footer),
+                              PageTemplate(id="body", frames=[frame], onPage=body)])
+        doc.build(self.story)
+        return buf.getvalue()
+
 
 # ── Charts ───────────────────────────────────────────────────────────────────
 
@@ -386,9 +629,21 @@ def _hbars(options: list[dict], title: str, colour=C_TEAL, top: int = 6):
 # ── The report ───────────────────────────────────────────────────────────────
 
 def build_report_docx(pack: dict, *, generated_at: str, ai: dict | None = None) -> bytes:
-    from docx.enum.text import WD_ALIGN_PARAGRAPH
-    from docx.shared import Cm
+    """The overall report as Word."""
+    W = _Doc(_plain(pack.get("campus") or "All campuses"))
+    _write_report(W, pack, generated_at=generated_at, ai=ai)
+    return W.save()
 
+
+def build_report_pdf(pack: dict, *, generated_at: str, ai: dict | None = None) -> bytes:
+    """The same report, page for page in the same order, as a PDF."""
+    W = _Pdf(_plain(pack.get("campus") or "All campuses"))
+    _write_report(W, pack, generated_at=generated_at, ai=ai)
+    return W.save()
+
+
+def _write_report(W, pack: dict, *, generated_at: str, ai: dict | None) -> None:
+    """Everything the report says, written to either writer (`_Doc` or `_Pdf`)."""
     campus = _plain(pack.get("campus") or "All campuses")
     text = summary_paragraphs(pack, ai)
     d = pack.get("overall_dept") or {}
@@ -399,30 +654,9 @@ def build_report_docx(pack: dict, *, generated_at: str, ai: dict | None = None) 
     sc = (ai or {}).get("scores") or {}
     registered = t.get("registered", 0)
 
-    W = _Doc(campus)
-    doc = W.d
-
-    # ── Cover ────────────────────────────────────────────────────────────
-    p = doc.add_paragraph()
-    _spacing(p, before=30, after=4)
-    _font(p.add_run("JAIN (DEEMED-TO-BE UNIVERSITY)"), size=11, colour=INK)
-    p = doc.add_paragraph()
-    _spacing(p, after=40, line=1.0)
-    _font(p.add_run("Deeksharambh 2026 — Overall Report"), size=36, bold=True, colour=NAVY)
-    if LOGO.exists():
-        p = doc.add_paragraph()
-        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        _spacing(p, after=60)
-        p.add_run().add_picture(str(LOGO), width=Cm(11))
-    p = doc.add_paragraph()
-    _spacing(p, after=2)
-    _font(p.add_run(THEME), size=16, colour=NAVY)
-    _bottom_rule(p, size=14)
-    p = doc.add_paragraph()
-    _spacing(p, before=4)
-    _font(p.add_run(f"Student orientation feedback and the AI survey · {DEPARTMENTS} departments · "
-                    f"{campus} · Generated {generated_at}"), size=11, colour=GREY)
-    W.page_break()
+    W.cover("Deeksharambh 2026 — Overall Report", THEME,
+            f"Student orientation feedback and the AI survey · {DEPARTMENTS} departments · "
+            f"{campus} · Generated {generated_at}")
 
     # ── 1. Executive summary ─────────────────────────────────────────────
     W.h1("Executive Summary")
@@ -569,9 +803,25 @@ def build_report_docx(pack: dict, *, generated_at: str, ai: dict | None = None) 
     W.para("Counts are read directly from the registration portal, the Deeksharambh replies and "
            "the AI surveys; no figure in this report is estimated.", size=10, colour=GREY)
 
-    buf = io.BytesIO()
-    doc.save(buf)
-    return buf.getvalue()
+
+async def report_pdf_response(*, campus: str = ""):
+    """The overall report as a PDF attachment: the Word report, page for page."""
+    from datetime import datetime
+
+    from fastapi.responses import StreamingResponse
+
+    from app.deeksharambh_meeting import meeting_pack
+    from app.outcome_departments import outcome_pack
+    from app.routes.shared_analysis import _in_thread
+
+    pack = await meeting_pack(campus=campus)
+    ai = (await outcome_pack(campus=campus))["overall"]
+    data = await _in_thread(build_report_pdf, pack, ai=ai,
+                            generated_at=datetime.now().strftime("%d %b %Y, %H:%M"))
+    name = f"Deeksharambh_2026_Overall_Report_{campus or 'All'}.pdf"
+    name = "".join(ch if (ch.isalnum() or ch in "._-") else "_" for ch in name)
+    return StreamingResponse(io.BytesIO(data), media_type="application/pdf",
+                             headers={"Content-Disposition": f'attachment; filename="{name}"'})
 
 
 async def report_docx_response(*, campus: str = ""):

@@ -937,7 +937,12 @@ async def department_links(base_url: str, *, campus: str = "") -> list[dict]:
 
 
 async def meeting_pdf_response(*, campus: str = "", dept: str = ""):
-    """The same document as a PDF attachment — every department, or `dept` alone."""
+    """The overall report as a PDF — the Word report's twin — or, with `dept`,
+    that department's own report."""
+    if not dept:
+        from app.deeksharambh_report_docx import report_pdf_response
+        return await report_pdf_response(campus=campus)
+
     import io
     from datetime import datetime
 
