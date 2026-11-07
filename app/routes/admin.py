@@ -1783,6 +1783,21 @@ async def admin_deeksharambh_meeting_docx(request: Request, campus: str = Query(
     return await report_docx_response(campus=campus)
 
 
+@router.get("/admin/survey/deeksharambh-theme.{kind}")
+async def admin_deeksharambh_theme_report(request: Request, kind: str,
+                                          campus: str = Query(default="")):
+    """Deeksharambh 2026 in two pages — the programme, its theme, how each school carried it,
+    and the students' strengths and gaps — as PDF or Word."""
+    if not _is_survey_admin(request):
+        raise HTTPException(status_code=403)
+    if kind not in ("pdf", "docx"):
+        raise HTTPException(status_code=404)
+
+    from app.deeksharambh_theme_report import theme_report_response
+
+    return await theme_report_response(campus=campus, kind=kind)
+
+
 @router.get("/admin/survey/deeksharambh-summary.pdf")
 async def admin_deeksharambh_summary_pdf(request: Request, campus: str = Query(default="")):
     """The three-page short summary of Deeksharambh, as a PDF."""

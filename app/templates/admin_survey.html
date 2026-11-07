@@ -698,6 +698,22 @@
             <div class="card">
               <div class="panel-head">
                 <div>
+                  <div class="h-card">🌐 Deeksharambh 2026 — Theme &amp; Student Voice</div>
+                  <div class="sub">Two pages in academic prose: an introduction to Deeksharambh, the
+                    2026 theme <i>Human &amp; AI: The Dawn of Collaborative Intelligence</i>, how each
+                    school brought the theme to life, and the overall student feedback as strengths
+                    and gaps. No statistics or charts.</div>
+                </div>
+                <div class="panel-actions">
+                  <a id="ori-theme-pdf" href="/admin/survey/deeksharambh-theme.pdf" class="btn btn-dark">⬇️ PDF</a>
+                  <a id="ori-theme-docx" href="/admin/survey/deeksharambh-theme.docx" class="btn btn-soft">⬇️ Word</a>
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="panel-head">
+                <div>
                   <div class="h-card">📝 Short summary</div>
                   <div class="sub">Deeksharambh in three pages of text: our approach, the department
                     approach, the figures at a glance, a short explanation of every section of the
@@ -3576,6 +3592,8 @@ function setOriView(view) {
   if ($('ori-meeting')) $('ori-meeting').href = '/admin/survey/deeksharambh-meeting?' + meetingScope;
   if ($('ori-meeting-pdf')) $('ori-meeting-pdf').href = '/admin/survey/deeksharambh-meeting.pdf?' + meetingScope;
   if ($('ori-meeting-docx')) $('ori-meeting-docx').href = '/admin/survey/deeksharambh-meeting.docx?' + meetingScope;
+  if ($('ori-theme-pdf')) $('ori-theme-pdf').href = '/admin/survey/deeksharambh-theme.pdf?' + meetingScope;
+  if ($('ori-theme-docx')) $('ori-theme-docx').href = '/admin/survey/deeksharambh-theme.docx?' + meetingScope;
   if ($('ori-summary-pdf')) $('ori-summary-pdf').href = '/admin/survey/deeksharambh-summary.pdf?' + meetingScope;
   if (view === 'analysis')    loadOriCampusReport();
   if (view === 'departments') loadOriDepartments();

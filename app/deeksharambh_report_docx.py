@@ -156,9 +156,11 @@ def _width(cell, inches: float):
 
 
 class _Doc:
-    """The document and its running section numbers."""
+    """The document and its running section numbers. `size` sets the body text and
+    `h1_size` the section headings; `header` is the line at the top of every page."""
 
-    def __init__(self, campus: str):
+    def __init__(self, campus: str, *, header: str = "Deeksharambh 2026 · Overall Report",
+                 size: float = 12, h1_size: float = 20):
         from docx import Document
         from docx.enum.text import WD_ALIGN_PARAGRAPH
         from docx.oxml import OxmlElement
@@ -174,7 +176,8 @@ class _Doc:
 
         normal = self.d.styles["Normal"]
         normal.font.name = FONT
-        normal.font.size = Pt(12)
+        normal.font.size = Pt(size)
+        self.size, self.h1_size = size, h1_size
         normal.element.get_or_add_rPr().get_or_add_rFonts().set(qn("w:eastAsia"), FONT)
 
         # Running header: the logo left, the report's name right; page number below.
@@ -182,7 +185,7 @@ class _Doc:
         head.paragraph_format.tab_stops.add_tab_stop(Cm(17.0), alignment=2)
         if LOGO.exists():
             head.add_run().add_picture(str(LOGO), height=Cm(0.9))
-        _font(_add(head, f"\tDeeksharambh 2026 · Overall Report · {campus}"), size=8,
+        _font(_add(head, f"\t{header} · {campus}"), size=8,
               colour=GREY)
         foot = sec.footer.paragraphs[0]
         foot.alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -205,8 +208,10 @@ class _Doc:
         self.n += 1
         self.sub = 0
         p = self.d.add_paragraph()
-        _spacing(p, before=14, after=8)
-        _font(_add(p, f"{self.n}. {title}"), size=20, bold=True, colour=NAVY)
+        compact = self.h1_size < 20
+        _spacing(p, before=8 if compact else 14, after=4 if compact else 8)
+        p.paragraph_format.keep_with_next = True
+        _font(_add(p, f"{self.n}. {title}"), size=self.h1_size, bold=True, colour=NAVY)
         _bottom_rule(p)
         return p
 
@@ -215,7 +220,8 @@ class _Doc:
         p = self.d.add_paragraph()
         _spacing(p, before=10, after=4)
         p.paragraph_format.keep_with_next = True
-        _font(_add(p, f"{self.n}.{self.sub} {title}"), size=14, bold=True, colour=NAVY)
+        _font(_add(p, f"{self.n}.{self.sub} {title}"), size=self.size + 2, bold=True,
+              colour=NAVY)
         return p
 
     def label(self, text: str):
@@ -226,16 +232,22 @@ class _Doc:
         return p
 
     # Text ------------------------------------------------------------------
-    def para(self, markup: str, *, size=12, colour=INK, after=6):
+    def para(self, markup: str, *, size=None, colour=INK, after=6):
+        from docx.enum.text import WD_ALIGN_PARAGRAPH
         p = self.d.add_paragraph()
         _spacing(p, after=after)
-        return _rich(p, markup, size=size, colour=colour)
+        if self.size < 12:
+            p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+        return _rich(p, markup, size=size or self.size, colour=colour)
 
     def bullets(self, items: list[str]):
+        from docx.enum.text import WD_ALIGN_PARAGRAPH
         for markup in items:
             p = self.d.add_paragraph(style="List Bullet")
             _spacing(p, after=3)
-            _rich(p, markup)
+            if self.size < 12:
+                p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+            _rich(p, markup, size=self.size)
 
     def numbered(self, items: list[str]):
         for markup in items:
@@ -327,6 +339,21 @@ class _Doc:
         from docx.enum.text import WD_BREAK
         self.d.add_paragraph().add_run().add_break(WD_BREAK.PAGE)
 
+    def title_block(self, title: str, subtitle: str):
+        """A title at the top of page one, for documents with no cover page."""
+        from docx.enum.text import WD_ALIGN_PARAGRAPH
+        # No cover, so page one carries the logo header like every other page.
+        self.d.sections[0].different_first_page_header_footer = False
+        p = self.d.add_paragraph()
+        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        _spacing(p, before=0, after=2, line=1.0)
+        _font(_add(p, title), size=24, bold=True, colour=NAVY)
+        p = self.d.add_paragraph()
+        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        _spacing(p, after=6)
+        _font(_add(p, subtitle), size=self.size + 1, italic=True, colour=TEAL)
+        _bottom_rule(p, size=10)
+
     def cover(self, title: str, theme: str, line: str):
         from docx.enum.text import WD_ALIGN_PARAGRAPH
         from docx.shared import Cm
@@ -360,7 +387,8 @@ class _Pdf:
     """The `_Doc` interface drawn as a PDF: Times, navy titles, a teal rule, the
     logo and report name across the top of every page, the page number below."""
 
-    def __init__(self, campus: str):
+    def __init__(self, campus: str, *, header: str = "Deeksharambh 2026 · Overall Report",
+                 size: float = 12, h1_size: float = 20):
         from reportlab.lib import colors
         from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY
         from reportlab.lib.pagesizes import A4
@@ -370,26 +398,34 @@ class _Pdf:
         self.C = lambda h: colors.HexColor("#" + h)
         self.cm, self.A4 = cm, A4
         self.campus = campus
+        self.header, self.size, self.h1_size = header, size, h1_size
         self.story = []
         self.n = self.sub = self.fig = 0
         self.width = A4[0] - 4.0 * cm
 
         def st(name, **kw):
-            base = dict(fontName="Times-Roman", fontSize=12, leading=16, textColor=self.C(INK),
-                        alignment=TA_JUSTIFY)
+            base = dict(fontName="Times-Roman", fontSize=size, leading=round(size * 1.33, 1),
+                        textColor=self.C(INK), alignment=TA_JUSTIFY)
             base.update(kw)
             return ParagraphStyle(name, **base)
 
         self.S = {
             "body": st("body", spaceAfter=6),
             "small": st("small", fontSize=10, leading=13, textColor=self.C(GREY)),
-            "h1": st("h1", fontName="Times-Bold", fontSize=20, leading=24, textColor=self.C(NAVY),
-                     alignment=0, spaceBefore=12, spaceAfter=2),
-            "h2": st("h2", fontName="Times-Bold", fontSize=14, leading=18, textColor=self.C(NAVY),
-                     alignment=0, spaceBefore=9, spaceAfter=3),
+            "h1": st("h1", fontName="Times-Bold", fontSize=h1_size, leading=h1_size * 1.2,
+                     textColor=self.C(NAVY), alignment=0,
+                     spaceBefore=12 if h1_size >= 20 else 7, spaceAfter=2),
+            "h2": st("h2", fontName="Times-Bold", fontSize=size + 2, leading=(size + 2) * 1.28,
+                     textColor=self.C(NAVY), alignment=0, spaceBefore=6 if size < 12 else 9,
+                     spaceAfter=2 if size < 12 else 3),
+            "subtitle": st("subtitle", fontName="Times-Italic", fontSize=size + 1,
+                           leading=(size + 1) * 1.3, textColor=self.C(TEAL),
+                           alignment=TA_CENTER),
+            "doctitle": st("doctitle", fontName="Times-Bold", fontSize=24, leading=28,
+                           textColor=self.C(NAVY), alignment=TA_CENTER),
             "label": st("label", fontName="Times-Bold", fontSize=14, leading=18,
                         textColor=self.C(TEAL), alignment=0, spaceBefore=8, spaceAfter=3),
-            "list": st("list", spaceAfter=3),
+            "list": st("list", spaceAfter=2 if size < 12 else 3),
             "cell": st("cell", fontSize=11, leading=13.5, alignment=0),
             "cellc": st("cellc", fontSize=11, leading=13.5, alignment=TA_CENTER),
             "th": st("th", fontName="Times-Bold", fontSize=11, leading=13.5,
@@ -439,10 +475,17 @@ class _Pdf:
         self.story += [CondPageBreak(3 * self.cm), Paragraph(self._esc(text), self.S["label"])]
 
     # Text ------------------------------------------------------------------
-    def para(self, markup: str, *, size=12, colour=INK, after=6):
+    def para(self, markup: str, *, size=None, colour=INK, after=6):
         from reportlab.platypus import Paragraph
-        style = self.S["small"] if size < 12 else self.S["body"]
+        style = self.S["small"] if size and size < self.size else self.S["body"]
         self.story.append(Paragraph(markup, style))
+
+    def title_block(self, title: str, subtitle: str):
+        """A title at the top of page one, for documents with no cover page."""
+        from reportlab.platypus import Paragraph, Spacer
+        self.story += [Paragraph(self._esc(title), self.S["doctitle"]), Spacer(1, 3),
+                       Paragraph(self._esc(subtitle), self.S["subtitle"]),
+                       self._rule(thickness=1.0, space=6)]
 
     def _list(self, items, kind):
         from reportlab.platypus import ListFlowable, ListItem, Paragraph
@@ -450,7 +493,7 @@ class _Pdf:
             [ListItem(Paragraph(m, self.S["list"]), leftIndent=16) for m in items],
             bulletType=kind, start="\u2022" if kind == "bullet" else None,
             bulletFormat="%s." if kind == "1" else None, leftIndent=18,
-            bulletFontName="Times-Roman", bulletFontSize=12, spaceAfter=6))
+            bulletFontName="Times-Roman", bulletFontSize=self.size, spaceAfter=4))
 
     def bullets(self, items: list[str]):
         self._list(items, "bullet")
@@ -513,6 +556,7 @@ class _Pdf:
 
     def cover(self, title: str, theme: str, line: str):
         from reportlab.platypus import Image, NextPageTemplate, Paragraph, Spacer
+        self.has_cover = True
         self.story += [Spacer(1, 30), Paragraph("JAIN (DEEMED-TO-BE UNIVERSITY)", self.S["kicker"]),
                        Spacer(1, 4), Paragraph(self._esc(title), self.S["title"]), Spacer(1, 50)]
         if LOGO.exists():
@@ -546,7 +590,7 @@ class _Pdf:
             canvas.setFont("Times-Roman", 8)
             canvas.setFillColor(self.C(GREY))
             canvas.drawRightString(W - 2 * cm, H - 1.25 * cm - 0.6 * cm,
-                                   f"Deeksharambh 2026 · Overall Report · {campus}")
+                                   f"{self.header} · {campus}")
             canvas.restoreState()
 
         def footer(canvas, doc):
@@ -561,12 +605,14 @@ class _Pdf:
             footer(canvas, doc)
 
         buf = io.BytesIO()
-        doc = BaseDocTemplate(buf, pagesize=self.A4, title="Deeksharambh 2026 — Overall Report",
-                              author="JAIN University")
+        doc = BaseDocTemplate(buf, pagesize=self.A4, title=self.header, author="JAIN University")
         frame = Frame(2 * cm, 2.1 * cm, W - 4 * cm, H - 2.1 * cm - 2.6 * cm, id="f",
                       leftPadding=0, rightPadding=0, topPadding=0, bottomPadding=0)
-        doc.addPageTemplates([PageTemplate(id="cover", frames=[frame], onPage=footer),
-                              PageTemplate(id="body", frames=[frame], onPage=body)])
+        templates = [PageTemplate(id="cover", frames=[frame], onPage=footer),
+                     PageTemplate(id="body", frames=[frame], onPage=body)]
+        if not getattr(self, "has_cover", False):      # page one carries the logo header too
+            templates.reverse()
+        doc.addPageTemplates(templates)
         doc.build(self.story)
         return buf.getvalue()
 

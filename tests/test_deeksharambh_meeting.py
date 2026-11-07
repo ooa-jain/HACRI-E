@@ -1735,3 +1735,61 @@ def test_the_word_report_survives_control_characters_in_typed_answers():
     cells = " ".join(c.text for t in d.tables for row in t.rows for c in row.cells)
     assert "Ease of transition" in cells and "Man ageable" in cells
     assert build_report_pdf(pack, generated_at="now").startswith(b"%PDF-")
+
+
+# ── Theme and student voice (two pages, PDF and Word) ────────────────────────
+
+@pytest.mark.asyncio
+async def test_the_theme_report_is_two_pages_of_prose_in_pdf_and_word(client, admin_client):
+    await _seed()
+    from io import BytesIO
+
+    import docx
+    from pypdf import PdfReader
+
+    assert (await client.get("/admin/survey/deeksharambh-theme.pdf")).status_code == 403
+    assert (await admin_client.get("/admin/survey/deeksharambh-theme.txt")).status_code == 404
+    r = await admin_client.get("/admin/survey/deeksharambh-theme.pdf")
+    assert r.status_code == 200 and r.content.startswith(b"%PDF-")
+    assert "Theme_and_Student_Voice_All.pdf" in r.headers["content-disposition"]
+    reader = PdfReader(BytesIO(r.content))
+    assert len(reader.pages) <= 2
+    text = " ".join(" ".join((p.extract_text() or "").split()) for p in reader.pages)
+
+    w = await admin_client.get("/admin/survey/deeksharambh-theme.docx")
+    assert w.status_code == 200 and w.content[:2] == b"PK"
+    d = docx.Document(BytesIO(w.content))
+    words = "\n".join(p.text for p in d.paragraphs)
+    assert not d.tables and not d.inline_shapes          # prose only, no tables or charts
+
+    for body in (text, words):
+        heads = ["1. Introduction", "2. Theme of Deeksharambh 2026",
+                 "3. How the Schools Brought the Theme to Life", "4. Overall Student Feedback",
+                 "4.1 Strengths", "4.2 Gaps"]
+        at = [body.index(h) for h in heads]
+        assert at == sorted(at)
+        assert "Human & AI: The Dawn of Collaborative Intelligence" in body
+        for school in ("School of Commerce", "School of Law", "Department of Languages",
+                       "School of Management"):
+            assert school in body
+        # No statistics: no percentages, no averages, no acronym.
+        assert "%" not in body and "/10" not in body and "NPS" not in body
+        assert "Department of Commerce" not in body           # overall, not per department
+
+
+def test_strengths_and_gaps_say_shares_in_words():
+    from app.deeksharambh_theme_report import _how_many, strengths_and_gaps
+
+    assert _how_many(85) == "the large majority of" and _how_many(12) == "a minority of"
+    q = lambda key, opts: {"key": key, "answered": 10, "kind": "single", "rows": [],
+                           "all": [{"label": l, "pct": p, "count": 1} for l, p in opts]}
+    pack = {"overall_dept": {"headline": {"belonging": 7.4}, "sections": [{"title": "x", "questions": [
+        q("q3", [("Strongly Agree", 44.2), ("Agree", 41.0)]),
+        q("q14", [("Moderately Interactive", 60.0), ("Highly Interactive", 25.0)]),
+        q("q39", [("More interactive workshops", 48.1)]),
+    ]}]}}
+    strengths, gaps = strengths_and_gaps(pack)
+    assert strengths[0].startswith("<b>A welcoming environment.</b> The large majority of students")
+    assert "rated highly" in strengths[0]
+    assert any("Fewer than half" in g and "more interactive workshops" in g for g in gaps)
+    assert not any(ch.isdigit() for s in strengths + gaps for ch in s)
