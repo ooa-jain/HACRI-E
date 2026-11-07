@@ -404,17 +404,18 @@ class _Pdf:
         self.width = A4[0] - 4.0 * cm
 
         def st(name, **kw):
-            base = dict(fontName="Times-Roman", fontSize=size, leading=round(size * 1.33, 1),
+            base = dict(fontName="Times-Roman", fontSize=size,
+                        leading=round(size * (1.33 if size >= 12 else 1.27), 1),
                         textColor=self.C(INK), alignment=TA_JUSTIFY)
             base.update(kw)
             return ParagraphStyle(name, **base)
 
         self.S = {
-            "body": st("body", spaceAfter=6),
+            "body": st("body", spaceAfter=6 if size >= 12 else 4),
             "small": st("small", fontSize=10, leading=13, textColor=self.C(GREY)),
             "h1": st("h1", fontName="Times-Bold", fontSize=h1_size, leading=h1_size * 1.2,
                      textColor=self.C(NAVY), alignment=0,
-                     spaceBefore=12 if h1_size >= 20 else 7, spaceAfter=2),
+                     spaceBefore=12 if h1_size >= 20 else 5, spaceAfter=2),
             "h2": st("h2", fontName="Times-Bold", fontSize=size + 2, leading=(size + 2) * 1.28,
                      textColor=self.C(NAVY), alignment=0, spaceBefore=6 if size < 12 else 9,
                      spaceAfter=2 if size < 12 else 3),
@@ -425,7 +426,7 @@ class _Pdf:
                            textColor=self.C(NAVY), alignment=TA_CENTER),
             "label": st("label", fontName="Times-Bold", fontSize=14, leading=18,
                         textColor=self.C(TEAL), alignment=0, spaceBefore=8, spaceAfter=3),
-            "list": st("list", spaceAfter=2 if size < 12 else 3),
+            "list": st("list", spaceAfter=1.5 if size < 12 else 3),
             "cell": st("cell", fontSize=11, leading=13.5, alignment=0),
             "cellc": st("cellc", fontSize=11, leading=13.5, alignment=TA_CENTER),
             "th": st("th", fontName="Times-Bold", fontSize=11, leading=13.5,
@@ -493,7 +494,8 @@ class _Pdf:
             [ListItem(Paragraph(m, self.S["list"]), leftIndent=16) for m in items],
             bulletType=kind, start="\u2022" if kind == "bullet" else None,
             bulletFormat="%s." if kind == "1" else None, leftIndent=18,
-            bulletFontName="Times-Roman", bulletFontSize=self.size, spaceAfter=4))
+            bulletFontName="Times-Roman", bulletFontSize=self.size,
+            spaceAfter=4 if self.size >= 12 else 2))
 
     def bullets(self, items: list[str]):
         self._list(items, "bullet")

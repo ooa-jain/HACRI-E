@@ -1793,3 +1793,27 @@ def test_strengths_and_gaps_say_shares_in_words():
     assert "rated highly" in strengths[0]
     assert any("Fewer than half" in g and "more interactive workshops" in g for g in gaps)
     assert not any(ch.isdigit() for s in strengths + gaps for ch in s)
+
+
+def test_faculty_connect_is_its_own_strength_with_a_second_line():
+    from app.deeksharambh_theme_report import strengths_and_gaps
+
+    q = lambda key, opts: {"key": key, "answered": 10, "kind": "multi", "rows": [],
+                           "all": [{"label": l, "pct": p, "count": 1} for l, p in opts]}
+    pack = {"overall_dept": {"headline": {}, "sections": [{"title": "x", "questions": [
+        q("q11", [("University Overview and Vision", 39.8), ("Faculty Interaction", 32.0)]),
+        q("q37", [("Cultural and fun events", 53.8), ("Faculty interaction sessions", 48.1)]),
+        q("q26", [("How friendly everyone was", 52.8), ("Quality of faculty", 39.5)]),
+        q("q36", [("Excellent Overall Experience", 47.2), ("Strong Faculty Impression", 29.5)]),
+        q("q27", [("Making new friends", 71.0)]),
+    ]}]}}
+    strengths, _gaps = strengths_and_gaps(pack)
+    faculty = next(s for s in strengths if s.startswith("<b>Faculty connect.</b>"))
+    assert "ranked among the most impactful sessions" in faculty
+    assert "should continue in the next edition" in faculty
+    assert "quality of faculty was among students' greatest surprises" in faculty
+    assert "strong faculty impression was among the leading reasons" in faculty
+    assert not any(ch.isdigit() for ch in faculty)
+    # The peer point stands on its own, without the faculty sentence.
+    peer = next(s for s in strengths if s.startswith("<b>Strong peer connection.</b>"))
+    assert "Faculty" not in peer

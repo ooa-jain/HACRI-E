@@ -198,19 +198,46 @@ def strengths_and_gaps(pack: dict) -> tuple[list[str], list[str]]:
             + (f", with the {_names(useful, 2)} valued most." if useful else "."))
 
     smile, surprise = a.top("q27", 1), a.top("q26", 1)
-    faculty = a.share("q11", "Faculty Interaction")
-    impact = [_lower(o["label"]) for o in a.top("q11", 3)]
     if smile or surprise:
-        text = "<b>Strong peer and faculty connection.</b> "
+        text = "<b>Strong peer connection.</b> "
         if smile:
             text += f"Students were most delighted by {_text(_lower(smile[0]['label']))}"
             text += (f", and what surprised them most was {_text(_lower(surprise[0]['label']))}."
                      if surprise else ".")
         else:
             text += f"What surprised students most was {_text(_lower(surprise[0]['label']))}."
-        if faculty is not None and "faculty interaction" in impact:
-            text += " Faculty interaction also ranked among the most impactful sessions."
         strengths.append(text)
+
+    # Faculty connect: the sessions, what to keep, the surprises and the reasons to
+    # recommend JAIN, each said only where faculty is among the leading answers.
+    def leads(key, name, n=3):
+        return any(_lower(o["label"]).startswith(_lower(name)) for o in a.top(key, n))
+
+    impactful = leads("q11", "Faculty Interaction")
+    keep = leads("q37", "Faculty interaction")
+    quality = leads("q26", "Quality of faculty")
+    impression = leads("q36", "Strong Faculty Impression")
+    if impactful or keep or quality or impression:
+        first = []
+        if impactful:
+            first.append("faculty interaction ranked among the most impactful sessions of the "
+                         "programme")
+        if keep:
+            first.append("students named it among the elements that should continue in the next "
+                         "edition" if impactful else "students named faculty interaction among the "
+                         "elements that should continue in the next edition")
+        second = []
+        if quality:
+            second.append("the quality of faculty was among students' greatest surprises")
+        if impression:
+            second.append("a strong faculty impression was among the leading reasons for "
+                          "recommending JAIN")
+        text = "<b>Faculty connect.</b> "
+        if first:
+            text += _cap(", and ".join(first)) + "."
+        if second:
+            text += " " + _cap(", and ".join(second)) + "."
+        strengths.append(text.strip())
 
     prepared = a.share("q18", "Well Prepared", "Very Well Prepared")
     if prepared is not None and prepared >= 50:
