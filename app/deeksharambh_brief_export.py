@@ -81,7 +81,7 @@ RECT = 1  # MSO_SHAPE.RECTANGLE
 
 # The programme's own stated theme — printed on every Deeksharambh 2026
 # cover, not something this brief derives from a count.
-THEME_TITLE = "Human + AI: Building Your Future"
+THEME_TITLE = "Human & AI: The Dawn of Collaborative Intelligence"
 THEME_LINE = (
     "Smooth transition into campus life  ·  Bridge Course for readiness  ·  "
     "Immersive orientation that builds belonging & confidence"

@@ -1610,12 +1610,23 @@ async def test_the_short_summary_is_three_pages_of_text_from_the_live_answers(cl
     reader = PdfReader(BytesIO(r.content))
     assert len(reader.pages) <= 3
     text = "\n".join(p.extract_text() or "" for p in reader.pages)
-    heads = ["Deeksharambh 2026 Report", "Report Title", "Objective", "Our Approach",
-             "Department Approach", "At a Glance", "Student Feedback", "What Students Want Next"]
+    heads = ["Deeksharambh 2026 Report", "Report Title", "Objective", "Theme", "Our Approach",
+             "At a Glance", "Student Feedback", "What Students Want Next"]
     at = [text.index(h) for h in heads]
     assert at == sorted(at)
-    # Read from this cohort: 11 registered across 4 departments, 6 completed.
-    assert "11 students registered across 4 departments" in " ".join(text.split())
+    flat = " ".join(text.split())
+    # The theme the posters print, and the University's stated 28 departments.
+    assert "Human & AI: The Dawn of Collaborative Intelligence" in flat
+    assert "28 departments" in flat and "Department Approach" not in flat
+    # The full flow, in order: pre survey, Footsteps, the week, feedback, post survey.
+    steps = ["AI pre survey (baseline)", "Footsteps (pre-arrival)",
+             "Deeksharambh orientation week and Bridge Course", "Deeksharambh feedback",
+             "AI post survey"]
+    at = [flat.index(s) for s in steps]
+    assert at == sorted(at)
+    # Read from this cohort: 11 registered, 10 took the baseline, 6 completed Deeksharambh.
+    assert "11 students registered on the portal" in flat
+    assert "10 students completed it" in flat and "6 completed it" in flat
     assert "Transition and Settling In" in text and "NPS" not in text
     assert "Deeksharambh 2026 Overall Analysis" in text
     # Text only: no answer tables.
@@ -1635,5 +1646,8 @@ def test_the_short_summary_leaves_out_what_is_not_on_file():
     t = summary_paragraphs(pack)
     assert t["glance"] == "" and t["way"] == []
     assert [title for title, _p in t["feedback"]] == ["NEP 2020 and Digital Readiness"]
-    assert "registered across" in t["approach"]
+    # No AI survey figures on file: the flow is still described, with no numbers.
+    assert len(t["approach_steps"]) == 5
+    assert "students completed it" not in t["approach_steps"][0]
+    assert "average AI score moved" not in t["approach_steps"][-1]
     assert build_summary_pdf(pack, generated_at="now").startswith(b"%PDF-")

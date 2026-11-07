@@ -163,7 +163,7 @@ async def test_brief_ppt_has_the_seven_slides_with_real_numbers(admin_client):
         for slide in deck.slides for shape in slide.shapes
         if shape.has_text_frame
     )
-    assert "Human + AI: Building Your Future" in words
+    assert "Human & AI: The Dawn of Collaborative Intelligence" in words
     assert "STUDENT JOURNEY" in words
     assert "6" in words              # registered
     assert "Department of Law" in words
@@ -258,7 +258,7 @@ async def test_the_impact_page_links_to_the_brief(client):
     token = get_vibe_token("")
     page = await client.get("/shared/impact", params={"campus": "", "token": token})
     assert page.status_code == 200
-    assert "Human + AI: Building Your Future" in page.text
+    assert "Human &amp; AI: The Dawn of Collaborative Intelligence" in page.text
     assert "/shared/impact/brief-ppt?campus=&amp;token=" in page.text
 
     r = await client.get("/shared/impact/brief-ppt", params={"campus": "", "token": token})

@@ -5,9 +5,9 @@ The same clean document style as the full report (white page, serif type, the
 grey JAIN logo at the top right, "Deeksharambh 2026 Overall Analysis" at the
 foot), but prose only, no tables:
 
-  Report Title · Objective · Our Approach · Department Approach · At a Glance ·
-  Student Feedback (a short paragraph for each survey section) ·
-  What Students Want Next · Way Forward
+  Report Title · Objective · Theme · Our Approach (the full flow: AI pre survey,
+  Deeksharambh, AI post survey) · At a Glance · Student Feedback (a short
+  paragraph for each survey section) · What Students Want Next · Way Forward
 
 Every sentence is written from the live answers in `meeting_pack()`'s overall
 reading. Answers are found by the option text students chose (matched without
@@ -25,6 +25,20 @@ from app.deeksharambh_meeting_pdf import LOGO, _text
 INK = "#111111"
 BODY = "#222222"
 MUTED = "#595959"
+
+# The 2026 theme, as the Deeksharambh posters print it, and the line each
+# school carried it under. Stated by the programme, not read from any count.
+THEME = "Human & AI: The Dawn of Collaborative Intelligence"
+SCHOOL_THEMES = [
+    ("Commerce", "Finance Meets Intelligence"),
+    ("Computer Science & IT", "Code. Compute. Create the Future."),
+    ("Design", "Imagine. Create. Transform."),
+    ("Engineering & Technology", "Engineering the Intelligent Future"),
+]
+# The number of departments Deeksharambh 2026 was run for, as the University
+# states it. The portal's own count is higher: it also lists centres, areas
+# and students with no department recorded.
+DEPARTMENTS = 28
 
 # Sessions the departments themselves lead, as the session lists name them.
 DEPARTMENT_SESSIONS = [
@@ -114,41 +128,83 @@ def _listed(options: list[dict], lower: bool = False) -> str:
                   for o in options])
 
 
-def summary_paragraphs(pack: dict) -> dict:
-    """Every paragraph of the summary, as plain reportlab-safe strings."""
+def summary_paragraphs(pack: dict, ai: dict | None = None) -> dict:
+    """Every paragraph of the summary, as plain reportlab-safe strings.
+
+    `ai` is the AI survey's overall reading (`outcome_pack()["overall"]`): the
+    baseline and post counts and scores the approach quotes. Without it the
+    approach still describes the flow, just without those figures."""
     d = pack.get("overall_dept") or {}
     t = pack.get("totals") or {}
     a = _Answers(d)
     h = d.get("headline") or {}
     out: dict[str, object] = {}
 
-    # ── Our approach ─────────────────────────────────────────────────────
-    out["approach"] = (
-        "Deeksharambh was run as a structured induction in three stages: the Footsteps pre-arrival "
-        "module, an orientation week of University, School and Department sessions, club fairs, "
-        "industry and alumni talks, mentor meets and cultural events, and a Bridge Course with NEP "
-        "2020, ABC ID / APAAR and ERP / LMS onboarding. Students then answered one feedback survey. "
-        f"Of <b>{_n(t.get('registered', 0))}</b> students registered across "
-        f"<b>{t.get('departments', 0)} departments</b>, <b>{_n(t.get('took', 0))}</b> completed "
-        f"Deeksharambh (<b>{_p(t.get('pct') or 0)}</b>), and every figure below is read from "
-        "their replies.")
+    # ── Theme ────────────────────────────────────────────────────────────
+    out["theme"] = (
+        f"Deeksharambh 2026 was built around the theme <b>{_text(THEME)}</b>: human empathy, "
+        "creativity and purpose working together with AI's intelligence, innovation and impact. "
+        "Each school carried it into its own discipline - "
+        + _join([f"{_text(school)}: <i>{_text(line)}</i>" for school, line in SCHOOL_THEMES])
+        + " - under one thread for every student: ideate, collaborate, learn, analyse and "
+        "innovate.")
 
-    # ── Department approach ──────────────────────────────────────────────
+    # ── Our approach: the full flow ──────────────────────────────────────
+    registered = t.get("registered", 0)
+    j = (ai or {}).get("journey") or {}
+    sc = ((ai or {}).get("scores") or {})
+    overall = sc.get("overall") or {}
+    out["approach_intro"] = (
+        f"Deeksharambh 2026 was run for <b>{DEPARTMENTS} departments</b> and followed one flow for "
+        f"every student, from registration to the end of the programme. "
+        f"<b>{_n(registered)}</b> students registered on the portal.")
+    steps = []
+    base = ("<b>AI pre survey (baseline).</b> On registering, each student took the AI survey, "
+            "which measures AI literacy (knowing how AI works and where it fails) and AI readiness "
+            "(being willing and able to work with it), so every student's starting point was on "
+            "record before the programme began.")
+    if j.get("baseline"):
+        base += (f" {_n(j['baseline'])} students completed it ({_p(j.get('baseline_pct') or 0)} "
+                 "of those registered)"
+                 + (f", with an average AI score of {overall['before']} out of 5."
+                    if overall.get("before") is not None else "."))
+    steps.append(base)
+    steps.append("<b>Footsteps (pre-arrival).</b> Before arriving, students worked through the "
+                 "Footsteps module: welcome videos, faculty introductions and an overview of the "
+                 "University, their School and Department, their programme and campus life.")
+    steps.append("<b>Deeksharambh orientation week and Bridge Course.</b> On campus, students "
+                 "attended University, School and Department sessions, faculty interactions, the "
+                 "club fair, industry and alumni talks, mentor meets and cultural events, followed "
+                 "by the Bridge Course with NEP 2020, ABC ID / APAAR and ERP / LMS onboarding.")
+    took = t.get("took", 0)
+    steps.append("<b>Deeksharambh feedback.</b> At the end of the week, students rated every part "
+                 f"of the programme in the Deeksharambh survey. <b>{_n(took)}</b> completed it "
+                 f"(<b>{_p(t.get('pct') or 0)}</b> of those registered), and the student feedback "
+                 "below is read from their replies.")
+    post = ("<b>AI post survey.</b> After the programme, students took the AI survey again, so "
+            "the same measures can be compared before and after.")
+    if j.get("post"):
+        post += f" {_n(j['post'])} students have completed it so far ({_p(j.get('post_pct') or 0)})"
+        if overall.get("before") is not None and overall.get("after") is not None:
+            lit, rd = sc.get("literacy") or {}, sc.get("readiness") or {}
+            post += (f"; the average AI score moved from {overall['before']} to {overall['after']} "
+                     f"({overall['change']:+.2f})"
+                     + (f", with literacy at {lit['before']} to {lit['after']} and readiness at "
+                        f"{rd['before']} to {rd['after']}" if lit.get("after") is not None
+                        and rd.get("after") is not None else "")
+                     + ".")
+        else:
+            post += "."
+    steps.append(post)
+    out["approach_steps"] = steps
+
+    # The department-led sessions, ranked — read for the way forward below.
     rated = []
     for name in DEPARTMENT_SESSIONS:
         s = a.share("q11", name)
         if s is not None:
             rated.append((name, s))
     rated.sort(key=lambda x: -x[1])
-    text = ("Within the common programme, departments led the sessions closest to each student's "
-            "own discipline: the School and Department Introduction, Faculty Interaction, the "
-            "Academic Roadmap Session, Lab / Discipline Demos and Mentor Meets.")
-    if len(rated) >= 3:
-        best = _join([f"{_text(n)} ({_p(s)})" for n, s in rated[:3]])
-        low = _join([f"{_text(n)} ({_p(s)})" for n, s in rated[-2:]])
-        text += (f" Students named {best} among the sessions with the biggest impact, while "
-                 f"{low} registered least and are where departments can add the most next year.")
-    out["department"] = text
 
     # ── At a glance ──────────────────────────────────────────────────────
     bits = []
@@ -388,7 +444,7 @@ def summary_paragraphs(pack: dict) -> dict:
     return out
 
 
-def build_summary_pdf(pack: dict, *, generated_at: str) -> bytes:
+def build_summary_pdf(pack: dict, *, generated_at: str, ai: dict | None = None) -> bytes:
     """The short summary as a PDF."""
     try:
         from reportlab.lib import colors
@@ -407,10 +463,10 @@ def build_summary_pdf(pack: dict, *, generated_at: str) -> bytes:
 
     C = colors.HexColor
     campus = _text(pack.get("campus") or "All campuses")
-    text = summary_paragraphs(pack)
+    text = summary_paragraphs(pack, ai)
 
     def st(name, **kw):
-        base = dict(fontName="Times-Roman", fontSize=12, leading=17, textColor=C(BODY),
+        base = dict(fontName="Times-Roman", fontSize=11.5, leading=15.6, textColor=C(BODY),
                     alignment=TA_JUSTIFY)
         base.update(kw)
         return ParagraphStyle(name, **base)
@@ -420,10 +476,10 @@ def build_summary_pdf(pack: dict, *, generated_at: str) -> bytes:
                     spaceAfter=2),
         "sub": st("sub", fontSize=11, leading=14, textColor=C(MUTED), alignment=TA_CENTER,
                   spaceAfter=8),
-        "h1": st("h1", fontSize=16.5, leading=21, textColor=C(INK), alignment=0, spaceBefore=12,
-                 spaceAfter=3),
-        "h2": st("h2", fontName="Times-Bold", fontSize=12.5, leading=16, textColor=C(INK),
-                 alignment=0, spaceBefore=9, spaceAfter=2),
+        "h1": st("h1", fontSize=16, leading=20, textColor=C(INK), alignment=0, spaceBefore=10,
+                 spaceAfter=2),
+        "h2": st("h2", fontName="Times-Bold", fontSize=12, leading=15, textColor=C(INK),
+                 alignment=0, spaceBefore=7, spaceAfter=1),
         "lead": st("lead", fontName="Times-Bold", textColor=C(INK), alignment=0),
         "body": st("body"),
         "small": st("small", fontSize=10, leading=13.5, textColor=C(MUTED), spaceBefore=10),
@@ -468,16 +524,19 @@ def build_summary_pdf(pack: dict, *, generated_at: str) -> bytes:
         P("To understand how first-year students experienced Deeksharambh 2026, how well it "
           "prepared them for university life, and what they expect from JAIN next, so that the "
           "programme can be strengthened for the coming year."),
-        P("Our Approach", "h1"), P(text["approach"]),
-        P("Department Approach", "h1"), P(text["department"]),
+        P("Theme", "h1"), P(text["theme"]),
+        P("Our Approach", "h1"), P(text["approach_intro"]),
+        ListFlowable([ListItem(P(step), leftIndent=16) for step in text["approach_steps"]],
+                     bulletType="1", bulletFormat="%s.", leftIndent=18,
+                     bulletFontName="Times-Roman", bulletFontSize=12, spaceBefore=2),
     ]
     if text["glance"]:
-        story += [P("At a Glance", "h1"), P(text["glance"])]
+        story.append(KeepTogether([P("At a Glance", "h1"), P(text["glance"])]))
     if text["feedback"]:
         story.append(P("Student Feedback", "h1"))
         for title, para in text["feedback"]:
             story.append(KeepTogether([P(_text(title), "h2"), P(para)]))
-    story += [P("What Students Want Next", "h1"), P(text["next"])]
+    story.append(KeepTogether([P("What Students Want Next", "h1"), P(text["next"])]))
     if text["way"]:
         story += [P("Way Forward", "h1"), ListFlowable(
             [ListItem(P(w), leftIndent=14) for w in text["way"]], bulletType="bullet",
@@ -497,10 +556,12 @@ async def summary_pdf_response(*, campus: str = ""):
     from fastapi.responses import StreamingResponse
 
     from app.deeksharambh_meeting import meeting_pack
+    from app.outcome_departments import outcome_pack
     from app.routes.shared_analysis import _in_thread
 
     pack = await meeting_pack(campus=campus)
-    data = await _in_thread(build_summary_pdf, pack,
+    ai = (await outcome_pack(campus=campus))["overall"]
+    data = await _in_thread(build_summary_pdf, pack, ai=ai,
                             generated_at=datetime.now().strftime("%d %b %Y, %H:%M"))
     name = f"Deeksharambh_2026_Short_Summary_{campus or 'All'}.pdf"
     name = "".join(ch if (ch.isalnum() or ch in "._-") else "_" for ch in name)
