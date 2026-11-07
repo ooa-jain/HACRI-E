@@ -42,43 +42,43 @@ SUBTITLE = f"{THEME} — Programme Overview and Student Feedback"
 # How each school carried the theme, as its Deeksharambh 2026 poster states it.
 SCHOOLS = [
     ("School of Commerce", "Finance Meets Intelligence",
-     "presented commerce as the meeting point of financial judgement and analytical "
-     "intelligence, introducing FinTech, AI in accounting, business analytics, supply-chain "
-     "intelligence, ethics and governance, and entrepreneurship with AI, under the call to "
-     "&ldquo;analyse smarter, decide better and lead tomorrow.&rdquo;"),
+     "introduced FinTech, AI in accounting, business analytics, supply-chain intelligence and "
+     "entrepreneurship with AI, urging students to &ldquo;analyse smarter, decide better and "
+     "lead tomorrow.&rdquo;"),
     ("School of Management", "Leading in the Age of AI",
-     "framed leadership as the capacity to lead both people and intelligent systems, "
-     "emphasising data-driven decision-making, human-centric leadership, strategy and "
-     "innovation, marketing intelligence, future-ready human resources and an entrepreneurial "
-     "ecosystem with a global perspective."),
+     "framed leadership as leading both people and intelligent systems, through data-driven "
+     "decisions, human-centric leadership, strategy, marketing intelligence and future-ready "
+     "human resources."),
     ("School of Computer Science &amp; IT", "Code. Compute. Create the Future.",
-     "introduced generative AI, cybersecurity, data science, cloud and distributed systems, "
-     "software engineering and game design, alongside AI ethics and digital society, with the "
-     "message &ldquo;The future is intelligent. Build it together.&rdquo;"),
+     "introduced generative AI, cybersecurity, data science, cloud systems and software "
+     "engineering alongside AI ethics: &ldquo;The future is intelligent. Build it "
+     "together.&rdquo;"),
     ("School of Engineering &amp; Technology", "Engineering the Intelligent Future",
-     "highlighted AI and machine learning, robotics and automation, IoT and smart systems, "
-     "advanced manufacturing, and aerospace and autonomous systems, anchored in ethics and "
-     "sustainability: &ldquo;By humans. Enhanced by AI.&rdquo;"),
+     "highlighted AI and machine learning, robotics, IoT, advanced manufacturing and autonomous "
+     "systems, anchored in sustainability: &ldquo;By humans. Enhanced by AI.&rdquo;"),
     ("School of Design", "Imagine. Create. Transform.",
-     "explored generative and sustainable design, UX/UI, interaction, fashion and visual "
-     "communication, affirming that &ldquo;AI can generate possibilities, but only humans give "
-     "them meaning.&rdquo;"),
+     "explored generative, sustainable and UX/UI design, affirming that &ldquo;AI can generate "
+     "possibilities, but only humans give them meaning.&rdquo;"),
     ("School of Allied Healthcare &amp; Sciences", "Care. Compassion. Intelligence.",
-     "connected AI-assisted diagnostics, biomedical innovation, patient-care technology, "
-     "nutrition, mental health and public health with the conviction that &ldquo;intelligence "
-     "can analyse; compassion can heal.&rdquo;"),
+     "connected AI-assisted diagnostics, biomedical innovation, patient care and public health "
+     "with the conviction that &ldquo;intelligence can analyse; compassion can heal.&rdquo;"),
+    ("School of Sciences", "Decoding Nature. Discovering Intelligence.",
+     "explored the life, physical, computational, environmental, forensic and psychological "
+     "sciences: &ldquo;Science explains the world; intelligence improves it; humanity elevates "
+     "it.&rdquo;"),
     ("School of Humanities &amp; Social Sciences",
      "Understanding Humanity. Shaping a Better World.",
-     "examined society, psychology, public policy, economics, human rights and media, arguing "
-     "that &ldquo;the more intelligent machines become, the more humanity matters.&rdquo;"),
+     "examined society, psychology, public policy and human rights, arguing that &ldquo;the "
+     "more intelligent machines become, the more humanity matters.&rdquo;"),
     ("Department of Languages", "Words Connect. Intelligence Transforms.",
-     "linked language learning, translation and interpretation, cultural studies and natural "
-     "language processing to global citizenship, presenting every language as &ldquo;a "
-     "bridge.&rdquo;"),
+     "linked translation, cultural studies and natural language processing to global "
+     "citizenship, presenting every language as &ldquo;a bridge.&rdquo;"),
     ("School of Law", "Justice. Ethics. Intelligence.",
-     "addressed AI regulation and governance, privacy and data protection, constitutional "
-     "rights, dispute resolution and AI-assisted legal research, holding that &ldquo;AI can "
-     "process information; humans deliver justice.&rdquo;"),
+     "addressed AI regulation, data protection, constitutional rights and AI-assisted legal "
+     "research: &ldquo;AI can process information; humans deliver justice.&rdquo;"),
+    ("School of Sports Education &amp; Research", "Perform. Learn. Transform.",
+     "combined sports science and performance analytics, coaching, mental fitness and sports "
+     "management with fair play for all: &ldquo;Intelligence trains. Character wins.&rdquo;"),
 ]
 
 INTRODUCTION = (

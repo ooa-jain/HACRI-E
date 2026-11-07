@@ -1770,7 +1770,8 @@ async def test_the_theme_report_is_two_pages_of_prose_in_pdf_and_word(client, ad
         assert at == sorted(at)
         assert "Human & AI: The Dawn of Collaborative Intelligence" in body
         for school in ("School of Commerce", "School of Law", "Department of Languages",
-                       "School of Management"):
+                       "School of Management", "School of Sciences",
+                       "School of Sports Education & Research"):
             assert school in body
         # No statistics: no percentages, no averages, no acronym.
         assert "%" not in body and "/10" not in body and "NPS" not in body
